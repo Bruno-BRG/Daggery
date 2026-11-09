@@ -5,7 +5,7 @@ import { PDFDocument, PDFTextField } from 'pdf-lib';
 import { createCharacterPdf, characterPdfFilename, DEFAULT_PDF_OPTIONS } from './exportPdf';
 import type { Sheet } from './types';
 
-const font = new Uint8Array(readFileSync(new URL('../../../public/fonts/NotoSans-Regular.ttf', import.meta.url)));
+const font = new Uint8Array(readFileSync(new URL('../../assets/fonts/NotoSans-Regular.ttf', import.meta.url)));
 const sheet: Sheet = {
   id: 'pdf-test', name: 'João — Éowyn', playerName: 'Bárbara', level: 1, proficiency: 1,
   classId: 'guardian', subclassId: 'stalwart', ancestryId: 'human', communityId: null,

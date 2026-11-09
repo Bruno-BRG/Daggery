@@ -3,6 +3,7 @@ import { Dialog } from '../../components/Dialog';
 import { Icon } from '../../components/Icon';
 import type { Sheet } from './types';
 import type { PdfOptions } from './exportPdf';
+import fontUrl from '../../assets/fonts/NotoSans-Regular.ttf?url';
 import './exportPdf.css';
 
 export function ExportPdfDialog({ sheet, open, onClose }: { sheet: Sheet; open: boolean; onClose: () => void }) {
@@ -14,7 +15,7 @@ export function ExportPdfDialog({ sheet, open, onClose }: { sheet: Sheet; open: 
     setBusy(true); setError(''); setDone(false);
     try {
       const [{ createCharacterPdf, characterPdfFilename }, response] = await Promise.all([
-        import('./exportPdf'), fetch(`${import.meta.env.BASE_URL}fonts/NotoSans-Regular.ttf`),
+        import('./exportPdf'), fetch(fontUrl),
       ]);
       if (!response.ok) throw new Error('The PDF font could not be loaded. Please try again.');
       const bytes = await createCharacterPdf(sheet, options, new Uint8Array(await response.arrayBuffer()));
