@@ -1,8 +1,10 @@
 import { strict as assert } from 'node:assert';
 import { randomBytes } from 'node:crypto';
 import { test } from 'node:test';
-import { adversaries } from '@daggery/content';
-import { fitMemory, type MemoryPart } from './ai/memory';
+import { adversaries, ancestries, classes, communities } from '@daggery/content';
+import { hpMax, stressMax } from '@daggery/shared/daggerheart';
+import type { Sheet } from '@daggery/shared/daggerheart/types';
+import { fitMemory, snapshotFor, type MemoryPart } from './ai/memory';
 import { migrateCampaignDatabase } from './campaign-db';
 import { CampaignService } from './campaign-service';
 import { OPENING_INSTRUCTION } from './ai/prompts';
@@ -1247,6 +1249,128 @@ test('the per-turn snapshot is valid JSON of at most 4000 characters and says wh
     const big = snapshotOf(lastTurnRequest(f).body);
     assert.ok(big.text.length <= 4000, 'the snapshot JSON is at most 4000 characters');
     assert.equal(big.data.truncated, true, 'a snapshot with dropped items says so');
+  } finally {
+    await f.close();
+  }
+});
+
+// ---- GM read tools: Fear and spotlight in the snapshot, get_character, get_adversary and search_rules by ID ----
+
+test('the table snapshot carries Fear and the spotlight holder, reads 0 and null when unset, and reaches the GM request', async () => {
+  const f = await fixture(request => request.tools ? completion('The tide turns. What do you do?') : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const unset = snapshotFor(f.db, f.ai.actions, f.campaign);
+    assert.equal(unset.fear, 0, 'missing Fear reads as 0');
+    assert.equal(unset.spotlight, null, 'no spotlight document reads as null');
+    f.ai.actions.write(f.campaign, 'combat', 'fear', { kind: 'fear', value: 3 });
+    act(f, currentTurn(f), 'set_spotlight', { holder: f.setup.heroId, reason: 'Ash acts first' });
+    const heroHeld = snapshotFor(f.db, f.ai.actions, f.campaign);
+    assert.equal(heroHeld.fear, 3);
+    assert.equal(heroHeld.spotlight, f.setup.heroId, 'a hero holder shows as the hero ID');
+    act(f, currentTurn(f), 'set_spotlight', { holder: 'GM', reason: 'The GM takes the spotlight' });
+    assert.equal(snapshotFor(f.db, f.ai.actions, f.campaign).spotlight, 'GM');
+    await runTurn(f, 'Look around.');
+    const sent = snapshotOf(lastTurnRequest(f).body).data;
+    assert.equal(sent.fear, 3, 'the model request carries Fear');
+    assert.equal(sent.spotlight, 'GM', 'the model request carries the spotlight holder');
+  } finally {
+    await f.close();
+  }
+});
+
+test('get_character returns the hero class, loadout and equipment through the model, and rejects an unknown hero', async () => {
+  const replies: (() => Response)[] = [];
+  const f = await fixture(request => request.tools ? (replies.shift() ?? (() => completion('The tide turns. What do you do?')))() : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const sheet = f.ai.actions.read<Sheet>(f.campaign, 'sheets', f.setup.heroId)!;
+    replies.push(() => completion(null, [call('hero', 'get_character', { heroId: f.setup.heroId })]), () => completion('Ash steadies the blade. What do you do?'));
+    const before = f.requests.length;
+    await runTurn(f, 'Check on Ash.');
+    const hero = JSON.parse(toolContent(f, before, 'hero')) as Record<string, any>;
+    assert.notEqual(hero.truncated, true, 'a quick-start hero is complete');
+    assert.equal(hero.id, sheet.id);
+    assert.equal(hero.name, 'Ash');
+    assert.equal(hero.level, 1);
+    assert.deepEqual(hero.class, { id: 'warrior', name: classes.find(item => item.id === 'warrior')!.name });
+    assert.equal(hero.subclass.id, sheet.subclassId);
+    assert.equal(hero.heritage, ancestries.find(item => item.id === 'human')!.name);
+    assert.deepEqual(hero.community, { id: 'wanderborne', name: communities.find(item => item.id === 'wanderborne')!.name });
+    assert.deepEqual(hero.traits, sheet.traits);
+    assert.deepEqual(hero.hp, { marked: 0, max: hpMax(sheet) });
+    assert.deepEqual(hero.stress, { marked: 0, max: stressMax(sheet) });
+    assert.equal(hero.hope.current, 2);
+    assert.equal(hero.armor.id, sheet.armorId);
+    assert.equal(hero.weapons.primary.id, sheet.weapons.find(item => item.slot === 'primary')?.weaponId);
+    assert.equal(hero.weapons.secondary, null);
+    assert.deepEqual(hero.experiences, sheet.experiences.map((item: any) => ({ name: item.name, modifier: item.modifier })));
+    assert.deepEqual(hero.loadout.map((card: any) => card.id), sheet.loadoutIds);
+    assert.ok(sheet.loadoutIds.length > 0, 'the quick-start hero has a loadout');
+    assert.ok(hero.loadout.every((card: any) => typeof card.name === 'string' && typeof card.type === 'string' && typeof card.domain === 'string'), 'each card names its domain and type');
+    assert.deepEqual(hero.inventory.map((item: any) => [item.name, item.qty]), sheet.inventory.map((item: any) => [item.name, item.qty]));
+    assert.deepEqual(f.ai.actions.read(f.campaign, 'sheets', f.setup.heroId), sheet, 'reading a sheet writes nothing');
+    const recorded = f.db.prepare("SELECT label FROM ai_actions WHERE turn_id = ? AND tool = 'get_character'").get(currentTurn(f)) as { label: string } | undefined;
+    assert.equal(recorded?.label, 'Reviewed a hero sheet', 'the read is recorded in the turn with its label');
+    assert.throws(() => act(f, currentTurn(f), 'get_character', { heroId: 'no-such-hero' }), { message: 'Invalid hero' });
+  } finally {
+    await f.close();
+  }
+});
+
+test('get_adversary returns the catalog stats, full feature text and current marks of an added adversary, and rejects other IDs', async () => {
+  const f = await fixture(request => request.tools ? completion('The tide turns. What do you do?') : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const turn = currentTurn(f);
+    const foe = adversaries.find(entry => entry.type !== 'Minion' && entry.features.some(feature => feature.text.length > 280))!;
+    act(f, turn, 'create_scene', { name: 'Cliff Road' });
+    const added = act(f, turn, 'add_adversary', { catalogId: foe.id, name: 'Harrier 1' });
+    act(f, turn, 'set_condition', { targetId: added.adversaryId, condition: 'vulnerable', active: true, reason: 'Struck from behind' });
+    const read = act(f, turn, 'get_adversary', { adversaryId: added.adversaryId });
+    assert.equal(read.id, foe.id);
+    assert.equal(read.name, foe.name);
+    assert.equal(read.type, foe.type);
+    assert.equal(read.difficulty, foe.difficulty);
+    assert.deepEqual(read.attack, { modifier: foe.attack.modifier, damage: foe.attack.damage });
+    assert.deepEqual(read.thresholds, foe.thresholds ?? null);
+    assert.equal(read.hp, foe.hp);
+    assert.equal(read.stress, foe.stress);
+    assert.deepEqual(read.features, foe.features.map(feature => ({ name: feature.name, kind: feature.kind, text: feature.text })));
+    assert.ok(read.features.some((feature: any) => feature.text.length > 280), 'feature text is returned in full');
+    assert.equal(read.adversaryId, added.adversaryId);
+    assert.equal(read.tableName, 'Harrier 1');
+    assert.equal(read.hpMarked, 0);
+    assert.equal(read.stressMarked, 0);
+    assert.equal(read.defeated, 0);
+    assert.equal(read.groupSize, null);
+    assert.deepEqual(read.conditions, ['vulnerable']);
+    assert.throws(() => act(f, turn, 'get_adversary', { adversaryId: 'adv:no-such-adversary' }), { message: 'Invalid adversary' });
+    const clock = act(f, turn, 'create_countdown', { name: 'Clock', start: 4 });
+    assert.throws(() => act(f, turn, 'get_adversary', { adversaryId: clock.countdownId }), { message: 'Invalid adversary' }, 'a countdown is not an adversary');
+    f.ai.actions.write(f.campaign, 'combat', 'fear', { kind: 'fear', value: 1 });
+    assert.throws(() => act(f, turn, 'get_adversary', { adversaryId: 'fear' }), { message: 'Invalid adversary' }, 'the Fear document is not an adversary');
+  } finally {
+    await f.close();
+  }
+});
+
+test('search_rules returns one ancestry, community or card in full by ID, keeps substring search trimmed, and rejects unknown IDs', async () => {
+  const f = await fixture(request => request.tools ? completion('The tide turns. What do you do?') : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const turn = currentTurn(f);
+    const infernis = ancestries.find(entry => entry.id === 'infernis')!;
+    assert.ok(infernis.description.length > 280, 'the entry has a description longer than the substring cap');
+    assert.deepEqual(act(f, turn, 'search_rules', { category: 'ancestries', id: 'infernis' }), infernis);
+    const community = communities.find(entry => entry.id === 'wanderborne')!;
+    assert.deepEqual(act(f, turn, 'search_rules', { category: 'communities', id: 'wanderborne' }), community);
+    assert.throws(() => act(f, turn, 'search_rules', { category: 'ancestries', id: 'no-such-ancestry' }), { message: 'Invalid rule ID' });
+    assert.throws(() => act(f, turn, 'search_rules', { category: 'communities', id: 'infernis' }), { message: 'Invalid rule ID' }, 'an ID is looked up only in its own category');
+    const listed = act(f, turn, 'search_rules', { category: 'ancestries', query: 'infernis' }) as Record<string, any>[];
+    assert.ok(listed.some(item => item.id === 'infernis'), 'substring search still finds the entry');
+    assert.ok(listed.every(item => String(item.description).length <= 280), 'substring results stay trimmed');
+    assert.ok((act(f, turn, 'search_rules', { category: 'communities' }) as unknown[]).length <= 6, 'query is optional and keeps the six-result cap');
   } finally {
     await f.close();
   }

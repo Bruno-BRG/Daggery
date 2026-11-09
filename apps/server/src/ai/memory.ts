@@ -149,6 +149,9 @@ export function snapshotFor(db: Database.Database, source: DocSource, campaign: 
     };
   });
   const combat = source.docs(campaign, 'combat');
+  const fearValue = combat.find(doc => doc.id === 'fear')?.value.value;
+  const holder = combat.find(doc => doc.id === 'spotlight')?.value.holder;
+  const spotlight = holder === 'GM' ? 'GM' : typeof holder === 'string' && holder.indexOf('sheet:') === 0 ? holder.slice('sheet:'.length) : null;
   const countdowns = combat.filter(doc => doc.value.kind === 'countdown').slice(0, 8).map(doc => ({
     id: doc.id, name: doc.value.name, remaining: doc.value.value, sides: doc.value.sides, visible: doc.value.visible !== false,
   }));
@@ -161,6 +164,8 @@ export function snapshotFor(db: Database.Database, source: DocSource, campaign: 
   return {
     heroes,
     scene: scene ? { id: scene.id, name: scene.name } : null,
+    fear: typeof fearValue === 'number' ? fearValue : 0,
+    spotlight,
     countdowns,
     adversaries: present,
     pendingCards: cards.map(card => {

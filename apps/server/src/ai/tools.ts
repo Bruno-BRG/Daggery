@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
-import { adversaries, armor, classes, consumables, domainCards, environments, items, weapons } from '@daggery/content';
+import { adversaries, ancestries, armor, classes, communities, consumables, domainCards, environments, items, weapons } from '@daggery/content';
 import { hasFeature, maxDiceTotal, rollDice, rollDie, type AiInteraction, type AiState } from '@daggery/shared';
-import { evasion, weaponForSlot } from '@daggery/shared/daggerheart';
+import { armorScore, evasion, getArmor, getClass, getCommunity, getDomainCard, getSubclass, heritageDisplayName, hpMax, MAX_HOPE, sheetAncestries, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { SoloService } from '../solo';
@@ -17,7 +17,9 @@ const schema = (properties: Record<string, unknown>, required: string[] = Object
 const tool = (name: string, description: string, properties: Record<string, unknown>, required?: string[]): ToolDefinition => ({ name, description, parameters: schema(properties, required) });
 export const GM_TOOLS: ToolDefinition[] = [
   tool('get_context', 'Read the table snapshot: heroes, the active scene, countdowns, present adversaries, pending cards, the campaign state, the GM preparations, and the image assets that can serve as scene maps, with their IDs. Use it only when a needed fact is missing.', {}),
-  tool('search_rules', 'Find actual catalog rules, adversaries, environments, items or abilities. Results are trimmed; use the returned source IDs.', { query: s, category: { type: 'string', enum: ['adversaries', 'environments', 'items', 'consumables', 'weapons', 'armor', 'cards', 'classes'] } }),
+  tool('search_rules', 'Find actual catalog rules, adversaries, environments, items, abilities, ancestries or communities. Without id, a substring search returns at most six results trimmed to 280 characters per field. With id (an exact catalog ID from a search result, get_character or get_adversary), returns that one entry in full.', { query: s, id: s, category: { type: 'string', enum: ['adversaries', 'ancestries', 'communities', 'environments', 'items', 'consumables', 'weapons', 'armor', 'cards', 'classes'] } }, ['category']),
+  tool('get_character', 'Read one hero sheet: level, class and subclass, heritage, community, traits, HP/Stress/Hope/armor marks with maxima, evasion, equipped weapons and armor, Experiences, loadout domain cards, inventory, and source IDs. Read-only. Use search_rules with category cards and a card ID for full card text.', { heroId: s }, ['heroId']),
+  tool('get_adversary', 'Read one present adversary: its catalog stats and full feature text, plus its current marks, defeated count, group size, and active conditions. Read-only.', { adversaryId: s }, ['adversaryId']),
   tool('set_memory', 'Rewrite the GM-only secrets and plans as one short text of at most 4000 characters. Players never see it, and the new text replaces the previous one entirely.', { memory: s }),
   tool('update_state', 'Merge changes into the campaign state: location, time of day, objective, threads, NPCs, promises, and facts. List items upsert by id; use removeIds to delete. Caps: 12 threads, 30 NPCs, 10 promises, 20 facts.', {
     location: s,
@@ -55,7 +57,7 @@ export const GM_TOOLS: ToolDefinition[] = [
 ];
 
 const ACTION_LABELS: Record<string, string> = {
-  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', set_memory: 'Updated GM secrets', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
+  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
 };
 
 export interface ActionContext {
@@ -69,6 +71,42 @@ export interface ActionContext {
 
 function compactRule(item: object): Record<string, unknown> {
   return Object.fromEntries(Object.entries(item).slice(0, 10).map(([key, value]) => [key, typeof value === 'string' ? value.slice(0, 280) : value]));
+}
+
+/** A hero's loadout card by ID: name, domain, level and type. Full text comes from search_rules with the ID. */
+function cardView(id: string): Record<string, unknown> {
+  const card = getDomainCard(id);
+  return card ? { id: card.id, name: card.name, domain: card.domain, level: card.level, type: card.type } : { id, name: null };
+}
+
+/** A compact but complete read of one hero sheet, with catalog IDs next to every name. */
+function characterView(sheet: Sheet): Record<string, unknown> {
+  const cls = getClass(sheet.classId), subclass = getSubclass(sheet.classId, sheet.subclassId), community = getCommunity(sheet.communityId), equipped = getArmor(sheet.armorId);
+  const slot = (name: 'primary' | 'secondary') => {
+    const entry = sheet.weapons.find(item => item.slot === name);
+    return entry ? { id: entry.weaponId, name: weaponForSlot(sheet, name)?.name ?? null } : null;
+  };
+  return {
+    id: sheet.id,
+    name: sheet.name,
+    level: sheet.level,
+    proficiency: sheet.proficiency,
+    class: { id: sheet.classId, name: cls?.name ?? null },
+    subclass: sheet.subclassId ? { id: sheet.subclassId, name: subclass?.name ?? null } : null,
+    heritage: heritageDisplayName(sheet),
+    ancestries: sheetAncestries(sheet).map(entry => ({ id: entry.id, name: entry.name })),
+    community: sheet.communityId ? { id: sheet.communityId, name: community?.name ?? null } : null,
+    traits: sheet.traits,
+    hp: { marked: sheet.hpMarked, max: hpMax(sheet) },
+    stress: { marked: sheet.stressMarked, max: stressMax(sheet) },
+    hope: { current: sheet.hope, max: MAX_HOPE },
+    armor: { id: sheet.armorId, name: equipped?.name ?? null, marked: sheet.armorSlotsMarked, max: armorScore(sheet) },
+    evasion: evasion(sheet),
+    weapons: { primary: slot('primary'), secondary: slot('secondary') },
+    experiences: sheet.experiences.map(item => ({ name: item.name, modifier: item.modifier })),
+    loadout: sheet.loadoutIds.map(cardView),
+    inventory: sheet.inventory.map(entry => ({ name: entry.name, qty: entry.qty, kind: entry.kind, catalogId: entry.catalogId ?? null })),
+  };
 }
 
 export class GmActions {
@@ -183,10 +221,30 @@ export class GmActions {
       ctx.assertActive();
       if (name === 'get_context') result = { ...this.snapshot(ctx.campaign, ctx.owner), preparations: this.preparationDocs(ctx.campaign), assets: this.imageAssets(ctx.campaign) };
       else if (name === 'search_rules') {
-        const catalog: Record<string, readonly { id: string }[]> = { adversaries, environments, items, consumables, weapons, armor, cards: domainCards, classes };
-        const category = text(args.category, 30), query = text(args.query, 200).toLowerCase();
+        const catalog: Record<string, readonly { id: string }[]> = { adversaries, ancestries, communities, environments, items, consumables, weapons, armor, cards: domainCards, classes };
+        const category = text(args.category, 30), query = text(args.query, 200, '').toLowerCase(), id = text(args.id, 120, '');
         if (!Object.hasOwn(catalog, category)) throw new Error('Invalid catalog category');
-        result = catalog[category]!.filter(item => JSON.stringify(item).toLowerCase().indexOf(query) >= 0).slice(0, 6).map(item => compactRule(item));
+        if (id) {
+          const entry = catalog[category]!.find(item => item.id === id);
+          if (!entry) throw new Error('Invalid rule ID');
+          result = entry;
+        }
+        else result = catalog[category]!.filter(item => JSON.stringify(item).toLowerCase().indexOf(query) >= 0).slice(0, 6).map(item => compactRule(item));
+      }
+      else if (name === 'get_character') result = characterView(hero(args.heroId));
+      else if (name === 'get_adversary') {
+        const id = text(args.adversaryId, 120), doc = this.read<Record<string, any>>(ctx.campaign, 'combat', id);
+        const source = doc?.kind === 'adversary' ? adversaries.find(item => item.id === doc.catalogId) : undefined;
+        if (!doc || !source) throw new Error('Invalid adversary');
+        result = {
+          id: source.id, name: source.name, type: source.type, difficulty: source.difficulty,
+          attack: { modifier: source.attack.modifier, damage: source.attack.damage },
+          thresholds: source.thresholds ?? null, hp: source.hp, stress: source.stress,
+          features: source.features.map(feature => ({ name: feature.name, kind: feature.kind, text: feature.text })),
+          adversaryId: id, tableName: doc.name,
+          hpMarked: doc.hpMarked, stressMarked: doc.stressMarked, defeated: doc.defeated ?? 0, groupSize: doc.groupSize ?? null,
+          conditions: Object.keys(doc.conditions ?? {}).filter(key => doc.conditions[key] === true),
+        };
       }
       else if (name === 'set_memory') {
         this.db.prepare('UPDATE campaign_ai SET memory = ?, updated = ? WHERE campaign_id = ?').run(this.secretsText(args.memory), new Date().toISOString(), ctx.campaign); result = { saved: true };
