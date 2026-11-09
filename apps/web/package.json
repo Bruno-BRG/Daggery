@@ -13,8 +13,10 @@
   "dependencies": {
     "@daggery/content": "*",
     "@daggery/shared": "*",
+    "@pdf-lib/fontkit": "^1.1.1",
     "@phosphor-icons/react": "^2.1.10",
     "cannon-es": "^0.20.0",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.5.438",
     "pixi.js": "^8.22.0",
     "react": "^19.3.1",

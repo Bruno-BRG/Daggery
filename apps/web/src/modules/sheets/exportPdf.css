@@ -1,0 +1,11 @@
+.sheet-export-dialog { width: min(100% - 24px, 520px); }
+.sheet-export-options { display: grid; gap: 18px; min-width: 0; margin: 24px 0; padding: 0; border: 0; }
+.sheet-export-options > label:first-child { display: grid; gap: 8px; }
+.sheet-export-options select { width: 100%; padding: 10px; border: 1px solid var(--ds-border); border-radius: 6px; background: var(--ds-inset); color: var(--ds-ink); }
+.sheet-export-check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.sheet-export-check input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--color-accent-500); }
+.sheet-export-hint { margin: 20px 0; color: var(--ds-muted); font-size: .85rem; line-height: 1.6; }
+.sheet-export-dialog .sheet-primary { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; max-width: 100%; white-space: normal; }
+@container (max-width: 520px) {
+  .character-folio .folio-toolbar .sheet-toolbar-actions .sheet-export-trigger { display: none; }
+}
