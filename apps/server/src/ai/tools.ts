@@ -1,0 +1,364 @@
+import { randomUUID } from 'node:crypto';
+import type Database from 'better-sqlite3';
+import { adversaries, armor, classes, consumables, domainCards, environments, items, weapons } from '@daggery/content';
+import { hasFeature, maxDiceTotal, rollDice, rollDie, type AiInteraction, type AiState } from '@daggery/shared';
+import { evasion, weaponForSlot } from '@daggery/shared/daggerheart';
+import type { Sheet } from '@daggery/shared/daggerheart/types';
+import type { CampaignService } from '../campaign-service';
+import { SoloService } from '../solo';
+import type { ToolDefinition } from './provider';
+import { AiChats } from './chats';
+import { AiJournal } from './journal';
+import { applyStatePatch, emptyState, normalizeState, SECRETS_LIMIT, snapshotFor } from './memory';
+import { integer, number, record, text } from './validation';
+
+const s = { type: 'string' }, n = { type: 'number' };
+const schema = (properties: Record<string, unknown>, required: string[] = Object.keys(properties)) => ({ type: 'object', properties, required, additionalProperties: false });
+const tool = (name: string, description: string, properties: Record<string, unknown>, required?: string[]): ToolDefinition => ({ name, description, parameters: schema(properties, required) });
+export const GM_TOOLS: ToolDefinition[] = [
+  tool('get_context', 'Read the table snapshot: heroes, the active scene, countdowns, present adversaries, pending cards, the campaign state, the GM preparations, and the image assets that can serve as scene maps, with their IDs. Use it only when a needed fact is missing.', {}),
+  tool('search_rules', 'Find actual catalog rules, adversaries, environments, items or abilities. Results are trimmed; use the returned source IDs.', { query: s, category: { type: 'string', enum: ['adversaries', 'environments', 'items', 'consumables', 'weapons', 'armor', 'cards', 'classes'] } }),
+  tool('set_memory', 'Rewrite the GM-only secrets and plans as one short text of at most 4000 characters. Players never see it, and the new text replaces the previous one entirely.', { memory: s }),
+  tool('update_state', 'Merge changes into the campaign state: location, time of day, objective, threads, NPCs, promises, and facts. List items upsert by id; use removeIds to delete. Caps: 12 threads, 30 NPCs, 10 promises, 20 facts.', {
+    location: s,
+    timeOfDay: s,
+    objective: s,
+    threads: { type: 'array', items: { type: 'object', properties: { id: s, title: s, status: { type: 'string', enum: ['open', 'stalled', 'resolved'] }, note: s }, required: ['title'] } },
+    npcs: { type: 'array', items: { type: 'object', properties: { id: s, name: s, role: s, attitude: s, lastSeen: s }, required: ['name'] } },
+    promises: { type: 'array', items: { type: 'object', properties: { id: s, text: s }, required: ['text'] } },
+    facts: { type: 'array', items: s },
+    removeIds: { type: 'array', items: s },
+  }, []),
+  tool('journal_add', 'Write an adventure note: a discovery, decision, promise, or changed relationship. Dice, damage, and scene changes are already recorded automatically. Shared notes are visible to players; others are for the GM only. At most three per turn.', { title: s, body: s, shared: { type: 'boolean' } }, ['title', 'body']),
+  tool('search_journal', 'Search the adventure journal by keyword. Returns at most six entries with trimmed text. Use it before inventing a detail that may already exist.', { query: s, limit: n }, ['query']),
+  tool('write_prep', 'Create/update GM preparations. Setting field keys: premise, tone, locations, factions, secrets, agreements. Scenario field keys: hook, stakes, scenes, cast, rewards, aftermath. Values are prose. An existing scenario ID preserves that scenario.', { kind: { type: 'string', enum: ['setting', 'scenario'] }, title: s, fields: { type: 'object', additionalProperties: s }, id: s }, ['kind', 'title', 'fields']),
+  tool('write_note', 'Create a campaign note for the Notes page, shared or GM-only. Never overwrite another author’s private note. For adventure records, use journal_add.', { title: s, body: s, shared: { type: 'boolean' } }),
+  tool('create_scene', 'Create a table scene and make it active. For its map, use the ID of an image asset listed by get_context, or leave assetId blank for a grid.', { name: s, cols: n, rows: n, assetId: s }, ['name']),
+  tool('activate_scene', 'Switch to an existing map scene.', { sceneId: s }),
+  tool('place_token', 'Place a hero, NPC, prop or marker on the active scene. Coordinates are grid cells. Hero reference is optional.', { name: s, x: n, y: n, heroId: s }, ['name', 'x', 'y']),
+  tool('move_token', 'Move an existing miniature within its scene using grid-cell coordinates.', { tokenId: s, x: n, y: n }),
+  tool('set_condition', 'Set or clear Vulnerable, Restrained or Hidden on a present adversary or miniature. Explain the fictional trigger; this does not grant damage or extra attacks.', { targetId: s, condition: { type: 'string', enum: ['vulnerable', 'restrained', 'hidden'] }, active: { type: 'boolean' }, reason: s }),
+  tool('set_spotlight', 'Pass the spotlight to GM or a hero ID. An extra GM spotlight still requires spending Fear separately when the rules require it.', { holder: s, reason: s }),
+  tool('draw_on_scene', 'Add a line, rectangle, ellipse or text annotation to the active map. Coordinates and sizes are grid cells.', { kind: { type: 'string', enum: ['line', 'rect', 'ellipse', 'text'] }, x: n, y: n, width: n, height: n, text: s }, ['kind', 'x', 'y', 'width', 'height']),
+  tool('fog_area', 'Add a rectangular fog hide/reveal area on the active scene, using grid cells.', { x: n, y: n, width: n, height: n, reveal: { type: 'boolean' } }),
+  tool('add_adversary', 'Add an adversary from the actual catalog to the encounter and active map. Difficulty/damage/HP come from the source.', { catalogId: s, name: s, x: n, y: n }, ['catalogId']),
+  tool('request_roll', 'Ask the player to roll a trait against a declared Difficulty. For a basic weapon attack provide enemyId; the engine chooses the equipped weapon trait, Difficulty and damage. Never roll the player’s choice for them.', { heroId: s, trait: { type: 'string', enum: ['agility', 'strength', 'finesse', 'instinct', 'presence', 'knowledge'] }, difficulty: n, reason: s, enemyId: s }, ['heroId', 'trait', 'difficulty', 'reason']),
+  tool('adversary_attack', 'Resolve a present adversary’s standard d20 attack against a hero. Damage becomes a player-confirmed card with an Armor option. Requires a fictional opening; no extra spotlight is granted.', { adversaryId: s, heroId: s, reason: s }),
+  tool('spend_fear', 'Pay a legal GM feature/extra-move cost from existing Fear, with an explanation. Does not grant any additional free actions.', { amount: n, reason: s }),
+  tool('create_countdown', 'Create a named countdown with an explicit completion event. Countdown does not advance automatically.', { name: s, start: n }),
+  tool('advance_countdown', 'Advance a relevant countdown by 1–3 once for its cause. Do not charge the same consequence twice.', { countdownId: s, amount: n, reason: s }),
+  tool('roll_loot', 'Roll the Core Set item/consumable table with a rarity-appropriate d12 pool and record the reward.', { table: { type: 'string', enum: ['items', 'consumables'] }, rarity: { type: 'string', enum: ['Common', 'Uncommon', 'Rare', 'Legendary'] }, note: s }, ['table', 'rarity']),
+  tool('give_item', 'Give a known catalog item or consumable to a hero. Use this after agreeing the reward; it changes inventory.', { heroId: s, catalogId: s, quantity: n }),
+  tool('solo_oracle', 'Consult the solo oracle or thematic scene engine without changing Hope/Fear. Available only in Solo rulesets.', { kind: { type: 'string', enum: ['oracle', 'scene', 'prompt', 'response'] }, question: s, likelihood: { type: 'string', enum: ['very-likely', 'likely', 'even', 'unlikely', 'very-unlikely'] } }, ['kind', 'question']),
+  tool('offer_choices', 'Offer 2–4 possible next actions without choosing for the player. The player can always type something else.', { prompt: s, choices: { type: 'array', items: s, minItems: 2, maxItems: 4 } }),
+  tool('withdraw_request', 'Withdraw an obsolete roll or choice card when the player changes their intention. Cannot withdraw already incurred damage. Never use this to reroll a resolved action.', { messageId: s, reason: s }),
+];
+
+const ACTION_LABELS: Record<string, string> = {
+  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', set_memory: 'Updated GM secrets', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
+};
+
+export interface ActionContext {
+  campaign: string; owner: string; turn: string; callId: string;
+  /** Session that receives messages and journal entries. Defaults to the open session. */
+  chat?: string;
+  assertActive: () => void;
+  publish: (campaign: string, ns: string, id: string, value: unknown) => void;
+  publishRoll: (campaign: string, kind: string, result: unknown) => void;
+}
+
+function compactRule(item: object): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(item).slice(0, 10).map(([key, value]) => [key, typeof value === 'string' ? value.slice(0, 280) : value]));
+}
+
+export class GmActions {
+  readonly journal: AiJournal;
+  readonly chats: AiChats;
+  constructor(private db: Database.Database, private campaigns: CampaignService) {
+    this.journal = new AiJournal(db);
+    this.chats = new AiChats(db);
+  }
+  read<T = Record<string, any>>(campaign: string, ns: string, id: string): T | undefined {
+    const row = this.db.prepare('SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = ? AND id = ?').get(campaign, ns, id) as { value: string } | undefined;
+    return row ? JSON.parse(row.value) as T : undefined;
+  }
+  docs(campaign: string, ns: string): { id: string; value: Record<string, any> }[] {
+    return (this.db.prepare('SELECT id, value FROM campaign_docs WHERE campaign_id = ? AND ns = ? ORDER BY updated DESC').all(campaign, ns) as { id: string; value: string }[]).map(row => ({ id: row.id, value: JSON.parse(row.value) as Record<string, any> }));
+  }
+  write(campaign: string, ns: string, id: string, value: unknown): void {
+    this.db.prepare('INSERT INTO campaign_docs(campaign_id,ns,id,value,updated) VALUES (?,?,?,?,?) ON CONFLICT(campaign_id,ns,id) DO UPDATE SET value=excluded.value,updated=excluded.updated').run(campaign, ns, id, JSON.stringify(value), new Date().toISOString());
+  }
+  message(campaign: string, chat: string | null, turn: string | null, role: string, body: string, interaction?: AiInteraction): string {
+    const id = randomUUID(), at = new Date().toISOString();
+    this.db.prepare('INSERT INTO ai_messages(id,campaign_id,turn_id,chat_id,role,text,interaction,created) VALUES (?,?,?,?,?,?,?,?)').run(id, campaign, turn, chat, role, body, interaction ? JSON.stringify(interaction) : null, at);
+    if (chat) this.chats.touch(chat, at);
+    return id;
+  }
+  readState(campaign: string): AiState {
+    const row = this.db.prepare('SELECT state FROM campaign_ai WHERE campaign_id = ?').get(campaign) as { state: string } | undefined;
+    if (!row) return emptyState();
+    try { return normalizeState(JSON.parse(row.state)); } catch { return emptyState(); }
+  }
+  writeState(campaign: string, state: AiState): void {
+    this.db.prepare('UPDATE campaign_ai SET state = ?, updated = ? WHERE campaign_id = ?').run(JSON.stringify(state), new Date().toISOString(), campaign);
+  }
+  snapshot(campaign: string, owner: string): Record<string, unknown> {
+    const solo = hasFeature(this.campaigns.configuration(campaign), 'daggerheart.solo') ? new SoloService(this.db, this.campaigns).snapshot(owner, campaign) : null;
+    return Object.assign(snapshotFor(this.db, this, campaign), { state: this.readState(campaign), solo: solo ? solo.state : null });
+  }
+  isHiddenCombat(campaign: string, combatId: string): boolean { return this.hiddenToken(campaign, combatId); }
+  /** GM secrets must be text of at most SECRETS_LIMIT characters. Longer text is refused, never cut. */
+  secretsText(value: unknown): string {
+    if (typeof value !== 'string') throw new Error('Invalid memory: send the secrets as text.');
+    const memory = value.trim();
+    if (memory.length > SECRETS_LIMIT) throw new Error('Invalid memory: at most 4000 characters. Rewrite a shorter version.');
+    return memory;
+  }
+  preparationDocs(campaign: string): { kind: string; id: string; title: string; fields: Record<string, unknown> }[] {
+    const docs = this.docs(campaign, 'gm').filter(doc => doc.value.kind === 'setting' || doc.value.kind === 'scenario');
+    const ordered = [...docs.filter(doc => doc.value.kind === 'setting'), ...docs.filter(doc => doc.value.kind === 'scenario').slice(0, 3)];
+    return ordered.map(doc => ({ kind: String(doc.value.kind), id: doc.id, title: String(doc.value.title ?? ''), fields: (doc.value.fields ?? {}) as Record<string, unknown> }));
+  }
+  imageAssets(campaign: string): { id: string; name: string; mediaType: string }[] {
+    return this.db.prepare("SELECT id, name, media_type AS mediaType FROM campaign_assets WHERE campaign_id = ? AND media_type LIKE 'image/%' ORDER BY created_at DESC LIMIT 12").all(campaign) as { id: string; name: string; mediaType: string }[];
+  }
+  private hiddenToken(campaign: string, combatId: string): boolean {
+    if (!combatId) return false;
+    return this.docs(campaign, 'map').some(doc => doc.id.indexOf('token:') === 0 && doc.value.combatRefId === combatId && doc.value.hidden === true);
+  }
+  private recordEvent(name: string, args: Record<string, unknown>, result: unknown, campaign: string, chat: string, turn: string): void {
+    const data = (result && typeof result === 'object' ? result : {}) as Record<string, any>;
+    const note = (title: string, body: string, visibility: 'shared' | 'gm' = 'shared') => this.journal.event(campaign, chat, turn, title, body, visibility);
+    if (name === 'create_scene') note('Scene · ' + String(data.name), 'The active scene changed.', 'shared');
+    else if (name === 'activate_scene') {
+      const scene = this.read<Record<string, any>>(campaign, 'map', 'scene:' + text(args.sceneId, 120));
+      note('Scene · ' + String(scene ? scene.name : 'changed'), '');
+    }
+    else if (name === 'add_adversary') note('Encounter · ' + String(data.name) + ' joins the scene', '', this.hiddenToken(campaign, String(data.adversaryId ?? '')) ? 'gm' : 'shared');
+    else if (name === 'adversary_attack') {
+      const enemyId = text(args.adversaryId, 120);
+      const enemy = this.read<Record<string, any>>(campaign, 'combat', enemyId);
+      const hero = this.read<Record<string, any>>(campaign, 'sheets', text(args.heroId, 120));
+      const target = hero ? String(hero.name) : 'the hero';
+      const outcome = data.hit === true ? 'hits ' + target + ' for ' + String(data.damage) : 'misses ' + target;
+      note('Attack · ' + String(enemy ? enemy.name : 'Adversary') + ' ' + outcome, 'Attack roll ' + String(data.attack) + '.', this.hiddenToken(campaign, enemyId) ? 'gm' : 'shared');
+    }
+    else if (name === 'spend_fear') note('Fear · GM spent ' + String(data.spent) + ' Fear (' + String(data.remaining) + ' left)', text(args.reason, 800, ''), 'shared');
+    else if (name === 'create_countdown') note('Countdown · ' + text(args.name, 200) + ' started at ' + String(data.remaining), '', 'shared');
+    else if (name === 'advance_countdown') {
+      const countdown = this.read<Record<string, any>>(campaign, 'combat', text(args.countdownId, 120));
+      const label = countdown ? String(countdown.name) : 'Countdown';
+      note('Countdown · ' + label + ' is at ' + String(data.remaining) + (data.complete === true ? ' (complete)' : ''), text(args.reason, 800, ''), countdown && countdown.visible === false ? 'gm' : 'shared');
+    }
+    else if (name === 'roll_loot') note('Reward · ' + String(data.name) + ' (' + text(args.rarity, 20) + ' ' + text(args.table, 20) + ' roll)', String(data.description ?? ''), 'shared');
+    else if (name === 'give_item') note('Reward · ' + String(data.hero) + ' received ' + String(data.quantity) + 'x ' + String(data.given), '', 'shared');
+    else if (name === 'set_condition') {
+      const target = text(args.targetId, 120);
+      const isToken = target.indexOf('token:') === 0;
+      const doc = this.read<Record<string, any>>(campaign, isToken ? 'map' : 'combat', target);
+      const hidden = isToken ? doc !== undefined && doc.hidden === true : this.hiddenToken(campaign, target);
+      note('Condition · ' + text(args.condition, 30) + ' ' + (args.active === true ? 'applied to' : 'cleared from') + ' ' + String(doc ? doc.name : 'a target'), text(args.reason, 800, ''), hidden ? 'gm' : 'shared');
+    }
+  }
+  execute(name: string, raw: unknown, ctx: ActionContext): unknown {
+    ctx.assertActive(); this.campaigns.requireGm(ctx.owner, ctx.campaign);
+    const previous = this.db.prepare('SELECT result FROM ai_actions WHERE turn_id = ? AND call_id = ?').get(ctx.turn, ctx.callId) as { result: string } | undefined;
+    if (previous) return JSON.parse(previous.result) as unknown;
+    if (!GM_TOOLS.some(tool => tool.name === name)) throw new Error('Invalid GM tool');
+    const args = record(raw), changed: { ns: string; id: string; value: unknown }[] = [];
+    const rolls: { kind: string; result: unknown }[] = [];
+    const chat = ctx.chat ? ctx.chat : this.chats.resolveActive(ctx.campaign, null);
+    const put = (ns: string, id: string, value: unknown) => { this.write(ctx.campaign, ns, id, value); changed.push({ ns, id, value }); };
+    const hero = (id: unknown) => {
+      const value = this.read<Sheet>(ctx.campaign, 'sheets', text(id, 120));
+      if (!value) throw new Error('Invalid hero'); return value;
+    };
+    const activeScene = () => {
+      const active = this.read(ctx.campaign, 'map', 'active');
+      const scene = active && this.read(ctx.campaign, 'map', 'scene:' + active.sceneId);
+      if (!scene) throw new Error('Invalid scene: create or activate a scene first'); return scene;
+    };
+    let result: unknown;
+    this.db.transaction(() => {
+      ctx.assertActive();
+      if (name === 'get_context') result = { ...this.snapshot(ctx.campaign, ctx.owner), preparations: this.preparationDocs(ctx.campaign), assets: this.imageAssets(ctx.campaign) };
+      else if (name === 'search_rules') {
+        const catalog: Record<string, readonly { id: string }[]> = { adversaries, environments, items, consumables, weapons, armor, cards: domainCards, classes };
+        const category = text(args.category, 30), query = text(args.query, 200).toLowerCase();
+        if (!Object.hasOwn(catalog, category)) throw new Error('Invalid catalog category');
+        result = catalog[category]!.filter(item => JSON.stringify(item).toLowerCase().indexOf(query) >= 0).slice(0, 6).map(item => compactRule(item));
+      }
+      else if (name === 'set_memory') {
+        this.db.prepare('UPDATE campaign_ai SET memory = ?, updated = ? WHERE campaign_id = ?').run(this.secretsText(args.memory), new Date().toISOString(), ctx.campaign); result = { saved: true };
+      }
+      else if (name === 'update_state') {
+        const next = applyStatePatch(this.readState(ctx.campaign), args);
+        this.writeState(ctx.campaign, next);
+        result = { saved: true, threads: next.threads.length, npcs: next.npcs.length, promises: next.promises.length, facts: next.facts.length };
+      }
+      else if (name === 'journal_add') {
+        const written = this.db.prepare("SELECT COUNT(*) AS n FROM ai_journal WHERE turn_id = ? AND kind = 'note' AND author = 'gm'").get(ctx.turn) as { n: number };
+        if (written.n >= 3) throw new Error('Invalid journal entry: at most three notes per turn');
+        const title = text(args.title, 160), body = text(args.body, 1200);
+        if (!title || !body) throw new Error('Invalid journal entry: a title and body are required');
+        const shared = args.shared === true;
+        const id = this.journal.insert(ctx.campaign, { chat, turn: ctx.turn, kind: 'note', title, body, visibility: shared ? 'shared' : 'gm', author: 'gm' });
+        result = { id, shared };
+      }
+      else if (name === 'search_journal') {
+        result = this.journal.search(ctx.campaign, true, text(args.query, 200, ''), integer(args.limit, 1, 6, 4));
+      }
+      else if (name === 'write_prep') {
+        const kind = text(args.kind, 20); if (!['setting', 'scenario'].includes(kind)) throw new Error('Invalid preparation kind');
+        const fields = record(args.fields); if (Object.keys(fields).length > 12) throw new Error('Invalid fields');
+        const id = kind === 'setting' ? 'setting' : text(args.id, 120, 'scenario:' + randomUUID());
+        const existing = this.read(ctx.campaign, 'gm', id);
+        if (existing && existing.kind !== kind) throw new Error('Invalid preparation ID: belongs to another document kind');
+        const value = { kind, title: text(args.title, 200), fields: Object.fromEntries(Object.entries(fields).map(([key, value]) => [text(key, 60), text(value, 6000)])), environmentId: '', status: 'planned', updated: new Date().toISOString() };
+        put('gm', id, value); result = { id, saved: true };
+      }
+      else if (name === 'write_note') {
+        result = { id: this.campaigns.saveNote(ctx.owner, ctx.campaign, null, text(args.title, 200), text(args.body, 10000), args.shared === true ? 'shared' : 'private') };
+      }
+      else if (name === 'create_scene') {
+        const id = randomUUID(); const value: Record<string, unknown> = { id, name: text(args.name, 100), order: this.docs(ctx.campaign, 'map').filter(doc => doc.id.indexOf('scene:') === 0).length, cols: integer(args.cols, 6, 100, 30), rows: integer(args.rows, 6, 100, 20), cell: 100, offsetX: 0, offsetY: 0, showGrid: true, boardStyle: 'midnight', ranges: [1, 3, 6, 12, 13] };
+        if (args.assetId) {
+          const asset = this.db.prepare("SELECT id FROM campaign_assets WHERE campaign_id = ? AND id = ? AND media_type LIKE 'image/%'").get(ctx.campaign, text(args.assetId, 120));
+          if (!asset) throw new Error('Invalid map asset'); value.mapUrl = '/api/campaigns/' + ctx.campaign + '/assets/' + text(args.assetId, 120);
+        }
+        put('map', 'scene:' + id, value); put('map', 'active', { sceneId: id }); result = { sceneId: id, name: value.name };
+      }
+      else if (name === 'activate_scene') {
+        const id = text(args.sceneId, 120); if (!this.read(ctx.campaign, 'map', 'scene:' + id)) throw new Error('Invalid scene');
+        put('map', 'active', { sceneId: id }); result = { sceneId: id };
+      }
+      else if (name === 'place_token' || name === 'add_adversary') {
+        const scene = activeScene(), id = randomUUID();
+        let refId: string | undefined, combatId: string | undefined;
+        let label = text(args.name, 100, name === 'add_adversary' ? 'Adversary' : 'Miniature');
+        if (name === 'add_adversary') {
+          const source = adversaries.find(item => item.id === args.catalogId); if (!source) throw new Error('Invalid adversary source');
+          label = text(args.name, 100, source.name); combatId = 'adv:' + randomUUID();
+          put('combat', combatId, { kind: 'adversary', sceneId: scene.id, catalogId: source.id, name: label, addedAt: Date.now(), hpMarked: 0, stressMarked: 0, groupSize: source.type === 'Minion' ? 1 : null, defeated: 0, conditions: { vulnerable: false, restrained: false, hidden: false }, counters: [] });
+        } else if (args.heroId) refId = hero(args.heroId).id;
+        const x = number(args.x, 0, scene.cols - 1, 3), y = number(args.y, 0, scene.rows - 1, 3);
+        put('map', 'token:' + id, { id, name: label, sceneId: scene.id, kind: combatId ? 'adversary' : refId ? 'character' : 'npc', ...(refId ? { refId } : {}), ...(combatId ? { combatRefId: combatId } : {}), x: x * scene.cell, y: y * scene.cell, size: 1, hidden: false, color: combatId ? '#b1344a' : '#e5b04b', conditions: [], rotation: 0 });
+        result = { tokenId: 'token:' + id, adversaryId: combatId, name: label };
+      }
+      else if (name === 'move_token') {
+        const id = text(args.tokenId, 120), token = this.read(ctx.campaign, 'map', id); if (!token || id.indexOf('token:') !== 0) throw new Error('Invalid token');
+        const scene = this.read(ctx.campaign, 'map', 'scene:' + token.sceneId); if (!scene) throw new Error('Invalid scene');
+        put('map', id, { ...token, x: number(args.x, 0, scene.cols - 1) * scene.cell, y: number(args.y, 0, scene.rows - 1) * scene.cell }); result = { moved: id };
+      }
+      else if (name === 'fog_area') {
+        const scene = activeScene(), id = randomUUID(), x = number(args.x, 0, scene.cols) * scene.cell, y = number(args.y, 0, scene.rows) * scene.cell;
+        const width = number(args.width, .1, scene.cols) * scene.cell, height = number(args.height, .1, scene.rows) * scene.cell;
+        put('map', 'fog:' + id, { id, sceneId: scene.id, mode: args.reveal === true ? 'reveal' : 'hide', points: [x, y, x + width, y, x + width, y + height, x, y + height], order: Date.now() }); result = { fogId: id };
+      }
+      else if (name === 'draw_on_scene') {
+        const scene = activeScene(), id = randomUUID(), kind = text(args.kind, 20);
+        if (!['line', 'rect', 'ellipse', 'text'].includes(kind)) throw new Error('Invalid drawing kind');
+        const x = number(args.x, 0, scene.cols) * scene.cell, y = number(args.y, 0, scene.rows) * scene.cell;
+        const width = number(args.width, 0, scene.cols) * scene.cell, height = number(args.height, 0, scene.rows) * scene.cell;
+        put('map', 'drawing:' + id, { id, sceneId: scene.id, kind, points: [x, y, x + width, y + height], width: 3, color: '#e5b04b', ...(kind === 'text' ? { text: text(args.text, 500), fontSize: 24 } : {}) }); result = { drawingId: id };
+      }
+      else if (name === 'set_condition') {
+        const id = text(args.targetId, 120), condition = text(args.condition, 30);
+        if (!['vulnerable', 'restrained', 'hidden'].includes(condition) || typeof args.active !== 'boolean') throw new Error('Invalid condition');
+        const ns = id.indexOf('token:') === 0 ? 'map' : 'combat', target = this.read(ctx.campaign, ns, id);
+        if (!target || ns === 'combat' && target.kind !== 'adversary') throw new Error('Invalid condition target');
+        if (ns === 'combat') put(ns, id, { ...target, conditions: { ...target.conditions, [condition]: args.active } });
+        else {
+          const label = condition.charAt(0).toUpperCase() + condition.slice(1), conditions = (target.conditions as string[]).filter(item => item.toLowerCase() !== condition);
+          if (args.active) conditions.push(label); put(ns, id, { ...target, conditions });
+          if (target.combatRefId) {
+            const linked = this.read(ctx.campaign, 'combat', target.combatRefId);
+            if (linked?.kind === 'adversary') put('combat', target.combatRefId, { ...linked, conditions: { ...linked.conditions, [condition]: args.active } });
+          }
+        }
+        result = { targetId: id, condition, active: args.active, reason: text(args.reason, 800) };
+      }
+      else if (name === 'set_spotlight') {
+        const holder = text(args.holder, 120), key = holder === 'GM' ? 'GM' : 'sheet:' + hero(holder).id;
+        const current = this.read(ctx.campaign, 'combat', 'spotlight') ?? { kind: 'spotlight', tokensOn: false, tokenMax: 3, tokens: {} };
+        put('combat', 'spotlight', { ...current, holder: key }); result = { holder: key, reason: text(args.reason, 800) };
+      }
+      else if (name === 'request_roll') {
+        const sheet = hero(args.heroId); let trait = text(args.trait, 20);
+        if (!['agility', 'strength', 'finesse', 'instinct', 'presence', 'knowledge'].includes(trait)) throw new Error('Invalid trait');
+        const pending = this.db.prepare("SELECT id FROM ai_messages WHERE campaign_id = ? AND json_extract(interaction,'$.kind') = 'roll' AND json_extract(interaction,'$.resolved') = 0 LIMIT 1").get(ctx.campaign);
+        if (pending) throw new Error('Invalid action: wait for the pending player roll');
+        let difficulty = integer(args.difficulty, 1, 40); const enemyId = text(args.enemyId, 120, '');
+        if (enemyId) {
+          const enemy = this.read(ctx.campaign, 'combat', enemyId); const source = adversaries.find(item => item.id === enemy?.catalogId);
+          if (!source) throw new Error('Invalid attack target');
+          difficulty = source.difficulty;
+          const weapon = weaponForSlot(sheet, 'primary'); if (!weapon) throw new Error('Invalid attack: equip a primary weapon');
+          trait = weapon.trait.toLowerCase();
+        }
+        const id = this.message(ctx.campaign, chat, ctx.turn, 'gm', text(args.reason, 1500), { kind: 'roll', resolved: false, heroId: sheet.id, trait, difficulty, ...(enemyId ? { enemyId } : {}) });
+        result = { requestId: id, hero: sheet.name, difficulty, waitingForPlayer: true };
+      }
+      else if (name === 'adversary_attack') {
+        const enemy = this.read(ctx.campaign, 'combat', text(args.adversaryId, 120)), source = adversaries.find(item => item.id === enemy?.catalogId), sheet = hero(args.heroId);
+        if (!enemy || !source || enemy.hpMarked >= source.hp || source.type === 'Minion' && enemy.defeated >= (enemy.groupSize ?? 1)) throw new Error('Invalid or defeated adversary');
+        const modifier = integer(Number(source.attack.modifier), -30, 30);
+        const attack = rollDice('1d20' + (modifier < 0 ? '' : '+') + String(modifier)); rolls.push({ kind: 'dice', result: attack });
+        const hit = attack.rolls[0] === 20 || attack.total >= evasion(sheet);
+        let damage = 0;
+        if (hit) { const rolled = rollDice(source.attack.damage); damage = rolled.total; if (attack.rolls[0] === 20) damage += maxDiceTotal(source.attack.damage); rolls.push({ kind: 'dice', result: rolled }); }
+        this.message(ctx.campaign, chat, ctx.turn, 'roll', enemy.name + ': attack ' + attack.total + ' vs ' + sheet.name + '’s Evasion ' + evasion(sheet) + ' — ' + (hit ? damage + ' damage' : 'miss') + '. ' + text(args.reason, 800), hit ? { kind: 'damage', resolved: false, heroId: sheet.id, damage, direct: false } : undefined);
+        result = { hit, attack: attack.total, damage, playerConfirmsDamage: hit };
+      }
+      else if (name === 'spend_fear') {
+        const amount = integer(args.amount, 1, 12), fear = this.read(ctx.campaign, 'combat', 'fear') ?? { kind: 'fear', value: 0 };
+        if (fear.value < amount) throw new Error('Invalid action: not enough Fear');
+        put('combat', 'fear', { kind: 'fear', value: fear.value - amount }); result = { spent: amount, remaining: fear.value - amount, reason: text(args.reason, 800) };
+      }
+      else if (name === 'create_countdown') {
+        const id = 'cd:' + randomUUID(), start = integer(args.start, 1, 20), sides = [4, 6, 8, 10, 12, 20].find(size => size >= start)!;
+        put('combat', id, { kind: 'countdown', name: text(args.name, 200), start, sides, value: start, visible: true, addedAt: Date.now() }); result = { countdownId: id, remaining: start };
+      }
+      else if (name === 'advance_countdown') {
+        const id = text(args.countdownId, 120), countdown = this.read(ctx.campaign, 'combat', id); if (countdown?.kind !== 'countdown') throw new Error('Invalid countdown');
+        const remaining = Math.max(0, countdown.value - integer(args.amount, 1, 3)); put('combat', id, { ...countdown, value: remaining }); result = { countdownId: id, remaining, complete: remaining === 0, reason: text(args.reason, 800) };
+      }
+      else if (name === 'roll_loot') {
+        const rarity = text(args.rarity, 20), count = ({ Common: 1, Uncommon: 2, Rare: 3, Legendary: 4 } as Record<string, number>)[rarity];
+        if (!count || !['items', 'consumables'].includes(String(args.table))) throw new Error('Invalid loot table or rarity');
+        const dice = Array.from({ length: count }, () => rollDie(12)), total = dice.reduce((a, b) => a + b, 0);
+        const item = args.table === 'items' ? items[total - 1] : consumables.find(entry => entry.rollTable?.roll === total); if (!item) throw new Error('Invalid loot result');
+        const value = { kind: 'loot', table: args.table, dice, total, itemId: item.id, name: item.name, description: item.description, note: text(args.note, 500, ''), updated: new Date().toISOString() };
+        put('gm', 'loot:' + randomUUID(), value); result = value;
+      }
+      else if (name === 'give_item') {
+        const sheet = hero(args.heroId), item = [...items, ...consumables].find(entry => entry.id === args.catalogId); if (!item) throw new Error('Invalid item');
+        const qty = integer(args.quantity, 1, 5), kind = consumables.some(value => value.id === item.id) ? 'consumable' : 'item';
+        const inventory = [...sheet.inventory]; const existing = inventory.find(entry => entry.catalogId === item.id && entry.kind === kind);
+        if (existing) existing.qty += qty; else inventory.push({ id: randomUUID(), name: item.name, description: item.description, catalogId: item.id, qty, kind });
+        put('sheets', sheet.id, { ...sheet, inventory, updatedAt: new Date().toISOString() }); result = { given: item.name, quantity: qty, hero: sheet.name };
+      }
+      else if (name === 'solo_oracle') {
+        result = new SoloService(this.db, this.campaigns).roll(ctx.owner, ctx.campaign, { requestId: randomUUID(), kind: text(args.kind, 30), question: text(args.question, 2000), likelihood: text(args.likelihood, 30, 'even') });
+      }
+      else if (name === 'offer_choices') {
+        if (!Array.isArray(args.choices) || args.choices.length < 2 || args.choices.length > 4) throw new Error('Invalid choices');
+        const choices = args.choices.map(choice => text(choice, 300));
+        result = { requestId: this.message(ctx.campaign, chat, ctx.turn, 'gm', text(args.prompt, 1000), { kind: 'choices', resolved: false, choices }), waitingForPlayer: true };
+      }
+      else if (name === 'withdraw_request') {
+        const id = text(args.messageId, 120), row = this.db.prepare('SELECT interaction FROM ai_messages WHERE campaign_id = ? AND id = ?').get(ctx.campaign, id) as { interaction: string | null } | undefined;
+        const interaction = row?.interaction ? JSON.parse(row.interaction) as AiInteraction : null;
+        if (!interaction || interaction.resolved || interaction.kind === 'damage') throw new Error('Invalid request to withdraw');
+        this.db.prepare('UPDATE ai_messages SET interaction = ? WHERE id = ?').run(JSON.stringify({ ...interaction, resolved: true }), id);
+        this.message(ctx.campaign, chat, ctx.turn, 'notice', 'Request withdrawn: ' + text(args.reason, 800)); result = { withdrawn: id };
+      }
+      this.recordEvent(name, args, result, ctx.campaign, chat, ctx.turn);
+      const encoded = JSON.stringify(result ?? { done: true });
+      this.db.prepare('INSERT INTO ai_actions(id,campaign_id,turn_id,call_id,tool,label,result,created) VALUES (?,?,?,?,?,?,?,?)').run(randomUUID(), ctx.campaign, ctx.turn, ctx.callId, name, ACTION_LABELS[name] ?? name, encoded, new Date().toISOString());
+    })();
+    for (const doc of changed) ctx.publish(ctx.campaign, doc.ns, doc.id, doc.value);
+    for (const roll of rolls) ctx.publishRoll(ctx.campaign, roll.kind, roll.result);
+    return result ?? { done: true };
+  }
+}

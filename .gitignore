@@ -1,0 +1,7 @@
+
+sources/
+*.tmp.ts
+node_modules/
+data/
+dist/
+.claude/

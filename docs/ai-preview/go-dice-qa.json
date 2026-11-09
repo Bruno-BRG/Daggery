@@ -1,0 +1,98 @@
+{
+  "metrics": [
+    {
+      "phase": "before roll",
+      "canvases": [
+        {
+          "dice": "true",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 1000,
+            "top": 0,
+            "right": 1440,
+            "bottom": 1000,
+            "left": 0
+          },
+          "state": "idle",
+          "started": "0"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "phase": "after roll",
+      "canvas": [
+        {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 1440,
+            "height": 1000,
+            "top": 0,
+            "right": 1440,
+            "bottom": 1000,
+            "left": 0
+          },
+          "state": "rolling",
+          "started": "1",
+          "completed": "0",
+          "position": "fixed",
+          "zIndex": "50"
+        }
+      ]
+    },
+    {
+      "phase": "manual",
+      "viewport": 1440,
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 1000,
+        "top": 0,
+        "right": 1440,
+        "bottom": 1000,
+        "left": 0
+      },
+      "state": "settled",
+      "started": "2",
+      "completed": "2",
+      "values": "11,3"
+    },
+    {
+      "phase": "manual",
+      "viewport": 390,
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844,
+        "top": 0,
+        "right": 390,
+        "bottom": 844,
+        "left": 0
+      },
+      "state": "settled",
+      "started": "3",
+      "completed": "3",
+      "values": "6,10"
+    },
+    {
+      "phase": "missing shared export regression",
+      "errorShown": true,
+      "workspacePreserved": true,
+      "overviewRecovery": true
+    }
+  ],
+  "bounds": {
+    "width": 390,
+    "scroll": 390,
+    "overflow": 0
+  },
+  "errors": [],
+  "warnings": [
+    "WebSocket connection to 'ws://localhost:4174/ws?campaign=4518b3d4-bb1f-4907-a104-2e00110c7343' failed: WebSocket is closed before the connection is established."
+  ]
+}

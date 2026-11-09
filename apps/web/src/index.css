@@ -1,0 +1,507 @@
+@import "tailwindcss";
+
+/* Semantic foundation from the Daggery design system. The slate and accent
+   aliases keep the existing game modules consistent without changing their logic. */
+@theme {
+  --font-sans: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Lora", Georgia, "Times New Roman", serif;
+  --color-canvas: #0d0b13;
+  --color-slate-50: #fbfaf7;
+  --color-slate-100: #f3f0ea;
+  --color-slate-200: #e4e0d9;
+  --color-slate-300: #d0cbc3;
+  --color-slate-400: #aca6bb;
+  --color-slate-500: #948da6;
+  --color-slate-600: #7c7595;
+  --color-slate-700: #6a6382;
+  --color-slate-800: #2d2842;
+  --color-slate-900: #1e1a2a;
+  --color-slate-950: #191623;
+  --color-accent-50: #fff8e8;
+  --color-accent-100: #fdeec6;
+  --color-accent-200: #f9dc95;
+  --color-accent-300: #f2c76b;
+  --color-accent-400: #ecb95a;
+  --color-accent-500: #e5b04b;
+  --color-accent-600: #c99236;
+  --color-accent-700: #a0722b;
+  --color-accent-800: #6e4f1f;
+  --color-accent-900: #47331a;
+  --color-accent-950: #2a2010;
+  --color-violet-50: #f7f2ff;
+  --color-violet-100: #ece2ff;
+  --color-violet-200: #dccaff;
+  --color-violet-300: #c9b1f8;
+  --color-violet-400: #b89af4;
+  --color-violet-500: #9f7ce8;
+  --color-violet-600: #8562cf;
+  --color-violet-700: #6c4aa8;
+  --color-violet-800: #4f3581;
+  --color-violet-900: #362461;
+  --color-violet-950: #22173f;
+  --color-rose-50: #fff1f3;
+  --color-rose-100: #ffe0e5;
+  --color-rose-200: #ffc4cc;
+  --color-rose-300: #f79aa6;
+  --color-rose-400: #ff7b8a;
+  --color-rose-500: #f35b6d;
+  --color-rose-600: #d9465a;
+  --color-rose-700: #b1344a;
+  --color-rose-800: #7e2237;
+  --color-rose-900: #58192a;
+  --color-rose-950: #30101a;
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #b4f0d3;
+  --color-emerald-300: #86e5b8;
+  --color-emerald-400: #5fd69f;
+  --color-emerald-500: #35b97f;
+  --color-emerald-600: #239a67;
+  --color-emerald-700: #1a7650;
+  --color-emerald-800: #145a3e;
+  --color-emerald-900: #0f4530;
+  --color-emerald-950: #0a2a1e;
+  --color-sky-50: #eefaff;
+  --color-sky-100: #d3f1fa;
+  --color-sky-200: #aee6f5;
+  --color-sky-300: #8ad8ea;
+  --color-sky-400: #5ec5de;
+  --color-sky-500: #3aa9c8;
+  --color-sky-600: #2a88a4;
+  --color-sky-700: #21687f;
+  --color-sky-800: #1a4f61;
+  --color-sky-900: #133a49;
+  --color-sky-950: #0b2430;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 16px;
+}
+
+:root {
+  color-scheme: dark;
+  --ds-surface: #120f19;
+  --ds-raised: #191623;
+  --ds-inset: #0e0c14;
+  --ds-hover: #262037;
+  --ds-ink: #f3f0ea;
+  --ds-muted: #aca6bb;
+  --ds-faint: #948da6;
+  --ds-border: #2d2842;
+  --ds-border-strong: #4d4668;
+  --ds-control: #6a6382;
+  --ds-brand: #e5b04b;
+  --ds-brand-strong: #f2c86b;
+  --ds-on-brand: #1d1407;
+  --ds-brand-soft: color-mix(in srgb, var(--ds-brand) 13%, transparent);
+  --ds-brand-line: color-mix(in srgb, var(--ds-brand) 38%, transparent);
+  --ds-fear: #b89af4;
+  --ds-fear-soft: color-mix(in srgb, var(--ds-fear) 15%, transparent);
+  --ds-focus: #f7d27e;
+  --ds-shadow: rgb(5 4 10 / 0.5);
+  --ds-shadow-lg: rgb(5 4 10 / 0.62);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ds-surface: #f4f2f8;
+  --ds-raised: #ffffff;
+  --ds-inset: #ebe8f2;
+  --ds-hover: #ece9f3;
+  --ds-ink: #1c1828;
+  --ds-muted: #5f5873;
+  --ds-faint: #696178;
+  --ds-border: #dcd6e6;
+  --ds-border-strong: #b9b1ca;
+  --ds-control: #8f87a2;
+  --ds-brand: #8a5d14;
+  --ds-brand-strong: #6f4a0f;
+  --ds-on-brand: #ffffff;
+  --ds-fear: #6d45b3;
+  --ds-focus: #8a5d14;
+  --ds-shadow: rgb(28 24 40 / 0.14);
+  --ds-shadow-lg: rgb(28 24 40 / 0.22);
+  --color-canvas: #f4f2f8;
+  --color-slate-50: #1c1828;
+  --color-slate-100: #262135;
+  --color-slate-200: #352f48;
+  --color-slate-300: #473f5c;
+  --color-slate-400: #5f5873;
+  --color-slate-500: #696178;
+  --color-slate-600: #a79fb8;
+  --color-slate-700: #8f87a2;
+  --color-slate-800: #dcd6e6;
+  --color-slate-900: #f0edf5;
+  --color-slate-950: #ffffff;
+  --color-accent-50: #2a1e07;
+  --color-accent-100: #3d2c0c;
+  --color-accent-200: #543d13;
+  --color-accent-300: #74520f;
+  --color-accent-400: #84600f;
+  --color-accent-500: #8a5d14;
+  --color-accent-600: #6d4a10;
+  --color-accent-700: #c4a06a;
+  --color-accent-800: #dcc294;
+  --color-accent-900: #f0e3c4;
+  --color-accent-950: #fbf4e4;
+  /* Legacy module status colors use pale text on dark surfaces. Supply
+     equivalent dark text and light surfaces when the light theme is active. */
+  --color-sky-100: #164e63;
+  --color-sky-200: #164e63;
+  --color-sky-300: #155e75;
+  --color-sky-400: #0e7490;
+  --color-sky-800: #86b9c7;
+  --color-sky-900: #d8edf2;
+  --color-sky-950: #e9f5f7;
+  --color-rose-200: #881d2d;
+  --color-rose-300: #9f2436;
+  --color-rose-400: #aa3041;
+  --color-rose-800: #d598a0;
+  --color-rose-900: #f0dadd;
+  --color-rose-950: #faedef;
+  --color-emerald-200: #145a40;
+  --color-emerald-300: #176b4a;
+  --color-emerald-400: #19734f;
+  --color-emerald-700: #6ba68b;
+  --color-emerald-800: #91bea8;
+  --color-emerald-900: #d9ede3;
+  --color-emerald-950: #eaf6ef;
+  --color-violet-200: #583579;
+  --color-violet-300: #674187;
+  --color-violet-400: #765094;
+  --color-violet-800: #bba1ce;
+  --color-violet-900: #eee4f4;
+  --color-violet-950: #f5eff8;
+}
+
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--ds-surface);
+  color: var(--ds-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+:focus-visible { outline: 3px solid var(--ds-focus); outline-offset: 2px; }
+* { scrollbar-width: thin; scrollbar-color: var(--color-slate-700) transparent; }
+
+.daggery-auth-shell { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 32px 18px; }
+.daggery-auth-wrap { width: min(100%, 440px); }
+.daggery-auth-logo { justify-content: center; margin-bottom: 24px; }
+.daggery-auth-card { padding: clamp(24px, 5vw, 36px); border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-raised); }
+.daggery-auth-card h1 { margin: 0; font: 700 clamp(28px, 6vw, 34px)/1.15 var(--font-display); letter-spacing: -.5px; }
+.daggery-auth-card > p { margin: 10px 0 0; color: var(--ds-muted); line-height: 1.5; }
+.daggery-auth-form, .daggery-email-link-form { display: grid; gap: 16px; margin-top: 24px; }
+.daggery-auth-form label, .daggery-email-link-form label { display: grid; gap: 7px; color: var(--ds-ink); font-size: 14px; font-weight: 600; }
+.daggery-auth-input { width: 100%; min-height: 44px; padding: 9px 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-surface); color: var(--ds-ink); font-weight: 400; }
+.daggery-auth-submit { justify-content: center; width: 100%; }
+.daggery-auth-submit:disabled { opacity: .6; cursor: wait; }
+.daggery-auth-form small, .daggery-auth-message { color: var(--ds-muted); font-size: 13px; line-height: 1.5; }
+.daggery-auth-error { color: var(--color-rose-300); font-size: 13px; line-height: 1.5; }
+.daggery-auth-link, .daggery-auth-alternatives button { color: var(--ds-ink); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.daggery-auth-alternatives { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 20px; margin-top: 24px; }
+.daggery-email-link { margin-top: 28px; }
+.daggery-email-link-form { max-width: 420px; }
+.daggery-home { max-width: 1040px; margin: 0 auto; padding: 42px 36px; }
+.daggery-home h1 { font: 700 36px/1.15 var(--font-display); letter-spacing: -.5px; margin: 0 0 10px; }
+.daggery-home p { color: var(--ds-muted); }
+.daggery-home-feature { margin-top: 30px; padding: 24px; border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-raised); }
+.daggery-home-feature h2 { margin: 0; font: 700 24px/1.2 var(--font-display); }
+.daggery-home-feature p { max-width: 60ch; margin: 9px 0 20px; }
+.daggery-primary { min-height: 42px; display: inline-flex; align-items: center; gap: 8px; padding: 0 16px; border: 0; border-radius: var(--radius-md); background: var(--ds-brand); color: var(--ds-on-brand); font-weight: 700; cursor: pointer; }
+.daggery-primary:hover { filter: brightness(.92); }
+.daggery-home-title { margin: 30px 0 12px; font-size: 16px; font-weight: 700; }
+.daggery-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.daggery-shortcut { display: flex; gap: 12px; padding: 16px; border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-raised); color: var(--ds-ink); text-align: left; cursor: pointer; }
+.daggery-shortcut:hover { border-color: var(--ds-brand); }
+.daggery-shortcut-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: var(--radius-md); background: var(--ds-hover); color: var(--ds-muted); }
+.daggery-shortcut strong, .daggery-shortcut small { display: block; }
+.daggery-shortcut small { margin-top: 4px; color: var(--ds-muted); line-height: 1.4; }
+
+/* Workspace: each pane scrolls independently, with a stable canvas on every device. */
+html, body, #root { min-width: 320px; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled), summary, select { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+.daggery-shell { display: flex; height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; background: var(--ds-surface); }
+.daggery-sidebar { display: flex; flex: 0 0 236px; width: 236px; min-height: 0; flex-direction: column; padding: 28px 16px 16px; background: var(--ds-raised); border-right: 1px solid var(--ds-border); }
+.daggery-logo { display: flex; align-items: center; gap: 10px; padding: 0 8px; font: 700 28px/1 var(--font-display); letter-spacing: -1px; }
+.daggery-logo-mark { display: grid; place-items: center; width: 36px; height: 40px; flex: none; border-radius: var(--radius-md); background: var(--ds-brand); color: var(--ds-on-brand); font-family: Georgia, serif; font-size: 28px; }
+.daggery-logo-text > span { display: block; margin-top: 7px; font: 600 12px/1 var(--font-sans); letter-spacing: 1.55px; color: var(--ds-muted); }
+.daggery-icon { width: 20px; height: 20px; flex: none; }
+.daggery-campaign-switch { width: 100%; display: flex; align-items: center; gap: 10px; margin-top: 30px; padding: 12px 10px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-surface); text-align: left; color: var(--ds-ink); }
+.daggery-campaign-switch:hover { border-color: var(--ds-brand); }
+.daggery-campaign-switch > .daggery-icon { width: 14px; color: var(--ds-muted); }
+.daggery-campaign-monogram { display: grid; place-items: center; flex: none; width: 34px; height: 36px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--ds-brand) 12%, var(--ds-raised)); color: var(--ds-brand); font: 600 19px var(--font-display); }
+.daggery-campaign-info { flex: 1; min-width: 0; }
+.daggery-campaign-info strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 700; }
+.daggery-campaign-info small { display: block; margin-top: 3px; font-size: 12px; color: var(--ds-muted); }
+.daggery-search { display: flex; align-items: center; gap: 8px; min-height: 40px; margin: 14px 0 23px; padding: 0 10px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); color: var(--ds-muted); font-size: 12px; text-align: left; }
+.daggery-search .daggery-icon { width: 16px; }
+.daggery-search kbd { margin-left: auto; padding: 2px 4px; border: 1px solid var(--ds-border); border-radius: var(--radius-xs); font: inherit; white-space: nowrap; }
+.daggery-nav { display: grid; gap: 24px; overflow-y: auto; }
+.daggery-nav-group { display: grid; gap: 4px; }
+.daggery-nav-group-label { margin: 0 0 7px; padding: 0 12px; color: var(--ds-muted); font-size: 12px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; }
+.daggery-nav-button { min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border: 0; border-radius: var(--radius-md); background: transparent; color: var(--ds-muted); text-align: left; font-size: 13px; font-weight: 500; transition: background .15s, color .15s; }
+.daggery-nav-button:hover { background: color-mix(in srgb, var(--ds-brand) 6%, var(--ds-raised)); color: var(--ds-ink); }
+.daggery-nav-button[aria-current="page"] { background: color-mix(in srgb, var(--ds-brand) 10%, var(--ds-raised)); color: var(--ds-brand); font-weight: 700; }
+.daggery-nav-active-dot { width: 5px; height: 5px; margin-left: auto; border-radius: 50%; background: var(--ds-brand); }
+.daggery-sidebar-footer { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 18px 4px 0; border-top: 1px solid var(--ds-border); }
+.daggery-avatar { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: 50%; background: color-mix(in srgb, var(--ds-brand) 12%, var(--ds-raised)); color: var(--ds-brand); font-size: 12px; font-weight: 700; }
+.daggery-profile { flex: 1; min-width: 0; }
+.daggery-profile input { width: 100%; background: transparent; color: var(--ds-ink); border: 0; font-size: 12px; font-weight: 600; }
+.daggery-profile small { display: block; margin-top: 2px; font-size: 12px; color: var(--ds-muted); }
+.daggery-footer-switch { display: grid; place-items: center; width: 32px; height: 36px; color: var(--ds-muted); }
+.daggery-footer-switch .daggery-icon { width: 16px; }
+.daggery-workspace { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.daggery-topbar { min-height: 72px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 28px; border-bottom: 1px solid var(--ds-border); background: var(--ds-raised); }
+.daggery-breadcrumb { display: flex; align-items: center; gap: 12px; min-width: 0; color: var(--ds-muted); font-size: 12px; }
+.daggery-breadcrumb > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 22ch; }
+.daggery-breadcrumb strong { flex-shrink: 0; color: var(--ds-ink); font-weight: 600; }
+.daggery-top-actions { display: flex; flex-shrink: 0; align-items: center; gap: 8px; }
+.daggery-connection { display: inline-flex; align-items: center; gap: 6px; margin-right: 12px; color: var(--ds-muted); font-size: 12px; }
+.daggery-connection i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-rose-400); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-rose-400) 10%, transparent); }
+.daggery-connection.is-online i { background: var(--color-emerald-400); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-emerald-400) 10%, transparent); }
+.daggery-roll-toggle, .daggery-theme { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-raised); color: var(--ds-ink); font-size: 12px; font-weight: 600; }
+.daggery-roll-toggle .daggery-icon { width: 16px; height: 16px; }
+.daggery-roll-toggle:hover, .daggery-theme:hover { background: var(--ds-surface); border-color: var(--ds-muted); }
+.daggery-roll-toggle.is-active { color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 7%, var(--ds-raised)); border-color: color-mix(in srgb, var(--ds-brand) 35%, var(--ds-border)); }
+.daggery-theme { width: 38px; flex: none; padding: 0; }
+.daggery-theme .daggery-icon { width: 17px; height: 17px; }
+.daggery-content { display: flex; flex: 1; min-height: 0; }
+.daggery-main { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+.daggery-main:focus { outline: none; }
+.daggery-page-map, .daggery-page-compendium { overflow: hidden; }
+.daggery-page-sheets { container-type: inline-size; }
+.daggery-rolls { flex: 0 0 284px; width: 284px; overflow-y: auto; padding: 24px 20px; border-left: 1px solid var(--ds-border); background: var(--ds-raised); }
+.daggery-section-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+.daggery-section-heading h2 { font-size: 14px; font-weight: 700; }
+.daggery-section-heading p { margin-top: 3px; color: var(--ds-muted); font-size: 12px; }
+.daggery-section-icon { color: var(--ds-brand); }
+.daggery-history { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--ds-border); }
+.daggery-history-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.daggery-history-heading h2 { font-size: 12px; font-weight: 700; }
+.daggery-history-heading > span { padding: 2px 7px; border-radius: var(--radius-sm); background: var(--ds-surface); color: var(--ds-muted); font-size: 12px; }
+.daggery-empty-rolls { display: flex; align-items: center; flex-direction: column; gap: 7px; padding: 28px 8px; border: 1px dashed var(--ds-border); border-radius: var(--radius-md); color: var(--ds-muted); text-align: center; }
+.daggery-empty-rolls > .daggery-icon { margin-bottom: 5px; opacity: .6; width: 28px; height: 28px; }
+.daggery-empty-rolls strong { color: var(--ds-ink); font-size: 12px; font-weight: 500; }
+.daggery-empty-rolls p { font-size: 12px; }
+.daggery-log-row { padding: 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-surface); }
+.daggery-bottom-nav { display: none; }
+.daggery-home { width: 100%; max-width: 1160px; padding: clamp(24px, 3.1vw, 48px); }
+.daggery-home h1 { font: 600 clamp(28px, 2.6vw, 38px)/1.2 var(--font-display); overflow-wrap: anywhere; }
+.daggery-overview-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.daggery-overview-heading .daggery-eyebrow { margin: 0 0 10px; color: var(--ds-brand); font-size: 13px; font-weight: 600; }
+.daggery-overview-heading h1 { margin: 0 0 9px; }
+.daggery-overview-heading p { font-size: 12px; line-height: 1.6; }
+.daggery-role-badge { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; padding: 6px 10px; border: 1px solid var(--ds-border); border-radius: var(--radius-sm); color: var(--ds-muted); font-size: 12px; background: var(--ds-raised); }
+.daggery-role-badge > span { color: var(--ds-brand); }
+.daggery-table-feature { display: flex; position: relative; overflow: hidden; isolation: isolate; min-height: 286px; border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-raised); color: var(--ds-ink); }
+.daggery-table-copy { position: relative; z-index: 1; flex: 1; padding: 30px; }
+.daggery-feature-eyebrow { display: flex; align-items: center; gap: 7px; margin-bottom: 16px; color: var(--ds-brand); font-size: 13px; font-weight: 600; }
+.daggery-feature-eyebrow .daggery-icon { width: 15px; height: 15px; }
+.daggery-table-copy h2 { font: 500 clamp(25px, 2.4vw, 34px)/1.25 var(--font-display); letter-spacing: -.7px; }
+.daggery-table-copy p { max-width: 33ch; margin: 13px 0 22px; color: var(--ds-muted); font-size: 12px; line-height: 1.7; }
+.daggery-primary { min-height: 44px; padding: 0 16px; font-size: 12px; font-weight: 600; border-radius: var(--radius-md); }
+.daggery-table-copy .daggery-primary { gap: 10px; background: var(--ds-brand); color: var(--ds-on-brand); }
+.daggery-table-copy .daggery-primary .daggery-icon { width: 16px; height: 16px; }
+.daggery-table-copy .daggery-primary .daggery-icon:last-child { margin-left: 12px; }
+.daggery-table-art { position: relative; display: grid; place-items: center; flex: 0 0 39%; align-self: stretch; color: var(--ds-brand); background-image: radial-gradient(ellipse at 70% 40%, var(--ds-brand-soft), transparent 75%); }
+.daggery-table-art::before { position: absolute; inset: 0; content: ''; opacity: .2; background-image: linear-gradient(color-mix(in srgb, var(--ds-brand) 19%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--ds-brand) 19%, transparent) 1px, transparent 1px); background-size: 32px 32px; transform: rotate(-12deg) scale(1.5); z-index: -1; }
+.daggery-art-orbit { position: absolute; width: 290px; height: 220px; border: 1px solid color-mix(in srgb, var(--ds-brand) 14%, transparent); border-radius: 41% 59% 38% 62%; transform: rotate(-32deg); }
+.orbit-two { width: 380px; height: 290px; transform: rotate(-32deg); }
+.orbit-three { width: 470px; height: 360px; transform: rotate(-32deg); }
+.daggery-compass { position: relative; width: min(82%, 216px); transform: rotate(12deg); }
+.daggery-compass > span { display: block; text-align: center; margin-bottom: 3px; font: 12px Georgia, serif; }
+.daggery-compass svg { width: 100%; fill: none; stroke: var(--ds-brand); stroke-width: .9; }
+.daggery-compass svg .daggery-compass-fill { fill: color-mix(in srgb, var(--ds-brand) 33%, transparent); stroke: none; }
+.daggery-art-caption { position: absolute; bottom: 19px; color: var(--ds-muted); font: italic 12px var(--font-display); white-space: nowrap; }
+.daggery-section-title { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin: 30px 0 14px; }
+.daggery-section-title h2 { font-size: 13px; font-weight: 700; }
+.daggery-section-title > span { color: var(--ds-muted); font-size: 12px; }
+.daggery-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.daggery-shortcut { min-width: 0; padding: 18px; gap: 12px; border-color: var(--ds-border); border-radius: var(--radius-lg); transition: border-color .15s; }
+.daggery-shortcut:hover { border-color: var(--ds-border-strong); }
+.daggery-shortcut-icon { width: 38px; height: 38px; border-radius: var(--radius-md); background: var(--ds-hover); }
+.daggery-shortcut strong { font-size: 13px; font-weight: 700; }
+.daggery-shortcut small { font-size: 12px; line-height: 1.7; }
+.daggery-essential { flex-direction: column; gap: 0; padding: 19px; }
+.daggery-shortcut-top { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-bottom: 17px; }
+.daggery-shortcut-top > .daggery-icon { display: none; }
+.essential-combat .daggery-shortcut-icon { background: var(--ds-hover); color: var(--ds-muted); }
+.essential-compendium .daggery-shortcut-icon { background: var(--ds-hover); color: var(--ds-muted); }
+.daggery-shortcut-link { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 20px; width: 100%; color: var(--ds-brand); font-size: 12px; font-weight: 600; }
+.daggery-shortcut-link .daggery-icon { width: 12px; height: 12px; }
+.daggery-story-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.daggery-story-links .daggery-shortcut { align-items: center; }
+.daggery-story-links .daggery-shortcut > span:nth-child(2) { flex: 1; }
+.daggery-story-links .daggery-shortcut > .daggery-icon { width: 14px; color: var(--ds-muted); }
+.daggery-home-footer { display: flex; align-items: center; gap: 8px; margin-top: 30px; padding-top: 19px; border-top: 1px solid var(--ds-border); color: var(--ds-muted); font-size: 12px; }
+.daggery-home-footer > span:first-child { color: var(--ds-brand); }
+.daggery-home-footer > span:last-child { margin-left: auto; font-size: 12px; letter-spacing: 1.5px; }
+.daggery-skip { position: fixed; top: -100px; left: 12px; z-index: 100; padding: 12px; border-radius: var(--radius-sm); background: var(--ds-brand); color: var(--ds-on-brand); }
+.daggery-skip:focus { top: 12px; }
+.daggery-alert { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 24px; color: var(--color-rose-300); border-bottom: 1px solid var(--color-rose-800); background: var(--color-rose-950); font-size: 12px; }
+.daggery-alert button { flex: none; padding: 8px; }
+.daggery-dialog { position: fixed; inset: 0; width: min(480px, calc(100% - 32px)); max-height: calc(100dvh - 48px); margin: auto; padding: 0; border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-raised); color: var(--ds-ink); box-shadow: 0 24px 90px var(--ds-shadow-lg); overflow: auto; overscroll-behavior: contain; }
+.daggery-dialog::backdrop { background: color-mix(in srgb, var(--ds-inset) 60%, transparent); backdrop-filter: blur(4px); }
+.daggery-dialog-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--ds-border); background: var(--ds-raised); }
+.daggery-dialog-header h2 { font-size: 15px; font-weight: 700; }
+.daggery-dialog-body { padding: 22px; }
+.daggery-dialog-description { color: var(--ds-muted); font-size: 13px; line-height: 1.7; }
+.daggery-invite-code { display: grid; gap: 8px; margin: 20px 0; font-size: 12px; font-weight: 600; }
+.daggery-invite-code input { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-surface); font-family: monospace; font-size: 14px; }
+.daggery-menu-dialog .daggery-campaign-switch { margin: 0 0 24px; }
+.daggery-menu-dialog .daggery-nav { gap: 22px; }
+.daggery-mobile-profile { display: grid; gap: 8px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--ds-border); font-size: 12px; }
+.daggery-menu-role { margin-top: 8px; font-size: 12px; color: var(--ds-muted); }
+.daggery-dice-dialog { inset: 12px 12px 12px auto; width: 350px; max-width: calc(100% - 24px); max-height: calc(100dvh - 24px); height: calc(100dvh - 24px); margin: 0; }
+.daggery-command-search { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-surface); }
+.daggery-command-search .daggery-icon { color: var(--ds-muted); }
+.daggery-command-search input { width: 100%; min-width: 0; font-size: 14px; }
+.daggery-command-results { display: grid; gap: 4px; margin-top: 14px; }
+.daggery-command-results > button { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-radius: var(--radius-md); text-align: left; }
+.daggery-command-results > button:hover { background: var(--ds-surface); }
+.daggery-command-results > button > span:nth-child(2) { flex: 1; }
+.daggery-command-results strong, .daggery-command-results small { display: block; }
+.daggery-command-results strong { font-size: 13px; font-weight: 600; }
+.daggery-command-results small { margin-top: 3px; font-size: 12px; color: var(--ds-muted); }
+.daggery-command-results > button > .daggery-icon { width: 15px; color: var(--ds-muted); }
+.daggery-command-empty { padding: 24px 0; color: var(--ds-muted); font-size: 13px; text-align: center; }
+.daggery-loading { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 50vh; font-size: 13px; color: var(--ds-muted); }
+.daggery-loading > span { width: 16px; height: 16px; border: 2px solid var(--ds-border); border-top-color: var(--ds-brand); border-radius: 50%; animation: daggery-spin 1s linear infinite; }
+@keyframes daggery-spin { to { transform: rotate(360deg); } }
+@media (min-width: 768px) and (max-width: 1199px) {
+  .daggery-sidebar { width: 80px; flex-basis: 80px; padding: 24px 12px 14px; align-items: center; }
+  .daggery-sidebar .daggery-logo { padding: 0; }
+  .daggery-sidebar .daggery-logo-text, .daggery-sidebar .daggery-nav-label, .daggery-sidebar .daggery-nav-group-label, .daggery-sidebar .daggery-campaign-info, .daggery-sidebar .daggery-campaign-switch > .daggery-icon, .daggery-sidebar .daggery-profile, .daggery-sidebar .daggery-footer-switch, .daggery-sidebar .daggery-search > span, .daggery-sidebar .daggery-search kbd, .daggery-sidebar .daggery-nav-active-dot { display: none; }
+  .daggery-sidebar .daggery-campaign-switch { padding: 8px; width: 52px; margin-top: 25px; }
+  .daggery-sidebar .daggery-search { width: 48px; justify-content: center; margin-bottom: 12px; }
+  .daggery-sidebar .daggery-nav-button { justify-content: center; width: 48px; padding: 0; }
+  .daggery-sidebar-footer { width: 100%; justify-content: center; }
+  .daggery-sidebar .daggery-nav { gap: 20px; }
+  .daggery-topbar { padding-inline: 24px; }
+}
+@media (max-width: 767px) {
+  .daggery-shell { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  .daggery-sidebar { display: none; }
+  .daggery-topbar { min-height: 66px; padding: 10px 16px; gap: 8px; }
+  .daggery-breadcrumb { display: grid; gap: 3px; font-size: 12px; }
+  .daggery-breadcrumb > span:first-child { max-width: 24ch; }
+  .daggery-breadcrumb > span:nth-child(2) { display: none; }
+  .daggery-breadcrumb strong { font-size: 14px; }
+  .daggery-top-actions { gap: 6px; }
+  .daggery-invite > span, .daggery-connection > span { display: none; }
+  .daggery-invite { width: 38px; padding: 0; }
+  .daggery-connection { margin-right: 5px; }
+  .daggery-bottom-nav { display: grid; position: fixed; inset: auto 0 0; z-index: 40; grid-template-columns: repeat(5, minmax(0, 1fr)); min-height: calc(68px + env(safe-area-inset-bottom)); padding: 7px 8px calc(7px + env(safe-area-inset-bottom)); border-top: 1px solid var(--ds-border); background: var(--ds-raised); }
+  .daggery-bottom-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 52px; border-radius: var(--radius-md); color: var(--ds-muted); font-size: 12px; font-weight: 500; }
+  .daggery-bottom-nav button[aria-current], .daggery-bottom-nav button.is-active { background: color-mix(in srgb, var(--ds-brand) 9%, var(--ds-raised)); color: var(--ds-brand); font-weight: 700; }
+  .daggery-bottom-nav .daggery-icon { width: 20px; height: 20px; }
+  .daggery-home { padding: 26px 20px; }
+  .daggery-overview-heading { align-items: flex-start; margin-bottom: 24px; }
+  .daggery-overview-heading h1 { font-size: 29px; }
+  .daggery-overview-heading p { font-size: 12px; }
+  .daggery-role-badge { display: none; }
+  .daggery-table-feature { min-height: 290px; }
+  .daggery-table-copy { padding: 26px 24px; }
+  .daggery-table-copy h2 { font-size: 28px; }
+  .daggery-table-art { position: absolute; inset: 0 -110px 0 45%; opacity: .32; z-index: -1; }
+  .daggery-table-art::after { position: absolute; inset: 0; content: ''; background: linear-gradient(90deg, var(--ds-raised), transparent); }
+  .daggery-art-caption { display: none; }
+  .daggery-table-copy p { max-width: 28ch; }
+  .daggery-section-title { margin-top: 26px; }
+  .daggery-section-title > span { display: none; }
+  .daggery-shortcuts { grid-template-columns: 1fr; gap: 10px; }
+  .daggery-essential { display: grid; grid-template-columns: 40px 1fr; column-gap: 14px; padding: 18px; }
+  .daggery-shortcut-top { grid-row: span 3; align-self: start; margin-bottom: 0; }
+  .daggery-shortcut-top > .daggery-icon { display: none; }
+  .daggery-shortcut-link { margin-top: 11px; }
+  .daggery-story-links { grid-template-columns: 1fr; gap: 10px; }
+  .daggery-home-footer { flex-wrap: wrap; line-height: 1.6; }
+  .daggery-home-footer > span:last-child { display: none; }
+  .daggery-dialog { max-height: calc(100dvh - 24px); }
+  .daggery-menu-dialog { inset: auto 0 0; width: 100%; max-height: 90dvh; border-radius: var(--radius-xl) var(--radius-xl) 0 0; margin: 0; padding-bottom: env(safe-area-inset-bottom); }
+  .daggery-dialog-body { padding: 20px; }
+}
+@media (max-width: 399px) {
+  .daggery-dice-toggle > span { display: none; }
+  .daggery-dice-toggle { width: 38px; padding: 0; }
+  .daggery-breadcrumb > span:first-child { max-width: 17ch; }
+  .daggery-home { padding-inline: 16px; }
+}
+@media (pointer: coarse) {
+  .daggery-main :is(button, select, input:not([type="checkbox"]):not([type="radio"]):not([type="color"])), .daggery-dialog :is(button, select, input), .daggery-auth-shell :is(button, input), .daggery-top-actions button { min-height: 44px; }
+  .daggery-main :is(button, select), .daggery-dialog button { min-width: 32px; }
+  .daggery-main :is(input, select, textarea), .daggery-dialog :is(input, select, textarea) { font-size: max(16px, 1em); }
+  .daggery-main .sheet-armor-pip, .daggery-main .sheet-pip { min-width: 28px; min-height: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+.daggery-interface-error { margin: 32px auto; padding: 24px; max-width: 640px; border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-raised); color: var(--ds-ink); }
+.daggery-interface-error h1 { font-size: 24px; margin: 8px 0 12px; }
+.daggery-interface-error p { line-height: 1.7; }
+.daggery-error-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+.daggery-interface-error summary { cursor: pointer; color: var(--ds-muted); font-size: 13px; }
+.daggery-interface-error pre { margin-top: 12px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.daggery-overview-heading p { font-size: 13px; }
+.daggery-table-copy p { font-size: 13px; }
+.daggery-shortcut strong { font-size: 14px; }
+.daggery-shortcut small { font-size: 12px; }
+.daggery-shortcut-link { font-size: 12px; }
+.daggery-section-title h2 { font-size: 14px; }
+.daggery-page-notes > .daggery-home { container-type: inline-size; }
+@container (min-width: 650px) { .daggery-notes-layout { grid-template-columns: minmax(180px, 1fr) 2fr; } }
+.daggery-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 36px 24px; border: 1px dashed var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-raised); text-align: center; }
+.daggery-empty-state > .daggery-icon { width: 28px; height: 28px; margin-bottom: 5px; color: var(--ds-brand); }
+.daggery-empty-state > strong { font: 500 18px var(--font-display); }
+.daggery-empty-state p { max-width: 44ch; font-size: 13px; line-height: 1.7; }
+.daggery-notes-layout .daggery-shortcut[aria-current] { border-color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 5%, var(--ds-raised)); }
+.daggery-campaigns { max-width: 1080px; margin: 0 auto; min-height: 100dvh; }
+.daggery-campaigns-brand { display: flex; align-items: center; justify-content: space-between; }
+.daggery-campaigns-intro { margin: 56px 0 28px; }
+.daggery-campaigns-intro .daggery-eyebrow { margin-bottom: 12px; color: var(--ds-brand); font-size: 13px; font-weight: 600; }
+.daggery-campaigns-intro > p:last-child { font-size: 14px; line-height: 1.7; }
+.daggery-campaign-forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.daggery-campaign-forms .daggery-home-feature { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.daggery-campaign-forms h2 { margin-top: 5px; font-size: 23px; }
+.daggery-campaign-forms p { margin: 0 0 8px; font-size: 12px; line-height: 1.7; }
+.daggery-campaign-forms label { font-size: 12px; font-weight: 600; }
+.daggery-campaign-forms input { min-height: 44px; }
+.daggery-campaign-forms button { justify-content: center; }
+.daggery-campaign-list-header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 36px 0 16px; }
+.daggery-campaign-list-header h2 { margin-right: auto; font-size: 16px; font-weight: 600; }
+.daggery-campaign-list-header input { width: 220px; max-width: 100%; }
+.daggery-campaign-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.daggery-campaign-card { min-width: 0; padding: 24px; border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-raised); }
+.daggery-campaign-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.daggery-campaign-card h2 { margin: 22px 0 8px; font: 500 24px/1.3 var(--font-display); overflow-wrap: anywhere; }
+.daggery-campaign-card p { font-size: 12px; line-height: 1.7; }
+.daggery-campaign-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.daggery-campaign-card-actions .daggery-primary { margin-right: auto; }
+.daggery-campaigns .daggery-email-link { padding-top: 24px; border-top: 1px solid var(--ds-border); }
+@media (max-width: 639px) {
+  .daggery-campaigns-intro { margin-top: 36px; }
+  .daggery-campaign-forms, .daggery-campaign-grid { grid-template-columns: 1fr; }
+  .daggery-campaign-list-header h2 { flex-basis: 100%; }
+  .daggery-campaign-list-header input { flex: 1; width: 120px; }
+  .daggery-campaign-card .daggery-role-badge { display: inline-flex; }
+}
+@media (pointer: coarse) {
+  .daggery-top-actions :is(.daggery-theme, .daggery-invite, .daggery-dice-toggle) { min-width: 44px; }
+  .daggery-main .sheet-step { min-width: 44px; min-height: 44px; }
+  .daggery-main :is(.sheet-slot, .sheet-armor-pip) { min-width: 36px; min-height: 36px; }
+  .sheet-hope-pips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .daggery-main .sheet-hope-pip { min-width: 32px; min-height: 44px; transform: none; border-radius: var(--radius-sm); }
+}
+@media (max-width: 767px) {
+  .daggery-topbar { padding-top: max(10px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  .daggery-bottom-nav { padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+}
+@media (max-width: 359px) {
+  .daggery-bottom-nav button { font-size: 11px; letter-spacing: 0; }
+  .daggery-bottom-nav button > span { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

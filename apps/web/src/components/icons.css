@@ -1,0 +1,21 @@
+.daggery-icon, .room-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+.daggery-sidebar .daggery-nav-button .daggery-icon { width: 22px; height: 22px; }
+.daggery-shell .daggery-top-actions .daggery-icon { width: 19px; height: 19px; }
+.daggery-bottom-nav button .daggery-icon { width: 23px; height: 23px; }
+.sheet-trait-label .daggery-icon { width: 19px; height: 19px; color: var(--ds-brand); }
+.character-folio .sheet-trait-label { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.item-glyph { --item-color: var(--ds-brand); display: inline-grid; place-items: center; flex: none; width: 42px; height: 42px; border: 1px solid color-mix(in srgb,var(--item-color) 25%,var(--ds-border)); border-radius: var(--radius-lg); background: color-mix(in srgb,var(--item-color) 10%,var(--ds-surface)); color: var(--item-color); }
+.item-glyph > .daggery-icon { width: 25px; height: 25px; color: inherit; }
+.item-glyph[data-tone='rose'] { --item-color: light-dark(#a13e59,#eda1b6); }
+.item-glyph[data-tone='sky'] { --item-color: light-dark(#346b88,#9acee5); }
+.item-glyph[data-tone='green'] { --item-color: light-dark(#337259,#9bd7b8); }
+.item-glyph[data-tone='gold'] { --item-color: light-dark(#8c6224,#edcb89); }
+.item-glyph[data-tone='violet'] { --item-color: light-dark(#7751aa,#c7a8f4); }
+.character-folio .sheet-item-emblem.item-glyph { width: 40px; height: 42px; color: var(--item-color); }
+.character-folio .session-gear-heading > .item-glyph { color: var(--item-color); border-color: color-mix(in srgb,var(--item-color) 25%,var(--ds-border)); background: color-mix(in srgb,var(--item-color) 10%,var(--ds-surface)); }
+.equipment-picker-results .item-glyph { width: 40px; height: 42px; border-radius: var(--radius-lg); }
+.equipment-picker-results .item-glyph > .daggery-icon { width: 24px; height: 24px; }
+.daggery-home .icon-page-title { display: flex; align-items: center; gap: 12px; }
+.daggery-home .icon-page-title .daggery-icon { width: 30px; height: 30px; color: var(--ds-brand); }
+.character-folio .sheet-gold > .daggery-icon { width: 19px; height: 19px; color: var(--ds-brand); }
+@container (max-width: 360px) { .character-folio .sheet-trait-label { flex-direction: column; gap: 4px; } }

@@ -1,0 +1,4160 @@
+[
+  {
+    "id": "adjust-reality",
+    "name": "Adjust Reality",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 10,
+    "file": "domain/arcana/adjust-reality.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 387,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "arcana-touched",
+    "name": "Arcana-Touched",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 7,
+    "file": "domain/arcana/arcana-touched.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 381,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "arcane-reflection",
+    "name": "Arcane Reflection",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 8,
+    "file": "domain/arcana/arcane-reflection.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 383,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "blink-out",
+    "name": "Blink Out",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 4,
+    "file": "domain/arcana/blink-out.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 375,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "chain-lightning",
+    "name": "Chain Lightning",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 5,
+    "file": "domain/arcana/chain-lightning.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 377,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "cinder-grasp",
+    "name": "Cinder Grasp",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 2,
+    "file": "domain/arcana/cinder-grasp.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 371,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "cloaking-blast",
+    "name": "Cloaking Blast",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 7,
+    "file": "domain/arcana/cloaking-blast.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 381,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "confusing-aura",
+    "name": "Confusing Aura",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 8,
+    "file": "domain/arcana/confusing-aura.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 383,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "counterspell",
+    "name": "Counterspell",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 3,
+    "file": "domain/arcana/counterspell.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 373,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "earthquake",
+    "name": "Earthquake",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 9,
+    "file": "domain/arcana/earthquake.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 385,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "falling-sky",
+    "name": "Falling Sky",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 10,
+    "file": "domain/arcana/falling-sky.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 387,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "flight",
+    "name": "Flight",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 3,
+    "file": "domain/arcana/flight.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 373,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "floating-eye",
+    "name": "Floating Eye",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 2,
+    "file": "domain/arcana/floating-eye.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 371,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "premonition",
+    "name": "Premonition",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 5,
+    "file": "domain/arcana/premonition.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 377,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "preservation-blast",
+    "name": "Preservation Blast",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 4,
+    "file": "domain/arcana/preservation-blast.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 375,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "rift-walker",
+    "name": "Rift Walker",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 6,
+    "file": "domain/arcana/rift-walker.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 379,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "rune-ward",
+    "name": "Rune Ward",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 1,
+    "file": "domain/arcana/rune-ward.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 368,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "sensory-projection",
+    "name": "Sensory Projection",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 9,
+    "file": "domain/arcana/sensory-projection.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 385,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "telekinesis",
+    "name": "Telekinesis",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 6,
+    "file": "domain/arcana/telekinesis.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 379,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "unleash-chaos",
+    "name": "Unleash Chaos",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 1,
+    "file": "domain/arcana/unleash-chaos.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 368,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "wall-walk",
+    "name": "Wall Walk",
+    "kind": "domain",
+    "domain": "arcana",
+    "level": 1,
+    "file": "domain/arcana/wall-walk.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 368,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "a-soldiers-bond",
+    "name": "A Soldier’s Bond",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 2,
+    "file": "domain/blade/a-soldiers-bond.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 371,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "battle-cry",
+    "name": "Battle Cry",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 8,
+    "file": "domain/blade/battle-cry.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 383,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "battle-monster",
+    "name": "Battle Monster",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 10,
+    "file": "domain/blade/battle-monster.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 387,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "battle-hardened",
+    "name": "Battle-Hardened",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 6,
+    "file": "domain/blade/battle-hardened.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 379,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "blade-touched",
+    "name": "Blade-Touched",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 7,
+    "file": "domain/blade/blade-touched.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 381,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "champions-edge",
+    "name": "Champion’s Edge",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 5,
+    "file": "domain/blade/champions-edge.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 377,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "deadly-focus",
+    "name": "Deadly Focus",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 4,
+    "file": "domain/blade/deadly-focus.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 375,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "fortified-armor",
+    "name": "Fortified Armor",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 4,
+    "file": "domain/blade/fortified-armor.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 375,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "frenzy",
+    "name": "Frenzy",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 8,
+    "file": "domain/blade/frenzy.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 383,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "get-back-up",
+    "name": "Get Back Up",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 1,
+    "file": "domain/blade/get-back-up.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 368,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "glancing-blow",
+    "name": "Glancing Blow",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 7,
+    "file": "domain/blade/glancing-blow.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 381,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "gore-and-glory",
+    "name": "Gore and Glory",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 9,
+    "file": "domain/blade/gore-and-glory.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 385,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "not-good-enough",
+    "name": "Not Good Enough",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 1,
+    "file": "domain/blade/not-good-enough.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 368,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "onslaught",
+    "name": "Onslaught",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 10,
+    "file": "domain/blade/onslaught.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 387,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "rage-up",
+    "name": "Rage Up",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 6,
+    "file": "domain/blade/rage-up.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 379,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "reapers-strike",
+    "name": "Reaper’s Strike",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 9,
+    "file": "domain/blade/reapers-strike.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 385,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "reckless",
+    "name": "Reckless",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 2,
+    "file": "domain/blade/reckless.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 371,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "scramble",
+    "name": "Scramble",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 3,
+    "file": "domain/blade/scramble.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 373,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "versatile-fighter",
+    "name": "Versatile Fighter",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 3,
+    "file": "domain/blade/versatile-fighter.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 373,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "vitality",
+    "name": "Vitality",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 5,
+    "file": "domain/blade/vitality.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 377,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "whirlwind",
+    "name": "Whirlwind",
+    "kind": "domain",
+    "domain": "blade",
+    "level": 1,
+    "file": "domain/blade/whirlwind.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 368,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "bone-touched",
+    "name": "Bone-Touched",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 7,
+    "file": "domain/bone/bone-touched.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 381,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "boost",
+    "name": "Boost",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 4,
+    "file": "domain/bone/boost.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 375,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "brace",
+    "name": "Brace",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 3,
+    "file": "domain/bone/brace.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 373,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "breaking-blow",
+    "name": "Breaking Blow",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 8,
+    "file": "domain/bone/breaking-blow.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 383,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "cruel-precision",
+    "name": "Cruel Precision",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 7,
+    "file": "domain/bone/cruel-precision.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 381,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "deathrun",
+    "name": "Deathrun",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 10,
+    "file": "domain/bone/deathrun.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 387,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "deft-maneuvers",
+    "name": "Deft Maneuvers",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 1,
+    "file": "domain/bone/deft-maneuvers.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 368,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "ferocity",
+    "name": "Ferocity",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 2,
+    "file": "domain/bone/ferocity.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 371,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "i-see-it-coming",
+    "name": "I See It Coming",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 1,
+    "file": "domain/bone/i-see-it-coming.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 368,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "know-thy-enemy",
+    "name": "Know Thy Enemy",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 5,
+    "file": "domain/bone/know-thy-enemy.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 377,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "on-the-brink",
+    "name": "On the Brink",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 9,
+    "file": "domain/bone/on-the-brink.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 385,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "rapid-riposte",
+    "name": "Rapid Riposte",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 6,
+    "file": "domain/bone/rapid-riposte.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 379,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "recovery",
+    "name": "Recovery",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 6,
+    "file": "domain/bone/recovery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 379,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "redirect",
+    "name": "Redirect",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 4,
+    "file": "domain/bone/redirect.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 375,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "signature-move",
+    "name": "Signature Move",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 5,
+    "file": "domain/bone/signature-move.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 377,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "splintering-strike",
+    "name": "Splintering Strike",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 9,
+    "file": "domain/bone/splintering-strike.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 385,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "strategic-approach",
+    "name": "Strategic Approach",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 2,
+    "file": "domain/bone/strategic-approach.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 371,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "swift-step",
+    "name": "Swift Step",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 10,
+    "file": "domain/bone/swift-step.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 387,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "tactician",
+    "name": "Tactician",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 3,
+    "file": "domain/bone/tactician.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 373,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "untouchable",
+    "name": "Untouchable",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 1,
+    "file": "domain/bone/untouchable.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 368,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "wrangle",
+    "name": "Wrangle",
+    "kind": "domain",
+    "domain": "bone",
+    "level": 8,
+    "file": "domain/bone/wrangle.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 383,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "banish",
+    "name": "Banish",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 6,
+    "file": "domain/codex/banish.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 379,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-ava",
+    "name": "Book of Ava",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 1,
+    "file": "domain/codex/book-of-ava.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 369,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "book-of-exota",
+    "name": "Book of Exota",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 4,
+    "file": "domain/codex/book-of-exota.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 375,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-grynn",
+    "name": "Book of Grynn",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 4,
+    "file": "domain/codex/book-of-grynn.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 375,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-homet",
+    "name": "Book of Homet",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 7,
+    "file": "domain/codex/book-of-homet.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 381,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-illiat",
+    "name": "Book of Illiat",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 1,
+    "file": "domain/codex/book-of-illiat.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 369,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "book-of-korvax",
+    "name": "Book of Korvax",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 3,
+    "file": "domain/codex/book-of-korvax.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 373,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-norai",
+    "name": "Book of Norai",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 3,
+    "file": "domain/codex/book-of-norai.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 373,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-ronin",
+    "name": "Book of Ronin",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 9,
+    "file": "domain/codex/book-of-ronin.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 385,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-sitil",
+    "name": "Book of Sitil",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 2,
+    "file": "domain/codex/book-of-sitil.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 371,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-tyfar",
+    "name": "Book of Tyfar",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 1,
+    "file": "domain/codex/book-of-tyfar.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 369,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "book-of-vagras",
+    "name": "Book of Vagras",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 2,
+    "file": "domain/codex/book-of-vagras.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 371,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-vyola",
+    "name": "Book of Vyola",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 8,
+    "file": "domain/codex/book-of-vyola.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 383,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "book-of-yarrow",
+    "name": "Book of Yarrow",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 10,
+    "file": "domain/codex/book-of-yarrow.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 387,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "codex-touched",
+    "name": "Codex-Touched",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 7,
+    "file": "domain/codex/codex-touched.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 381,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "disintegration-wave",
+    "name": "Disintegration Wave",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 9,
+    "file": "domain/codex/disintegration-wave.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 385,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "manifest-wall",
+    "name": "Manifest Wall",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 5,
+    "file": "domain/codex/manifest-wall.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 377,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "safe-haven",
+    "name": "Safe Haven",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 8,
+    "file": "domain/codex/safe-haven.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 383,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "sigil-of-retribution",
+    "name": "Sigil of Retribution",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 6,
+    "file": "domain/codex/sigil-of-retribution.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 379,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "teleport",
+    "name": "Teleport",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 5,
+    "file": "domain/codex/teleport.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 377,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "transcendent-union",
+    "name": "Transcendent Union",
+    "kind": "domain",
+    "domain": "codex",
+    "level": 10,
+    "file": "domain/codex/transcendent-union.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 387,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "astral-projection",
+    "name": "Astral Projection",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 8,
+    "file": "domain/grace/astral-projection.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 383,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "copycat",
+    "name": "Copycat",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 9,
+    "file": "domain/grace/copycat.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 385,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "deft-deceiver",
+    "name": "Deft Deceiver",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 1,
+    "file": "domain/grace/deft-deceiver.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 369,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "encore",
+    "name": "Encore",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 10,
+    "file": "domain/grace/encore.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 387,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "endless-charisma",
+    "name": "Endless Charisma",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 7,
+    "file": "domain/grace/endless-charisma.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 381,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "enrapture",
+    "name": "Enrapture",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 1,
+    "file": "domain/grace/enrapture.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 369,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "grace-touched",
+    "name": "Grace-Touched",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 7,
+    "file": "domain/grace/grace-touched.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 382,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "hypnotic-shimmer",
+    "name": "Hypnotic Shimmer",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 3,
+    "file": "domain/grace/hypnotic-shimmer.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 373,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "inspirational-words",
+    "name": "Inspirational Words",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 1,
+    "file": "domain/grace/inspirational-words.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 369,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "invisibility",
+    "name": "Invisibility",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 3,
+    "file": "domain/grace/invisibility.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 374,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "mass-enrapture",
+    "name": "Mass Enrapture",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 8,
+    "file": "domain/grace/mass-enrapture.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 384,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "master-of-the-craft",
+    "name": "Master of the Craft",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 9,
+    "file": "domain/grace/master-of-the-craft.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 386,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "never-upstaged",
+    "name": "Never Upstaged",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 6,
+    "file": "domain/grace/never-upstaged.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 379,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "notorious",
+    "name": "Notorious",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 10,
+    "file": "domain/grace/notorious.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 388,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "share-the-burden",
+    "name": "Share the Burden",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 6,
+    "file": "domain/grace/share-the-burden.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 380,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "soothing-speech",
+    "name": "Soothing Speech",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 4,
+    "file": "domain/grace/soothing-speech.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 375,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "tell-no-lies",
+    "name": "Tell No Lies",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 2,
+    "file": "domain/grace/tell-no-lies.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 371,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "thought-delver",
+    "name": "Thought Delver",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 5,
+    "file": "domain/grace/thought-delver.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 377,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "through-your-eyes",
+    "name": "Through Your Eyes",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 4,
+    "file": "domain/grace/through-your-eyes.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 376,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "troublemaker",
+    "name": "Troublemaker",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 2,
+    "file": "domain/grace/troublemaker.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 372,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "words-of-discord",
+    "name": "Words of Discord",
+    "kind": "domain",
+    "domain": "grace",
+    "level": 5,
+    "file": "domain/grace/words-of-discord.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 378,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "chokehold",
+    "name": "Chokehold",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 3,
+    "file": "domain/midnight/chokehold.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 374,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "dark-whispers",
+    "name": "Dark Whispers",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 6,
+    "file": "domain/midnight/dark-whispers.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 380,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "eclipse",
+    "name": "Eclipse",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 10,
+    "file": "domain/midnight/eclipse.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 388,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "glyph-of-nightfall",
+    "name": "Glyph of Nightfall",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 4,
+    "file": "domain/midnight/glyph-of-nightfall.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 376,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "hush",
+    "name": "Hush",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 5,
+    "file": "domain/midnight/hush.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 378,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "mass-disguise",
+    "name": "Mass Disguise",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 6,
+    "file": "domain/midnight/mass-disguise.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 380,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "midnight-spirit",
+    "name": "Midnight Spirit",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 2,
+    "file": "domain/midnight/midnight-spirit.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 372,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "midnight-touched",
+    "name": "Midnight-Touched",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 7,
+    "file": "domain/midnight/midnight-touched.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 382,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "night-terror",
+    "name": "Night Terror",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 9,
+    "file": "domain/midnight/night-terror.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 386,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "phantom-retreat",
+    "name": "Phantom Retreat",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 5,
+    "file": "domain/midnight/phantom-retreat.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 378,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "pick-and-pull",
+    "name": "Pick and Pull",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 1,
+    "file": "domain/midnight/pick-and-pull.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 369,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "rain-of-blades",
+    "name": "Rain of Blades",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 1,
+    "file": "domain/midnight/rain-of-blades.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 369,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "shadowbind",
+    "name": "Shadowbind",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 2,
+    "file": "domain/midnight/shadowbind.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 372,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "shadowhunter",
+    "name": "Shadowhunter",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 8,
+    "file": "domain/midnight/shadowhunter.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 384,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "specter-of-the-dark",
+    "name": "Specter of the Dark",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 10,
+    "file": "domain/midnight/specter-of-the-dark.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 388,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "spellcharge",
+    "name": "Spellcharge",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 8,
+    "file": "domain/midnight/spellcharge.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 384,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "stealth-expertise",
+    "name": "Stealth Expertise",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 4,
+    "file": "domain/midnight/stealth-expertise.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 376,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "twilight-toll",
+    "name": "Twilight Toll",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 9,
+    "file": "domain/midnight/twilight-toll.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 386,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "uncanny-disguise",
+    "name": "Uncanny Disguise",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 1,
+    "file": "domain/midnight/uncanny-disguise.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 369,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "vanishing-dodge",
+    "name": "Vanishing Dodge",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 7,
+    "file": "domain/midnight/vanishing-dodge.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 382,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "veil-of-night",
+    "name": "Veil of Night",
+    "kind": "domain",
+    "domain": "midnight",
+    "level": 3,
+    "file": "domain/midnight/veil-of-night.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 374,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "conjure-swarm",
+    "name": "Conjure Swarm",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 2,
+    "file": "domain/sage/conjure-swarm.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 372,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "conjured-steeds",
+    "name": "Conjured Steeds",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 6,
+    "file": "domain/sage/conjured-steeds.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 380,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "corrosive-projectile",
+    "name": "Corrosive Projectile",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 3,
+    "file": "domain/sage/corrosive-projectile.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 374,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "death-grip",
+    "name": "Death Grip",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 4,
+    "file": "domain/sage/death-grip.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 376,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "fane-of-the-wilds",
+    "name": "Fane of the Wilds",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 9,
+    "file": "domain/sage/fane-of-the-wilds.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 386,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "forager",
+    "name": "Forager",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 6,
+    "file": "domain/sage/forager.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 380,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "force-of-nature",
+    "name": "Force of Nature",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 10,
+    "file": "domain/sage/force-of-nature.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 388,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "forest-sprites",
+    "name": "Forest Sprites",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 8,
+    "file": "domain/sage/forest-sprites.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 384,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "gifted-tracker",
+    "name": "Gifted Tracker",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 1,
+    "file": "domain/sage/gifted-tracker.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 370,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "healing-field",
+    "name": "Healing Field",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 4,
+    "file": "domain/sage/healing-field.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 376,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "natural-familiar",
+    "name": "Natural Familiar",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 2,
+    "file": "domain/sage/natural-familiar.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 372,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "natures-tongue",
+    "name": "Nature’s Tongue",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 1,
+    "file": "domain/sage/natures-tongue.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 370,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "plant-dominion",
+    "name": "Plant Dominion",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 9,
+    "file": "domain/sage/plant-dominion.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 386,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "rejuvenation-barrier",
+    "name": "Rejuvenation Barrier",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 8,
+    "file": "domain/sage/rejuvenation-barrier.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 384,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "sage-touched",
+    "name": "Sage-Touched",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 7,
+    "file": "domain/sage/sage-touched.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 382,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "tempest",
+    "name": "Tempest",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 10,
+    "file": "domain/sage/tempest.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 388,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "thorn-skin",
+    "name": "Thorn Skin",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 5,
+    "file": "domain/sage/thorn-skin.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 378,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "towering-stalk",
+    "name": "Towering Stalk",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 3,
+    "file": "domain/sage/towering-stalk.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 374,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "vicious-entangle",
+    "name": "Vicious Entangle",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 1,
+    "file": "domain/sage/vicious-entangle.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 370,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "wild-fortress",
+    "name": "Wild Fortress",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 5,
+    "file": "domain/sage/wild-fortress.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 378,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "wild-surge",
+    "name": "Wild Surge",
+    "kind": "domain",
+    "domain": "sage",
+    "level": 7,
+    "file": "domain/sage/wild-surge.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 382,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "bolt-beacon",
+    "name": "Bolt Beacon",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 1,
+    "file": "domain/splendor/bolt-beacon.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 370,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "divination",
+    "name": "Divination",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 4,
+    "file": "domain/splendor/divination.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 376,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "final-words",
+    "name": "Final Words",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 2,
+    "file": "domain/splendor/final-words.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 372,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "healing-hands",
+    "name": "Healing Hands",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 2,
+    "file": "domain/splendor/healing-hands.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 372,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "healing-strike",
+    "name": "Healing Strike",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 7,
+    "file": "domain/splendor/healing-strike.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 382,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "invigoration",
+    "name": "Invigoration",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 10,
+    "file": "domain/splendor/invigoration.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 388,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "life-ward",
+    "name": "Life Ward",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 4,
+    "file": "domain/splendor/life-ward.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 376,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "mending-touch",
+    "name": "Mending Touch",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 1,
+    "file": "domain/splendor/mending-touch.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 370,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "overwhelming-aura",
+    "name": "Overwhelming Aura",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 9,
+    "file": "domain/splendor/overwhelming-aura.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 386,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "reassurance",
+    "name": "Reassurance",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 1,
+    "file": "domain/splendor/reassurance.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 370,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "restoration",
+    "name": "Restoration",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 6,
+    "file": "domain/splendor/restoration.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 380,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "resurrection",
+    "name": "Resurrection",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 10,
+    "file": "domain/splendor/resurrection.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 388,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "salvation-beam",
+    "name": "Salvation Beam",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 9,
+    "file": "domain/splendor/salvation-beam.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 386,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "second-wind",
+    "name": "Second Wind",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 3,
+    "file": "domain/splendor/second-wind.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 374,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "shape-material",
+    "name": "Shape Material",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 5,
+    "file": "domain/splendor/shape-material.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 378,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "shield-aura",
+    "name": "Shield Aura",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 8,
+    "file": "domain/splendor/shield-aura.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 384,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "smite",
+    "name": "Smite",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 5,
+    "file": "domain/splendor/smite.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 378,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "splendor-touched",
+    "name": "Splendor-Touched",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 7,
+    "file": "domain/splendor/splendor-touched.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 382,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "stunning-sunlight",
+    "name": "Stunning Sunlight",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 8,
+    "file": "domain/splendor/stunning-sunlight.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 384,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "voice-of-reason",
+    "name": "Voice of Reason",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 3,
+    "file": "domain/splendor/voice-of-reason.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 374,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "zone-of-protection",
+    "name": "Zone of Protection",
+    "kind": "domain",
+    "domain": "splendor",
+    "level": 6,
+    "file": "domain/splendor/zone-of-protection.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 380,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "armorer",
+    "name": "Armorer",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 5,
+    "file": "domain/valor/armorer.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 378,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "bare-bones",
+    "name": "Bare Bones",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 1,
+    "file": "domain/valor/bare-bones.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 370,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "body-basher",
+    "name": "Body Basher",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 2,
+    "file": "domain/valor/body-basher.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 372,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "bold-presence",
+    "name": "Bold Presence",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 2,
+    "file": "domain/valor/bold-presence.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 372,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "critical-inspiration",
+    "name": "Critical Inspiration",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 3,
+    "file": "domain/valor/critical-inspiration.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 374,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "forceful-push",
+    "name": "Forceful Push",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 1,
+    "file": "domain/valor/forceful-push.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 370,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "full-surge",
+    "name": "Full Surge",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 8,
+    "file": "domain/valor/full-surge.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 384,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "goad-them-on",
+    "name": "Goad Them On",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 4,
+    "file": "domain/valor/goad-them-on.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 376,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "ground-pound",
+    "name": "Ground Pound",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 8,
+    "file": "domain/valor/ground-pound.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 384,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "hold-the-line",
+    "name": "Hold the Line",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 9,
+    "file": "domain/valor/hold-the-line.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 386,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "i-am-your-shield",
+    "name": "I Am Your Shield",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 1,
+    "file": "domain/valor/i-am-your-shield.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 370,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "inevitable",
+    "name": "Inevitable",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 6,
+    "file": "domain/valor/inevitable.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 380,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "lead-by-example",
+    "name": "Lead by Example",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 9,
+    "file": "domain/valor/lead-by-example.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 386,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "lean-on-me",
+    "name": "Lean on Me",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 3,
+    "file": "domain/valor/lean-on-me.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 374,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "rise-up",
+    "name": "Rise Up",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 6,
+    "file": "domain/valor/rise-up.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 380,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "rousing-strike",
+    "name": "Rousing Strike",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 5,
+    "file": "domain/valor/rousing-strike.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 378,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "shrug-it-off",
+    "name": "Shrug It Off",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 7,
+    "file": "domain/valor/shrug-it-off.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 382,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "support-tank",
+    "name": "Support Tank",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 4,
+    "file": "domain/valor/support-tank.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 376,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "unbreakable",
+    "name": "Unbreakable",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 10,
+    "file": "domain/valor/unbreakable.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 388,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "unyielding-armor",
+    "name": "Unyielding Armor",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 10,
+    "file": "domain/valor/unyielding-armor.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 388,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "valor-touched",
+    "name": "Valor-Touched",
+    "kind": "domain",
+    "domain": "valor",
+    "level": 7,
+    "file": "domain/valor/valor-touched.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 382,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "beastbound-foundation",
+    "name": "Beastbound",
+    "kind": "subclass",
+    "file": "subclass/beastbound-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 389,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "beastbound-specialization",
+    "name": "Beastbound",
+    "kind": "subclass",
+    "file": "subclass/beastbound-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 391,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "beastbound-mastery",
+    "name": "Beastbound",
+    "kind": "subclass",
+    "file": "subclass/beastbound-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 393,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "call-of-the-brave-foundation",
+    "name": "Call of the Brave",
+    "kind": "subclass",
+    "file": "subclass/call-of-the-brave-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 390,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "call-of-the-brave-specialization",
+    "name": "Call of the Brave",
+    "kind": "subclass",
+    "file": "subclass/call-of-the-brave-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 392,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "call-of-the-brave-mastery",
+    "name": "Call of the Brave",
+    "kind": "subclass",
+    "file": "subclass/call-of-the-brave-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 394,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "call-of-the-slayer-foundation",
+    "name": "Call of the Slayer",
+    "kind": "subclass",
+    "file": "subclass/call-of-the-slayer-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 390,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "call-of-the-slayer-specialization",
+    "name": "Call of the Slayer",
+    "kind": "subclass",
+    "file": "subclass/call-of-the-slayer-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 392,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "call-of-the-slayer-mastery",
+    "name": "Call of the Slayer",
+    "kind": "subclass",
+    "file": "subclass/call-of-the-slayer-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 394,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "divine-wielder-foundation",
+    "name": "Divine Wielder",
+    "kind": "subclass",
+    "file": "subclass/divine-wielder-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 390,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "divine-wielder-specialization",
+    "name": "Divine Wielder",
+    "kind": "subclass",
+    "file": "subclass/divine-wielder-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 392,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "divine-wielder-mastery",
+    "name": "Divine Wielder",
+    "kind": "subclass",
+    "file": "subclass/divine-wielder-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 394,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "elemental-origin-foundation",
+    "name": "Elemental Origin",
+    "kind": "subclass",
+    "file": "subclass/elemental-origin-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 390,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "elemental-origin-specialization",
+    "name": "Elemental Origin",
+    "kind": "subclass",
+    "file": "subclass/elemental-origin-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 392,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "elemental-origin-mastery",
+    "name": "Elemental Origin",
+    "kind": "subclass",
+    "file": "subclass/elemental-origin-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 394,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "nightwalker-foundation",
+    "name": "Nightwalker",
+    "kind": "subclass",
+    "file": "subclass/nightwalker-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 389,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "nightwalker-specialization",
+    "name": "Nightwalker",
+    "kind": "subclass",
+    "file": "subclass/nightwalker-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 391,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "nightwalker-mastery",
+    "name": "Nightwalker",
+    "kind": "subclass",
+    "file": "subclass/nightwalker-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 393,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "primal-origin-foundation",
+    "name": "Primal Origin",
+    "kind": "subclass",
+    "file": "subclass/primal-origin-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 390,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "primal-origin-specialization",
+    "name": "Primal Origin",
+    "kind": "subclass",
+    "file": "subclass/primal-origin-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 392,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "primal-origin-mastery",
+    "name": "Primal Origin",
+    "kind": "subclass",
+    "file": "subclass/primal-origin-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 394,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "school-of-knowledge-foundation",
+    "name": "School of Knowledge",
+    "kind": "subclass",
+    "file": "subclass/school-of-knowledge-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 390,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "school-of-knowledge-specialization",
+    "name": "School of Knowledge",
+    "kind": "subclass",
+    "file": "subclass/school-of-knowledge-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 392,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "school-of-knowledge-mastery",
+    "name": "School of Knowledge",
+    "kind": "subclass",
+    "file": "subclass/school-of-knowledge-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 394,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "school-of-war-foundation",
+    "name": "School of War",
+    "kind": "subclass",
+    "file": "subclass/school-of-war-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 390,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "school-of-war-specialization",
+    "name": "School of War",
+    "kind": "subclass",
+    "file": "subclass/school-of-war-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 392,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "school-of-war-mastery",
+    "name": "School of War",
+    "kind": "subclass",
+    "file": "subclass/school-of-war-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 394,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "stalwart-foundation",
+    "name": "Stalwart",
+    "kind": "subclass",
+    "file": "subclass/stalwart-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 389,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "stalwart-specialization",
+    "name": "Stalwart",
+    "kind": "subclass",
+    "file": "subclass/stalwart-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 391,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "stalwart-mastery",
+    "name": "Stalwart",
+    "kind": "subclass",
+    "file": "subclass/stalwart-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 393,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "syndicate-foundation",
+    "name": "Syndicate",
+    "kind": "subclass",
+    "file": "subclass/syndicate-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 390,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "syndicate-specialization",
+    "name": "Syndicate",
+    "kind": "subclass",
+    "file": "subclass/syndicate-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 392,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "syndicate-mastery",
+    "name": "Syndicate",
+    "kind": "subclass",
+    "file": "subclass/syndicate-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 394,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "troubadour-foundation",
+    "name": "Troubadour",
+    "kind": "subclass",
+    "file": "subclass/troubadour-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 389,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "troubadour-specialization",
+    "name": "Troubadour",
+    "kind": "subclass",
+    "file": "subclass/troubadour-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 391,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "troubadour-mastery",
+    "name": "Troubadour",
+    "kind": "subclass",
+    "file": "subclass/troubadour-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 393,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "vengeance-foundation",
+    "name": "Vengeance",
+    "kind": "subclass",
+    "file": "subclass/vengeance-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 389,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "vengeance-specialization",
+    "name": "Vengeance",
+    "kind": "subclass",
+    "file": "subclass/vengeance-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 391,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "vengeance-mastery",
+    "name": "Vengeance",
+    "kind": "subclass",
+    "file": "subclass/vengeance-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 393,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "warden-of-renewal-foundation",
+    "name": "Warden of Renewal",
+    "kind": "subclass",
+    "file": "subclass/warden-of-renewal-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 389,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "warden-of-renewal-specialization",
+    "name": "Warden of Renewal",
+    "kind": "subclass",
+    "file": "subclass/warden-of-renewal-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 391,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "warden-of-renewal-mastery",
+    "name": "Warden of Renewal",
+    "kind": "subclass",
+    "file": "subclass/warden-of-renewal-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 393,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "warden-of-the-elements-foundation",
+    "name": "Warden of the Elements",
+    "kind": "subclass",
+    "file": "subclass/warden-of-the-elements-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 389,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "warden-of-the-elements-specialization",
+    "name": "Warden of the Elements",
+    "kind": "subclass",
+    "file": "subclass/warden-of-the-elements-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 391,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "warden-of-the-elements-mastery",
+    "name": "Warden of the Elements",
+    "kind": "subclass",
+    "file": "subclass/warden-of-the-elements-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 393,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "wayfinder-foundation",
+    "name": "Wayfinder",
+    "kind": "subclass",
+    "file": "subclass/wayfinder-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 389,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "wayfinder-specialization",
+    "name": "Wayfinder",
+    "kind": "subclass",
+    "file": "subclass/wayfinder-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 391,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "wayfinder-mastery",
+    "name": "Wayfinder",
+    "kind": "subclass",
+    "file": "subclass/wayfinder-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 393,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "winged-sentinel-foundation",
+    "name": "Winged Sentinel",
+    "kind": "subclass",
+    "file": "subclass/winged-sentinel-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 390,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "winged-sentinel-specialization",
+    "name": "Winged Sentinel",
+    "kind": "subclass",
+    "file": "subclass/winged-sentinel-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 392,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "winged-sentinel-mastery",
+    "name": "Winged Sentinel",
+    "kind": "subclass",
+    "file": "subclass/winged-sentinel-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 394,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "wordsmith-foundation",
+    "name": "Wordsmith",
+    "kind": "subclass",
+    "file": "subclass/wordsmith-foundation.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 389,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "wordsmith-specialization",
+    "name": "Wordsmith",
+    "kind": "subclass",
+    "file": "subclass/wordsmith-specialization.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 391,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "wordsmith-mastery",
+    "name": "Wordsmith",
+    "kind": "subclass",
+    "file": "subclass/wordsmith-mastery.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 393,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "highborne",
+    "name": "Highborne",
+    "kind": "community",
+    "file": "community/highborne.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 395,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "loreborne",
+    "name": "Loreborne",
+    "kind": "community",
+    "file": "community/loreborne.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 395,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "orderborne",
+    "name": "Orderborne",
+    "kind": "community",
+    "file": "community/orderborne.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 395,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "ridgeborne",
+    "name": "Ridgeborne",
+    "kind": "community",
+    "file": "community/ridgeborne.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 395,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "seaborne",
+    "name": "Seaborne",
+    "kind": "community",
+    "file": "community/seaborne.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 395,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "slyborne",
+    "name": "Slyborne",
+    "kind": "community",
+    "file": "community/slyborne.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 395,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "underborne",
+    "name": "Underborne",
+    "kind": "community",
+    "file": "community/underborne.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 395,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "wanderborne",
+    "name": "Wanderborne",
+    "kind": "community",
+    "file": "community/wanderborne.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 395,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "wildborne",
+    "name": "Wildborne",
+    "kind": "community",
+    "file": "community/wildborne.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 395,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "clank",
+    "name": "Clank",
+    "kind": "ancestry",
+    "file": "ancestry/clank.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 396,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "drakona",
+    "name": "Drakona",
+    "kind": "ancestry",
+    "file": "ancestry/drakona.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 396,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "dwarf",
+    "name": "Dwarf",
+    "kind": "ancestry",
+    "file": "ancestry/dwarf.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 396,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "elf",
+    "name": "Elf",
+    "kind": "ancestry",
+    "file": "ancestry/elf.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 396,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "faerie",
+    "name": "Faerie",
+    "kind": "ancestry",
+    "file": "ancestry/faerie.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 396,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "faun",
+    "name": "Faun",
+    "kind": "ancestry",
+    "file": "ancestry/faun.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 396,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "firbolg",
+    "name": "Firbolg",
+    "kind": "ancestry",
+    "file": "ancestry/firbolg.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 396,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "fungril",
+    "name": "Fungril",
+    "kind": "ancestry",
+    "file": "ancestry/fungril.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 396,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "galapa",
+    "name": "Galapa",
+    "kind": "ancestry",
+    "file": "ancestry/galapa.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 396,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "giant",
+    "name": "Giant",
+    "kind": "ancestry",
+    "file": "ancestry/giant.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 397,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "goblin",
+    "name": "Goblin",
+    "kind": "ancestry",
+    "file": "ancestry/goblin.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 397,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "halfling",
+    "name": "Halfling",
+    "kind": "ancestry",
+    "file": "ancestry/halfling.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 397,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "human",
+    "name": "Human",
+    "kind": "ancestry",
+    "file": "ancestry/human.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 397,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "infernis",
+    "name": "Infernis",
+    "kind": "ancestry",
+    "file": "ancestry/infernis.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 397,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "katari",
+    "name": "Katari",
+    "kind": "ancestry",
+    "file": "ancestry/katari.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 397,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "orc",
+    "name": "Orc",
+    "kind": "ancestry",
+    "file": "ancestry/orc.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 397,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "ribbet",
+    "name": "Ribbet",
+    "kind": "ancestry",
+    "file": "ancestry/ribbet.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 397,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "simiah",
+    "name": "Simiah",
+    "kind": "ancestry",
+    "file": "ancestry/simiah.webp",
+    "sourcePdf": "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf",
+    "page": 397,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  }
+]

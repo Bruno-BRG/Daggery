@@ -1,0 +1,1082 @@
+[
+  {
+    "id": "stride-potion",
+    "name": "Stride Potion",
+    "description": "You gain a +1 bonus to your next Agility Roll.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 1
+    }
+  },
+  {
+    "id": "bolster-potion",
+    "name": "Bolster Potion",
+    "description": "You gain a +1 bonus to your next Strength Roll.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 2
+    }
+  },
+  {
+    "id": "control-potion",
+    "name": "Control Potion",
+    "description": "You gain a +1 bonus to your next Finesse Roll.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 3
+    }
+  },
+  {
+    "id": "attune-potion",
+    "name": "Attune Potion",
+    "description": "You gain a +1 bonus to your next Instinct Roll.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 4
+    }
+  },
+  {
+    "id": "charm-potion",
+    "name": "Charm Potion",
+    "description": "You gain a +1 bonus to your next Presence Roll.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 5
+    }
+  },
+  {
+    "id": "enlighten-potion",
+    "name": "Enlighten Potion",
+    "description": "You gain a +1 bonus to your next Knowledge Roll.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 6
+    }
+  },
+  {
+    "id": "minor-health-potion",
+    "name": "Minor Health Potion",
+    "description": "Clear 1d4 HP.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 7
+    }
+  },
+  {
+    "id": "minor-stamina-potion",
+    "name": "Minor Stamina Potion",
+    "description": "Clear 1d4 Stress.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 8
+    }
+  },
+  {
+    "id": "grindletooth-venom",
+    "name": "Grindletooth Venom",
+    "description": "You can apply this venom to a weapon that deals physical damage to add a d6 to your next damage roll with that weapon.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 9
+    }
+  },
+  {
+    "id": "varik-leaves",
+    "name": "Varik Leaves",
+    "description": "You can eat these paired leaves to immediately gain 2 Hope.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 10
+    }
+  },
+  {
+    "id": "vial-of-moondrip",
+    "name": "Vial of Moondrip",
+    "description": "When you drink the contents of this vial, you can see in total darkness until your next rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 11
+    }
+  },
+  {
+    "id": "unstable-arcane-shard",
+    "name": "Unstable Arcane Shard",
+    "description": "You can make a Finesse Roll to throw this shard at a group of adversaries within Far range. Targets you succeed against take 1d20 magic damage.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 12
+    }
+  },
+  {
+    "id": "potion-of-stability",
+    "name": "Potion of Stability",
+    "description": "You can drink this potion to choose one additional downtime move.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 13
+    }
+  },
+  {
+    "id": "improved-grindletooth-venom",
+    "name": "Improved Grindletooth Venom",
+    "description": "You can apply this venom to a weapon that deals physical damage to add a d8 to your next damage roll with that weapon.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 14
+    }
+  },
+  {
+    "id": "morphing-clay",
+    "name": "Morphing Clay",
+    "description": "You can spend a Hope to use this clay, altering your face enough to make you unrecognizable until your next rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 15
+    }
+  },
+  {
+    "id": "vial-of-darksmoke",
+    "name": "Vial of Darksmoke",
+    "description": "When an adversary attacks you, use this vial and roll a number of d6s equal to your Agility. Add the highest result to your Evasion against the attack.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 16
+    }
+  },
+  {
+    "id": "jumping-root",
+    "name": "Jumping Root",
+    "description": "Eat this root to leap up to Far range once without needing to roll.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 17
+    }
+  },
+  {
+    "id": "snap-powder",
+    "name": "Snap Powder",
+    "description": "Mark a Stress and clear a HP.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 18
+    }
+  },
+  {
+    "id": "health-potion",
+    "name": "Health Potion",
+    "description": "Clear 1d4+1 HP.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 19
+    }
+  },
+  {
+    "id": "stamina-potion",
+    "name": "Stamina Potion",
+    "description": "Clear 1d4+1 Stress.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 20
+    }
+  },
+  {
+    "id": "armor-stitcher",
+    "name": "Armor Stitcher",
+    "description": "You can use this stitcher to spend any number of Hope and clear that many Armor Slots.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 21
+    }
+  },
+  {
+    "id": "gill-salve",
+    "name": "Gill Salve",
+    "description": "You can apply this salve to your neck to breathe underwater for a number of minutes equal to your level.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 22
+    }
+  },
+  {
+    "id": "replication-parchment",
+    "name": "Replication Parchment",
+    "description": "By touching this piece of parchment to another, you can perfectly copy the second parchment’s contents. Once used, this parchment becomes mundane paper.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 23
+    }
+  },
+  {
+    "id": "improved-arcane-shard",
+    "name": "Improved Arcane Shard",
+    "description": "You can make a Finesse Roll to throw this shard at a group of adversaries within Far range. Targets you succeed against take 2d20 magic damage.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 24
+    }
+  },
+  {
+    "id": "major-stride-potion",
+    "name": "Major Stride Potion",
+    "description": "You gain a +1 bonus to your Agility until your next rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 25
+    }
+  },
+  {
+    "id": "major-bolster-potion",
+    "name": "Major Bolster Potion",
+    "description": "You gain a +1 bonus to your Strength until your next rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 26
+    }
+  },
+  {
+    "id": "major-control-potion",
+    "name": "Major Control Potion",
+    "description": "You gain a +1 bonus to your Finesse until your next rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 27
+    }
+  },
+  {
+    "id": "major-attune-potion",
+    "name": "Major Attune Potion",
+    "description": "You gain a +1 bonus to your Instinct until your next rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 28
+    }
+  },
+  {
+    "id": "major-charm-potion",
+    "name": "Major Charm Potion",
+    "description": "You gain a +1 bonus to your Presence until your next rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 29
+    }
+  },
+  {
+    "id": "major-enlighten-potion",
+    "name": "Major Enlighten Potion",
+    "description": "You gain a +1 bonus to your Knowledge until your next rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 30
+    }
+  },
+  {
+    "id": "blood-of-the-yorgi",
+    "name": "Blood of the Yorgi",
+    "description": "You can drink this blood to disappear from where you are and immediately reappear at a point you can see within Very Far range.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 31
+    }
+  },
+  {
+    "id": "homets-secret-potion",
+    "name": "Homet’s Secret Potion",
+    "description": "After drinking this potion, the next successful attack you make critically succeeds.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 32
+    }
+  },
+  {
+    "id": "redthorn-saliva",
+    "name": "Redthorn Saliva",
+    "description": "You can apply this saliva to a weapon that deals physical damage to add a d12 to your next damage roll with that weapon.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 33
+    }
+  },
+  {
+    "id": "channelstone",
+    "name": "Channelstone",
+    "description": "You can use this stone to take a spell or grimoire from your vault, use it once, and return it to your vault.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 34
+    }
+  },
+  {
+    "id": "mythic-dust",
+    "name": "Mythic Dust",
+    "description": "You can apply this dust to a weapon that deals magic damage to add a d12 to your next damage roll with that weapon.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 35
+    }
+  },
+  {
+    "id": "acidpaste",
+    "name": "Acidpaste",
+    "description": "This paste eats away walls and other surfaces in bright flashes.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 36
+    }
+  },
+  {
+    "id": "hopehold-flare",
+    "name": "Hopehold Flare",
+    "description": "When you use this flare, allies within Close range roll a d6 when they spend a Hope. On a result of 6, they gain the effect of that Hope without spending it. The flare lasts until the end of the scene.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 37
+    }
+  },
+  {
+    "id": "major-arcane-shard",
+    "name": "Major Arcane Shard",
+    "description": "You can make a Finesse Roll to throw this shard at a group of adversaries within Far range. Targets you succeed against take 4d20 magic damage.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 38
+    }
+  },
+  {
+    "id": "featherbone",
+    "name": "Featherbone",
+    "description": "You can use this bone to control your falling speed for a number of minutes equal to your level.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 39
+    }
+  },
+  {
+    "id": "circle-of-the-void",
+    "name": "Circle of the Void",
+    "description": "Mark a Stress to create a void that extends up to Far range. No magic can be cast inside the void, and creatures within the void are immune to magic damage.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 40
+    }
+  },
+  {
+    "id": "sun-tree-sap",
+    "name": "Sun Tree Sap",
+    "description": "Consume this sap to roll a d6. On a result of 5–6, clear 2 HP. On a result of 2–4, clear 3 Stress. On a result of 1, see through the veil of death and return changed, gaining one scar.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 41
+    }
+  },
+  {
+    "id": "dripfang-poison",
+    "name": "Dripfang Poison",
+    "description": "A creature who consumes this poison takes 8d10 direct magic damage.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 42
+    }
+  },
+  {
+    "id": "major-health-potion",
+    "name": "Major Health Potion",
+    "description": "Clear 1d4+2 HP.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 43
+    }
+  },
+  {
+    "id": "major-stamina-potion",
+    "name": "Major Stamina Potion",
+    "description": "Clear 1d4+2 Stress.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 44
+    }
+  },
+  {
+    "id": "ogre-musk",
+    "name": "Ogre Musk",
+    "description": "You can use this musk to prevent anyone from tracking you by mundane or magical means until your next rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 45
+    }
+  },
+  {
+    "id": "wingsprout",
+    "name": "Wingsprout",
+    "description": "You gain magic wings that allow you to fly for a number of minutes equal to your level.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 46
+    }
+  },
+  {
+    "id": "jar-of-lost-voices",
+    "name": "Jar of Lost Voices",
+    "description": "You can open this jar to release a deafening echo of voices for a number of minutes equal to your Instinct. Creatures within Far range unprepared for the sound take 6d8 magic damage.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 47
+    }
+  },
+  {
+    "id": "dragonbloom-tea",
+    "name": "Dragonbloom Tea",
+    "description": "You can drink this tea to unleash a fiery breath attack. Make an Instinct Roll against all adversaries in front of you within Close range. Targets you succeed against take d20 physical damage using your Proficiency.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 48
+    }
+  },
+  {
+    "id": "bridge-seed",
+    "name": "Bridge Seed",
+    "description": "Thick vines grow from your location to a point of your choice within Far range, allowing you to climb up or across them. The vines dissipate on your next short rest.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 49
+    }
+  },
+  {
+    "id": "sleeping-sap",
+    "name": "Sleeping Sap",
+    "description": "You can drink this potion to fall asleep for a full night’s rest. You clear all Stress upon waking.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 50
+    }
+  },
+  {
+    "id": "feast-of-xuria",
+    "name": "Feast of Xuria",
+    "description": "You can eat this meal to clear all HP and Stress and gain 1d4 Hope.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 51
+    }
+  },
+  {
+    "id": "bonding-honey",
+    "name": "Bonding Honey",
+    "description": "This honey can be used to glue two objects together permanently.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 52
+    }
+  },
+  {
+    "id": "shrinking-potion",
+    "name": "Shrinking Potion",
+    "description": "You can drink this potion to halve your size until you choose to drop this form or your next rest. While in this form, you have a +2 bonus to Agility and a −1 penalty to your Proficiency.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 53
+    }
+  },
+  {
+    "id": "growing-potion",
+    "name": "Growing Potion",
+    "description": "You can drink this potion to double your size until you choose to drop this form or your next rest. While in this form, you have a +2 bonus to Strength and a +1 bonus to your Proficiency.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 54
+    }
+  },
+  {
+    "id": "knowledge-stone",
+    "name": "Knowledge Stone",
+    "description": "If you die while holding this stone, an ally can take a card from your loadout to place in their loadout or vault. After they take this knowledge, the stone crumbles.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 55
+    }
+  },
+  {
+    "id": "sweet-moss",
+    "name": "Sweet Moss",
+    "description": "You can consume this moss during a rest to clear 1d10 HP or 1d10 Stress.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 56
+    }
+  },
+  {
+    "id": "blinding-orb",
+    "name": "Blinding Orb",
+    "description": "You can activate this orb to create a flash of bright light. All targets within Close range become Vulnerable until they mark HP.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 57
+    }
+  },
+  {
+    "id": "death-tea",
+    "name": "Death Tea",
+    "description": "After you drink this tea, you instantly kill your target when you critically succeed on an attack. If you don’t critically succeed on an attack before your next long rest, you die.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 58
+    }
+  },
+  {
+    "id": "mirror-of-marigold",
+    "name": "Mirror of Marigold",
+    "description": "When you take damage, you can spend a Hope to negate that damage, after which the mirror shatters.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 59
+    }
+  },
+  {
+    "id": "stardrop",
+    "name": "Stardrop",
+    "description": "You can use this stardrop to summon a hailstorm of comets that deals 8d20 physical damage to all targets within Very Far range.",
+    "rollTable": {
+      "name": "Core Set Consumables",
+      "roll": 60
+    }
+  },
+  {
+    "id": "warding-candle",
+    "name": "Warding Candle",
+    "description": "You can light this candle to fill an area within Close range with a halo of light. A creature outside the halo can’t enter it if they have ill intent toward a creature within it. The candle burns for an hour.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 1
+    }
+  },
+  {
+    "id": "iridian-dust",
+    "name": "Iridian Dust",
+    "description": "This multicolored powder sticks to everything and prevents creatures covered in it from becoming Hidden.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 2
+    }
+  },
+  {
+    "id": "verglasian-seed",
+    "name": "Verglasian Seed",
+    "description": "You can use this ice shard to instantly freeze an area of water up to Close range.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 3
+    }
+  },
+  {
+    "id": "cupbearers-bezoar",
+    "name": "Cupbearer’s Bezoar",
+    "description": "You can swallow this bezoar to become immune to poisons until your next long rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 4
+    }
+  },
+  {
+    "id": "mossmantle-potion",
+    "name": "Mossmantle Potion",
+    "description": "You can drink this tea to perfectly blend into natural environments until your next rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 5
+    }
+  },
+  {
+    "id": "lyrebird-lozenge",
+    "name": "Lyrebird Lozenge",
+    "description": "You can dissolve this lozenge in your mouth to perfectly mimic any voice you’ve heard until the end of the scene.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 6
+    }
+  },
+  {
+    "id": "vial-of-featherfall",
+    "name": "Vial of Featherfall",
+    "description": "You can drink this potion to ignore damage from falling for the next 10 minutes.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 7
+    }
+  },
+  {
+    "id": "chimeric-saliva",
+    "name": "Chimeric Saliva",
+    "description": "You can apply this saliva to a weapon that deals physical damage to change its damage type to magic until your next rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 8
+    }
+  },
+  {
+    "id": "packet-of-space-dust",
+    "name": "Packet of Space Dust",
+    "description": "This dust causes anything it covers to become lighter than air. One packet contains enough dust to cover the contents of a picnic basket, and the effects last for an hour.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 9
+    }
+  },
+  {
+    "id": "pipeweed",
+    "name": "Pipeweed",
+    "description": "When you choose the Clear Stress downtime move during a short rest, you can smoke this non-intoxicating leaf to clear an additional Stress. Any other PCs who chose the Clear Stress downtime move also gain this benefit.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 10
+    }
+  },
+  {
+    "id": "deathseers-powder",
+    "name": "Deathseer’s Powder",
+    "description": "You can sprinkle this powder over a recently deceased corpse to conjure a spectral reprise of their final minute of life.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 11
+    }
+  },
+  {
+    "id": "slayers-salt",
+    "name": "Slayer’s Salt",
+    "description": "You can spread this salt in a line along windowsills or thresholds to create a magical barrier that undead creatures can’t cross until the line is broken.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 12
+    }
+  },
+  {
+    "id": "yakamel-milk",
+    "name": "Yakamel Milk",
+    "description": "After consuming this milk, the next time you clear 1 or more Hit Points, you clear an additional Hit Point.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 13
+    }
+  },
+  {
+    "id": "glowmoss-mushroom",
+    "name": "Glowmoss Mushroom",
+    "description": "You can break this mushroom into pieces, causing it to glow bright blue until your next long rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 14
+    }
+  },
+  {
+    "id": "red-ooze-oil",
+    "name": "Red Ooze Oil",
+    "description": "You can coat your weapon in this oil. The next successful attack you make with this weapon deals an extra 1d8 magic damage and temporarily Ignites the target. While Ignited, the target takes 1d4 magic damage when they take the spotlight.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 15
+    }
+  },
+  {
+    "id": "instant-camp",
+    "name": "Instant Camp",
+    "description": "You can unfold this small mechanical box into a camping tent large enough to safely house six people. The tent collapses at the end of your next long rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 16
+    }
+  },
+  {
+    "id": "bundle-of-spiderlegs",
+    "name": "Bundle of Spiderlegs",
+    "description": "You can eat these spiderlegs to walk on walls until your next rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 17
+    }
+  },
+  {
+    "id": "ciscan-fog-bottle",
+    "name": "Ciscan Fog Bottle",
+    "description": "You can break this jar to fill the area within Close range with magical mist. A creature who enters the mist clears a Stress and becomes Hidden.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 18
+    }
+  },
+  {
+    "id": "snapthorn-seed",
+    "name": "Snapthorn Seed",
+    "description": "You can throw this seed at a point you can see. It explodes into a tangle of binding vines that temporarily Restrains all creatures within Close range of that point.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 19
+    }
+  },
+  {
+    "id": "sprite-bottle",
+    "name": "Sprite Bottle",
+    "description": "When you mark your last Hit Point, this bottle shatters to release the Sprite inside. The Sprite clears all your Hit Points before fading from the Mortal Realm.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 20
+    }
+  },
+  {
+    "id": "gravity-bomb",
+    "name": "Gravity Bomb",
+    "description": "You can throw this peach-sized mechanical orb at a point within Far range. It implodes and pulls all creatures and objects within Close range of that point into Melee range with it.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 21
+    }
+  },
+  {
+    "id": "gossip-flower",
+    "name": "Gossip Flower",
+    "description": "You can plant this seed in soil. It instantly grows into a small flower that records everything it hears for up to one week. When plucked, the flower recites what it recorded in real time, then withers.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 22
+    }
+  },
+  {
+    "id": "displacement-token",
+    "name": "Displacement Token",
+    "description": "You can swallow this token to conjure two illusions of yourself that you can control. Each illusion lasts until it takes damage or until your next rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 23
+    }
+  },
+  {
+    "id": "night-hags-dust",
+    "name": "Night Hag’s Dust",
+    "description": "You can blow this dust in an adversary’s face to prevent them from clearing Stress until your next long rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 24
+    }
+  },
+  {
+    "id": "self-sewing-thread",
+    "name": "Self-Sewing Thread",
+    "description": "You can use this thread to clear either a Hit Point or 2 Armor Slots.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 25
+    }
+  },
+  {
+    "id": "stonemasons-fortune",
+    "name": "Stonemason’s Fortune",
+    "description": "When you throw this gray brick on the ground, it immediately grows into a 6-foot-tall, 10-foot-wide, and 2-foot-deep wall of solid stone.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 26
+    }
+  },
+  {
+    "id": "mnemonic-potion",
+    "name": "Mnemonic Potion",
+    "description": "You can drink this potion to Utilize an Experience without spending a Hope.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 27
+    }
+  },
+  {
+    "id": "salamander-salve",
+    "name": "Salamander Salve",
+    "description": "You can apply this salve to your skin to make yourself immune to heat until your next rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 28
+    }
+  },
+  {
+    "id": "green-ooze-oil",
+    "name": "Green Ooze Oil",
+    "description": "You can coat your weapon in this oil. The next successful attack you make with this weapon deals an extra 1d8 magic damage and temporarily Corrodes the target. While Corroded, the target gains a −2 penalty to their damage thresholds.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 29
+    }
+  },
+  {
+    "id": "sunlight-orb",
+    "name": "Sunlight Orb",
+    "description": "You can shatter this orb to make the area within Very Far range appear as though it’s sunlit daytime for the next 24 hours.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 30
+    }
+  },
+  {
+    "id": "moonlight-orb",
+    "name": "Moonlight Orb",
+    "description": "You can shatter this orb to make the area within Very Far range appear as though it’s moonlit nighttime for the next 24 hours.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 31
+    }
+  },
+  {
+    "id": "midas-flask",
+    "name": "Midas Flask",
+    "description": "You can pour this small flask of alchemical liquid over a mundane item to instantly transmute it into a handful of gold.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 32
+    }
+  },
+  {
+    "id": "staff-of-reversal",
+    "name": "Staff of Reversal",
+    "description": "You can break this staff against the ground to reverse one magical transformation or effect within Far range.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 33
+    }
+  },
+  {
+    "id": "berserkers-brew",
+    "name": "Berserker’s Brew",
+    "description": "When you drink this dram of liquid, you gain a bonus to your Strength and a penalty to your Finesse and Knowledge equal to your Instinct (minimum 1). This effect lasts until you make a death move or until your next rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 34
+    }
+  },
+  {
+    "id": "emberite-shard",
+    "name": "Emberite Shard",
+    "description": "Choose a point within Far range. All targets within Close range of that point must succeed on a Reaction Roll (16) or take 3d6 magic damage and become temporarily Ablaze. While Ablaze, a creature must roll a d4 whenever they make an action roll. On a result of 1, they mark a Hit Point. On a result of 4, they clear the Ablaze condition.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 35
+    }
+  },
+  {
+    "id": "arcticite-shard",
+    "name": "Arcticite Shard",
+    "description": "Choose a point within Far range. All targets within Close range of that point must succeed on a Reaction Roll (16) or take 3d6 magic damage and become temporarily Restrained by ice.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 36
+    }
+  },
+  {
+    "id": "fulgurite-shard",
+    "name": "Fulgurite Shard",
+    "description": "Choose a point within Far range. All targets within Close range of that point must succeed on a Reaction Roll (16) or take 3d6 magic damage and mark 1d4 Stress as lightning crackles through the area.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 37
+    }
+  },
+  {
+    "id": "demiurges-draught",
+    "name": "Demiurge’s Draught",
+    "description": "You can drink this draught to gain a +1 bonus to your Proficiency for your next successful attack roll.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 38
+    }
+  },
+  {
+    "id": "cockerel-claw-tea",
+    "name": "Cockerel Claw Tea",
+    "description": "You can drink this tea to refresh your features as if you had taken a long rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 39
+    }
+  },
+  {
+    "id": "potion-of-vigilance",
+    "name": "Potion of Vigilance",
+    "description": "You can drink this potion to gain a +1 bonus to your Evasion until you mark a Hit Point.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 40
+    }
+  },
+  {
+    "id": "cacophonous-concoction",
+    "name": "Cacophonous Concoction",
+    "description": "When you drink this potion, anything you say or do in the next hour becomes impossible for a witness to recount. Any attempts they make to communicate what they saw, heard, or otherwise sensed comes out garbled or nonsensical.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 41
+    }
+  },
+  {
+    "id": "nightmare-mead",
+    "name": "Nightmare Mead",
+    "description": "You can drink this potion to discover the deepest fear of the next person you make eye contact with. When you do, the GM gains a Fear.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 42
+    }
+  },
+  {
+    "id": "stake-of-abjuration",
+    "name": "Stake of Abjuration",
+    "description": "You can hammer this stake into the ground and make a proclamation. Until your next rest, a creature within Far range of the stake who transgresses that proclamation must mark a Stress. The stake lasts until your next rest, then it shatters.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 43
+    }
+  },
+  {
+    "id": "psychopomps-shroud",
+    "name": "Psychopomp’s Shroud",
+    "description": "You can place this shroud over the corpse of a recently deceased creature. The creature’s spirit enters the shroud and becomes your spectral assistant until the next sunrise, when they pass through the veil of death and take the shroud with them.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 44
+    }
+  },
+  {
+    "id": "phial-of-deep-ink",
+    "name": "Phial of Deep Ink",
+    "description": "You can drink this bottle of ink to transform into a cephalopod of roughly your size for the next hour. You gain rubbery skin, soft bones, the ability to breathe underwater, and new limbs until you have eight total.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 45
+    }
+  },
+  {
+    "id": "mesmers-tonic",
+    "name": "Mesmer’s Tonic",
+    "description": "When you drink this tonic, the only thing you can hear until your next rest are the surface thoughts of creatures within Very Close range.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 46
+    }
+  },
+  {
+    "id": "invisibility-potion",
+    "name": "Invisibility Potion",
+    "description": "You are Hidden until you deal damage to another creature or until your next rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 47
+    }
+  },
+  {
+    "id": "formoid-serum",
+    "name": "Formoid Serum",
+    "description": "You can drink this potion to become a swarm of 16 million ants until the end of the scene. You keep and have access to all equipment, loot, and features.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 48
+    }
+  },
+  {
+    "id": "steelskin-salve",
+    "name": "Steelskin Salve",
+    "description": "You can apply this salve to your skin to gain a bonus to your damage thresholds equal to your tier until the end of the scene.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 49
+    }
+  },
+  {
+    "id": "godlings-pomelo",
+    "name": "Godling’s Pomelo",
+    "description": "You can eat this citrus fruit to clear all Hit Points and Stress.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 50
+    }
+  },
+  {
+    "id": "snakeskin-spirit",
+    "name": "Snakeskin Spirit",
+    "description": "You can drink this potion to slough off your outer layer of skin and heal a scar.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 51
+    }
+  },
+  {
+    "id": "magic-users-malison",
+    "name": "Magic-User’s Malison",
+    "description": "When you release this spellcaster’s trapped soul, you can cast one spell from a card in your vault as if it were in your loadout. This doesn’t work for permanently vaulted cards.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 52
+    }
+  },
+  {
+    "id": "quintessential-severant",
+    "name": "Quintessential Severant",
+    "description": "You can use this magic blade to cut one magical or metaphysical bond, such as an enchantment, contract, magical tether, or divine oath. When you do, the blade shatters.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 53
+    }
+  },
+  {
+    "id": "mask-of-the-echoed-self",
+    "name": "Mask of the Echoed Self",
+    "description": "You can wear this mask during your next level up to swap the values of any of your traits. When you do, the mask becomes your permanent face.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 54
+    }
+  },
+  {
+    "id": "necroprancers-bell",
+    "name": "Necroprancer’s Bell",
+    "description": "You can break this rusted, clapperless bell against the ground to summon a skeletal steed that climbs out of the earth and serves you until the next sunrise.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 55
+    }
+  },
+  {
+    "id": "drakemantle",
+    "name": "Drakemantle",
+    "description": "You can use this enchanted ancient dragon hide to gain draconic characteristics until the end of the scene, when the hide falls aways in tatters. Until then, you can fly and gain a +5 bonus to your damage thresholds and a +1 bonus to your Proficiency.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 56
+    }
+  },
+  {
+    "id": "gamblers-fallacy",
+    "name": "Gambler’s Fallacy",
+    "description": "You can spend any number of handfuls of gold by placing them into this slotted ceramic jar shaped like a pig. When you throw the jar at a point within Far range, it explodes and deals 1d20 magic damage for each handful of gold spent to all creatures within Close range of that point. All gold within the jar is destroyed.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 57
+    }
+  },
+  {
+    "id": "lionheart-tonic",
+    "name": "Lionheart Tonic",
+    "description": "You can drink this tonic to gain a +1 bonus to your Proficiency until you roll with Fear.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 58
+    }
+  },
+  {
+    "id": "tears-of-the-undying-hero",
+    "name": "Tears of the Undying Hero",
+    "description": "When you drink this potion, death can’t touch you until your next long rest. When you would mark your last Hit Point, instead of making a death move, you make one final action roll before falling into a dreamless slumber until an ally chooses the Tend to Wounds downtime move to clear your Hit Points.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 59
+    }
+  },
+  {
+    "id": "featherstep-potion",
+    "name": "Featherstep Potion",
+    "description": "You can drink this potion to sprout small wings from your ankles that give you a bonus to your Evasion equal to your tier until your next rest.",
+    "rollTable": {
+      "name": "Additional Consumables",
+      "roll": 60
+    }
+  }
+]

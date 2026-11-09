@@ -1,0 +1,9 @@
+.daggery-combat { container-type: inline-size; min-height: 100%; }
+.daggery-combat-controls { order: 2; }
+@container (min-width: 960px) {
+  .daggery-combat-layout { flex-direction: row; }
+  .daggery-combat-controls { order: 0; width: 300px; border-bottom: 0; border-right: 1px solid var(--ds-border); }
+}
+@container (min-width: 1200px) {
+  .daggery-encounter-builder { grid-template-columns: 280px minmax(0, 1fr); }
+}

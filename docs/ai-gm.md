@@ -1,0 +1,369 @@
+# AI Game Master
+
+Daggery includes a GM runner in the app, with OpenCode Go, OpenCode pay as you go and OpenRouter connections.
+GM control is a campaign option, independent of the Group/Solo ruleset. Existing campaigns
+continue to use human control until their owner selects AI Game Master.
+
+## Start an adventure
+
+1. Create a campaign, or open **Campaign settings**, and select **AI Game Master**.
+2. Open **Adventure → GM connection**. Select **OpenCode Go · subscription** if you
+   have Go, or **OpenCode Console / Zen · pay as you go** if you use credits. Paste
+   your API key and select a model from that plan's live catalog. When switching
+   between the two OpenCode options, a blank key keeps your encrypted saved key.
+   Alternatively, choose OpenRouter and use its API key.
+3. Describe a premise and tone/boundaries. Choose a memory size: Lean, Balanced (the
+   default), Rich or Maximum. Maximum uses up to 60 percent of the model's context window,
+   which Daggery reads when you save the connection. Then choose an existing hero, your
+   existing party, or create a hero at level 1 with starter equipment and domain cards.
+4. Create a session. Nothing runs until you select **Begin the adventure**. Begin opens the
+   session with a recap when the journal has entries, and otherwise with the opening scene.
+   Type your actions or use a suggested choice. Resolve requested rolls and incoming damage
+   using their cards in the conversation.
+
+The Go connection uses `/inference/go/v1/models` and
+`/inference/go/openai/v1/chat/completions`. The pay as you go connection uses the
+separate `/inference/v1/models` and `/inference/openai/v1/chat/completions` endpoints.
+Existing saved credit connections retain their provider; they are not migrated silently.
+Daggery never falls back from Go to the credit endpoint. OpenCode's own **Extra Usage**
+account setting can still permit credit spending after an allowance is exhausted.
+OpenCode describes Go as intended for coding agent traffic; GM traffic may be restricted.
+Daggery sends its own user agent and a stable ID for each session, without impersonating
+a coding client. Saving loads the catalog but makes no billed inference request.
+
+Each chat request carries the session's ID in an `x-opencode-session` header. Temperature is
+sent only when the model's catalog lists support for it: 0.85 for GM turns and 0.2 for
+compaction. The catalog's context window and temperature are stored each time the
+connection is saved. Connections saved before this change have no stored values, so they
+use the base memory budget and send no temperature until they are saved again.
+
+References: [OpenCode Console API](https://opencode.ai/docs/console/api),
+[OpenCode Go](https://opencode.ai/docs/console/go/),
+[OpenCode inference](https://opencode.ai/docs/console/api/inference),
+[OpenRouter tool calling](https://openrouter.ai/docs/guides/features/tool-calling).
+
+## Play and control
+
+In this guide, the owner is the campaign GM who set up the AI GM, and the GM is the AI
+narrator. Adventure combines narration, player input, contextual roll, damage and choice
+cards, party resources, navigation, sessions, the adventure journal and a GM activity
+ledger. The owner can edit the GM secrets, change setup or connection, pause or resume the
+GM, stop any turn, or remove the key. A player can stop a turn that the player started.
+Rolls and document changes also update the existing table and sheets through live sync.
+
+Typed GM actions cover campaign context, catalog searches, GM secrets, campaign state,
+journal notes and searches, setting and scenario preparation, notes on the Notes page,
+scenes, miniatures, drawings, fog, conditions, spotlight, adversaries, standard attacks,
+requested hero rolls, Fear costs, countdowns, loot, inventory rewards and choices. In Solo
+campaigns the GM can consult the configured oracles, themes and weighted pool. The engine
+generates the dice and provides their results to the model.
+
+Action cards use actual sheet traits, Experience costs, Hope/Fear and critical Stress
+recovery. Basic attacks with an equipped weapon update adversary HP. Incoming damage requires
+player confirmation, with an available Armor Slot option. Repeated resolution cannot
+roll or charge twice. Resolving a card starts a GM turn that narrates the result. The player
+handles class/card abilities, special adversary features, reactions, recovery, advancement
+and death moves through the sheets and tools. The GM can consult source text; arbitrary
+printed abilities are not automatically run.
+
+AI + Solo uses ordinary GM responses and explicit Fear payments. The prompt instructs
+the model to avoid also applying solo automatic Fear spending for the same response.
+The manual Solo workspace remains available. Fictional judgment and pacing remain the
+model's responsibility; not every narrative rule can be enforced mechanically.
+
+## Sessions
+
+A campaign can hold many sessions. Each session works like a separate chat, with its own
+transcript and session summary. The journal, the campaign digest, the campaign state, the
+GM secrets and the GM preparations belong to the whole campaign and carry over from one
+session to the next.
+
+Only the owner creates, renames, ends, compacts and deletes sessions. Members see every
+session and can play in open ones. While a GM turn is running, creating, deleting, ending
+or compacting a session fails with a conflict. The transcript loads 60 messages at a time.
+
+Creating a session starts no GM turn. The owner or a member presses **Begin the adventure**
+in an empty session to open it. When the journal has entries, the GM recaps the story so far
+from the campaign digest, the recent chapters and the journal, and no player message is
+stored. When the journal is empty, Begin stores a short opening message from the player, and
+the GM opens the scene in reply. A session that already has messages cannot be begun again.
+
+Ending a session makes it read only. The GM writes a final chapter from the messages that
+are not yet summarized, and the session's open roll and choice cards close. Open damage
+cards stay open, but no card can be answered in an ended session. A session with nothing
+left to summarize ends without a chapter. Deleting a session removes its messages and GM
+activity. Its journal entries stay and keep the session name they had when the session was
+deleted.
+
+## Adventure journal
+
+The journal is a campaign record shared by all sessions. It has three kinds of entries.
+
+Events are written automatically for dice rolls, scene changes, encounters, damage, Fear
+spending, countdowns, rewards, attacks, conditions and player choices. Events are read
+only. An event about a hidden countdown is visible only to the owner. The event that starts
+a countdown is always shared, because the GM creates countdowns visible. An event about an
+adversary whose map token is hidden is also visible only to the owner.
+
+Notes are written by the GM with `journal_add`, which allows three per turn, or by the
+owner. A note is visible only to the owner unless it is marked shared. Titles can be up to
+160 characters. A GM note body can be up to 1,200 characters, and an owner note body up to
+6,000. Longer text is refused.
+
+Chapters are written when a compaction summarizes older messages, automatic or manual, and
+when a session ends with messages left to summarize. Chapters are always shared. They are
+numbered across the campaign, and a final chapter has "(final)" in its title.
+
+The owner can edit and delete notes and chapters. Events cannot be changed. Members see
+shared entries only. The journal lists entries newest first, 40 at a time, and can be
+filtered by kind and searched by text. The GM can search the journal with `search_journal`.
+That search covers every entry, including those visible only to the owner. It returns four
+results by default and never more than six, with each body trimmed to 600 characters.
+
+## Memory and compaction
+
+Each GM request starts with the static GM prompt, and the tool schemas are sent with it. The
+blocks below follow as system messages, in this order:
+
+1. Campaign setup: the game system, the premise, the tone and the player's hero.
+2. GM preparations: the setting and the two newest scenarios. See below.
+3. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
+4. The last three chapters.
+5. The GM secrets and plans, visible only to the owner.
+6. The campaign state, visible only to the owner.
+7. The session summary, a working summary of the current session of up to 300 words.
+8. The recent messages of the session that fit in the budget.
+9. The table snapshot, which comes last on every request.
+
+The blocks are rebuilt on every request, so changes apply at once.
+
+GM preparations are the setting and the scenarios saved with `write_prep`. The GM sees the
+setting and the two most recently saved scenarios as one GM only block of at most 2,500
+characters. The block starts with the heading "GM preparations (GM only):". It then lists
+the setting and each scenario, and each starts with its title. The setting fields appear in
+this order: premise, tone, locations, factions, secrets and agreements. The scenario fields
+appear in this order: hook, stakes, scenes, cast, rewards and aftermath. A field can hold
+6,000 characters when it is saved, but the block shows only the first 600 characters of each
+value. Empty fields are left out. If the block would be longer than 2,500 characters, its end
+is cut and a note says so.
+
+Each block has its own length limit. The premise is sent up to 1,500 characters, and the tone
+is saved with a limit of 300 characters. The digest is sent up to 1,800 characters, each
+chapter up to 1,300 characters of text, the GM secrets up to 4,000 characters, the campaign
+state up to 6,000 characters, and the session summary up to 2,000 characters.
+
+All memory blocks together stay within 17,000 characters, about 4,860 estimated tokens. When
+they are over that, the oldest chapter goes first, one at a time, until they fit. If they are
+still over after every chapter has gone, the preparations block is cut and ends with the line
+"(preparations shortened to fit the memory limit)". The setup, the digest, the campaign state
+and the session summary are never trimmed by the cap. These four blocks and the secrets fit
+under the cap together even at their largest sizes, so the preparations absorb any excess and
+the secrets are not cut in practice.
+
+The GM secrets hold plans and facts that players must not see. `set_memory` rewrites them in
+full, and the owner can also edit them in the app. Both refuse text longer than 4,000
+characters and save nothing. The owner cannot save the secrets while a GM turn is running.
+The GM reads only the first 4,000 characters of any longer text that is already saved.
+
+Notes on the Notes page are never sent to the GM. The journal is the adventure record the
+GM reads. Its last three chapters are in the memory, and `search_journal` reaches the rest.
+
+The campaign state holds the location, the time of day, the objective, threads, NPCs, player
+promises and facts. The GM updates it with `update_state`. A thread can be open, stalled or
+resolved. The lists hold up to 12 threads, 30 NPCs, 10 promises and 20 facts. Adding a
+thread, NPC or promise beyond its limit fails until one is removed. When facts go past 20,
+the oldest are dropped. The GM reads the state as plain text lines. Each thread, NPC and
+promise line ends with its ID, so `update_state` can change that item. Empty fields are left
+out. If the rendered state is longer than 6,000 characters, items are left out from the end
+of the text, starting with the last facts. The text then says how many items were left out.
+
+Every GM request ends with the table snapshot. It is valid JSON of at most 4,000 characters,
+under a heading line that says it is the present state. It holds up to six heroes, the active
+scene, up to eight countdowns, up to twelve adversaries in the scene, up to five pending cards
+and, in Solo campaigns, the solo state. The campaign state is not in the snapshot. When the
+snapshot is too long, the longest list loses its last items and the object gets
+`"truncated": true`.
+
+The GM can call `get_context` to read the same snapshot with the campaign state, the setting,
+up to three of the newest scenarios with their fields as saved, and up to 12 of the newest
+image assets. Each asset comes with its ID, name and media type. `create_scene` can use one of
+those IDs as the map. Every tool result is valid JSON of at most 6,000 characters. A result
+that is too long loses items from its longest list.
+
+The memory size sets the token budget for memory and messages together. Lean is 12,000
+estimated tokens, Balanced is 24,000 (the default) and Rich is 48,000. Maximum is 60 percent
+of the model's context window, so a model with a 1,000,000-token window gets 600,000 tokens.
+Memory uses no more than its 17,000 characters, and recent messages get the rest of the
+budget, with a floor of 1,000 tokens. The GM prompt and tool schemas add about 4,600
+estimated tokens on top of the budget, and the snapshot adds up to 4,000 characters more.
+When the catalog reports a context window for the model, the fixed sizes are capped at 60
+percent of that window too. Until a connection is saved with its window, Maximum uses 48,000
+tokens. Tokens are estimated as characters divided by 3.5.
+
+Maximum also raises the memory limits. Its memory may use up to 60,000 characters, the GM
+sees up to twelve recent chapters instead of three, the GM preparations take up to 12,000
+characters, and the campaign state up to 20,000 characters. The digest, the GM secrets and
+the session summary keep their own limits. A Maximum request is therefore far larger than a
+Balanced one, so it costs more and can take longer. The setup form shows the estimated budget
+for each size.
+
+Compaction keeps long sessions within the budget. At the start of a turn, the GM compacts
+when the messages that are not yet summarized exceed 60 percent of the message budget. The
+newest 30 percent of the message budget stays verbatim, and older messages are summarized.
+After a compaction, the next automatic one comes once about 30 percent of the message budget
+in new messages has built up. The interval therefore depends on the memory size and the
+length of the messages.
+
+A single summarizer request covers at most 40,000 estimated tokens of messages. A larger
+backlog, which is common on Maximum, takes several rounds. Each round writes its own chapter,
+and the session summary carries forward from one round to the next. The rounds continue until
+only the newest messages that fit in the 30 percent tail remain unsummarized. The transcript
+shows the summarized notice once.
+
+The owner can also compact an open session now. That skips the 60 percent trigger and keeps
+the same 30 percent tail. If every unsummarized message fits in that tail, a manual
+compaction writes nothing.
+
+A compaction is one request to the owner's model with no tools. The reply must be a JSON
+object with three text fields: `chapter`, `working` and `digest`. Each field is cut to its
+word limit: 180 words for the chapter, 300 for the working summary and 250 for the digest. A
+reply with an empty field counts as unreadable. Text around the object, such as a code fence,
+is ignored. If the reply cannot be read, the server asks the model once more. A valid reply
+writes the chapter to the journal and replaces the session summary and the campaign digest.
+
+If the second reply also fails, the server writes a fallback chapter of at most 1,200
+characters. It is made from the titles of up to 12 shared events from the period the batch
+covers, followed by the first sentence of up to 12 GM messages. The session summary and the
+digest stay unchanged in that case. Unless the session is ending, the transcript then shows a
+notice that earlier messages were summarized. Because the summaries come from the model, they
+can omit or misstate details. Compaction requests do not count toward the 12 model responses
+in a turn.
+
+Compaction uses the owner's selected model. A GM reply can use up to 2,400 output tokens, and
+a compaction reply up to 1,800.
+
+## Persistence and recovery
+
+Sessions, messages, journal entries, actions, setup, memory and campaign state persist in
+SQLite. Each campaign permits one active turn, a timeout of five minutes that includes any
+compaction rounds, at most 12
+successful model responses and 24 committed actions per turn. Turns stop on cancellation,
+pause, a missing connection or lost owner authority. These limits apply to each turn. They
+do not cap spending on the provider account.
+
+Tool calls and results are privately checkpointed. Successful actions deduplicate by turn
+and provider call ID. Retry resumes from the checkpoint and does not repeat them. A server
+restart marks interrupted turns failed and exposes retry. This cannot prevent a provider
+billing a request whose response was lost. Narration currently appears after a complete
+model reply, with status polling during the turn.
+
+## Keys and access
+
+Keys travel to the authenticated backend and are encrypted with AES-256-GCM, authenticated
+to their owning user. Responses return only a masked hint, provider and model. A user's
+connection can serve their AI campaigns. Current owner authority is checked before each
+action.
+
+Set `DAGGERY_AI_SECRET` to a random key of 32 bytes encoded as base64 in production, or the
+server creates `ai-keyring.key` in `DAGGERY_DATA_DIR`. Keep it private and **back it up
+with the database**. Losing or replacing it requires entering the provider keys again. Do
+not commit it. Schema migrations 4, 5 and 6 add AI tables, checkpoints, sessions and the
+journal. Migration 6 gives each existing AI campaign one session named Session 1 and moves
+its existing messages into that session. Existing campaign data and the database backup
+made before a migration are preserved.
+
+The runner has no account, invitation or tools for campaign administration. Each request
+includes only the campaign being played, and other campaigns and credentials are not
+included. Members see the transcript and shared journal entries. Only the owner sees the
+GM secrets, campaign state, digest, session summary, action results and entries visible
+only to the owner. Browser routes keep session checks and exact Origin checks. Outbound
+requests use fixed provider URLs and redact provider errors.
+
+## Extension boundaries
+
+The shared contract adds `gmController: "ai"`; absence means human control. A system must
+declare `supportsAiGm` and register its UI feature before offering AI control. Provider
+transport and encrypted credentials are separate from Daggerheart's tools. Daggerheart is
+the only shipped AI implementation. A future system requires its own prompt, action adapter
+and interaction resolver; a flag does not translate Daggerheart mechanics.
+
+This implementation calls provider APIs from Daggery. An external CLI/MCP connection with a
+separate machine identity remains future work. There is no general MCP endpoint or bearer
+credential for external agents.
+
+## Verification
+
+The server suite has 65 tests, and all 65 pass. Of these, 40 are in
+`apps/server/src/ai-memory.test.ts`. The other 25 are in the existing server test files,
+and nine of those are in `apps/server/src/ai.test.ts`. The shared fixtures in
+`apps/server/src/ai-test-kit.ts` keep databases in memory and replace the model provider
+with a fake fetch.
+
+The 40 tests in `ai-memory.test.ts` cover:
+
+- Sessions: a schema 5 database migrates into one Session 1 per campaign. Sessions keep
+  separate transcripts, and a turn cannot start in one session while another runs.
+- Ended sessions: an ended session writes a final chapter, refuses turns and card answers,
+  and keeps its transcript readable.
+- Journal visibility and events: members see only shared entries and cannot write. Each
+  consequential tool, each resolved roll and each resolved damage card writes an event, and
+  events about hidden targets stay with the owner.
+- The `journal_add` cap: a fourth note in one turn is refused, three are stored, and notes
+  are owner only unless shared.
+- Compaction and retry: each compaction writes one chapter, and a retry after a provider
+  failure resumes from its checkpoint without a second chapter.
+- Fallback: two unreadable summaries write one fallback chapter from shared events and GM
+  lead sentences, and the working summary stays unchanged.
+- Summarizer input: the summarizer request has no tools and does not include the GM secrets
+  or the campaign state.
+- Budget: a campaign of 60 Balanced turns keeps the memory and messages of each request
+  within the budget plus 5,000 estimated tokens, and it compacts at least twice.
+- Maximum: the budget is 60 percent of the saved window. A backlog of 400 messages is
+  summarized in batches of at most about 40,000 estimated tokens, one chapter each, and the
+  newest 30 percent stays verbatim. Every request stays within the budget, and the GM keeps
+  the newest twelve chapters in view.
+- Session header: every model request in a session carries that session's ID in the
+  `x-opencode-session` header, including compaction and the end turn.
+- Caps: tool results stay within 6,000 characters and remain valid JSON, `search_rules`
+  returns at most six results, and the state refuses a 13th thread or a 31st NPC.
+- Sessions and Begin: creating a session starts no turn. Begin opens an empty session with a
+  recap when the journal has entries, and that recap stores no player message. Otherwise
+  Begin stores the player's opening message. A second Begin is refused. A recap cut off before
+  its first checkpoint keeps its instruction after a restart. `start` refuses request IDs that
+  name internal turns. Renaming relabels the session's journal entries, a running session
+  cannot be deleted, and deleting keeps its entries under the old name. The transcript returns
+  the newest 60 messages and pages back through earlier ones.
+- HTTP routes: the session, Begin, journal, setup, compaction, ending and deletion routes, their
+  errors for ended sessions and invalid input, and the Origin check on writes.
+- Memory limits: `set_memory` and `PUT /memory` refuse more than 4,000 characters and save
+  nothing. When memory is over the cap, the oldest chapter goes first, and the preparations
+  are cut before the secrets. The preparations block, `get_context`, the campaign state text
+  and the snapshot each have tests for their limits.
+
+Four unit tests check `fitMemory` directly. The oldest chapter goes first, the preparations
+are shortened once every chapter is gone, the secrets are shortened last with their own
+notice, and memory under the cap is left alone. End to end, requests never reach the secrets
+branch, so only the unit test covers it.
+
+The nine tests in `ai.test.ts` cover encryption isolation, migration, OpenCode Go routing,
+model filtering and error redaction, quick start classes, campaign, privacy and Origin
+boundaries, document changes, actual player dice, adversary damage and Armor, duplicate
+resolution, and cancellation and retry without repeated Fear spending. The other 16 cover
+the campaign routes and services, email login, asset uploads, WebSockets and solo play.
+
+Model narration quality is not tested automatically. The fake model returns scripted replies,
+so the tests check the engine, the stored data and the prompts. They do not check how the
+narration reads.
+
+Browser checks used a simulated native provider and an isolated database. They covered setup,
+the opening, rolls, choices, retry, stop, pause and reload at 320, 390, 834 and 1440 pixels;
+sessions, the recap, compacting now, ending a session, switching sessions, the journal and the
+member view; and, after the opening moved to its own Begin action, a fresh session at 390 and
+1440 pixels. `docs/ai-preview/qa.json` records the earlier run, which predates sessions. No paid
+live inference was performed without a key that a user supplied.
+
+## Limits
+
+- Token counts are estimates. Daggery divides characters by 3.5, so provider token counts and the budgets can differ.
+- OpenCode Go may refuse GM traffic under its terms, because OpenCode describes Go as intended for coding agent traffic. A refusal appears as a provider error, and Daggery does not switch to pay as you go billing.
+- Model narration quality is not tested automatically. It needs a manual check with a real key.

@@ -1,0 +1,86 @@
+{
+  "checks": [
+    "loot saving and refresh",
+    "setting save and refresh",
+    "scenario create/edit/delete and refresh",
+    "unsaved navigation protection",
+    "table search and rarity pools",
+    "GM-only navigation",
+    "320/390/834/1440 layouts"
+  ],
+  "errors": [],
+  "measurements": [
+    {
+      "name": "loot-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflowing": []
+    },
+    {
+      "name": "setting-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflowing": []
+    },
+    {
+      "name": "scenario-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflowing": []
+    },
+    {
+      "name": "loot-tablet",
+      "width": 834,
+      "scroll": 834,
+      "overflowing": []
+    },
+    {
+      "name": "setting-tablet",
+      "width": 834,
+      "scroll": 834,
+      "overflowing": []
+    },
+    {
+      "name": "scenarios-tablet",
+      "width": 834,
+      "scroll": 834,
+      "overflowing": []
+    },
+    {
+      "name": "loot-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "setting-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "scenarios-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "loot-small-phone",
+      "width": 320,
+      "scroll": 320,
+      "overflowing": []
+    },
+    {
+      "name": "setting-small-phone",
+      "width": 320,
+      "scroll": 320,
+      "overflowing": []
+    },
+    {
+      "name": "scenarios-small-phone",
+      "width": 320,
+      "scroll": 320,
+      "overflowing": []
+    }
+  ]
+}

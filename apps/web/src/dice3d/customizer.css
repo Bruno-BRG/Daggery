@@ -1,0 +1,35 @@
+.dice-customizer { border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-surface); color: var(--ds-ink); }
+.dice-customizer > summary { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 12px; cursor: pointer; list-style: none; }
+.dice-customizer summary::-webkit-details-marker { display: none; }
+.dice-customizer > summary strong { font-size: 14px; }
+.dice-customizer > summary > span { margin-left: auto; color: var(--ds-muted); font-size: 13px; }
+.dice-customizer > summary > .daggery-icon { width: 18px; height: 18px; color: var(--ds-brand); flex: none; }
+.dice-customizer > summary > .daggery-icon:last-child { width: 14px; color: var(--ds-muted); }
+.dice-customizer[open] > summary > .daggery-icon:last-child { transform: rotate(90deg); }
+.dice-customizer-body { display: grid; gap: 18px; padding: 4px 12px 16px; }
+.dice-preset-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.dice-preset-grid > button { position: relative; min-height: 74px; display: grid; place-items: center; gap: 7px; padding: 12px 6px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-raised); font-size: 14px; color: var(--ds-ink); }
+.dice-preset-grid > button[aria-pressed='true'] { border-color: var(--ds-brand); background: color-mix(in srgb,var(--ds-brand) 10%,var(--ds-raised)); }
+.dice-preset-grid > button > .daggery-icon { position: absolute; top: 5px; right: 5px; width: 13px; height: 13px; color: var(--ds-brand); }
+.dice-preset-swatches { display: flex; align-items: center; gap: 4px; }
+.dice-preset-swatches i { width: 18px; height: 18px; border: 1px solid #ffffff40; border-radius: var(--radius-sm); box-shadow: inset 0 1px 3px #ffffff30,0 2px 3px #0002; transform: rotate(-10deg); }
+.dice-finish-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; }
+.dice-finish-label select { min-width: 120px; max-width: 65%; min-height: 44px; padding: 8px 10px; font-size: 15px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-raised); color: var(--ds-ink); }
+.dice-effects { min-width: 0; border: 0; padding: 0; margin: 0; }
+.dice-effects legend { font-size: 14px; padding: 0 0 9px; }
+.dice-effects > div { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; }
+.dice-effects button { min-height: 44px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); font-size: 14px; color: var(--ds-muted); background: var(--ds-raised); }
+.dice-effects button[aria-pressed='true'] { color: var(--ds-brand); border-color: var(--ds-brand); background: color-mix(in srgb,var(--ds-brand) 9%,var(--ds-raised)); }
+.dice-custom-colors > summary { display: flex; justify-content: space-between; align-items: center; min-height: 44px; font-size: 14px; cursor: pointer; list-style: none; }
+.dice-custom-colors > summary > .daggery-icon { width: 14px; height: 14px; }
+.dice-custom-colors[open] > summary > .daggery-icon { transform: rotate(90deg); }
+.dice-custom-colors > div { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; padding-top: 10px; }
+.dice-custom-colors label { display: grid; gap: 8px; font-size: 13px; color: var(--ds-muted); }
+.dice-custom-colors input { width: 100%; height: 44px; border: 1px solid var(--ds-border); padding: 3px; border-radius: var(--radius-md); background: var(--ds-raised); cursor: pointer; }
+.dice-style-actions { display: flex; align-items: center; gap: 8px; }
+.dice-style-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 44px; flex: 1; padding: 8px; border-radius: var(--radius-md); font-size: 14px; font-weight: 600; background: var(--ds-brand); color: var(--ds-on-brand); }
+.dice-style-actions button > .daggery-icon { width: 18px; height: 18px; }
+.dice-style-actions .dice-style-reset { flex: none; background: transparent; color: var(--ds-muted); font-weight: 400; }
+.dice-style-actions button:disabled { opacity: .5; cursor: wait; }
+.dice-customizer .dice-style-note { margin: -6px 0 0; font-size: 13px; line-height: 1.6; color: var(--ds-muted); }
+.dice-customizer :is(button,summary,input,select):focus-visible { outline: 2px solid var(--ds-brand); outline-offset: 3px; }

@@ -1,0 +1,166 @@
+{
+  "checks": [
+    "campaign creation UI and server solo privacy",
+    "all oracle/scene/theme/world rolls, four extra prompt tables, interpretation saving and resource isolation",
+    "countdown deduplication and paid companion assistance automatically consumed by character action",
+    "scene, theme pool, companion and journal survive page reload",
+    "unsaved preparation navigation protection",
+    "320/390/834/1440 layouts for all solo tabs",
+    "campaign settings switch rulesets and retain solo preparation",
+    "small-party campaign creation and correct starting Fear",
+    "lone-hero campaign starts independently with 1 Fear"
+  ],
+  "errors": [],
+  "measurements": [
+    {
+      "name": "creation-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflowing": []
+    },
+    {
+      "name": "themes-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflowing": []
+    },
+    {
+      "name": "companion-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflowing": []
+    },
+    {
+      "name": "journal-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflowing": []
+    },
+    {
+      "name": "oracles-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflowing": []
+    },
+    {
+      "name": "oracles-tablet",
+      "width": 834,
+      "scroll": 834,
+      "overflowing": []
+    },
+    {
+      "name": "scene-tablet",
+      "width": 834,
+      "scroll": 834,
+      "overflowing": []
+    },
+    {
+      "name": "themes-tablet",
+      "width": 834,
+      "scroll": 834,
+      "overflowing": []
+    },
+    {
+      "name": "companion-tablet",
+      "width": 834,
+      "scroll": 834,
+      "overflowing": []
+    },
+    {
+      "name": "journal-tablet",
+      "width": 834,
+      "scroll": 834,
+      "overflowing": []
+    },
+    {
+      "name": "rules-tablet",
+      "width": 834,
+      "scroll": 834,
+      "overflowing": []
+    },
+    {
+      "name": "oracles-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "scene-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "themes-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "companion-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "journal-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "rules-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "oracles-small-phone",
+      "width": 320,
+      "scroll": 320,
+      "overflowing": []
+    },
+    {
+      "name": "scene-small-phone",
+      "width": 320,
+      "scroll": 320,
+      "overflowing": []
+    },
+    {
+      "name": "themes-small-phone",
+      "width": 320,
+      "scroll": 320,
+      "overflowing": []
+    },
+    {
+      "name": "companion-small-phone",
+      "width": 320,
+      "scroll": 320,
+      "overflowing": []
+    },
+    {
+      "name": "journal-small-phone",
+      "width": 320,
+      "scroll": 320,
+      "overflowing": []
+    },
+    {
+      "name": "rules-small-phone",
+      "width": 320,
+      "scroll": 320,
+      "overflowing": []
+    },
+    {
+      "name": "oracles-phone-light",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    },
+    {
+      "name": "creation-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflowing": []
+    }
+  ]
+}

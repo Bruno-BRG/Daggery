@@ -1,0 +1,37 @@
+/* Note under the Dice button for browsers where 3D dice cannot start. */
+.dice-fallback-note {
+  position: fixed;
+  z-index: 60;
+  width: min(300px, calc(100vw - 16px));
+  padding: 12px 14px;
+  border: 1px solid var(--ds-border);
+  border-radius: var(--radius-md);
+  background: var(--ds-raised);
+  color: var(--ds-ink);
+  box-shadow: 0 12px 30px var(--ds-shadow-lg);
+  font-size: 13px;
+  line-height: 1.5;
+  pointer-events: auto;
+}
+
+.dice-fallback-note strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 650;
+}
+
+.dice-fallback-note p {
+  color: var(--ds-muted);
+}
+
+.dice-fallback-note button {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ds-muted);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+

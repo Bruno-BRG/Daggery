@@ -1,0 +1,61 @@
+{
+  "checks": [
+    "AI campaign creation, key and model setup, quick-start hero, opening scene, GM preparation and memory",
+    "server-generated roll and automatic GM continuation, clickable choices",
+    "failed provider request resumes checkpoint without duplicate tools",
+    "stop, pause/resume and persisted conversation after reload",
+    "responsive 320/390/834/1440 layouts and key never returned to browser"
+  ],
+  "measurements": [
+    {
+      "name": "campaign-creation",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "ready-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "adventure-desktop",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "adventure-1440",
+      "width": 1440,
+      "scroll": 1440,
+      "overflow": []
+    },
+    {
+      "name": "adventure-834",
+      "width": 834,
+      "scroll": 834,
+      "overflow": []
+    },
+    {
+      "name": "adventure-390",
+      "width": 390,
+      "scroll": 390,
+      "overflow": []
+    },
+    {
+      "name": "adventure-320",
+      "width": 320,
+      "scroll": 320,
+      "overflow": []
+    },
+    {
+      "name": "connection-phone",
+      "width": 390,
+      "scroll": 390,
+      "overflow": []
+    }
+  ],
+  "errors": [],
+  "provider": "simulated native tool-calling provider; no paid live inference"
+}

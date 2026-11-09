@@ -1,0 +1,55 @@
+.character-folio .ability-card { min-width: 0; overflow: hidden; padding: 21px; border: 1px solid color-mix(in srgb, var(--ability-color) 22%, var(--ds-border)); border-radius: var(--radius-xl); background: var(--sheet-sunken); color: var(--ds-ink); }
+.character-folio .ability-heading { display: flex; align-items: center; gap: 13px; margin-bottom: 17px; }
+.character-folio .ability-emblem { display: grid; place-items: center; width: 45px; height: 45px; flex-shrink: 0; border: 1px solid color-mix(in srgb, var(--ability-color) 22%, transparent); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--ability-color) 10%, transparent); color: var(--ability-color); }
+.character-folio .ability-emblem .daggery-icon { width: 23px; height: 23px; }
+.character-folio .ability-heading > div { min-width: 0; }
+.character-folio .ability-category { display: block; font-size: 12px; line-height: 1.5; font-weight: 500; color: var(--ability-color); margin-bottom: 3px; }
+.character-folio .ability-heading h4 { margin: 0; font-size: 20px; font-weight: 700; line-height: 1.3; letter-spacing: -.35px; color: var(--ds-ink); }
+.character-folio .ability-card .ability-summary { margin: 0; font-size: 16px; font-weight: 450; line-height: 1.65; color: var(--ds-ink); white-space: normal; max-width: 64ch; }
+.character-folio .ability-metric { display: flex; align-items: baseline; gap: 11px; flex-wrap: wrap; margin: 0 0 14px; padding-bottom: 15px; border-bottom: 1px solid color-mix(in srgb, var(--ability-color) 16%, transparent); }
+.character-folio .ability-metric strong { display: inline; color: var(--ability-color); font: 700 30px/1.15 var(--font-sans); letter-spacing: -.7px; margin: 0; }
+.character-folio .ability-metric > span { color: var(--ds-muted); font-size: 14px; }
+.character-folio .ability-facts { display: flex; flex-wrap: wrap; gap: 10px; margin: 17px 0 0; }
+.character-folio .ability-facts > div { display: grid; gap: 5px; flex: 1 1 125px; padding: 11px 13px; background: color-mix(in srgb, var(--ds-raised) 70%, transparent); border: 1px solid color-mix(in srgb, var(--ds-border) 60%, transparent); border-radius: var(--radius-md); }
+.character-folio .ability-facts dt { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ds-muted); }
+.character-folio .ability-facts dt .daggery-icon { width: 15px; height: 15px; color: var(--ability-color); }
+.character-folio .ability-facts dd { margin: 0; font-size: 16px; line-height: 1.4; font-weight: 650; }
+.character-folio .ability-facts > div:only-child { flex: 0 1 auto; display: flex; align-items: center; flex-wrap: wrap; gap: 11px; padding: 9px 12px; }
+.character-folio .ability-card:has(.ability-metric):not(:has(.ability-summary)) .ability-metric { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+.character-folio .ability-benefits { display: grid; gap: 12px; margin: 18px 0 0; padding: 0; list-style: none; }
+.character-folio .ability-benefits > li { display: flex; align-items: flex-start; gap: 11px; border: 0; background: transparent; padding: 0; }
+.character-folio .ability-benefits > li > span { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--ability-color) 9%, transparent); color: var(--ability-color); }
+.character-folio .ability-benefits .daggery-icon { width: 16px; height: 16px; }
+.character-folio .ability-benefits li p { margin: 1px 0 0; font-size: 15px; line-height: 1.6; color: var(--ds-ink); white-space: normal; }
+.character-folio .ability-rules { margin-top: 17px; border-top: 1px solid color-mix(in srgb, var(--ds-border) 65%, transparent); }
+.character-folio .ability-rules > summary { display: flex; align-items: center; gap: 8px; margin: 0; padding: 13px 0 0; min-height: 37px; list-style: none; cursor: pointer; color: var(--ds-muted); font-size: 13px; font-weight: 550; }
+.character-folio .ability-rules > summary::-webkit-details-marker { display: none; }
+.character-folio .ability-rules > summary .daggery-icon { width: 15px; height: 15px; }
+.character-folio .ability-rules > summary .daggery-icon:last-child { margin-left: auto; transition: transform .15s; }
+.character-folio .ability-rules[open] > summary .daggery-icon:last-child { transform: rotate(90deg); }
+.character-folio .ability-rules > div { margin-top: 14px; padding: 16px; border: 1px solid var(--sheet-line); border-radius: var(--radius-md); background: var(--ds-raised); }
+.character-folio .ability-rules > div > p { font-size: 16px; line-height: 1.75; color: var(--ds-muted); margin: 0 0 12px; white-space: pre-line; }
+.character-folio .ability-rules > div > p:last-child { margin-bottom: 0; }
+.character-folio .ability-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding-top: 17px; margin-top: 17px; border-top: 1px solid color-mix(in srgb, var(--ds-border) 65%, transparent); }
+.character-folio .ability-footer > span { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ds-muted); }
+.character-folio .ability-footer > span .daggery-icon { width: 16px; height: 16px; }
+.character-folio .ability-footer .sheet-ghost { min-height: 38px; padding-inline: 12px; font-size: 13px; }
+.character-folio .ability-list { gap: 14px; }
+.character-folio .ability-list > li { padding: 0; border: 0; border-radius: 0; background: transparent; }
+.character-folio .sheet-effects-panel .sheet-card-grid { gap: 14px; margin-top: 0; }
+.character-folio .sheet-effects-panel .sheet-vault { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--sheet-line); }
+.character-folio .sheet-effects-panel .sheet-vault > summary { min-height: 38px; font-size: 15px; }
+.character-folio .sheet-features > .sheet-panel { padding: 21px; border-radius: var(--radius-xl); }
+.character-folio .sheet-features .sheet-panel-head { margin-bottom: 20px; }
+.character-folio .sheet-features .sheet-section-title { font-size: 18px; text-transform: none; display: flex; align-items: center; gap: 9px; }
+.character-folio .sheet-features .sheet-section-title > .daggery-icon { width: 20px; height: 20px; color: var(--ds-brand); }
+@container (max-width: 520px) {
+  .character-folio .sheet-features > .sheet-panel { padding: 16px; }
+  .character-folio .ability-card { padding: 17px; }
+  .character-folio .ability-heading h4 { font-size: 19px; }
+  .character-folio .ability-emblem { width: 40px; height: 40px; }
+  .character-folio .ability-card .ability-summary, .character-folio .ability-rules > div > p { font-size: 16px; }
+  .character-folio .ability-facts > div { flex-basis: 100px; }
+  .character-folio .ability-footer { align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { .character-folio .ability-rules > summary .daggery-icon { transition: none; } }
