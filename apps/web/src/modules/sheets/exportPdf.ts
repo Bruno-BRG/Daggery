@@ -1,169 +1,138 @@
-import { PDFDocument, rgb, type PDFPage } from 'pdf-lib';
+import { PDFDocument, PDFHexString, PDFName, TextAlignment, drawCheckMark, rgb, type PDFPage } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { Sheet } from './types';
-import { TRAIT_ORDER, TRAIT_LABELS, getClass, getSubclass, getCommunity, getArmor, getDomainCard, ancestryFeatures, heritageDisplayName, hpMax, stressMax, armorScore, evasion, damageThresholds, weaponForSlot, damageNotation } from './rules';
+import { TRAIT_ORDER, getClass, getSubclass, getCommunity, getArmor, getWeapon, heritageDisplayName, hpMax, stressMax, armorScore, evasion, damageThresholds, weaponForSlot, damageNotation } from './rules';
 
-export interface PdfOptions {
-  paper: 'a4' | 'letter';
-  story: boolean;
-  abilities: boolean;
-  blank: boolean;
-}
-export const DEFAULT_PDF_OPTIONS: PdfOptions = { paper: 'a4', story: true, abilities: true, blank: false };
+export interface PdfOptions { blank: boolean; guide: boolean; references: boolean }
+export const DEFAULT_PDF_OPTIONS: PdfOptions = { blank: false, guide: true, references: true };
+// Zero-based page indices in the unmodified source PDF, including its class guides.
+export const ORIGINAL_SHEETS: Record<string, { sheet: number; guide: number; references?: number[] }> = {
+  bard: { sheet: 0, guide: 1 }, druid: { sheet: 2, guide: 5, references: [3, 4] },
+  guardian: { sheet: 6, guide: 7 }, ranger: { sheet: 8, guide: 10, references: [9] },
+  rogue: { sheet: 11, guide: 12 }, seraph: { sheet: 13, guide: 14 },
+  sorcerer: { sheet: 15, guide: 16 }, warrior: { sheet: 17, guide: 18 }, wizard: { sheet: 19, guide: 20 },
+};
 
-/** Local AcroForm export. Field values and appearance streams are both saved; never flatten. */
-export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, fontBytes: Uint8Array): Promise<Uint8Array> {
+/** Copies original vector pages, then adds transparent AcroForm widgets. Never redraw or flatten the source. */
+export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, fontBytes: Uint8Array, templateBytes: Uint8Array): Promise<Uint8Array> {
+  const source = await PDFDocument.load(templateBytes);
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
-  // Full font embedding keeps newly typed characters available when editing after download.
   const font = await pdf.embedFont(fontBytes);
   const form = pdf.getForm();
-  const [w, h] = options.paper === 'a4' ? [595.28, 841.89] : [612, 792];
-  const margin = 32, gap = 16, width = w - margin * 2;
-  const ink = rgb(.12, .14, .16), line = rgb(.65, .67, .69);
-  let page: PDFPage;
-  let fieldIndex = 0;
-  const label = (text: string, x: number, top: number, size = 8) => page.drawText(text, { x, y: h - top - size, size, font, color: ink });
-  const section = (text: string, x: number, top: number, size: number) => {
-    label(text.toUpperCase(), x, top, 10);
-    page.drawLine({ start: { x, y: h - top - 17 }, end: { x: x + size, y: h - top - 17 }, thickness: .7, color: line });
-  };
-  const newPage = (title: string) => {
-    page = pdf.addPage([w, h]);
-    label('DAGGERY / DAGGERHEART', margin, 20, 8);
-    label(title, margin, 38, 18);
-  };
-  const field = (name: string, title: string, value: unknown, x: number, top: number, fw: number, height = 24, multiline = false) => {
-    if (title) label(title.toUpperCase(), x, top, 7);
+  const mapping = ORIGINAL_SHEETS[sheet.classId];
+  const indices = [mapping?.sheet ?? 21];
+  if (options.guide && mapping) indices.push(mapping.guide);
+  if (options.references && mapping?.references) indices.push(...mapping.references);
+  const pages = await pdf.copyPages(source, indices);
+  pages.forEach(page => pdf.addPage(page));
+  let page: PDFPage = pages[0]!;
+  const ink = rgb(.08, .09, .1);
+  const field = (name: string, value: unknown, x: number, top: number, width: number, height: number, multiline = false, centered = false) => {
     const input = form.createTextField(name);
-    input.setText(options.blank ? '' : String(value ?? '').replace(/\u2212/g, '-'));
+    const text = options.blank ? '' : String(value ?? '').replace(/\u2212/g, '-');
+    // A fixed-size original form displays only its opening lines. Avoid laying out megabytes
+    // of invisible overflow, while retaining the complete value for scrolling/editing in a reader.
+    input.setText(multiline ? text.slice(0, 1200) : text);
     if (multiline) input.enableMultiline();
-    input.addToPage(page, { x, y: h - top - 12 - height, width: fw, height, font, textColor: ink, borderColor: line, borderWidth: .5, backgroundColor: rgb(1, 1, 1) });
-    input.setFontSize(multiline ? 9 : 0);
+    if (centered) input.setAlignment(TextAlignment.Center);
+    input.addToPage(page, { x, y: page.getHeight() - top - height, width, height, font,
+      textColor: ink, borderWidth: 0, backgroundColor: undefined, borderColor: undefined });
+    input.setFontSize(multiline ? 7 : 0);
+    input.updateAppearances(font);
+    if (multiline && text.length > 1200) input.acroField.setValue(PDFHexString.fromText(text));
     return input;
   };
-  const cls = getClass(sheet.classId);
+  const check = (name: string, checked: boolean, x: number, top: number, width: number, height: number) => {
+    const input = form.createCheckBox(name);
+    input.addToPage(page, { x, y: page.getHeight() - top - height, width, height,
+      borderWidth: 0, backgroundColor: undefined, borderColor: undefined, textColor: ink });
+    if (!options.blank && checked) input.check();
+    input.updateAppearances((_field, widget) => {
+      const rect = widget.getRectangle();
+      const on = drawCheckMark({ x: rect.width / 2, y: rect.height / 2, size: Math.min(rect.width, rect.height) * .8, thickness: .9, color: ink });
+      return { normal: { on, off: [] }, down: { on, off: [] } };
+    });
+  };
+  field('name', sheet.name, 233, 10, 160, 14);
+  field('pronouns', '', 440, 10, 89, 14);
+  field('heritage', [heritageDisplayName(sheet), getCommunity(sheet.communityId)?.name].filter(Boolean).join(' / '), 236, 30, 125, 14);
   const subclass = getSubclass(sheet.classId, sheet.subclassId);
-  const armor = getArmor(sheet.armorId);
-  newPage('Character sheet');
-  field('name', 'Name', sheet.name, margin, 76, width * .55);
-  field('player', 'Player', sheet.playerName, margin + width * .55 + gap, 76, width * .45 - gap);
-  const third = (width - gap * 2) / 3;
-  field('class', 'Class', cls?.name ?? sheet.classId, margin, 120, third);
-  field('subclass', 'Subclass', subclass?.name, margin + third + gap, 120, third);
-  field('level', 'Level / Proficiency', `${sheet.level} / ${sheet.proficiency}`, margin + (third + gap) * 2, 120, third);
-  field('heritage', 'Heritage', heritageDisplayName(sheet), margin, 164, width / 2 - gap / 2);
-  field('community', 'Community', getCommunity(sheet.communityId)?.name, margin + width / 2 + gap / 2, 164, width / 2 - gap / 2);
-  const traitWidth = (width - 5 * 8) / 6;
-  TRAIT_ORDER.forEach((trait, i) => field(`trait_${trait}`, TRAIT_LABELS[trait], sheet.traits[trait], margin + i * (traitWidth + 8), 212, traitWidth));
-  const left = 210, rightX = margin + left + gap, right = width - left - gap;
-  section('Damage & health', margin, 267, left);
-  const half = (left - 10) / 2;
-  field('evasion', 'Evasion', evasion(sheet), margin, 291, half);
-  field('armor_score', 'Armor score', armorScore(sheet), margin + half + 10, 291, half);
-  const t = damageThresholds(sheet);
-  field('major', 'Major threshold', t.major, margin, 335, half);
-  field('severe', 'Severe threshold', t.severe, margin + half + 10, 335, half);
-  field('hp', 'HP marked / maximum', `${sheet.hpMarked} / ${hpMax(sheet)}`, margin, 379, half);
-  field('stress', 'Stress marked / maximum', `${sheet.stressMarked} / ${stressMax(sheet)}`, margin + half + 10, 379, half);
-  field('hope', 'Hope / maximum', `${sheet.hope} / 6`, margin, 423, half);
-  field('armor_marked', 'Armor slots used', sheet.armorSlotsMarked, margin + half + 10, 423, half);
-  section('Experiences', margin, 476, left);
-  // Additional Experiences continue in the editable appendix, without truncation.
-  for (let i = 0; i < 3; i++) {
-    const exp = sheet.experiences[i];
-    field(`experience_${i}`, `Experience ${i + 1}`, exp ? `${exp.name} (${exp.modifier >= 0 ? '+' : ''}${exp.modifier})` : '', margin, 499 + i * 44, left);
-  }
-  field('gold', 'Gold (handfuls)', sheet.gold, margin, 639, left);
-  section('Active weapons', rightX, 267, right);
-  for (const [i, slot] of (['primary', 'secondary'] as const).entries()) {
-    const weapon = weaponForSlot(sheet, slot);
-    field(`weapon_${slot}`, `${slot} weapon`, weapon?.name, rightX, 291 + i * 88, right);
-    field(`weapon_${slot}_stats`, 'Trait / Range / Damage', weapon ? `${weapon.trait} / ${weapon.range} / ${damageNotation(weapon.damage, sheet.proficiency)} ${weapon.damageType}` : '', rightX, 335 + i * 88, right);
-  }
-  section('Active armor', rightX, 476, right);
-  field('armor', 'Name', armor?.name, rightX, 499, right);
-  field('armor_feature', 'Feature', armor?.feature ? `${armor.feature.name}: ${armor.feature.text}` : '', rightX, 543, right, 66, true);
-  field('equipment_notes', 'Equipment notes', '', rightX, 633, right, 56, true);
-
-  // Text is split by measured line width and page capacity; long content is never silently cut.
-  let top = 76;
-  const appendix = (title: string) => { newPage(title); top = 76; };
-  const wrap = (value: string) => {
-    const lines: string[] = [];
-    const widths = new Map<string, number>();
-    const measure = (char: string) => {
-      if (!widths.has(char)) widths.set(char, font.widthOfTextAtSize(char, 9));
-      return widths.get(char)!;
-    };
-    for (const paragraph of value.replace(/\r/g, '').split('\n')) {
-      let current = '';
-      let currentWidth = 0;
-      for (const char of paragraph) {
-        if (current && currentWidth + measure(char) > width - 16) {
-          const space = current.lastIndexOf(' ');
-          const cut = space > 0 ? space + 1 : current.length;
-          lines.push(current.slice(0, cut)); current = current.slice(cut);
-          currentWidth = Array.from(current).reduce((sum, c) => sum + measure(c), 0);
-        }
-        current += char;
-        currentWidth += measure(char);
-      }
-      lines.push(current);
-    }
-    return lines;
-  };
-  const block = (title: string, text: string, minHeight = 42) => {
-    const lines = wrap(text || '');
-    let offset = 0;
-    do {
-      if (h - top - 50 < 80) appendix('Character details - continued');
-      const capacity = Math.max(1, Math.floor((h - top - 80) / 14));
-      const part = lines.slice(offset, offset + capacity);
-      const height = Math.max(Math.min(minHeight, h - top - 80), part.length * 14 + 12);
-      field(`detail_${fieldIndex++}`, title + (offset ? ' (continued)' : ''), part.join('\n'), margin, top, width, height, true);
-      top += height + 32;
-      offset += part.length;
-    } while (offset < lines.length);
-  };
-  appendix('Equipment & Experiences');
-  block('Inventory', sheet.inventory.map(item => `${item.qty} x ${item.name}${item.description ? '\n' + item.description : ''}`).join('\n\n'), 220);
-  if (sheet.experiences.length > 3) block('Additional Experiences', sheet.experiences.slice(3).map(e => `${e.name} (${e.modifier >= 0 ? '+' : ''}${e.modifier})`).join('\n'));
-  for (const slot of ['primary', 'secondary'] as const) {
-    const weapon = weaponForSlot(sheet, slot);
-    if (weapon?.feature) block(`${slot} weapon feature`, `${weapon.feature.name}: ${weapon.feature.text}`);
-  }
-  if (options.abilities) {
-    appendix('Features & abilities');
-    if (cls?.hopeFeature) block(`Hope - ${cls.hopeFeature.name}`, cls.hopeFeature.text);
-    for (const f of cls?.classFeatures ?? []) block(f.name, f.text);
-    const subclassFeatures = [...(subclass?.foundation ?? []), ...(sheet.subclassUpgraded >= 1 ? subclass?.specialization ?? [] : []), ...(sheet.subclassUpgraded >= 2 ? subclass?.mastery ?? [] : [])];
-    for (const f of subclassFeatures) block(`${subclass?.name} - ${f.name}`, f.text);
-    for (const f of ancestryFeatures(sheet)) block(`${f.ancestryName} - ${f.name}`, f.text);
-    const community = getCommunity(sheet.communityId);
-    for (const f of community?.features ?? []) block(`${community?.name} - ${f.name}`, f.text);
-    if (sheet.multiclassId) {
-      const other = getClass(sheet.multiclassId);
-      const foundation = getSubclass(sheet.multiclassId, sheet.multiclassSubclassId ?? null);
-      for (const f of other?.classFeatures ?? []) block(`${other?.name} - ${f.name}`, f.text);
-      for (const f of foundation?.foundation ?? []) block(`${foundation?.name} - ${f.name}`, f.text);
-    }
-    for (const id of sheet.domainCardIds) {
-      const card = getDomainCard(id);
-      if (card) block(`${sheet.loadoutIds.includes(id) ? 'Active' : 'Vault'} - ${card.name}`, `${card.domain} / Level ${card.level} / ${card.type} / Recall ${card.recallCost}\n${card.text}`);
-    }
-  }
-  if (options.story) {
-    appendix('Story & notes');
-    for (const answer of sheet.background) block('Background', `${answer.question}\n${answer.answer}`);
-    for (const answer of sheet.connections) block('Connection', `${answer.question}\n${answer.answer}`);
-    block('Notes', sheet.notes, 220);
-  }
-  const count = pdf.getPageCount();
-  pdf.getPages().forEach((p, i) => {
-    p.drawText(`Editable character sheet / Daggery / ${i + 1} of ${count}`, { x: margin, y: 20, size: 7, font, color: ink });
+  field('subclass', mapping ? subclass?.name : `${getClass(sheet.classId)?.name ?? sheet.classId} / ${subclass?.name ?? ''}`, 409, 30, 120, 14);
+  field('level', sheet.level, 557, 20, 28, 25, false, true);
+  TRAIT_ORDER.forEach((trait, i) => {
+    field(`trait_${trait}`, sheet.traits[trait], 209 + i * 67.2, 83, 33, 24, false, true);
+    check(`trait_mark_${trait}`, sheet.traitMarks.includes(trait), 249 + i * 67.2, 68, 10, 10);
   });
-  pdf.setTitle(options.blank ? 'Blank Daggerheart character sheet' : `${sheet.name} - character sheet`);
+  field('evasion', evasion(sheet), 27, 90, 24, 23, false, true);
+  field('armor_score', armorScore(sheet), 91, 90, 27, 23, false, true);
+  // The source's armor icons are a 3-column / 4-row tracker.
+  for (let i = 0; i < 12; i++) check(`armor_slot_${i}`, i < sheet.armorSlotsMarked, 137 + (i % 3) * 12.6, 80 + Math.floor(i / 3) * 14.4, 7, 9);
+  const thresholds = damageThresholds(sheet);
+  field('major', thresholds.major, 84, 191, 22, 18, false, true);
+  field('severe', thresholds.severe, 171, 191, 22, 18, false, true);
+  for (let i = 0; i < 12; i++) {
+    check(`hp_${i}`, i < sheet.hpMarked, 38 + i * 16.8, 231, 12, 6);
+    check(`stress_${i}`, i < sheet.stressMarked, 38 + i * 16.8, 253, 12, 6);
+  }
+  // Tooltips retain maximums without changing any original labels or artwork.
+  form.getCheckBox('hp_0').acroField.dict.set(PDFName.of('TU'), PDFHexString.fromText(`HP marked: ${sheet.hpMarked}; maximum: ${hpMax(sheet)}`));
+  form.getCheckBox('stress_0').acroField.dict.set(PDFName.of('TU'), PDFHexString.fromText(`Stress marked: ${sheet.stressMarked}; maximum: ${stressMax(sheet)}`));
+  for (let i = 0; i < 6; i++) check(`hope_${i}`, i < sheet.hope, 43 + i * 35.6, 305, 8, 8);
+  for (let i = 0; i < 6; i++) check(`proficiency_${i}`, i < sheet.proficiency, 439 + i * 11.2, 174, 7, 7);
+  for (let i = 0; i < 5; i++) {
+    const exp = sheet.experiences[i];
+    field(`experience_${i}`, exp?.name, 22, 381 + i * 19.4, 193, 15);
+    field(`experience_${i}_modifier`, exp ? `${exp.modifier >= 0 ? '+' : ''}${exp.modifier}` : '', 225, 381 + i * 19.4, 26, 15, false, true);
+  }
+  // Original gold tracks: ten handfuls per bag, ten bags per chest.
+  for (let i = 0; i < 10; i++) {
+    check(`gold_handful_${i}`, i < sheet.gold % 10, 17 + i * 11.05, 514, 7, 7);
+    check(`gold_bag_${i}`, i < Math.floor(sheet.gold / 10) % 10, 137 + i * 10.4, 514, 7, 7);
+  }
+  field('gold_chests', Math.floor(sheet.gold / 100) || '', 244, 511, 12, 12, false, true);
+  const weaponFields = (prefix: string, weapon: ReturnType<typeof weaponForSlot>, row: number) => {
+    field(`${prefix}_name`, weapon?.name, 295, row, 115, 17);
+    field(`${prefix}_trait`, weapon ? `${weapon.trait} / ${weapon.range}` : '', 416, row, 90, 17);
+    field(`${prefix}_damage`, weapon ? `${damageNotation(weapon.damage, sheet.proficiency)} ${weapon.damageType}` : '', 513, row, 78, 17);
+    field(`${prefix}_feature`, weapon?.feature ? `${weapon.feature.name}: ${weapon.feature.text}` : '', 298, row + 30, 292, 14);
+  };
+  weaponFields('weapon_primary', weaponForSlot(sheet, 'primary'), 193);
+  weaponFields('weapon_secondary', weaponForSlot(sheet, 'secondary'), 286);
+  const armor = getArmor(sheet.armorId);
+  field('armor_name', armor?.name, 295, 391, 151, 17);
+  field('armor_thresholds', armor ? `${armor.baseThresholds.major} / ${armor.baseThresholds.severe}` : '', 454, 391, 69, 17, false, true);
+  field('armor_base_score', armor?.baseScore, 539, 391, 49, 17, false, true);
+  field('armor_feature', armor?.feature ? `${armor.feature.name}: ${armor.feature.text}` : '', 298, 421, 292, 14);
+  // Keep full inventory text editable even when it exceeds the original's fixed space.
+  field('inventory', sheet.inventory.map(item => `${item.qty} x ${item.name}${item.description ? ': ' + item.description : ''}`).join('\n'), 293, 493, 298, 99, true);
+  const stowed = sheet.inventory.filter(item => item.kind === 'weapon');
+  for (let i = 0; i < 2; i++) {
+    const item = stowed[i];
+    const weapon = getWeapon(item?.equipmentId ?? item?.catalogId ?? null);
+    weaponFields(`inventory_weapon_${i}`, weapon, 614 + i * 90.5);
+  }
+  if (!mapping) {
+    const cls = getClass(sheet.classId);
+    field('hope_feature', cls?.hopeFeature ? `${cls.hopeFeature.name}: ${cls.hopeFeature.text}` : '', 23, 326, 230, 23, true);
+    field('class_feature', cls?.classFeatures.map(f => `${f.name}: ${f.text}`).join('\n\n'), 23, 566, 230, 187, true);
+  }
+  if (options.guide && mapping) {
+    page = pages[1]!;
+    // Most guides have an 8.504pt bleed around the original Letter artwork; Warrior does not.
+    const offset = (page.getWidth() - 612) / 2;
+    const normalized = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const cls = getClass(sheet.classId);
+    const backgrounds = cls?.backgroundQuestions ?? [];
+    const connections = cls?.connections ?? [];
+    for (let i = 0; i < 3; i++) {
+      const answer = sheet.background.find(a => normalized(a.question) === normalized(backgrounds[i] ?? ''));
+      const connection = sheet.connections.find(a => normalized(a.question) === normalized(connections[i] ?? ''));
+      field(`background_${i}`, answer?.answer, 32 + offset, 282 + i * 54 + offset, 265, 28, true);
+      field(`connection_${i}`, connection?.answer, 332 + offset, 282 + i * 54 + offset, 255, 28, true);
+    }
+  }
+  pdf.setTitle(options.blank ? 'Original Daggerheart character sheet' : `${sheet.name} - original character sheet`);
   pdf.setCreator('Daggery');
   form.updateFieldAppearances(font);
   return pdf.save();
