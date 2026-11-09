@@ -2,7 +2,9 @@
 **/dist
 data
 sources
-docs
+docs/*
+!docs/solo-rules.md
+!docs/solo-themes.md
 tools
 .git
 .claude
