@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { PDFDocument, PDFTextField, PDFCheckBox, PDFArray, PDFRawStream } from 'pdf-lib';
+import { PDFDocument, PDFTextField, PDFCheckBox, PDFArray, PDFRawStream, PDFName } from 'pdf-lib';
 import { createCharacterPdf, characterPdfFilename, DEFAULT_PDF_OPTIONS, ORIGINAL_SHEETS } from './exportPdf';
 import type { Sheet } from './types';
 
@@ -76,16 +76,68 @@ test('original guide and class reference pages are optional; unknown classes use
     assert.equal(doc.getPageCount(), count);
     assert.equal(doc.getPage(0).getWidth(), 612);
     assert.equal(doc.getPage(0).getHeight(), 792);
+    if (classId === 'ranger') {
+      const form = doc.getForm();
+      form.getTextField('companion_name').setText('Moss');
+      form.getCheckBox('companion_training_0').check();
+      assert.equal(form.getFields().filter(f => f.getName().startsWith('companion_training_')).length, 16);
+      const edited = await PDFDocument.load(await doc.save());
+      assert.equal(edited.getForm().getTextField('companion_name').getText(), 'Moss');
+      assert.ok(edited.getForm().getCheckBox('companion_training_0').isChecked());
+    }
   }
 });
 
-test('fixed-space inventory retains the entire editable text and does not add recreated pages', async () => {
-  const description = 'A long inventory description. '.repeat(800) + 'FINAL_SENTENCE';
-  const expanded = { ...sheet, inventory: [{ ...sheet.inventory[0]!, description }] };
-  const doc = await PDFDocument.load(await createCharacterPdf(expanded, { blank: false, guide: false, references: false }, font, template));
-  assert.equal(doc.getPageCount(), 1);
-  assert.ok(doc.getForm().getTextField('inventory').getText()?.endsWith('FINAL_SENTENCE'));
-  assert.ok(!doc.getForm().getFields().some(f => f.getName() === 'notes'));
+test('inventory uses individual printed lines and continues extra items on original sheets', async () => {
+  const inventory = Array.from({ length: 8 }, (_, i) => ({ ...sheet.inventory[0]!, id: String(i), name: `Item ${i + 1}`, description: 'Full description. '.repeat(300) + 'FINAL_SENTENCE' }));
+  const doc = await PDFDocument.load(await createCharacterPdf({ ...sheet, inventory }, DEFAULT_PDF_OPTIONS, font, template));
+  assert.equal(doc.getPageCount(), 3);
+  const fields = doc.getForm();
+  for (let i = 0; i < 8; i++) {
+    const field = fields.getTextField(`inventory_${i}`);
+    assert.equal(field.getText(), `2 x Item ${i + 1}`);
+    const rect = field.acroField.getWidgets()[0]!.getRectangle();
+    assert.ok(Math.abs(rect.y - (792 - 489 - (i % 5) * 20.22 - 16)) < .01);
+    assert.ok(rect.height <= 16);
+    assert.ok(field.acroField.dict.get(PDFName.of('TU')));
+  }
+  assert.ok(!fields.getFields().some(f => f.getName() === 'inventory'));
+});
+
+test('resource widgets match the original drawing bounds and use readable default text sizes', async () => {
+  const doc = await PDFDocument.load(await createCharacterPdf(sheet, DEFAULT_PDF_OPTIONS, font, template));
+  const form = doc.getForm();
+  const bounds = (name: string) => form.getField(name).acroField.getWidgets()[0]!.getRectangle();
+  for (const [name, x, top, width, height] of [
+    ['hope_5',217.19,302.3,14.4,14.4], ['hp_11',243.50,230.59,15.29,7.64],
+    ['stress_0',62.86,252.65,13.45,7.64], ['stress_11',244.54,252.65,13.45,7.64],
+    ['proficiency_5',496.72,172.5,8.92,8.92], ['gold_handful_8',115.18,513.32,7.69,7.69],
+  ] as const) {
+    const rect = bounds(name);
+    assert.ok(Math.abs(rect.x-x)<.02,name);
+    assert.ok(Math.abs(rect.y-(792-top-height))<.02,name);
+    assert.ok(Math.abs(rect.width-width)<.02,name);
+  }
+  assert.match(form.getTextField('name').acroField.getDefaultAppearance() ?? '', /10 Tf/);
+  assert.match(form.getTextField('trait_agility').acroField.getDefaultAppearance() ?? '', /16 Tf/);
+});
+
+test('level-up guide boxes are editable and reflect advancement history including double-slot choices', async () => {
+  const advanced = { ...sheet, level: 6, advancementHistory: [
+    { level: 2, advancement: 'hp' }, { level: 2, advancement: 'traits' },
+    { level: 5, advancement: 'proficiency' }, { level: 6, advancement: 'subclass' },
+  ] };
+  for (const classId of ['guardian','warrior']) {
+    const doc = await PDFDocument.load(await createCharacterPdf({ ...advanced,classId }, DEFAULT_PDF_OPTIONS, font, template));
+    const form = doc.getForm();
+    assert.equal(form.getFields().filter(f => f.getName().startsWith('advance_')).length,40);
+    for (const name of ['advance_2_hp_0','advance_2_traits_0','advance_3_proficiency_0','advance_3_proficiency_1','advance_3_subclass_0']) assert.ok(form.getCheckBox(name).isChecked(),name);
+    const widget = form.getCheckBox('advance_2_traits_0').acroField.getWidgets()[0]!.getRectangle();
+    assert.ok(Math.abs(widget.x-(classId==='warrior'?15.59:24.10))<.02);
+    form.getCheckBox('advance_2_traits_1').check();
+    const edited = await PDFDocument.load(await doc.save());
+    assert.ok(edited.getForm().getCheckBox('advance_2_traits_1').isChecked());
+  }
 });
 
 test('download filename removes path and control characters', () => {
