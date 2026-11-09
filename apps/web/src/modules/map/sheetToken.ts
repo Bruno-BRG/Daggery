@@ -1,6 +1,7 @@
-import { classArt, getClass, hpMax, stressMax } from '../sheets/rules';
+import { getClass, hpMax, stressMax } from '../sheets/rules';
 import type { Sheet } from '../sheets/types';
 import { readPool, type MapToken } from './model';
+import { tokenImage } from '../sheets/appearance';
 
 export interface SheetEntry {
   id: string; name: string; className?: string; image?: string;
@@ -16,7 +17,12 @@ export function sheetEntry(id: string, value: unknown): SheetEntry | null {
   if (!modern) return { id, name, hp: readPool(v.hitPoints ?? v.hp), stress: readPool(v.stress) };
   const sheet = { ...v, bonusHpSlots: Number(v.bonusHpSlots) || 0, bonusStressSlots: Number(v.bonusStressSlots) || 0 } as unknown as Sheet;
   const hp = hpMax(sheet), stress = stressMax(sheet);
-  return { id, name, image: classArt(sheet.classId), className: getClass(sheet.classId)?.name, hp: { current: Math.max(0, hp - sheet.hpMarked), max: hp }, stress: { current: Math.max(0, stress - sheet.stressMarked), max: stress } };
+  return { id, name, image: tokenImage(sheet), className: getClass(sheet.classId)?.name, hp: { current: Math.max(0, hp - sheet.hpMarked), max: hp }, stress: { current: Math.max(0, stress - sheet.stressMarked), max: stress } };
+}
+
+export function linkedTokenImage(token: Pick<MapToken, 'image' | 'useCharacterImage'>, linked: SheetEntry): string | undefined {
+  if (token.useCharacterImage === false) return token.image;
+  return token.useCharacterImage || !token.image || token.image.startsWith('/cards/class/') ? linked.image : token.image;
 }
 
 export function patchLinkedPools(sheet: Sheet, patch: Partial<MapToken>): Sheet {

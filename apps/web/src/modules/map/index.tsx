@@ -14,7 +14,7 @@ import { SceneCreator, SceneManager, MiniatureRoster } from './TablePanels';
 import { copyScene } from './scenes';
 
 import { encounterToken, patchEncounter } from './encounterLink';
-import { patchLinkedPools, sheetEntry } from './sheetToken';
+import { linkedTokenImage, patchLinkedPools, sheetEntry } from './sheetToken';
 
 import type { Sheet } from '../sheets/types';
 import { NO_CONDITIONS, sourceOf, type CombatDoc, type AdversaryDoc, type AdversarySource } from '../combat/model';
@@ -230,7 +230,7 @@ export default function MapModule({ author }: { author: string }) {
           const encounter = token.combatRefId ? (combat.items[token.combatRefId] as AdversaryDoc | undefined) : undefined;
           if (encounter?.kind === 'adversary') return encounterToken(token, encounter);
           return linked
-            ? { ...token, image: token.image ?? linked.image, hp: linked.hp ?? token.hp, stress: linked.stress ?? token.stress }
+            ? { ...token, image: linkedTokenImage(token, linked), hp: linked.hp ?? token.hp, stress: linked.stress ?? token.stress }
             : token;
         }),
 
@@ -286,6 +286,7 @@ export default function MapModule({ author }: { author: string }) {
   }, [gm, tool]);
 
   const patchToken = (id: string, patch: Partial<MapToken>) => {
+    if ('image' in patch && patch.useCharacterImage === undefined) patch = { ...patch, useCharacterImage: false };
     const cur = itemsRef.current[`token:${id}`] as MapToken | undefined;
 
     if (cur) {
@@ -341,6 +342,7 @@ export default function MapModule({ author }: { author: string }) {
       rotation: 0,
 
       ...partial,
+      ...(partial.kind === 'character' && partial.refId && partial.useCharacterImage === undefined ? { useCharacterImage: true } : {}),
 
       id,
 

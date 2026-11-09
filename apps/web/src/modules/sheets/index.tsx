@@ -4,8 +4,9 @@ import Wizard from './Wizard';
 import SheetView from './SheetView';
 import { Icon } from '../../components/Icon';
 import { bringCharacterToTable } from '../../table-navigation';
-import { getAncestry, getClass, getCommunity, getSubclass, hpMax, stressMax, tierLabel, classArt } from './rules';
+import { getAncestry, getClass, getCommunity, getSubclass, hpMax, stressMax, tierLabel } from './rules';
 import type { Sheet } from './types';
+import { bannerImage, portraitImage } from './appearance';
 
 export default function SheetsModule({ author }: { author: string }) {
   const { items, set, remove } = useDocs<Sheet>('sheets');
@@ -105,7 +106,7 @@ function SheetCard({ sheet, onOpen, onDelete }: { sheet: Sheet; onOpen: () => vo
   const community = getCommunity(sheet.communityId);
   return (
     <li className="daggery-character-card">
-      {classArt(sheet.classId) && <img className="daggery-character-art" src={classArt(sheet.classId)} alt="" />}
+      {(bannerImage(sheet) || portraitImage(sheet)) && <img className={`daggery-character-art ${sheet.bannerUrl || sheet.portraitUrl ? 'is-custom' : ''}`} src={sheet.bannerUrl || portraitImage(sheet)} alt="" />}
       <div className="daggery-character-card-body">
         <button type="button" onClick={onOpen} className="text-left">
           <p className="text-lg font-semibold text-slate-100">{sheet.name}</p>

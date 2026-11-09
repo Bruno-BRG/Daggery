@@ -60,6 +60,8 @@ import { addInventoryItem, catalogInventoryItem, INVENTORY_KIND_LABELS } from '.
 import './sessionSheet.css';
 import { useSoloAssistance } from '../../systems/useSoloAssistance';
 import { ExportPdfDialog } from './ExportPdfDialog';
+import { CharacterImagesDialog } from './CharacterImagesDialog';
+import { portraitImage } from './appearance';
 
 interface SheetViewProps {
   sheet: Sheet;
@@ -121,10 +123,13 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   const [recoveryResult, setRecoveryResult] = useState('');
   const [actionsOpen, setActionsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [imagesOpen, setImagesOpen] = useState(false);
   const [abilitySearch, setAbilitySearch] = useState('');
   const [focused, setFocused] = useState(false);
   const [equipmentSlot, setEquipmentSlot] = useState<EquipmentSlot|null>(null);
   const connection = useSyncStatus();
+  const connectionRef = useRef(connection);
+  connectionRef.current = connection;
   useEffect(() => {
     if (!focused) return;
     const exit = (event: KeyboardEvent) => {
@@ -352,12 +357,12 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
         <div className="sheet-toolbar-actions"><button type="button" onClick={() => setExportOpen(true)} className="sheet-ghost sheet-export-trigger" aria-label="Export character PDF"><Icon name="pdf" /><span>PDF</span></button>{onPlay && <button type="button" className="sheet-ghost sheet-focus-toggle" aria-label={focused ? 'Exit focused sheet view' : 'Focus character sheet'} title={focused ? 'Back to campaign (Escape)' : 'Focus sheet for play'} aria-pressed={focused} onClick={() => setFocused(value => !value)}><Icon name={focused ? 'shrink' : 'expand'} /><span>{focused ? 'Exit focus' : 'Focus'}</span></button>}{onPlay && <button type="button" onClick={onPlay} className="sheet-ghost" title="Bring this character to the current scene"><Icon name="map" /><span>Table</span></button>}<button type="button" aria-label="Rest" onClick={() => openRecovery('rest')} className="sheet-ghost"><Icon name="moon" /><span>Rest</span></button><button type="button" onClick={() => setShowLevelUp(true)} disabled={sheet.level >= 10} className="sheet-primary"><Icon name="spark" />Level up</button><button type="button" onClick={() => setActionsOpen(true)} className="sheet-ghost folio-more" aria-label="Character actions"><Icon name="more" /></button></div>
       </header>
 
-      <section className="sheet-hero">
-        {art && <div className="sheet-hero-bg" style={{ backgroundImage: `url("${art}")` }} aria-hidden="true" />}
+      <section className={`sheet-hero ${sheet.bannerUrl ? 'has-character-banner' : ''}`}>
+        {sheet.bannerUrl ? <img className="character-banner" src={sheet.bannerUrl} alt="" /> : art && <div className="sheet-hero-bg" style={{ backgroundImage: `url("${art}")` }} aria-hidden="true" />}
         <div className="sheet-hero-top">
-          <div className="sheet-portrait" aria-hidden="true">
-            {art ? <img src={art} alt="" /> : <span>✦</span>}
-          </div>
+          <button type="button" className="sheet-portrait character-portrait-button" aria-label="Edit character images" title="Edit portrait, banner, and token" onClick={() => setImagesOpen(true)}>
+            {portraitImage(sheet) ? <img src={portraitImage(sheet)} alt="" /> : <Icon name="image" />}
+          </button>
           <div className="sheet-identity">
             <p className="sheet-eyebrow"><span className="folio-hero-spark" aria-hidden="true">✦</span>{cls?.name ?? sheet.classId}{subclass ? ` · ${subclass.name}` : ''}</p>
             <input value={sheet.name} onChange={(event) => mutate((current) => ({ ...current, name: event.target.value }))} className="sheet-name" aria-label="Character name" />
@@ -643,7 +648,11 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
               <div><p className="sheet-mini-label">Long</p><div className="sheet-rest-grid"><RestButton onClick={() => { mutate((current) => ({ ...current, hpMarked: 0 })); pushMessage('Long rest — all Hit Points cleared.'); }}>Heal all HP</RestButton><RestButton onClick={() => { mutate((current) => ({ ...current, stressMarked: 0 })); pushMessage('Long rest — all Stress cleared.'); }}>Clear all Stress</RestButton><RestButton onClick={() => { mutate((current) => ({ ...current, armorSlotsMarked: 0 })); pushMessage('Long rest — all armor slots repaired.'); }}>Repair Armor</RestButton><RestButton onClick={() => prepareRest(withAllies ? 2 : 1, 'long')}>Prepare</RestButton></div><p className="sheet-note mt-1">GM gains 1d4 + number of PCs Fear.</p></div>
             </div>)}{recoveryResult && <p className="folio-recovery-result" role="status">{recoveryResult}</p>}</div></Dialog>
       <ExportPdfDialog sheet={sheet} open={exportOpen} onClose={() => setExportOpen(false)} />
-      <Dialog open={actionsOpen} onClose={() => setActionsOpen(false)} title="Character actions" className="folio-actions-dialog"><p className="daggery-dialog-description">Manage {sheet.name}’s character sheet.</p><button type="button" className="sheet-ghost mt-5" onClick={() => { setActionsOpen(false); setExportOpen(true); }}><Icon name="pdf" />Export editable PDF</button><button type="button" className="sheet-primary mt-5" disabled={sheet.level >= 10} onClick={() => { setActionsOpen(false); setShowLevelUp(true); }}><Icon name="spark" />Level up</button><button type="button" className="sheet-danger mt-5" onClick={() => { if (window.confirm(`Delete ${sheet.name}'s sheet?`)) onDelete(); }}><Icon name="trash" />Delete character</button></Dialog>
+      <CharacterImagesDialog sheet={sheet} open={imagesOpen} onClose={() => setImagesOpen(false)} connected={connection === 'open'} onChange={patch => {
+        if (connectionRef.current !== 'open') throw new Error('Reconnect to the campaign before saving this image.');
+        mutate(current => ({ ...current, ...patch }));
+      }} />
+      <Dialog open={actionsOpen} onClose={() => setActionsOpen(false)} title="Character actions" className="folio-actions-dialog"><p className="daggery-dialog-description">Manage {sheet.name}’s character sheet.</p><button type="button" className="sheet-ghost mt-5" onClick={() => { setActionsOpen(false); setImagesOpen(true); }}><Icon name="image" />Character images</button><button type="button" className="sheet-ghost mt-5" onClick={() => { setActionsOpen(false); setExportOpen(true); }}><Icon name="pdf" />Export editable PDF</button><button type="button" className="sheet-primary mt-5" disabled={sheet.level >= 10} onClick={() => { setActionsOpen(false); setShowLevelUp(true); }}><Icon name="spark" />Level up</button><button type="button" className="sheet-danger mt-5" onClick={() => { if (window.confirm(`Delete ${sheet.name}'s sheet?`)) onDelete(); }}><Icon name="trash" />Delete character</button></Dialog>
       {showLevelUp && <LevelUpDialog sheet={sheet} onChange={(next) => { sheetRef.current = next; onChange(next); }} onClose={() => setShowLevelUp(false)} />}
     </div>
   );

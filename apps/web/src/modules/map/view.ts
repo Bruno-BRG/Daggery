@@ -524,7 +524,8 @@ export class MapView {
     if (!this.loading.has(url)) {
       this.loading.add(url);
 
-      Assets.load<Texture>(url).then(
+      // Authenticated asset URLs end in an ID, so Pixi cannot infer their image loader from an extension.
+      Assets.load<Texture>(/^\/api\/campaigns\/[^/]+\/assets\//.test(url) ? { src: url, parser: 'texture' } : url).then(
         () => {
           this.loading.delete(url);
 

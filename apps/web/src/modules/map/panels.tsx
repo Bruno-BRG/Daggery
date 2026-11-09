@@ -162,6 +162,7 @@ export function TokenEditor({
             />
           </label>
           <AssetPicker onSelect={url => onPatch({ image: url })} />
+          {linked && <button className={BUTTON} onClick={() => onPatch({ useCharacterImage: true })}>Use character image</button>}
           {token.image && (
             <button className={BUTTON} onClick={() => onPatch({ image: '' })}>
               Remove

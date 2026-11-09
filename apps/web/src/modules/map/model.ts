@@ -43,6 +43,8 @@ export interface MapToken extends Token {
   sceneId: string;
   color: string;
   image?: string;
+  /** Keep a linked miniature's artwork in sync with its character. False preserves a scene override. */
+  useCharacterImage?: boolean;
   hp?: Pool;
   stress?: Pool;
   conditions: string[];

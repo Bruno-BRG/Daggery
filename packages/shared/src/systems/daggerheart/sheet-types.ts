@@ -48,6 +48,10 @@ export interface Sheet {
   id: string;
   name: string;
   playerName: string;
+  /** Shared campaign images uploaded for this character. Older sheets use class art. */
+  portraitUrl?: string;
+  bannerUrl?: string;
+  tokenUrl?: string;
   /** 1..10. */
   level: number;
   /** Damage dice count for weapon attacks. Starts at 1, raised by advancements. */

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { fileTypeFromBuffer } from 'file-type';
 import { imageSize } from 'image-size';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type Database from 'better-sqlite3';
 import type { WebSocket } from 'ws';
 import { CampaignService, type CampaignRole } from './campaign-service';
@@ -123,15 +123,17 @@ export async function registerSecureGame(app: FastifyInstance, options: Options)
       broadcast(campaign, { type: 'roll', entry: { id: Number(row.lastInsertRowid), at, author, kind, result } });
     },
   });
-  app.post('/api/campaigns/:campaignId/assets', async (request, reply) => {
+  const upload = (characterImage: boolean) => async (request: FastifyRequest, reply: FastifyReply) => {
     const campaignId = params(request).campaignId!;
     const { user, role } = auth(request, campaignId);
-    if (role !== 'gm') throw new Error('Forbidden');
+    if (characterImage ? !canWriteDocument(service.configuration(campaignId), role, 'sheets', 'character') : role !== 'gm') throw new Error('Forbidden');
     const part = await request.file();
     if (!part) return reply.code(400).send({ error: 'Missing file' });
     const data = await part.toBuffer();
+    if (characterImage && data.length > 10 * 1024 * 1024) return reply.code(413).send({ error: 'Character images must be 10 MB or smaller' });
     const type = await fileTypeFromBuffer(data);
     if (!type || !['image/png', 'image/jpeg', 'image/webp', 'application/pdf'].includes(type.mime)) return reply.code(400).send({ error: 'Unsupported file' });
+    if (characterImage && !type.mime.startsWith('image/')) return reply.code(400).send({ error: 'Choose a PNG, JPEG, or WebP image' });
     if (type.mime.startsWith('image/')) {
       try {
         const dimensions = imageSize(data);
@@ -142,14 +144,16 @@ export async function registerSecureGame(app: FastifyInstance, options: Options)
     await writeFile(join(assetsDir, storageName), data, { flag: 'wx' });
     try {
       db.prepare(`INSERT INTO campaign_assets(id,campaign_id,uploaded_by,name,category,media_type,size,storage_name,visibility,created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'gm', ?)`).run(id, campaignId, user.id, part.filename.slice(0, 200), type.mime === 'application/pdf' ? 'document' : 'image', type.mime, data.length, storageName, new Date().toISOString());
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, campaignId, user.id, part.filename.slice(0, 200), characterImage ? 'character' : type.mime === 'application/pdf' ? 'document' : 'image', type.mime, data.length, storageName, characterImage ? 'shared' : 'gm', new Date().toISOString());
     } catch (error) {
       const { unlink } = await import('node:fs/promises');
       await unlink(join(assetsDir, storageName));
       throw error;
     }
     return reply.code(201).send({ id, url: `/api/campaigns/${campaignId}/assets/${id}` });
-  });
+  };
+  app.post('/api/campaigns/:campaignId/assets', upload(false));
+  app.post('/api/campaigns/:campaignId/character-images', upload(true));
   app.get('/api/campaigns/:campaignId/assets', async request => {
     const campaignId = params(request).campaignId!;
     const { role } = auth(request, campaignId);

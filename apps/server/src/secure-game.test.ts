@@ -54,6 +54,29 @@ test('asset uploads validate signatures and enforce campaign membership', async 
     assert.equal(inline.headers['content-type'], 'application/pdf');
     assert.match(inline.headers['content-disposition'] as string, /^inline;/);
     assert.equal((await app.inject({ method: 'GET', url: `${pdfUrl}?inline=1`, headers: { cookie: playerCookie } })).statusCode, 404);
+    const characterUpload = (cookie: string, bytes: Buffer, campaignId = campaign) => app.inject({ method: 'POST', url: `/api/campaigns/${campaignId}/character-images`, headers: { origin, cookie, 'content-type': 'multipart/form-data; boundary=testboundary' }, payload: payload(bytes) });
+    const portrait = await characterUpload(playerCookie, png);
+    assert.equal(portrait.statusCode, 201, 'players can upload their character images');
+    const portraitUrl = portrait.json().url as string;
+    for (const cookie of [gmCookie, playerCookie]) {
+      const image = await app.inject({ method: 'GET', url: portraitUrl, headers: { cookie } });
+      assert.equal(image.statusCode, 200);
+      assert.deepEqual(image.rawPayload, png);
+    }
+    const stored = db.prepare("SELECT visibility,category FROM campaign_assets WHERE id=?").get(portrait.json().id);
+    assert.deepEqual(stored, { visibility: 'shared', category: 'character' });
+    assert.equal((await characterUpload(playerCookie, Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF'))).statusCode, 400, 'character uploads cannot contain PDFs');
+    assert.equal((await characterUpload(playerCookie, Buffer.from('<svg></svg>'))).statusCode, 400);
+    const oversizedDimensions = Buffer.from(png); oversizedDimensions.writeUInt32BE(9000, 16);
+    assert.equal((await characterUpload(playerCookie, oversizedDimensions)).statusCode, 400);
+    assert.equal((await characterUpload(playerCookie, Buffer.concat([png, Buffer.alloc(10 * 1024 * 1024)]))).statusCode, 413);
+    const other = await service.register('imageoutsider', 'another very strong password');
+    const otherCookie = `daggery_session=${service.createSession(other.id)}`;
+    assert.equal((await characterUpload(otherCookie, png)).statusCode, 403);
+    assert.equal((await characterUpload('', png)).statusCode, 401);
+    assert.equal((await app.inject({ method: 'GET', url: portraitUrl, headers: { cookie: otherCookie } })).statusCode, 403);
+    const anotherCampaign = service.createCampaign(gm.id, 'Other images');
+    assert.equal((await app.inject({ method: 'GET', url: portraitUrl.replace(campaign, anotherCampaign), headers: { cookie: gmCookie } })).statusCode, 404);
   } finally { await app.close(); db.close(); rmSync(dir, { recursive: true, force: true }); }
 });
 
