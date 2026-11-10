@@ -1,0 +1,1207 @@
+{
+  "tables": [
+    {
+      "id": "special-elements",
+      "title": "Special Elements Table",
+      "die": "d100",
+      "entries": [
+        {
+          "range": [
+            1,
+            5
+          ],
+          "text": "SUPERSIZE: Roll in the Category again (if you get Special treat it as Expected). Whatever Element is generated make it more than what is expected. For instance if the Category is Locations and the Element generated is “pool,” where you originally may have envisioned this as a pond you now treat it as a lake."
+        },
+        {
+          "range": [
+            6,
+            10
+          ],
+          "text": "BARELY THERE: Roll in the Category again (if you get Special treat it as Expected). Whatever Element is generated minimize it as much as possible. If it’s an Encounter, such as an enemy, maybe they are wounded or of a lesser nature than usual. If it’s a Location maybe it is badly in need of repair or is unusually small."
+        },
+        {
+          "range": [
+            11,
+            15
+          ],
+          "text": "REMOVE ELEMENT: Roll in the Category again (if you get Special treat it as Expected) and cross that Element out removing it from the Category list. You will still use that Element for this Area but the Category List has now been altered for future rolls. If the Element is Unique then treat this result as Expected instead."
+        },
+        {
+          "range": [
+            16,
+            25
+          ],
+          "text": "ADD ELEMENT: Add a new Element to this Category at the end of the List. Generate the new Element by treating it like a Random Element and rolling for a description of it on the Random Element Descriptors Table. The new Element is added to the end of the Category List and is treated as though it was rolled for this Area. This is identical to a Random Element except that the Element generated is added to the Category List to possibly be encountered again later."
+        },
+        {
+          "range": [
+            26,
+            30
+          ],
+          "text": "THIS IS BAD: Roll in the Category again (if you get Special treat it as Expected). Whatever you get it is bad for the Player Character. For instance if it’s an Encounter it is probably something that is harmful. If it’s a Location maybe the place is dangerous. If it’s an Object maybe it’s unstable and about to explode. Go with a modification to the Element that seems the most obvious or roll twice on the Random Elements Descriptors Table for inspiration."
+        },
+        {
+          "range": [
+            31,
+            35
+          ],
+          "text": "THIS IS GOOD: Roll in the Category again (if you get Special treat it as Expected). Whatever you get it is something good for the Player Character. Whether it’s a Location, Encounter, or Object, it is an Element that will be helpful or useful. Go with a modification to the Element that seems most obvious or roll twice on the Random Elements Descriptors Table for inspiration."
+        },
+        {
+          "range": [
+            36,
+            50
+          ],
+          "text": "MULTI-ELEMENT: Roll twice on this Category list (if you get Special Element treat it as Expected) and include both of them in the Area. For instance if the Category is Location and the Elements are “pool” and “stony chamber” maybe this is a chamber with an ornate fountain in it."
+        },
+        {
+          "range": [
+            51,
+            60
+          ],
+          "text": "EXIT HERE: This Area, in addition to whatever else it contains, also holds an exit from the Region if this is possible. Maybe it’s a door out of the mansion or a hole in the cave wall. If this result makes no sense given the current Context of the adventure then ignore it and treat this as an Expected Element."
+        },
+        {
+          "range": [
+            61,
+            70
+          ],
+          "text": "RETURN: Whatever else this Area contains it also has access to another previously encountered Area. This is only possible if that other Area had a way to reach this one. If this result makes no sense ignore it and treat this as Expected."
+        },
+        {
+          "range": [
+            71,
+            75
+          ],
+          "text": "GOING DEEPER: Instead of adding one Progress Point for this Category add three. Otherwise treat this result as Expected."
+        },
+        {
+          "range": [
+            76,
+            80
+          ],
+          "text": "COMMON GROUND: Eliminate three Progress Points for this Category (don’t record this occurrence and eliminate two more). Otherwise treat this result as Expected."
+        },
+        {
+          "range": [
+            81,
+            100
+          ],
+          "text": "RANDOM ELEMENT: Treat this Special Element like a normal Random Element."
+        }
+      ]
+    },
+    {
+      "id": "random-element-descriptors",
+      "title": "Random Element Descriptors Table",
+      "die": "d100",
+      "columns": [
+        "Locations",
+        "Encounters",
+        "Objects"
+      ],
+      "entries": [
+        {
+          "range": [
+            1,
+            1
+          ],
+          "cells": [
+            "Abandoned",
+            "Abnormal",
+            "Amusing"
+          ]
+        },
+        {
+          "range": [
+            2,
+            2
+          ],
+          "cells": [
+            "Amusing",
+            "Aggressive",
+            "Ancient"
+          ]
+        },
+        {
+          "range": [
+            3,
+            3
+          ],
+          "cells": [
+            "Ancient",
+            "Angry",
+            "Aromatic"
+          ]
+        },
+        {
+          "range": [
+            4,
+            4
+          ],
+          "cells": [
+            "Aromatic",
+            "Anxious",
+            "Average"
+          ]
+        },
+        {
+          "range": [
+            5,
+            5
+          ],
+          "cells": [
+            "Beautiful",
+            "Beautiful",
+            "Beautiful"
+          ]
+        },
+        {
+          "range": [
+            6,
+            6
+          ],
+          "cells": [
+            "Bleak",
+            "Average",
+            "Bizarre"
+          ]
+        },
+        {
+          "range": [
+            7,
+            7
+          ],
+          "cells": [
+            "Average",
+            "Bold",
+            "Classy"
+          ]
+        },
+        {
+          "range": [
+            8,
+            8
+          ],
+          "cells": [
+            "Bizarre",
+            "Busy",
+            "Colorful"
+          ]
+        },
+        {
+          "range": [
+            9,
+            9
+          ],
+          "cells": [
+            "Calm",
+            "Calm",
+            "Creepy"
+          ]
+        },
+        {
+          "range": [
+            10,
+            10
+          ],
+          "cells": [
+            "Classy",
+            "Careless",
+            "Cute"
+          ]
+        },
+        {
+          "range": [
+            11,
+            11
+          ],
+          "cells": [
+            "Clean",
+            "Cautious",
+            "Damaged"
+          ]
+        },
+        {
+          "range": [
+            12,
+            12
+          ],
+          "cells": [
+            "Colorful",
+            "Cheerful",
+            "Delicate"
+          ]
+        },
+        {
+          "range": [
+            13,
+            13
+          ],
+          "cells": [
+            "Creepy",
+            "Combative",
+            "Disgusting"
+          ]
+        },
+        {
+          "range": [
+            14,
+            14
+          ],
+          "cells": [
+            "Cold",
+            "Bizarre",
+            "Cold"
+          ]
+        },
+        {
+          "range": [
+            15,
+            15
+          ],
+          "cells": [
+            "Cute",
+            "Crazy",
+            "Empty"
+          ]
+        },
+        {
+          "range": [
+            16,
+            16
+          ],
+          "cells": [
+            "Damaged",
+            "Curious",
+            "Enormous"
+          ]
+        },
+        {
+          "range": [
+            17,
+            17
+          ],
+          "cells": [
+            "Dangerous",
+            "Dangerous",
+            "Dangerous"
+          ]
+        },
+        {
+          "range": [
+            18,
+            18
+          ],
+          "cells": [
+            "Dark",
+            "Defiant",
+            "Exotic"
+          ]
+        },
+        {
+          "range": [
+            19,
+            19
+          ],
+          "cells": [
+            "Dirty",
+            "Classy",
+            "Deliberate"
+          ]
+        },
+        {
+          "range": [
+            20,
+            20
+          ],
+          "cells": [
+            "Delightful",
+            "Delightful",
+            "Delightful"
+          ]
+        },
+        {
+          "range": [
+            21,
+            21
+          ],
+          "cells": [
+            "Drab",
+            "Creepy",
+            "Faded"
+          ]
+        },
+        {
+          "range": [
+            22,
+            22
+          ],
+          "cells": [
+            "Disgusting",
+            "Energetic",
+            "Familiar"
+          ]
+        },
+        {
+          "range": [
+            23,
+            23
+          ],
+          "cells": [
+            "Enormous",
+            "Enormous",
+            "Enormous"
+          ]
+        },
+        {
+          "range": [
+            24,
+            24
+          ],
+          "cells": [
+            "Dry",
+            "Excited",
+            "Fancy"
+          ]
+        },
+        {
+          "range": [
+            25,
+            25
+          ],
+          "cells": [
+            "Empty",
+            "Fearful",
+            "Hard"
+          ]
+        },
+        {
+          "range": [
+            26,
+            26
+          ],
+          "cells": [
+            "Enormous",
+            "Ferocious",
+            "Heavy"
+          ]
+        },
+        {
+          "range": [
+            27,
+            27
+          ],
+          "cells": [
+            "Exotic",
+            "Foolish",
+            "Horrible"
+          ]
+        },
+        {
+          "range": [
+            28,
+            28
+          ],
+          "cells": [
+            "Fortunate",
+            "Fortunate",
+            "Fortunate"
+          ]
+        },
+        {
+          "range": [
+            29,
+            29
+          ],
+          "cells": [
+            "Familiar",
+            "Frantic",
+            "Important"
+          ]
+        },
+        {
+          "range": [
+            30,
+            30
+          ],
+          "cells": [
+            "Frightening",
+            "Frightening",
+            "Frightening"
+          ]
+        },
+        {
+          "range": [
+            31,
+            31
+          ],
+          "cells": [
+            "Full",
+            "Cute",
+            "Large"
+          ]
+        },
+        {
+          "range": [
+            32,
+            32
+          ],
+          "cells": [
+            "Fancy",
+            "Generous",
+            "Lethal"
+          ]
+        },
+        {
+          "range": [
+            33,
+            33
+          ],
+          "cells": [
+            "Festive",
+            "Gentle",
+            "Magnificent"
+          ]
+        },
+        {
+          "range": [
+            34,
+            34
+          ],
+          "cells": [
+            "Harsh",
+            "Glad",
+            "Military"
+          ]
+        },
+        {
+          "range": [
+            35,
+            35
+          ],
+          "cells": [
+            "Horrible",
+            "Graceful",
+            "Modern"
+          ]
+        },
+        {
+          "range": [
+            36,
+            36
+          ],
+          "cells": [
+            "Important",
+            "Happy",
+            "Extravagant"
+          ]
+        },
+        {
+          "range": [
+            37,
+            37
+          ],
+          "cells": [
+            "Helpful",
+            "Helpful",
+            "Helpful"
+          ]
+        },
+        {
+          "range": [
+            38,
+            38
+          ],
+          "cells": [
+            "Lavish",
+            "Helpless",
+            "Mundane"
+          ]
+        },
+        {
+          "range": [
+            39,
+            39
+          ],
+          "cells": [
+            "Magnificent",
+            "Innocent",
+            "Natural"
+          ]
+        },
+        {
+          "range": [
+            40,
+            40
+          ],
+          "cells": [
+            "Intense",
+            "Intense",
+            "Powerful"
+          ]
+        },
+        {
+          "range": [
+            41,
+            41
+          ],
+          "cells": [
+            "Messy",
+            "Lazy",
+            "Rare"
+          ]
+        },
+        {
+          "range": [
+            42,
+            42
+          ],
+          "cells": [
+            "Military",
+            "Defeated",
+            "Light"
+          ]
+        },
+        {
+          "range": [
+            43,
+            43
+          ],
+          "cells": [
+            "Loud",
+            "Loud",
+            "Loud"
+          ]
+        },
+        {
+          "range": [
+            44,
+            44
+          ],
+          "cells": [
+            "Modern",
+            "Loyal",
+            "Reassuring"
+          ]
+        },
+        {
+          "range": [
+            45,
+            45
+          ],
+          "cells": [
+            "Majestic",
+            "Majestic",
+            "Majestic"
+          ]
+        },
+        {
+          "range": [
+            46,
+            46
+          ],
+          "cells": [
+            "Meaningful",
+            "Disgusting",
+            "Meaningful"
+          ]
+        },
+        {
+          "range": [
+            47,
+            47
+          ],
+          "cells": [
+            "Extravagant",
+            "Enormous",
+            "Mechanical"
+          ]
+        },
+        {
+          "range": [
+            48,
+            48
+          ],
+          "cells": [
+            "Mundane",
+            "Miserable",
+            "Ruined"
+          ]
+        },
+        {
+          "range": [
+            49,
+            49
+          ],
+          "cells": [
+            "Mysterious",
+            "Mysterious",
+            "Mysterious"
+          ]
+        },
+        {
+          "range": [
+            50,
+            50
+          ],
+          "cells": [
+            "Natural",
+            "Feeble",
+            "New"
+          ]
+        },
+        {
+          "range": [
+            51,
+            51
+          ],
+          "cells": [
+            "Odd",
+            "Odd",
+            "Odd"
+          ]
+        },
+        {
+          "range": [
+            52,
+            52
+          ],
+          "cells": [
+            "Official",
+            "Official",
+            "Official"
+          ]
+        },
+        {
+          "range": [
+            53,
+            53
+          ],
+          "cells": [
+            "Peaceful",
+            "Peaceful",
+            "Small"
+          ]
+        },
+        {
+          "range": [
+            54,
+            54
+          ],
+          "cells": [
+            "Small",
+            "Playful",
+            "Smelly"
+          ]
+        },
+        {
+          "range": [
+            55,
+            55
+          ],
+          "cells": [
+            "Positive",
+            "Positive",
+            "Positive"
+          ]
+        },
+        {
+          "range": [
+            56,
+            56
+          ],
+          "cells": [
+            "Reassuring",
+            "Powerful",
+            "Powerful"
+          ]
+        },
+        {
+          "range": [
+            57,
+            57
+          ],
+          "cells": [
+            "Quaint",
+            "Exotic",
+            "Smooth"
+          ]
+        },
+        {
+          "range": [
+            58,
+            58
+          ],
+          "cells": [
+            "Quiet",
+            "Familiar",
+            "Valuable"
+          ]
+        },
+        {
+          "range": [
+            59,
+            59
+          ],
+          "cells": [
+            "Ruined",
+            "Slow",
+            "Warm"
+          ]
+        },
+        {
+          "range": [
+            60,
+            60
+          ],
+          "cells": [
+            "Rustic",
+            "Horrible",
+            "Soft"
+          ]
+        },
+        {
+          "range": [
+            61,
+            61
+          ],
+          "cells": [
+            "Simple",
+            "Swift",
+            "Watery"
+          ]
+        },
+        {
+          "range": [
+            62,
+            62
+          ],
+          "cells": [
+            "Threatening",
+            "Threatening",
+            "Threatening"
+          ]
+        },
+        {
+          "range": [
+            63,
+            63
+          ],
+          "cells": [
+            "Smelly",
+            "Violent",
+            "Weapon"
+          ]
+        },
+        {
+          "range": [
+            64,
+            64
+          ],
+          "cells": [
+            "Tranquil",
+            "Wild",
+            "Useful"
+          ]
+        },
+        {
+          "range": [
+            65,
+            65
+          ],
+          "cells": [
+            "Warm",
+            "Important",
+            "Clothing"
+          ]
+        },
+        {
+          "range": [
+            66,
+            66
+          ],
+          "cells": [
+            "Watery",
+            "Lonely",
+            "Travel"
+          ]
+        },
+        {
+          "range": [
+            67,
+            67
+          ],
+          "cells": [
+            "Negative",
+            "Mighty",
+            "Tool"
+          ]
+        },
+        {
+          "range": [
+            68,
+            68
+          ],
+          "cells": [
+            "Enclosed",
+            "Military",
+            "Negative"
+          ]
+        },
+        {
+          "range": [
+            69,
+            69
+          ],
+          "cells": [
+            "Domestic",
+            "Mundane",
+            "Communication"
+          ]
+        },
+        {
+          "range": [
+            70,
+            70
+          ],
+          "cells": [
+            "New",
+            "Powerful",
+            "Food"
+          ]
+        },
+        {
+          "range": [
+            71,
+            71
+          ],
+          "cells": [
+            "Open",
+            "Reassuring",
+            "Domestic"
+          ]
+        },
+        {
+          "range": [
+            72,
+            72
+          ],
+          "cells": [
+            "Safe",
+            "Small",
+            "Artistic"
+          ]
+        },
+        {
+          "range": [
+            73,
+            73
+          ],
+          "cells": [
+            "Expected",
+            "Smelly",
+            "Expected"
+          ]
+        },
+        {
+          "range": [
+            74,
+            74
+          ],
+          "cells": [
+            "Unexpected",
+            "Strong",
+            "Unexpected"
+          ]
+        },
+        {
+          "range": [
+            75,
+            75
+          ],
+          "cells": [
+            "Strange",
+            "Watery",
+            "Strange"
+          ]
+        },
+        {
+          "range": [
+            76,
+            76
+          ],
+          "cells": [
+            "Active",
+            "Weak",
+            "Resource"
+          ]
+        },
+        {
+          "range": [
+            77,
+            77
+          ],
+          "cells": [
+            "Inactive",
+            "Ambush",
+            "Fuel"
+          ]
+        },
+        {
+          "range": [
+            78,
+            78
+          ],
+          "cells": [
+            "Harmful",
+            "Harmful",
+            "Harmful"
+          ]
+        },
+        {
+          "range": [
+            79,
+            79
+          ],
+          "cells": [
+            "Primitive",
+            "Trap",
+            "Energy"
+          ]
+        },
+        {
+          "range": [
+            80,
+            80
+          ],
+          "cells": [
+            "Protection",
+            "Friend",
+            "Multiple"
+          ]
+        },
+        {
+          "range": [
+            81,
+            81
+          ],
+          "cells": [
+            "Unusual",
+            "Foe",
+            "Single"
+          ]
+        },
+        {
+          "range": [
+            82,
+            82
+          ],
+          "cells": [
+            "Bright",
+            "Negative",
+            "Unusual"
+          ]
+        },
+        {
+          "range": [
+            83,
+            83
+          ],
+          "cells": [
+            "Ornate",
+            "Evil",
+            "Bright"
+          ]
+        },
+        {
+          "range": [
+            84,
+            84
+          ],
+          "cells": [
+            "Atmosphere",
+            "Animal",
+            "Ornate"
+          ]
+        },
+        {
+          "range": [
+            85,
+            85
+          ],
+          "cells": [
+            "Sounds",
+            "Expected",
+            "Broken"
+          ]
+        },
+        {
+          "range": [
+            86,
+            86
+          ],
+          "cells": [
+            "Resourceful",
+            "Unexpected",
+            "Liquid"
+          ]
+        },
+        {
+          "range": [
+            87,
+            87
+          ],
+          "cells": [
+            "Purposeful",
+            "Strange",
+            "Personal"
+          ]
+        },
+        {
+          "range": [
+            88,
+            88
+          ],
+          "cells": [
+            "Personal",
+            "Armed",
+            "Intriguing"
+          ]
+        },
+        {
+          "range": [
+            89,
+            89
+          ],
+          "cells": [
+            "Exclusive",
+            "Active",
+            "Active"
+          ]
+        },
+        {
+          "range": [
+            90,
+            90
+          ],
+          "cells": [
+            "Intriguing",
+            "Inactive",
+            "Inactive"
+          ]
+        },
+        {
+          "range": [
+            91,
+            91
+          ],
+          "cells": [
+            "Echo",
+            "Multiple",
+            "Garbage"
+          ]
+        },
+        {
+          "range": [
+            92,
+            92
+          ],
+          "cells": [
+            "Unsteady",
+            "Single",
+            "Useless"
+          ]
+        },
+        {
+          "range": [
+            93,
+            93
+          ],
+          "cells": [
+            "Moving",
+            "Primitive",
+            "Primitive"
+          ]
+        },
+        {
+          "range": [
+            94,
+            94
+          ],
+          "cells": [
+            "Cluttered",
+            "Unusual",
+            "Desired"
+          ]
+        },
+        {
+          "range": [
+            95,
+            95
+          ],
+          "cells": [
+            "Storage",
+            "Fast",
+            "Healing"
+          ]
+        },
+        {
+          "range": [
+            96,
+            96
+          ],
+          "cells": [
+            "Confusing",
+            "Hidden",
+            "Hidden"
+          ]
+        },
+        {
+          "range": [
+            97,
+            97
+          ],
+          "cells": [
+            "Lonely",
+            "Natural",
+            "Prized"
+          ]
+        },
+        {
+          "range": [
+            98,
+            98
+          ],
+          "cells": [
+            "Long",
+            "Quiet",
+            "Flora"
+          ]
+        },
+        {
+          "range": [
+            99,
+            99
+          ],
+          "cells": [
+            "Tall",
+            "Unnatural",
+            "Moving"
+          ]
+        },
+        {
+          "range": [
+            100,
+            100
+          ],
+          "cells": [
+            "Artistic",
+            "Resourceful",
+            "Confusing"
+          ]
+        }
+      ]
+    }
+  ]
+}

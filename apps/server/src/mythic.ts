@@ -6,7 +6,7 @@ import type { MythicData, MythicTablesFile } from '@daggery/shared';
 import type { CampaignService } from './campaign-service';
 import { readSessionToken } from './campaign-routes';
 
-/** Directory holding the gitignored, copyrighted table extracts. */
+/** Directory holding the oracle table data files. */
 export const mythicDataDir = fileURLToPath(new URL('../../../packages/content/mythic/', import.meta.url));
 
 const FILES = {

@@ -1,0 +1,727 @@
+{
+  "tables": [
+    {
+      "id": "ask-the-game-master",
+      "title": "Ask the Game Master",
+      "die": "d100",
+      "columns": [
+        "Odds",
+        "Exceptional Yes",
+        "Yes",
+        "No",
+        "Exceptional No"
+      ],
+      "entries": [
+        {
+          "id": "certain",
+          "label": "Certain",
+          "ranges": {
+            "exceptionalYes": [
+              1,
+              18
+            ],
+            "yes": [
+              19,
+              90
+            ],
+            "no": [
+              91,
+              98
+            ],
+            "exceptionalNo": [
+              99,
+              100
+            ]
+          }
+        },
+        {
+          "id": "nearly-certain",
+          "label": "Nearly Certain",
+          "ranges": {
+            "exceptionalYes": [
+              1,
+              17
+            ],
+            "yes": [
+              18,
+              85
+            ],
+            "no": [
+              86,
+              97
+            ],
+            "exceptionalNo": [
+              98,
+              100
+            ]
+          }
+        },
+        {
+          "id": "very-likely",
+          "label": "Very Likely",
+          "ranges": {
+            "exceptionalYes": [
+              1,
+              15
+            ],
+            "yes": [
+              16,
+              75
+            ],
+            "no": [
+              76,
+              95
+            ],
+            "exceptionalNo": [
+              96,
+              100
+            ]
+          }
+        },
+        {
+          "id": "likely",
+          "label": "Likely",
+          "ranges": {
+            "exceptionalYes": [
+              1,
+              13
+            ],
+            "yes": [
+              14,
+              65
+            ],
+            "no": [
+              66,
+              93
+            ],
+            "exceptionalNo": [
+              94,
+              100
+            ]
+          }
+        },
+        {
+          "id": "50-50-or-unknown",
+          "label": "50/50 or Unknown",
+          "ranges": {
+            "exceptionalYes": [
+              1,
+              10
+            ],
+            "yes": [
+              11,
+              50
+            ],
+            "no": [
+              51,
+              90
+            ],
+            "exceptionalNo": [
+              91,
+              100
+            ]
+          }
+        },
+        {
+          "id": "unlikely",
+          "label": "Unlikely",
+          "ranges": {
+            "exceptionalYes": [
+              1,
+              7
+            ],
+            "yes": [
+              8,
+              35
+            ],
+            "no": [
+              36,
+              87
+            ],
+            "exceptionalNo": [
+              88,
+              100
+            ]
+          }
+        },
+        {
+          "id": "very-unlikely",
+          "label": "Very Unlikely",
+          "ranges": {
+            "exceptionalYes": [
+              1,
+              5
+            ],
+            "yes": [
+              6,
+              25
+            ],
+            "no": [
+              26,
+              85
+            ],
+            "exceptionalNo": [
+              86,
+              100
+            ]
+          }
+        },
+        {
+          "id": "nearly-impossible",
+          "label": "Nearly Impossible",
+          "ranges": {
+            "exceptionalYes": [
+              1,
+              3
+            ],
+            "yes": [
+              4,
+              15
+            ],
+            "no": [
+              16,
+              83
+            ],
+            "exceptionalNo": [
+              84,
+              100
+            ]
+          }
+        },
+        {
+          "id": "impossible",
+          "label": "Impossible",
+          "ranges": {
+            "exceptionalYes": [
+              1,
+              2
+            ],
+            "yes": [
+              3,
+              10
+            ],
+            "no": [
+              11,
+              82
+            ],
+            "exceptionalNo": [
+              83,
+              100
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "discover-meaning",
+      "title": "Discover Meaning",
+      "die": "d100",
+      "columns": [
+        "Action",
+        "Description"
+      ],
+      "entries": [
+        {
+          "range": [
+            1,
+            2
+          ],
+          "cells": [
+            "Attain",
+            "Artificial"
+          ]
+        },
+        {
+          "range": [
+            3,
+            4
+          ],
+          "cells": [
+            "Benefit",
+            "Beautiful"
+          ]
+        },
+        {
+          "range": [
+            5,
+            6
+          ],
+          "cells": [
+            "Betray",
+            "Bleak"
+          ]
+        },
+        {
+          "range": [
+            7,
+            8
+          ],
+          "cells": [
+            "Break",
+            "Bright"
+          ]
+        },
+        {
+          "range": [
+            9,
+            10
+          ],
+          "cells": [
+            "Burden",
+            "Clean"
+          ]
+        },
+        {
+          "range": [
+            11,
+            12
+          ],
+          "cells": [
+            "Change",
+            "Cold"
+          ]
+        },
+        {
+          "range": [
+            13,
+            14
+          ],
+          "cells": [
+            "Character",
+            "Colorful"
+          ]
+        },
+        {
+          "range": [
+            15,
+            16
+          ],
+          "cells": [
+            "Communicate",
+            "Damaged"
+          ]
+        },
+        {
+          "range": [
+            17,
+            18
+          ],
+          "cells": [
+            "Competition",
+            "Dangerous"
+          ]
+        },
+        {
+          "range": [
+            19,
+            20
+          ],
+          "cells": [
+            "Conclude",
+            "Dark"
+          ]
+        },
+        {
+          "range": [
+            21,
+            22
+          ],
+          "cells": [
+            "Conflict",
+            "Dirty"
+          ]
+        },
+        {
+          "range": [
+            23,
+            24
+          ],
+          "cells": [
+            "Control",
+            "Disagreeable"
+          ]
+        },
+        {
+          "range": [
+            25,
+            26
+          ],
+          "cells": [
+            "Create",
+            "Empty"
+          ]
+        },
+        {
+          "range": [
+            27,
+            28
+          ],
+          "cells": [
+            "Danger",
+            "Extravagant"
+          ]
+        },
+        {
+          "range": [
+            29,
+            30
+          ],
+          "cells": [
+            "Deceit",
+            "Feeble"
+          ]
+        },
+        {
+          "range": [
+            31,
+            32
+          ],
+          "cells": [
+            "Decrease",
+            "Fragrant"
+          ]
+        },
+        {
+          "range": [
+            33,
+            34
+          ],
+          "cells": [
+            "Delay",
+            "Frightening"
+          ]
+        },
+        {
+          "range": [
+            35,
+            36
+          ],
+          "cells": [
+            "Distant",
+            "Full"
+          ]
+        },
+        {
+          "range": [
+            37,
+            38
+          ],
+          "cells": [
+            "Emotions",
+            "Healthy"
+          ]
+        },
+        {
+          "range": [
+            39,
+            40
+          ],
+          "cells": [
+            "Enemies",
+            "Heavy"
+          ]
+        },
+        {
+          "range": [
+            41,
+            42
+          ],
+          "cells": [
+            "Environment",
+            "Helpful"
+          ]
+        },
+        {
+          "range": [
+            43,
+            44
+          ],
+          "cells": [
+            "Expectations",
+            "Important"
+          ]
+        },
+        {
+          "range": [
+            45,
+            46
+          ],
+          "cells": [
+            "Failure",
+            "Incomplete"
+          ]
+        },
+        {
+          "range": [
+            47,
+            48
+          ],
+          "cells": [
+            "Fears",
+            "Lacking"
+          ]
+        },
+        {
+          "range": [
+            49,
+            50
+          ],
+          "cells": [
+            "Fight",
+            "Large"
+          ]
+        },
+        {
+          "range": [
+            51,
+            52
+          ],
+          "cells": [
+            "Gain",
+            "Light"
+          ]
+        },
+        {
+          "range": [
+            53,
+            54
+          ],
+          "cells": [
+            "Goals",
+            "Loud"
+          ]
+        },
+        {
+          "range": [
+            55,
+            56
+          ],
+          "cells": [
+            "Good",
+            "Mechanical"
+          ]
+        },
+        {
+          "range": [
+            57,
+            58
+          ],
+          "cells": [
+            "Harm",
+            "Modern"
+          ]
+        },
+        {
+          "range": [
+            59,
+            60
+          ],
+          "cells": [
+            "Help",
+            "Mundane"
+          ]
+        },
+        {
+          "range": [
+            61,
+            62
+          ],
+          "cells": [
+            "Increase",
+            "Mysterious"
+          ]
+        },
+        {
+          "range": [
+            63,
+            64
+          ],
+          "cells": [
+            "Information",
+            "Natural"
+          ]
+        },
+        {
+          "range": [
+            65,
+            66
+          ],
+          "cells": [
+            "Leave",
+            "New"
+          ]
+        },
+        {
+          "range": [
+            67,
+            68
+          ],
+          "cells": [
+            "Move",
+            "Official"
+          ]
+        },
+        {
+          "range": [
+            69,
+            70
+          ],
+          "cells": [
+            "Mundane",
+            "Old"
+          ]
+        },
+        {
+          "range": [
+            71,
+            72
+          ],
+          "cells": [
+            "Nature",
+            "Peaceful"
+          ]
+        },
+        {
+          "range": [
+            73,
+            74
+          ],
+          "cells": [
+            "Negative",
+            "Perfect"
+          ]
+        },
+        {
+          "range": [
+            75,
+            76
+          ],
+          "cells": [
+            "NPC",
+            "Powerful"
+          ]
+        },
+        {
+          "range": [
+            77,
+            78
+          ],
+          "cells": [
+            "Object",
+            "Quiet"
+          ]
+        },
+        {
+          "range": [
+            79,
+            80
+          ],
+          "cells": [
+            "Obstacle",
+            "Reassuring"
+          ]
+        },
+        {
+          "range": [
+            81,
+            82
+          ],
+          "cells": [
+            "Official",
+            "Rotten"
+          ]
+        },
+        {
+          "range": [
+            83,
+            84
+          ],
+          "cells": [
+            "PC",
+            "Rough"
+          ]
+        },
+        {
+          "range": [
+            85,
+            86
+          ],
+          "cells": [
+            "Positive",
+            "Ruined"
+          ]
+        },
+        {
+          "range": [
+            87,
+            88
+          ],
+          "cells": [
+            "Progress",
+            "Rustic"
+          ]
+        },
+        {
+          "range": [
+            89,
+            90
+          ],
+          "cells": [
+            "Setback",
+            "Simple"
+          ]
+        },
+        {
+          "range": [
+            91,
+            92
+          ],
+          "cells": [
+            "Start",
+            "Small"
+          ]
+        },
+        {
+          "range": [
+            93,
+            94
+          ],
+          "cells": [
+            "Stop",
+            "Strange"
+          ]
+        },
+        {
+          "range": [
+            95,
+            96
+          ],
+          "cells": [
+            "Strange",
+            "Stylish"
+          ]
+        },
+        {
+          "range": [
+            97,
+            98
+          ],
+          "cells": [
+            "Surprise",
+            "Valuable"
+          ]
+        },
+        {
+          "range": [
+            99,
+            100
+          ],
+          "cells": [
+            "Uncertain",
+            "Warm"
+          ]
+        }
+      ]
+    }
+  ]
+}

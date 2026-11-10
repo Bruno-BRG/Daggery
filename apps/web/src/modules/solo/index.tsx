@@ -119,8 +119,8 @@ function Workspace() {
 function NotInstalled() {
   return <section className="solo-panel solo-empty-state">
     <Icon name="book" />
-    <h2>Mythic tables are not installed</h2>
-    <p>Add the Mythic table JSON files to the content folder to unlock the oracle and its tables.</p>
+    <h2>Oracle tables are not installed</h2>
+    <p>Add the oracle table JSON files to the content folder to unlock the oracle and its tables.</p>
   </section>;
 }
 
@@ -144,7 +144,7 @@ function OracleTab({ mythic, entries, busy, roll, accept }: { mythic: MythicData
   useEffect(() => { setExtraWords([]); }, [oracleResult?.id]);
   useEffect(() => { setMeaningWords([]); }, [meaningResult?.id]);
 
-  if (!mythic) return <p className="solo-empty">Loading Mythic tables…</p>;
+  if (!mythic) return <p className="solo-empty">Loading oracle tables…</p>;
   if (!mythic.available) return <NotInstalled />;
 
   const recent = entries.filter(entry => entry.kind === 'mythic-oracle').slice(0, 6);
@@ -167,7 +167,7 @@ function OracleTab({ mythic, entries, busy, roll, accept }: { mythic: MythicData
   return <div className="solo-oracle-layout">
     <div className="solo-stack">
       <form className="solo-panel" onSubmit={event => { event.preventDefault(); void ask(); }}>
-        <h2>Ask the Mythic oracle</h2>
+        <h2>Ask the oracle</h2>
         <p className="solo-muted">Pick how likely the answer is, then ask a yes/no question.</p>
         <label className="solo-field">Your question
           <input required maxLength={2000} value={question} onChange={event => setQuestion(event.target.value)} placeholder="Is the lighthouse occupied?" />
@@ -240,7 +240,7 @@ function Interpretation({ entry, busy, accept }: { entry: SoloEntry; busy: boole
 function TablesTab({ mythic, busy, roll }: { mythic: MythicData | null; busy: boolean; roll: Roll }) {
   const [columns, setColumns] = useState<Record<string, number>>({});
   const [results, setResults] = useState<Record<string, SoloEntry>>({});
-  if (!mythic) return <p className="solo-empty">Loading Mythic tables…</p>;
+  if (!mythic) return <p className="solo-empty">Loading oracle tables…</p>;
   if (!mythic.available) return <NotInstalled />;
 
   async function rollTable(source: MythicSource, tableId: string, column?: number) {
