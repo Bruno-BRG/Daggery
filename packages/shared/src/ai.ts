@@ -7,17 +7,17 @@ export interface AiConnection { provider: AiProvider; model: string; keyHint: st
 export type AiBudget = 'lean' | 'balanced' | 'rich' | 'maximum';
 /** Estimated tokens for memory plus recent messages in the fixed tiers. Maximum depends on the model's context window. The static prompt and tool schemas are counted separately. */
 export const AI_BUDGET_TOKENS: Record<Exclude<AiBudget, 'maximum'>, number> = { lean: 12000, balanced: 24000, rich: 48000 };
-export interface AiSetup { premise: string; tone: string; heroId: string }
+export interface AiSetup { premise: string; tone: string; heroId: string; persona: string }
 export interface AiInteraction {
   kind: 'roll' | 'damage' | 'choices'; resolved: boolean; heroId?: string;
   trait?: string; difficulty?: number; enemyId?: string; damage?: number; direct?: boolean; choices?: string[];
 }
 export interface AiMessage { id: string; role: 'player' | 'gm' | 'roll' | 'notice'; text: string; at: string; interaction?: AiInteraction }
 export interface AiAction { id: string; tool: string; label: string; result: unknown; at: string }
-export type AiTurnKind = 'turn' | 'compact' | 'end';
+export type AiTurnKind = 'turn' | 'compact' | 'end' | 'pause';
 export type AiRunStatus = 'running' | 'complete' | 'failed' | 'cancelled';
 export interface AiRun { id: string; kind: AiTurnKind; chatId: string; status: AiRunStatus; error: string; steps: number; cost: number; at: string }
-export type AiChatStatus = 'open' | 'ended';
+export type AiChatStatus = 'open' | 'paused' | 'ended';
 export interface AiChat { id: string; ordinal: number; title: string; status: AiChatStatus; messageCount: number; updatedAt: string; endedAt: string | null }
 export type AiJournalKind = 'event' | 'note' | 'chapter';
 export interface AiJournalEntry {

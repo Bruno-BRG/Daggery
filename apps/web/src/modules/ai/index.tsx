@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { type AiAdventure, type AiBudget, type AiChat, type AiConnection, type AiJournalEntry, type AiJournalPage, type AiMessage, type AiModel, type AiProvider, type AiState, type AiTurnKind } from '@daggery/shared';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
-import { armorScore, hpMax, stressMax } from '@daggery/shared/daggerheart';
+import { armorScore, damageNotation, hpMax, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
 import { api } from '../../api';
 import { getActiveCampaign } from '../../campaign-context';
 import { Dialog } from '../../components/Dialog';
@@ -18,8 +18,8 @@ const tokens = (count: number) => count >= 1000000 ? `${(count / 1000000).toFixe
 const timeOf = (value: string) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const stampOf = (value: string) => new Date(value).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
 const KIND_LABEL: Record<AiJournalEntry['kind'], string> = { event: 'Event', note: 'Note', chapter: 'Chapter' };
-const RUN_TEXT: Record<AiTurnKind, string> = { turn: 'Your GM is taking a turn…', compact: 'Your GM is saving the story so far…', end: 'Your GM is writing the final chapter…' };
-const THINKING_TEXT: Record<AiTurnKind, string> = { turn: 'The GM is preparing the next moment', compact: 'The GM is saving the story so far', end: 'The GM is writing the final chapter' };
+const RUN_TEXT: Record<AiTurnKind, string> = { turn: 'Your GM is taking a turn…', compact: 'Your GM is saving the story so far…', end: 'Your GM is writing the final chapter…', pause: 'Your GM is saving where play stopped…' };
+const THINKING_TEXT: Record<AiTurnKind, string> = { turn: 'The GM is preparing the next moment', compact: 'The GM is saving the story so far', end: 'The GM is writing the final chapter', pause: 'The GM is saving where play stopped' };
 const BUDGETS: AiBudget[] = ['lean', 'balanced', 'rich', 'maximum'];
 const BUDGET_LABEL: Record<AiBudget, string> = { lean: 'Lean', balanced: 'Balanced', rich: 'Rich', maximum: 'Maximum' };
 const ENDED_NOTE = 'This session has ended. Start a new session to keep playing.';
@@ -453,11 +453,48 @@ function MemoryList({ title, count, empty, children }: { title: string; count: n
 function Narration({ text }: { text: string }) {
   return <div className="ai-prose">{text.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph.split(/(\*\*[^*]+\*\*)/g).map((part, i) => part.startsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : part)}</p>)}</div>;
 }
+/** First NdM term of a damage notation, used to size the physical damage inputs. */
+function diceShape(notation: string): { count: number; sides: number } {
+  const match = /(\d*)d(\d+)/i.exec(notation);
+  return match ? { count: Math.max(1, Number(match[1] || 1)), sides: Number(match[2]) } : { count: 0, sides: 0 };
+}
+const validDie = (value: string, sides: number) => /^\d+$/.test(value.trim()) && Number(value) >= 1 && Number(value) <= sides;
+
 function ActionCard({ message, sheet, disabled, resolve }: { message: AiMessage; sheet?: Sheet; disabled: boolean; resolve: (value: unknown) => Promise<void> }) {
   const card = message.interaction!;
   const [experienceId, setExperience] = useState(''), [advantage, setAdvantage] = useState('normal'), [useArmor, setArmor] = useState(false);
+  const [focus, setFocus] = useState(false), [prayerIndex, setPrayerIndex] = useState('');
+  const [mode, setMode] = useState<'digital' | 'physical'>('digital');
+  const [hopeDie, setHopeDie] = useState(''), [fearDie, setFearDie] = useState(''), [advantageDie, setAdvantageDie] = useState(''), [damageDice, setDamageDice] = useState('');
+  const weapon = card.kind === 'roll' && card.enemyId && sheet ? weaponForSlot(sheet, 'primary') : undefined;
+  const shape = diceShape(weapon && sheet ? damageNotation(weapon.damage, sheet.proficiency) : '');
+  const advantageNeeded = advantage === 'advantage' || advantage === 'disadvantage';
+  const prayerDice = sheet?.resources?.prayerDice ?? [];
+  const prayerSpend = prayerIndex === '' ? {} : { prayerDie: { index: Number(prayerIndex) } };
+  const focusSpend = card.kind === 'roll' && card.enemyId && focus ? { focus: true } : {};
+  const damageFaces = damageDice.split(',').map(part => part.trim()).filter(Boolean);
+  const damageValid = !card.enemyId || damageFaces.length === shape.count && damageFaces.every(face => validDie(face, shape.sides));
+  const physicalValid = validDie(hopeDie, 12) && validDie(fearDie, 12) && (!advantageNeeded || validDie(advantageDie, 6)) && damageValid;
   return <div className="ai-action-card"><strong><Icon name={card.kind === 'roll' ? 'dice' : card.kind === 'damage' ? 'shield' : 'compass'} />{card.kind === 'roll' ? `${sheet?.name ?? 'Hero'} · ${card.trait} · Difficulty ${card.difficulty}` : card.kind === 'damage' ? `${sheet?.name ?? 'Hero'} · ${card.damage} incoming damage` : 'A few possibilities'}</strong>
-    {card.kind === 'choices' ? <div className="ai-choices">{card.choices?.map(choice => <button key={choice} type="button" disabled={disabled} onClick={() => void resolve({ choice })}>{choice}<Icon name="arrow" /></button>)}</div> : card.kind === 'roll' ? <><label>Advantage<select aria-label="Advantage" value={advantage} disabled={disabled} onChange={event => setAdvantage(event.target.value)}><option value="normal">Normal roll</option><option value="advantage">Advantage +d6</option><option value="disadvantage">Disadvantage −d6</option></select></label><label>Experience · costs 1 Hope<select aria-label="Experience" value={experienceId} disabled={disabled} onChange={event => setExperience(event.target.value)}><option value="">No Experience</option>{sheet?.experiences.map(experience => <option key={experience.id} value={experience.id} disabled={(sheet?.hope ?? 0) < 1}>{experience.name} +{experience.modifier}</option>)}</select></label><button className="daggery-primary" disabled={disabled || !sheet} onClick={() => void resolve({ experienceId, advantage })}>Roll Duality dice</button></> : <>{!card.direct && <label className="ai-checkbox"><input type="checkbox" checked={useArmor} disabled={disabled || !sheet || sheet.armorSlotsMarked >= armorScore(sheet)} onChange={event => setArmor(event.target.checked)} />Use 1 Armor Slot to reduce severity</label>}<button className="daggery-primary" disabled={disabled || !sheet} onClick={() => void resolve({ useArmor })}>Apply damage</button></>}
+    {card.kind === 'choices' ? <div className="ai-choices">{card.choices?.map(choice => <button key={choice} type="button" disabled={disabled} onClick={() => void resolve({ choice })}>{choice}<Icon name="arrow" /></button>)}</div> : card.kind === 'roll' ? <>
+      <label>Advantage<select aria-label="Advantage" value={advantage} disabled={disabled} onChange={event => setAdvantage(event.target.value)}><option value="normal">Normal roll</option><option value="advantage">Advantage +d6</option><option value="disadvantage">Disadvantage −d6</option></select></label>
+      <label>Experience · costs 1 Hope<select aria-label="Experience" value={experienceId} disabled={disabled} onChange={event => setExperience(event.target.value)}><option value="">No Experience</option>{sheet?.experiences.map(experience => <option key={experience.id} value={experience.id} disabled={(sheet?.hope ?? 0) < 1}>{experience.name} +{experience.modifier}</option>)}</select></label>
+      {sheet?.classId === 'ranger' && card.enemyId && <label className="ai-checkbox"><input type="checkbox" checked={focus} disabled={disabled || (sheet?.hope ?? 0) < 1} onChange={event => setFocus(event.target.checked)} />Ranger’s Focus · mark target, costs 1 Hope</label>}
+      {prayerDice.length > 0 && <label>Spend a Prayer Die<select aria-label="Prayer Die" value={prayerIndex} disabled={disabled} onChange={event => setPrayerIndex(event.target.value)}><option value="">Keep all dice</option>{prayerDice.map((value, index) => <option key={index} value={index}>d4: {value} (die {index + 1})</option>)}</select></label>}
+      <div className="ai-dice-mode" role="group" aria-label="Dice source">
+        <button type="button" aria-pressed={mode === 'digital'} disabled={disabled} onClick={() => setMode('digital')}>Digital dice</button>
+        <button type="button" aria-pressed={mode === 'physical'} disabled={disabled} onClick={() => setMode('physical')}>My physical dice</button>
+      </div>
+      {mode === 'physical' ? <>
+        <div className="ai-dice-fields">
+          <label>Hope d12<input aria-label="Hope d12" type="number" min={1} max={12} inputMode="numeric" value={hopeDie} disabled={disabled} onChange={event => setHopeDie(event.target.value)} /></label>
+          <label>Fear d12<input aria-label="Fear d12" type="number" min={1} max={12} inputMode="numeric" value={fearDie} disabled={disabled} onChange={event => setFearDie(event.target.value)} /></label>
+          {advantageNeeded && <label>{advantage === 'advantage' ? 'Advantage' : 'Disadvantage'} d6<input aria-label="Advantage d6" type="number" min={1} max={6} inputMode="numeric" value={advantageDie} disabled={disabled} onChange={event => setAdvantageDie(event.target.value)} /></label>}
+          {card.enemyId && shape.count > 0 && <label>Damage {shape.count}d{shape.sides}<input aria-label="Damage dice" placeholder={`${shape.count} ${shape.sides}-sided dice, comma separated`} value={damageDice} disabled={disabled} onChange={event => setDamageDice(event.target.value)} /></label>}
+        </div>
+        <button className="daggery-primary" disabled={disabled || !sheet || !physicalValid} onClick={() => void resolve({ experienceId, advantage, ...focusSpend, ...prayerSpend, dice: { hope: Number(hopeDie), fear: Number(fearDie), ...(advantageNeeded ? { advantageDie: Number(advantageDie) } : {}) }, ...(card.enemyId ? { damageDice: damageFaces.map(Number) } : {}) })}>Roll with physical dice</button>
+      </> : <button className="daggery-primary" disabled={disabled || !sheet} onClick={() => void resolve({ experienceId, advantage, ...focusSpend, ...prayerSpend })}>Roll Duality dice</button>}
+    </> : <>{!card.direct && <label className="ai-checkbox"><input type="checkbox" checked={useArmor} disabled={disabled || !sheet || sheet.armorSlotsMarked >= armorScore(sheet)} onChange={event => setArmor(event.target.checked)} />Use 1 Armor Slot to reduce severity</label>}{prayerDice.length > 0 && <label>Spend a Prayer Die<select aria-label="Prayer Die" value={prayerIndex} disabled={disabled} onChange={event => setPrayerIndex(event.target.value)}><option value="">Keep all dice</option>{prayerDice.map((value, index) => <option key={index} value={index}>reduce damage by {value} (die {index + 1})</option>)}</select></label>}<button className="daggery-primary" disabled={disabled || !sheet} onClick={() => void resolve({ useArmor, ...prayerSpend })}>Apply damage</button></>}
   </div>;
 }
 function Memory({ value, disabled, save }: { value: string; disabled: boolean; save: (value: string) => Promise<void> }) {
@@ -488,15 +525,16 @@ function Connection({ connection, onClose, onSaved }: { connection: AiConnection
   </form></Dialog>;
 }
 function Setup({ base, session, heroes, onClose, onSaved }: { base: string; session: AiAdventure; heroes: Sheet[]; onClose: () => void; onSaved: () => Promise<void> }) {
-  const [premise, setPremise] = useState(session.setup.premise), [tone, setTone] = useState(session.setup.tone), [heroId, setHeroId] = useState(session.setup.heroId || heroes[0]?.id || 'new');
+  const [premise, setPremise] = useState(session.setup.premise), [tone, setTone] = useState(session.setup.tone), [persona, setPersona] = useState(session.setup.persona), [heroId, setHeroId] = useState(session.setup.heroId || heroes[0]?.id || 'new');
   const [budget, setBudget] = useState<AiBudget>(session.budget);
   const [name, setName] = useState('Ash'), [classId, setClassId] = useState('warrior'), [classes, setClasses] = useState<{ id: string; name: string }[]>([]), [busy, setBusy] = useState(false), [error, setError] = useState('');
   useEffect(() => { void api<{ classes: { id: string; name: string }[] }>(`${base}/options`).then(value => setClasses(value.classes)).catch(error => setError(errorText(error))); }, [base]);
-  async function save(event: FormEvent) { event.preventDefault(); setBusy(true); setError(''); try { await api(`${base}/setup`, 'PUT', { premise, tone, budget, ...(heroId === 'new' ? { quickHero: { name, classId } } : { heroId }) }); await onSaved(); } catch (error) { setError(errorText(error)); } finally { setBusy(false); } }
+  async function save(event: FormEvent) { event.preventDefault(); setBusy(true); setError(''); try { await api(`${base}/setup`, 'PUT', { premise, tone, persona, budget, ...(heroId === 'new' ? { quickHero: { name, classId } } : { heroId }) }); await onSaved(); } catch (error) { setError(errorText(error)); } finally { setBusy(false); } }
   return <Dialog open onClose={onClose} title="Adventure setup"><form className="ai-form" onSubmit={save}>
     <p>Give your GM a starting point. Leave the premise open and discover it together.</p>
     <label>Adventure premise<textarea rows={4} maxLength={3000} value={premise} onChange={event => setPremise(event.target.value)} placeholder="A missing courier, a town swallowed by mist, a debt to an old friend…" /></label>
     <label>Tone & boundaries<input maxLength={300} value={tone} onChange={event => setTone(event.target.value)} placeholder="Hopeful fantasy, mystery, no graphic violence" /></label>
+    <label>GM persona & table style<textarea rows={3} maxLength={1500} value={persona} onChange={event => setPersona(event.target.value)} placeholder="Warm, wry narrator; slow-burn mystery; NPCs speak in short sentences" /></label>
     <label>Your hero<select aria-label="Your hero" value={heroId} onChange={event => setHeroId(event.target.value)}>{heroes.map(hero => <option key={hero.id} value={hero.id}>{hero.name} · {hero.classId}</option>)}<option value="new">Create a ready-to-play hero</option><option value="">Use the whole existing party</option></select></label>
     {heroId === 'new' && <><label>Hero name<input required maxLength={100} value={name} onChange={event => setName(event.target.value)} /></label><label>Class<select aria-label="Class" value={classId} onChange={event => setClassId(event.target.value)}>{classes.map(entry => <option key={entry.id} value={entry.id}>{entry.name}</option>)}</select></label><small>Starts at level 1 with equipment and domain cards. Customize your heritage, cards, and story in Characters.</small></>}
     <label>Memory size<select value={budget} onChange={event => setBudget(event.target.value as AiBudget)}>{BUDGETS.map(item => <option key={item} value={item}>{BUDGET_LABEL[item]} · {tokens(session.budgets[item])} tokens</option>)}</select></label>

@@ -7,6 +7,7 @@ import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { SoloService } from '../solo';
 import type { ToolDefinition } from './provider';
+import { AiCanon, CANON_KINDS, canonKind } from './canon';
 import { AiChats } from './chats';
 import { AiJournal } from './journal';
 import { applyStatePatch, emptyState, normalizeState, SECRETS_LIMIT, snapshotFor } from './memory';
@@ -21,6 +22,7 @@ export const GM_TOOLS: ToolDefinition[] = [
   tool('get_character', 'Read one hero sheet: level, class and subclass, heritage, community, traits, HP/Stress/Hope/armor marks with maxima, evasion, equipped weapons and armor, Experiences, loadout domain cards, inventory, and source IDs. Read-only. Use search_rules with category cards and a card ID for full card text.', { heroId: s }, ['heroId']),
   tool('get_adversary', 'Read one present adversary: its catalog stats and full feature text, plus its current marks, defeated count, group size, and active conditions. Read-only.', { adversaryId: s }, ['adversaryId']),
   tool('set_memory', 'Rewrite the GM-only secrets and plans as one short text of at most 4000 characters. Players never see it, and the new text replaces the previous one entirely.', { memory: s }),
+  tool('set_resume_note', 'Record the exact situation where play stops, so it survives a pause: what decision is pending, positions, active effects, and the next trigger. At most 1500 characters. It is shown to the GM as "Where we stopped" when play resumes.', { note: s }),
   tool('update_state', 'Merge changes into the campaign state: location, time of day, objective, threads, NPCs, promises, and facts. List items upsert by id; use removeIds to delete. Caps: 12 threads, 30 NPCs, 10 promises, 20 facts.', {
     location: s,
     timeOfDay: s,
@@ -33,6 +35,10 @@ export const GM_TOOLS: ToolDefinition[] = [
   }, []),
   tool('journal_add', 'Write an adventure note: a discovery, decision, promise, or changed relationship. Dice, damage, and scene changes are already recorded automatically. Shared notes are visible to players; others are for the GM only. At most three per turn.', { title: s, body: s, shared: { type: 'boolean' } }, ['title', 'body']),
   tool('search_journal', 'Search the adventure journal by keyword. Returns at most six entries with trimmed text. Use it before inventing a detail that may already exist.', { query: s, limit: n }, ['query']),
+  tool('journal_read', 'Read one complete journal entry by ID, including the full body and any GM-only note. Use search_journal first to find the ID.', { id: s }, ['id']),
+  tool('canon_write', 'Create or update a durable canon entry: a person, location, faction, promise, fact, history, plan, rumor, or secret. Bodies may be up to 6000 characters. Canon is never deleted to make room; archive obsolete entries instead. An entry with visibility "gm", including the kind "secret", is GM only; "shared" records it as player-safe.', { id: s, kind: { type: 'string', enum: [...CANON_KINDS] }, title: s, body: s, visibility: { type: 'string', enum: ['shared', 'gm'] }, source: s }, ['kind', 'title', 'body']),
+  tool('canon_search', 'Search durable canon by name or text. Returns active entries with id, kind, title and a trimmed body. Canon survives state compaction and fact eviction, so search here before inventing a detail. Entries with visibility "gm" or kind "secret" are GM only.', { query: s, kind: { type: 'string', enum: [...CANON_KINDS] }, limit: n }, ['query']),
+  tool('canon_read', 'Read one complete canon entry by ID, including its full body. Use canon_search first to find the ID. Entries with visibility "gm" or kind "secret" are GM only.', { id: s }, ['id']),
   tool('write_prep', 'Create/update GM preparations. Setting field keys: premise, tone, locations, factions, secrets, agreements. Scenario field keys: hook, stakes, scenes, cast, rewards, aftermath. Values are prose. An existing scenario ID preserves that scenario.', { kind: { type: 'string', enum: ['setting', 'scenario'] }, title: s, fields: { type: 'object', additionalProperties: s }, id: s }, ['kind', 'title', 'fields']),
   tool('write_note', 'Create a campaign note for the Notes page, shared or GM-only. Never overwrite another author’s private note. For adventure records, use journal_add.', { title: s, body: s, shared: { type: 'boolean' } }),
   tool('create_scene', 'Create a table scene and make it active. For its map, use the ID of an image asset listed by get_context, or leave assetId blank for a grid.', { name: s, cols: n, rows: n, assetId: s }, ['name']),
@@ -57,7 +63,7 @@ export const GM_TOOLS: ToolDefinition[] = [
 ];
 
 const ACTION_LABELS: Record<string, string> = {
-  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
+  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
 };
 
 export interface ActionContext {
@@ -106,15 +112,22 @@ function characterView(sheet: Sheet): Record<string, unknown> {
     experiences: sheet.experiences.map(item => ({ name: item.name, modifier: item.modifier })),
     loadout: sheet.loadoutIds.map(cardView),
     inventory: sheet.inventory.map(entry => ({ name: entry.name, qty: entry.qty, kind: entry.kind, catalogId: entry.catalogId ?? null })),
+    /** Current class-feature resources: Ranger's Focus target and unspent Seraph Prayer Dice. */
+    resources: {
+      focusTargetId: sheet.resources?.focusTargetId ?? null,
+      prayerDice: [...(sheet.resources?.prayerDice ?? [])],
+    },
   };
 }
 
 export class GmActions {
   readonly journal: AiJournal;
   readonly chats: AiChats;
+  readonly canon: AiCanon;
   constructor(private db: Database.Database, private campaigns: CampaignService) {
     this.journal = new AiJournal(db);
     this.chats = new AiChats(db);
+    this.canon = new AiCanon(db);
   }
   read<T = Record<string, any>>(campaign: string, ns: string, id: string): T | undefined {
     const row = this.db.prepare('SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = ? AND id = ?').get(campaign, ns, id) as { value: string } | undefined;
@@ -249,6 +262,11 @@ export class GmActions {
       else if (name === 'set_memory') {
         this.db.prepare('UPDATE campaign_ai SET memory = ?, updated = ? WHERE campaign_id = ?').run(this.secretsText(args.memory), new Date().toISOString(), ctx.campaign); result = { saved: true };
       }
+      else if (name === 'set_resume_note') {
+        const note = typeof args.note === 'string' ? args.note.trim() : '';
+        if (!note || note.length > 1500) throw new Error('Invalid resume note: at most 1500 characters.');
+        this.chats.setResumeNote(ctx.campaign, chat, note); result = { saved: true };
+      }
       else if (name === 'update_state') {
         const next = applyStatePatch(this.readState(ctx.campaign), args);
         this.writeState(ctx.campaign, next);
@@ -265,6 +283,26 @@ export class GmActions {
       }
       else if (name === 'search_journal') {
         result = this.journal.search(ctx.campaign, true, text(args.query, 200, ''), integer(args.limit, 1, 6, 4));
+      }
+      else if (name === 'journal_read') {
+        const entry = this.journal.view(ctx.campaign, text(args.id, 120), true);
+        if (!entry) throw new Error('Invalid journal entry');
+        result = entry;
+      }
+      else if (name === 'canon_write') {
+        const id = text(args.id, 120, '');
+        result = this.canon.upsert(ctx.campaign, { ...(id ? { id } : {}), kind: args.kind, title: args.title, body: args.body, visibility: args.visibility, source: args.source });
+      }
+      else if (name === 'canon_search') {
+        const kind = text(args.kind, 30, '');
+        if (kind) canonKind(kind);
+        result = this.canon.search(ctx.campaign, text(args.query, 200, ''), integer(args.limit, 1, 10, 6), kind ? [kind] : undefined)
+          .map(entry => ({ id: entry.id, kind: entry.kind, title: entry.title, body: entry.body.slice(0, 600) }));
+      }
+      else if (name === 'canon_read') {
+        const entry = this.canon.get(ctx.campaign, text(args.id, 120));
+        if (!entry) throw new Error('Invalid canon entry');
+        result = entry;
       }
       else if (name === 'write_prep') {
         const kind = text(args.kind, 20); if (!['setting', 'scenario'].includes(kind)) throw new Error('Invalid preparation kind');

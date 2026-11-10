@@ -5,6 +5,7 @@ import {
   isSuccess,
   maxDiceTotal,
   resolveDuality,
+  resolveDiceFaces,
   roll,
   rollDice,
   rollDie,
@@ -215,6 +216,55 @@ describe('rollDice', () => {
     const result = rollDice('3d6');
     expect(result.rolls).toHaveLength(3);
     for (const face of result.rolls) expect(face >= 1 && face <= 6).toBe(true);
+  });
+});
+
+describe('resolveDiceFaces', () => {
+  it('resolves reported faces and adds the flat modifier', () => {
+    expect(resolveDiceFaces('2d6+3', [4, 5])).toEqual({
+      notation: '2d6+3',
+      total: 12,
+      rolls: [4, 5],
+      modifier: 3,
+    });
+  });
+
+  it('treats a missing count as 1 and accepts a negative modifier', () => {
+    expect(resolveDiceFaces('d20', [17])).toEqual({
+      notation: 'd20',
+      total: 17,
+      rolls: [17],
+      modifier: 0,
+    });
+    expect(resolveDiceFaces('1d12-1', [1]).total).toBe(0);
+  });
+
+  it('handles multiple terms, whitespace and signs', () => {
+    const result = resolveDiceFaces(' 2D6 + 1d4 - 2 ', [6, 1, 4]);
+    expect(result.rolls).toEqual([6, 1, 4]);
+    expect(result.modifier).toBe(-2);
+    expect(result.total).toBe(6 + 1 + 4 - 2);
+  });
+
+  it('accepts a plain number with no dice', () => {
+    expect(resolveDiceFaces('7', []).total).toBe(7);
+  });
+
+  it('rejects the wrong number of faces', () => {
+    expect(() => resolveDiceFaces('2d6', [4])).toThrow(DiceNotationError);
+    expect(() => resolveDiceFaces('1d8', [4, 5])).toThrow(DiceNotationError);
+  });
+
+  it('rejects a face outside its range or a non-integer face', () => {
+    expect(() => resolveDiceFaces('1d8', [0])).toThrow(DiceNotationError);
+    expect(() => resolveDiceFaces('1d8', [9])).toThrow(DiceNotationError);
+    expect(() => resolveDiceFaces('1d8', [2.5])).toThrow(DiceNotationError);
+  });
+
+  it('rejects malformed notation with the same parser as rollDice', () => {
+    for (const bad of ['', '2d', '2d6*2', '2d6++1']) {
+      expect(() => resolveDiceFaces(bad, []), bad).toThrow(DiceNotationError);
+    }
   });
 });
 

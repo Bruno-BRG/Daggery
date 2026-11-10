@@ -9,12 +9,12 @@ import Database from 'better-sqlite3';
  * the old tables and never exposes these new ones.
  */
 export const LEGACY_CAMPAIGN_ID = 'legacy-unclaimed';
-export const CURRENT_VERSION = 6;
+export const CURRENT_VERSION = 8;
 
 /** Schema 6 adds AI sessions and the adventure journal. It only adds tables and columns, then backfills Session 1 for each AI campaign. Every step is idempotent. */
 function migrateAiSessions(db: Database.Database): void {
   const statements = [
-    "CREATE TABLE IF NOT EXISTS ai_chats (id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE, ordinal INTEGER NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('open','ended')), summary TEXT NOT NULL DEFAULT '', summarized_through INTEGER NOT NULL DEFAULT 0, summary_updated TEXT, created TEXT NOT NULL, updated TEXT NOT NULL, ended_at TEXT, UNIQUE(campaign_id, ordinal))",
+    "CREATE TABLE IF NOT EXISTS ai_chats (id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE, ordinal INTEGER NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('open','paused','ended')), summary TEXT NOT NULL DEFAULT '', summarized_through INTEGER NOT NULL DEFAULT 0, summary_updated TEXT, resume_note TEXT, created TEXT NOT NULL, updated TEXT NOT NULL, ended_at TEXT, UNIQUE(campaign_id, ordinal))",
     "CREATE TABLE IF NOT EXISTS ai_journal (id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE, chat_id TEXT REFERENCES ai_chats(id) ON DELETE SET NULL, chat_label TEXT NOT NULL DEFAULT '', turn_id TEXT, kind TEXT NOT NULL CHECK(kind IN ('event','note','chapter')), title TEXT NOT NULL, body TEXT NOT NULL, visibility TEXT NOT NULL CHECK(visibility IN ('shared','gm')), author TEXT NOT NULL CHECK(author IN ('engine','gm','owner')), created TEXT NOT NULL, updated TEXT NOT NULL)",
     "CREATE INDEX IF NOT EXISTS ai_journal_campaign ON ai_journal(campaign_id, kind)",
     "CREATE INDEX IF NOT EXISTS ai_journal_chat ON ai_journal(chat_id)",
@@ -22,7 +22,7 @@ function migrateAiSessions(db: Database.Database): void {
   for (const statement of statements) db.exec(statement);
   addColumn(db, 'ai_messages', 'chat_id TEXT REFERENCES ai_chats(id)');
   addColumn(db, 'ai_turns', 'chat_id TEXT REFERENCES ai_chats(id)');
-  addColumn(db, 'ai_turns', "kind TEXT NOT NULL DEFAULT 'turn' CHECK(kind IN ('turn','compact','end'))");
+  addColumn(db, 'ai_turns', "kind TEXT NOT NULL DEFAULT 'turn' CHECK(kind IN ('turn','compact','end','pause'))");
   addColumn(db, 'ai_turns', "prompt_version TEXT NOT NULL DEFAULT ''");
   addColumn(db, 'campaign_ai', "state TEXT NOT NULL DEFAULT '{}'");
   addColumn(db, 'campaign_ai', "digest TEXT NOT NULL DEFAULT ''");
@@ -46,6 +46,50 @@ function addColumn(db: Database.Database, table: string, definition: string): vo
   const name = definition.split(' ')[0]!;
   const columns = db.prepare('PRAGMA table_info(' + table + ')').all() as { name: string }[];
   if (!columns.some(column => column.name === name)) db.exec('ALTER TABLE ' + table + ' ADD COLUMN ' + definition);
+}
+
+function tableSql(db: Database.Database, table: string): string {
+  const row = db.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?").get(table) as { sql: string } | undefined;
+  return row ? row.sql : '';
+}
+
+function columnNames(db: Database.Database, table: string): string[] {
+  return (db.prepare('PRAGMA table_info(' + table + ')').all() as { name: string }[]).map(column => column.name);
+}
+
+/**
+ * Version 8 adds the paused chat status and its resume_note column, and the pause turn kind.
+ * SQLite cannot alter a CHECK constraint in place, so both tables are rebuilt. The rebuild drops
+ * the old table with foreign_keys OFF (that pragma only takes effect outside a transaction) and
+ * copies every row, which keeps ids so message, turn and journal references stay valid.
+ */
+function rebuildAiChatsAndTurns(db: Database.Database): void {
+  const chats = tableSql(db, 'ai_chats'), turns = tableSql(db, 'ai_turns');
+  const rebuildChats = chats !== '' && (!chats.includes("'paused'") || columnNames(db, 'ai_chats').indexOf('resume_note') < 0);
+  const rebuildTurns = turns !== '' && !turns.includes("'pause'");
+  if (!rebuildChats && !rebuildTurns) return;
+  db.pragma('foreign_keys = OFF');
+  try {
+    db.transaction(() => {
+      if (rebuildChats) {
+        const note = columnNames(db, 'ai_chats').indexOf('resume_note') >= 0 ? 'resume_note' : 'NULL';
+        db.exec("CREATE TABLE ai_chats_new (id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE, ordinal INTEGER NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('open','paused','ended')), summary TEXT NOT NULL DEFAULT '', summarized_through INTEGER NOT NULL DEFAULT 0, summary_updated TEXT, resume_note TEXT, created TEXT NOT NULL, updated TEXT NOT NULL, ended_at TEXT, UNIQUE(campaign_id, ordinal))");
+        db.exec("INSERT INTO ai_chats_new (id, campaign_id, ordinal, title, status, summary, summarized_through, summary_updated, resume_note, created, updated, ended_at) SELECT id, campaign_id, ordinal, title, status, summary, summarized_through, summary_updated, " + note + ", created, updated, ended_at FROM ai_chats");
+        db.exec('DROP TABLE ai_chats');
+        db.exec('ALTER TABLE ai_chats_new RENAME TO ai_chats');
+      }
+      if (rebuildTurns) {
+        db.exec("CREATE TABLE ai_turns_new (id TEXT PRIMARY KEY, campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE, user_id TEXT NOT NULL REFERENCES users(id), request_id TEXT NOT NULL, status TEXT NOT NULL, error TEXT NOT NULL DEFAULT '', steps INTEGER NOT NULL DEFAULT 0, cost REAL NOT NULL DEFAULT 0, created TEXT NOT NULL, updated TEXT NOT NULL, checkpoint TEXT NOT NULL DEFAULT '[]', chat_id TEXT REFERENCES ai_chats(id), kind TEXT NOT NULL DEFAULT 'turn' CHECK(kind IN ('turn','compact','end','pause')), prompt_version TEXT NOT NULL DEFAULT '', UNIQUE(campaign_id,request_id))");
+        db.exec("INSERT INTO ai_turns_new (id, campaign_id, user_id, request_id, status, error, steps, cost, created, updated, checkpoint, chat_id, kind, prompt_version) SELECT id, campaign_id, user_id, request_id, status, error, steps, cost, created, updated, checkpoint, chat_id, kind, prompt_version FROM ai_turns");
+        db.exec('DROP TABLE ai_turns');
+        db.exec('ALTER TABLE ai_turns_new RENAME TO ai_turns');
+        db.exec("CREATE UNIQUE INDEX IF NOT EXISTS ai_one_running ON ai_turns(campaign_id) WHERE status = 'running'");
+        db.exec('CREATE INDEX IF NOT EXISTS ai_turns_chat ON ai_turns(campaign_id, chat_id)');
+      }
+    })();
+  } finally {
+    db.pragma('foreign_keys = ON');
+  }
 }
 
 
@@ -205,6 +249,26 @@ export function migrateCampaignDatabase(db: Database.Database): void {
       if (!columns.some(column => column.name === 'checkpoint')) db.exec("ALTER TABLE ai_turns ADD COLUMN checkpoint TEXT NOT NULL DEFAULT '[]'");
     }
     if (version < 6) migrateAiSessions(db);
-    db.pragma(`user_version = ${CURRENT_VERSION}`);
+    if (version < 7) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ai_canon (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL CHECK(kind IN ('person','location','faction','promise','fact','history','plan','rumor','secret')),
+          title TEXT NOT NULL,
+          body TEXT NOT NULL,
+          visibility TEXT NOT NULL CHECK(visibility IN ('shared','gm')),
+          source TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','archived')),
+          created TEXT NOT NULL,
+          updated TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ai_canon_campaign ON ai_canon(campaign_id, kind);
+      `);
+    }
   })();
+  // Changing a CHECK constraint needs a table rebuild, which only works with foreign_keys OFF
+  // outside a transaction, so it runs after the main migration has committed.
+  if (version < 8) rebuildAiChatsAndTurns(db);
+  db.pragma(`user_version = ${CURRENT_VERSION}`);
 }

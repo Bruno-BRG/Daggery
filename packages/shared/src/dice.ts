@@ -229,6 +229,43 @@ export function rollDice(notation: string, rng: Rng = Math.random): DiceRoll {
 }
 
 /**
+ * Resolves a dice expression from reported die faces instead of rolling. `faces`
+ * supplies each die in order; flat terms come from the notation. Useful when the
+ * player rolls physical dice and reports the results.
+ */
+export function resolveDiceFaces(notation: string, faces: readonly number[]): DiceRoll {
+  const terms = parseNotation(notation);
+  const expected = terms.reduce((sum, term) => sum + (term.sides !== null ? term.count : 0), 0);
+  if (faces.length !== expected) {
+    throw new DiceNotationError(`Expected ${expected} ${expected === 1 ? 'die' : 'dice'} for "${notation}", got ${faces.length}`);
+  }
+
+  const rolls: number[] = [];
+  let total = 0;
+  let modifier = 0;
+  let index = 0;
+
+  for (const term of terms) {
+    if (term.sides !== null) {
+      for (let i = 0; i < term.count; i++) {
+        const face = faces[index++]!;
+        if (!Number.isInteger(face) || face < 1 || face > term.sides) {
+          throw new DiceNotationError(`Die ${index} must be an integer from 1 to ${term.sides}, got ${face}`);
+        }
+        rolls.push(face);
+        total += term.sign * face;
+      }
+    } else {
+      const value = term.sign * (term.flat ?? 0);
+      total += value;
+      modifier += value;
+    }
+  }
+
+  return { notation, total, rolls, modifier };
+}
+
+/**
  * Sum of the highest face of every die in an expression, ignoring flat modifiers.
  * Daggerheart critical damage is this maximum plus a normal damage roll.
  */

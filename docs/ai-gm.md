@@ -353,7 +353,7 @@ the campaign routes and services, email login, asset uploads, WebSockets and sol
 
 Model narration quality is not tested automatically. The fake model returns scripted replies,
 so the tests check the engine, the stored data and the prompts. They do not check how the
-narration reads.
+narration reads. For a live check, follow the [AI GM evaluation checklist](ai-gm-eval.md).
 
 Browser checks used a simulated native provider and an isolated database. They covered setup,
 the opening, rolls, choices, retry, stop, pause and reload at 320, 390, 834 and 1440 pixels;

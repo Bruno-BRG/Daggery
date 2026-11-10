@@ -91,12 +91,16 @@
 .ai-sr-label{font-size:11px;color:var(--ai-muted)}
 .ai-form{display:flex;flex-direction:column;gap:18px}
 .ai-form label,.ai-action-card label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:550}
-.ai-form input,.ai-form select,.ai-form textarea,.ai-action-card select{width:100%;min-width:0;background:var(--ai-panel);color:inherit;border:1px solid var(--ai-line);border-radius:var(--radius-sm);padding:11px;font-size:14px}
+.ai-form input,.ai-form select,.ai-form textarea,.ai-action-card select,.ai-action-card input{width:100%;min-width:0;background:var(--ai-panel);color:inherit;border:1px solid var(--ai-line);border-radius:var(--radius-sm);padding:11px;font-size:14px}
 .ai-form a{text-decoration:underline;color:var(--ai-accent)}
 .ai-action-card{margin-top:20px;padding:20px;background:var(--ai-panel);border:1px solid var(--ai-line);border-left:2px solid var(--ai-accent);border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:15px}
 .ai-action-card>strong{display:flex;align-items:center;gap:9px;font-size:13px}
 .ai-action-card>strong>svg{width:18px;height:18px;flex-shrink:0;color:var(--ai-accent)}
 .ai-action-card .ai-checkbox{display:flex;flex-direction:row;align-items:center}
+.ai-dice-mode{display:flex;gap:8px}
+.ai-dice-mode button{flex:1;border:1px solid var(--ai-line);border-radius:var(--radius-sm);padding:9px 10px;font-size:12px;color:inherit;background:transparent}
+.ai-dice-mode button[aria-pressed="true"]{border-color:var(--ai-accent);color:var(--ai-accent)}
+.ai-dice-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
 .ai-checkbox input{width:16px;height:16px}
 .ai-action-card>.daggery-primary{align-self:flex-start}
 .ai-choices{display:flex;flex-direction:column;gap:6px}

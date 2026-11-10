@@ -48,10 +48,13 @@ export function registerAiRoutes(app: FastifyInstance, options: {
   app.delete(base + '/chats/:chatId', handle(request => ai.deleteChat(user(request), campaign(request), param(request, 'chatId'))));
   app.post(base + '/compact', handle(request => ai.compactChat(user(request), campaign(request), request.body)));
   app.post(base + '/end', handle(request => ai.endChat(user(request), campaign(request), request.body)));
+  app.post(base + '/pause', handle(request => ai.pauseChat(user(request), campaign(request), request.body)));
+  app.post(base + '/resume', handle(request => ai.resumeChat(user(request), campaign(request), request.body)));
   app.post(base + '/turn', handle(request => ai.start(user(request), campaign(request), request.body)));
   app.post(base + '/stop', handle(request => { ai.cancel(user(request), campaign(request)); return { stopped: true }; }));
   app.post(base + '/retry', handle(request => ai.retry(user(request), campaign(request), text(record(request.body).turnId, 100))));
   app.post(base + '/messages/:messageId/resolve', handle(request => ai.resolve(user(request), campaign(request), param(request, 'messageId'), request.body)));
+  app.post(base + '/canon', handle(request => ai.importCanon(user(request), campaign(request), request.body)));
   app.get(base + '/journal', handle(request => ai.journalPage(user(request), campaign(request), query(request))));
   app.post(base + '/journal', handle(request => ({ entry: ai.addJournal(user(request), campaign(request), request.body) })));
   app.patch(base + '/journal/:entryId', handle(request => ({ entry: ai.editJournal(user(request), campaign(request), param(request, 'entryId'), request.body) })));

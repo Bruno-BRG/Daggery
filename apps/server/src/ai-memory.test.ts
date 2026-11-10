@@ -2,10 +2,11 @@ import { strict as assert } from 'node:assert';
 import { randomBytes } from 'node:crypto';
 import { test } from 'node:test';
 import { adversaries, ancestries, classes, communities } from '@daggery/content';
-import { hpMax, stressMax } from '@daggery/shared/daggerheart';
+import type { AiMessage } from '@daggery/shared';
+import { damageHp, damageSeverity, damageThresholds, hpMax, stressMax } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import { fitMemory, snapshotFor, type MemoryPart } from './ai/memory';
-import { migrateCampaignDatabase } from './campaign-db';
+import { CURRENT_VERSION, migrateCampaignDatabase } from './campaign-db';
 import { CampaignService } from './campaign-service';
 import { OPENING_INSTRUCTION } from './ai/prompts';
 import { AiConflict, AiService } from './ai/service';
@@ -24,6 +25,32 @@ function everyRequestUses(f: Fixture, from: number, chat: string, label: string)
   const sent = f.requests.slice(from);
   assert.ok(sent.length > 0, label + ' sent no model requests');
   for (const request of sent) assert.equal(request.session, chat, label + ' used the wrong provider session');
+}
+
+/** The fixture hero's stored sheet. */
+function heroOf(f: Fixture): Sheet {
+  const sheet = f.ai.actions.read<Sheet>(f.campaign, 'sheets', f.setup.heroId);
+  if (!sheet) throw new Error('the fixture hero is missing');
+  return sheet;
+}
+
+/** Rewrites the hero sheet (used to pin traits and resources for an acceptance case). */
+function heroSheet(f: Fixture, patch: Partial<Sheet>): Sheet {
+  const sheet = { ...heroOf(f), ...patch };
+  f.ai.actions.write(f.campaign, 'sheets', sheet.id, sheet);
+  return sheet;
+}
+
+/** Requests a roll as the GM would, then returns the open card. */
+function openRoll(f: Fixture, args: Record<string, unknown>): AiMessage {
+  act(f, currentTurn(f), 'request_roll', { heroId: f.setup.heroId, ...args });
+  const card = f.ai.session(f.user.id, f.campaign).messages.find(message => message.interaction?.kind === 'roll' && !message.interaction.resolved);
+  if (!card) throw new Error('no open roll card');
+  return card;
+}
+
+function fearValue(f: Fixture): number {
+  return f.ai.actions.read<{ value: number }>(f.campaign, 'combat', 'fear')?.value ?? 0;
 }
 
 test('schema 5 transcripts migrate into one open Session 1 per campaign, and running the migration again changes nothing', () => {
@@ -52,7 +79,7 @@ test('schema 5 transcripts migrate into one open Session 1 per campaign, and run
 
     migrateCampaignDatabase(db);
     migrateCampaignDatabase(db);
-    assert.equal(db.pragma('user_version', { simple: true }), 6);
+    assert.equal(db.pragma('user_version', { simple: true }), CURRENT_VERSION);
     const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(row => row.name);
     assert.ok(tables.includes('ai_chats'), 'ai_chats exists after migration');
     assert.ok(tables.includes('ai_journal'), 'ai_journal exists after migration');
@@ -124,7 +151,8 @@ test('an ended session writes a final chapter, refuses turns and card answers, a
     const roll = cards.find(message => message.interaction?.kind === 'roll')!;
     const damage = cards.find(message => message.interaction?.kind === 'damage')!;
     assert.ok(roll && damage, 'the session has an open roll card and an open damage card');
-    ai.endChat(user.id, campaign, { chatId: chat });
+    // Ending in force keeps the old behaviour: open roll/choice cards are resolved and damage cards stay open.
+    ai.endChat(user.id, campaign, { chatId: chat, force: true });
     const ended = await finished(ai, user.id, campaign);
     assert.equal(ended.run?.kind, 'end');
     assert.equal(ended.run?.status, 'complete');
@@ -138,6 +166,110 @@ test('an ended session writes a final chapter, refuses turns and card answers, a
     assert.ok(transcript.some(message => message.text === 'Begin the night watch.'), 'the player message is still readable');
     assert.ok(transcript.some(message => message.role === 'notice' && message.text.startsWith('This session has ended.')), 'the ended notice is shown');
     assert.equal(transcript.find(message => message.id === damage.id)?.interaction?.resolved, false);
+  } finally {
+    await f.close();
+  }
+});
+
+test('pausing keeps open cards pending and refuses play, and resuming applies each card exactly once', async t => {
+  const f = await fixture(request => request.tools ? completion('The harbor stays quiet. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    const chat = ai.session(user.id, campaign).activeChatId!;
+    await runTurn(f, 'Begin the night watch.');
+    const turn = currentTurn(f);
+    const foe = adversaries.find(entry => entry.type !== 'Minion')!;
+    act(f, turn, 'create_scene', { name: 'Harbor Wall' });
+    const enemy = act(f, turn, 'add_adversary', { catalogId: foe.id }) as { adversaryId: string };
+    act(f, turn, 'request_roll', { heroId: f.setup.heroId, trait: 'instinct', difficulty: 10, reason: 'Listen for the bell.' });
+    t.mock.method(Math, 'random', () => 0.999);
+    act(f, turn, 'adversary_attack', { adversaryId: enemy.adversaryId, heroId: f.setup.heroId, reason: 'Strikes from the wall.' });
+    const open = ai.session(user.id, campaign).messages;
+    const roll = open.find(message => message.interaction?.kind === 'roll')!;
+    const damage = open.find(message => message.interaction?.kind === 'damage')!;
+    assert.ok(roll && damage, 'the session has an open roll card and an open damage card');
+
+    ai.pauseChat(user.id, campaign, { chatId: chat });
+    const paused = await finished(ai, user.id, campaign);
+    assert.equal(paused.run?.kind, 'pause');
+    assert.equal(paused.run?.status, 'complete');
+    assert.equal(paused.chats.find(row => row.id === chat)?.status, 'paused');
+    const held = ai.session(user.id, campaign, chat).messages;
+    const heldRoll = held.find(message => message.id === roll.id)!;
+    const heldDamage = held.find(message => message.id === damage.id)!;
+    assert.deepEqual(heldRoll.interaction, roll.interaction, 'pause does not touch a pending roll');
+    assert.deepEqual(heldDamage.interaction, damage.interaction, 'pause does not touch a pending damage card');
+    assert.ok(held.some(message => message.role === 'notice' && message.text.startsWith('This session is paused.')), 'the paused notice is shown');
+
+    assert.throws(() => ai.start(user.id, campaign, { chatId: chat, requestId: 'paused-turn', message: 'Still there?' }), { message: 'Invalid action: this session is paused. Resume it to keep playing.' });
+    assert.throws(() => ai.resolve(user.id, campaign, damage.id, { useArmor: false }), { message: /^Invalid action: this session is paused/ });
+    assert.throws(() => ai.resolve(user.id, campaign, roll.id, { advantage: 'normal' }), { message: /^Invalid action: this session is paused/ });
+    assert.throws(() => ai.pauseChat(user.id, campaign, { chatId: chat }), { message: /already paused/ });
+
+    assert.equal(ai.resumeChat(user.id, campaign, { chatId: chat }).chat.status, 'open');
+    const resource = () => {
+      const sheet = f.ai.actions.read<Sheet>(campaign, 'sheets', f.setup.heroId)!;
+      return { hpMarked: sheet.hpMarked, stressMarked: sheet.stressMarked, hope: sheet.hope, armorSlotsMarked: sheet.armorSlotsMarked };
+    };
+
+    const beforeDamage = resource();
+    ai.resolve(user.id, campaign, damage.id, { useArmor: false });
+    await finished(ai, user.id, campaign);
+    const afterDamage = resource();
+    assert.ok(afterDamage.hpMarked >= beforeDamage.hpMarked);
+    assert.deepEqual(ai.resolve(user.id, campaign, damage.id, { useArmor: false }), { resolved: true }, 'a resolved damage card is a no-op');
+    assert.deepEqual(resource(), afterDamage, 'the damage card never applies twice');
+
+    const beforeRoll = resource();
+    ai.resolve(user.id, campaign, roll.id, { advantage: 'normal' });
+    await finished(ai, user.id, campaign);
+    const afterRoll = resource();
+    assert.equal(afterRoll.hope, beforeRoll.hope + 1, 'the critical duality grants exactly one Hope');
+    assert.deepEqual(ai.resolve(user.id, campaign, roll.id, { advantage: 'normal' }), { resolved: true }, 'a resolved roll card is a no-op');
+    assert.deepEqual(resource(), afterRoll, 'the roll card never applies twice');
+  } finally {
+    await f.close();
+  }
+});
+
+test('ending a session with pending cards is refused unless forced', async () => {
+  const f = await fixture(request => request.tools ? completion('The night holds. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    const chat = ai.session(user.id, campaign).activeChatId!;
+    await runTurn(f, 'Begin the watch.');
+    const turn = currentTurn(f);
+    act(f, turn, 'request_roll', { heroId: f.setup.heroId, trait: 'instinct', difficulty: 10, reason: 'Listen.' });
+    const card = ai.session(user.id, campaign).messages.find(message => message.interaction?.kind === 'roll')!;
+    assert.throws(() => ai.endChat(user.id, campaign, { chatId: chat }), { message: 'Invalid action: resolve or pause first — there are pending cards.' });
+    assert.equal(ai.session(user.id, campaign).chats.find(row => row.id === chat)?.status, 'open', 'a refused end changes nothing');
+    ai.endChat(user.id, campaign, { chatId: chat, force: true });
+    const ended = await finished(ai, user.id, campaign);
+    assert.equal(ended.run?.kind, 'end');
+    assert.equal(ended.chats.find(row => row.id === chat)?.status, 'ended');
+    assert.equal(ended.messages.find(message => message.id === card.id)?.interaction?.resolved, true, 'force end still resolves an open roll card');
+  } finally {
+    await f.close();
+  }
+});
+
+test('a resume note is saved on the open session and shown in the GM memory', async () => {
+  const f = await fixture(request => request.tools ? completion('The gate waits.') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    const chat = ai.session(user.id, campaign).activeChatId!;
+    await runTurn(f, 'Begin.');
+    const note = 'Ash holds the harbor gate; the gray keeper waits for an answer. Next: decide whether to open the gate.';
+    act(f, currentTurn(f), 'set_resume_note', { note });
+    assert.throws(() => act(f, currentTurn(f), 'set_resume_note', { note: 'x'.repeat(1501) }), { message: 'Invalid resume note: at most 1500 characters.' });
+    await runTurn(f, 'I wait at the gate.');
+    const request = f.requests.filter(entry => entry.tools).at(-1)!;
+    const systems = (request.body.messages as { role: string; content: string | null }[]).filter(message => message.role === 'system').map(message => message.content ?? '');
+    const where = systems.find(content => content.startsWith('Where we stopped:'));
+    assert.ok(where, 'the resume note is in the GM memory');
+    assert.ok(where!.includes(note));
+    const stored = f.db.prepare('SELECT resume_note FROM ai_chats WHERE id = ?').get(chat) as { resume_note: string };
+    assert.equal(stored.resume_note, note);
   } finally {
     await f.close();
   }
@@ -1371,6 +1503,520 @@ test('search_rules returns one ancestry, community or card in full by ID, keeps 
     assert.ok(listed.some(item => item.id === 'infernis'), 'substring search still finds the entry');
     assert.ok(listed.every(item => String(item.description).length <= 280), 'substring results stay trimmed');
     assert.ok((act(f, turn, 'search_rules', { category: 'communities' }) as unknown[]).length <= 6, 'query is optional and keeps the six-result cap');
+  } finally {
+    await f.close();
+  }
+});
+
+// ---- Durable canon: entries survive state eviction, full reads, active scenario pinning and Markdown import ----
+
+test('canon survives more than twenty state updates, and canon_read returns a body longer than the journal snippet', async () => {
+  const f = await fixture(request => request.tools ? completion('The harbor is quiet. What do you do?') : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const turn = currentTurn(f);
+    const promise = act(f, turn, 'canon_write', { kind: 'promise', title: "The Keeper's Lamp", body: 'Ash promised to return the lamp to the keeper.' });
+    assert.equal(promise.kind, 'promise');
+    assert.equal(promise.status, 'active');
+    const body = prose(3000, 'Mara Vey of the Salt Chapel');
+    const person = act(f, turn, 'canon_write', { kind: 'person', title: 'Mara Vey', body });
+    assert.ok(body.length > 600, 'the source record is longer than a journal snippet');
+    assert.ok(!('errors' in person), 'the entry is stored');
+    const firstFact = 'Fact 0: ' + prose(80, 'Fact seed 0');
+    for (let index = 0; index < 25; index++) {
+      act(f, turn, 'update_state', { facts: ['Fact ' + String(index) + ': ' + prose(80, 'Fact seed ' + String(index))] });
+    }
+    const state = f.ai.actions.readState(f.campaign);
+    assert.equal(state.facts.length, 20, 'structured state keeps its twenty-fact cap');
+    assert.ok(!state.facts.includes(firstFact), 'the oldest fact was evicted');
+    const read = act(f, turn, 'canon_read', { id: person.id });
+    assert.equal(read.body, body, 'canon_read returns the complete body');
+    assert.equal(read.visibility, 'gm', 'GM-written canon is GM only by default');
+    const found = act(f, turn, 'canon_search', { query: "Keeper's Lamp" }) as { id: string; kind: string; title: string; body: string }[];
+    assert.deepEqual(found.map(entry => entry.id), [promise.id], 'the old promise is still retrievable by name');
+    assert.equal(found[0]!.body, 'Ash promised to return the lamp to the keeper.');
+    assert.equal((act(f, turn, 'canon_read', { id: promise.id }) as { body: string }).body, 'Ash promised to return the lamp to the keeper.');
+    assert.throws(() => act(f, turn, 'canon_read', { id: 'no-such-canon' }), { message: 'Invalid canon entry' });
+    assert.throws(() => act(f, turn, 'canon_write', { kind: 'poem', title: 'Bad kind', body: 'x' }), { message: 'Invalid canon kind' });
+    assert.throws(() => act(f, turn, 'canon_write', { kind: 'fact', title: 'Too long', body: 'x'.repeat(6001) }), { message: /at most 6000 characters/ });
+  } finally {
+    await f.close();
+  }
+});
+
+test('canon_search finds an old promise after session compaction and fact eviction', async () => {
+  const f = await fixture(request => request.tools ? completion('The harbor is quiet. What do you do?') : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const turn = currentTurn(f);
+    const promise = act(f, turn, 'canon_write', { kind: 'promise', title: 'The Salt Oath', body: 'Ash swore to bring the tide wardens to the chapel.' });
+    for (let index = 0; index < 25; index++) {
+      act(f, turn, 'update_state', { facts: ['Fact ' + String(index) + ': ' + prose(100, 'Evicted fact ' + String(index))] });
+    }
+    assert.ok(!f.ai.actions.readState(f.campaign).facts.some(fact => fact.indexOf('Fact 0:') === 0), 'the first fact is gone from structured state');
+    const chat = f.ai.session(f.user.id, f.campaign).activeChatId!;
+    seedHistory(f, chat, 24, 1200);
+    f.ai.compactChat(f.user.id, f.campaign, { chatId: chat });
+    const compacted = await finished(f.ai, f.user.id, f.campaign);
+    assert.equal(compacted.run?.kind, 'compact');
+    assert.ok(f.ai.journalPage(f.user.id, f.campaign, { kind: 'chapter' }).entries.length > 0, 'the session was compacted into a chapter');
+    const found = act(f, currentTurn(f), 'canon_search', { query: 'Salt Oath' }) as { id: string }[];
+    assert.deepEqual(found.map(entry => entry.id), [promise.id], 'canon retrieval survives compaction');
+  } finally {
+    await f.close();
+  }
+});
+
+test('the active scenario stays pinned first when a newer planned scenario is written', async () => {
+  const f = await fixture(request => request.tools ? completion('The bell tolls. What do you do?') : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const turn = currentTurn(f);
+    act(f, turn, 'write_prep', { kind: 'setting', title: 'The Drowned Coast', fields: { premise: 'A coast where the tide keeps old promises.' } });
+    act(f, turn, 'write_prep', { kind: 'scenario', id: 'active-arc', title: 'The Drowned Bell', fields: { hook: 'A bell rings below the water.' } });
+    const active = f.ai.actions.read<Record<string, any>>(f.campaign, 'gm', 'active-arc')!;
+    f.ai.actions.write(f.campaign, 'gm', 'active-arc', { ...active, status: 'active' });
+    await pause(5);
+    act(f, turn, 'write_prep', { kind: 'scenario', id: 'planned-b', title: 'The Broken Tide', fields: { hook: 'The tide fails.' } });
+    await pause(5);
+    act(f, turn, 'write_prep', { kind: 'scenario', id: 'planned-c', title: 'The Silent Fleet', fields: { hook: 'Sails appear without wind.' } });
+    await runTurn(f, 'Look around.');
+    const block = memoryBlocks(lastTurnRequest(f).body).find(item => item.startsWith('GM preparations (GM only):'));
+    assert.ok(block, 'the preparations block is present');
+    assert.ok(block.includes('Scenario: The Drowned Bell'), 'the active scenario is pinned even though it is older');
+    assert.ok(block.includes('Scenario: The Silent Fleet'), 'the newest planned scenario fills the second slot');
+    assert.ok(!block.includes('Scenario: The Broken Tide'), 'the older planned scenario is left out by the two-scenario cap');
+    assert.ok(block.indexOf('Scenario: The Drowned Bell') < block.indexOf('Scenario: The Silent Fleet'), 'the active scenario comes first');
+  } finally {
+    await f.close();
+  }
+});
+
+test('the memory prompt lists active canon titles newest first and points to canon_search when capped', async () => {
+  const f = await fixture(request => request.tools ? completion('The archive is open. What do you do?') : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const turn = currentTurn(f);
+    for (let index = 0; index < 30; index++) {
+      act(f, turn, 'canon_write', { kind: 'person', title: 'Person ' + String(index) + ' of the ' + 'long tide record ' + String(index), body: 'Record ' + String(index) });
+    }
+    await runTurn(f, 'Look around.');
+    const block = memoryBlocks(lastTurnRequest(f).body).find(item => item.startsWith('Canon in this campaign'));
+    assert.ok(block, 'the canon titles block is present');
+    assert.ok(block.length <= 1500, 'the block stays within about 1500 characters');
+    assert.match(block, /\(\d+ more; use canon_search\)$/);
+    assert.ok(block.includes('person: Person 29 of the long tide record 29'), 'the newest entry is listed first');
+    assert.ok(!block.includes('person: Person 0 of the long tide record 0'), 'the oldest entries fall behind the cap');
+  } finally {
+    await f.close();
+  }
+});
+
+test('journal_read returns the complete body that search trims to 600 characters', async () => {
+  const f = await fixture(request => request.tools ? completion('The harbor is quiet. What do you do?') : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const body = prose(1600, 'The long oath of the tide wardens');
+    const entry = f.ai.addJournal(f.user.id, f.campaign, { title: 'The long oath', body, shared: false });
+    const turn = currentTurn(f);
+    const found = act(f, turn, 'search_journal', { query: 'long oath' }) as { id: string; body: string }[];
+    assert.equal(found[0]?.id, entry.id);
+    assert.equal(found[0]?.body.length, 600, 'search still trims its snippets');
+    assert.equal((act(f, turn, 'journal_read', { id: entry.id }) as { body: string }).body, body, 'the full entry is readable');
+    assert.throws(() => act(f, turn, 'journal_read', { id: 'no-such-entry' }), { message: 'Invalid journal entry' });
+  } finally {
+    await f.close();
+  }
+});
+
+test('the canon import route requires a GM and stores each Markdown document whole with import provenance', async () => {
+  const f = await fixture(() => completion('Ready.'));
+  const { app, cookie } = await httpApp(f);
+  const base = '/api/campaigns/' + f.campaign + '/ai';
+  try {
+    const player = await addPlayer(f, 'canonplayer');
+    const playerCookie = 'daggery_session=' + f.campaigns.createSession(player.id);
+    const body = '# The Salt Chapel\n\nA shrine below the harbor wall.' + String.fromCharCode(10) + String.fromCharCode(10) + prose(1200, 'The chapel record');
+    const payload = { documents: [{ title: 'The Salt Chapel', body, kind: 'location', visibility: 'shared' }] };
+    const denied = await app.inject({ method: 'POST', url: base + '/canon', headers: { cookie: playerCookie, origin: ORIGIN }, payload });
+    assert.equal(denied.statusCode, 403, 'only the GM may import canon');
+    const imported = await app.inject({ method: 'POST', url: base + '/canon', headers: { cookie, origin: ORIGIN }, payload });
+    assert.equal(imported.statusCode, 200);
+    const result = imported.json() as { imported: number; entries: { id: string }[] };
+    assert.equal(result.imported, 1);
+    const entry = f.ai.actions.canon.get(f.campaign, result.entries[0]!.id)!;
+    assert.equal(entry.body, body, 'the document is stored whole, not split');
+    assert.equal(entry.source, 'import:The Salt Chapel');
+    assert.equal(entry.visibility, 'shared');
+    const tooMany = await app.inject({ method: 'POST', url: base + '/canon', headers: { cookie, origin: ORIGIN }, payload: { documents: Array.from({ length: 51 }, (_, index) => ({ title: 'Document ' + String(index), body: 'x' })) } });
+    assert.equal(tooMany.statusCode, 400, 'at most fifty documents are accepted');
+  } finally {
+    await app.close();
+    await f.close();
+  }
+});
+
+test('physical Duality dice resolve from the reported faces exactly once and mark the roll as player-reported', async () => {
+  const f = await fixture(request => request.tools ? completion('The sigil answers. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    await runTurn(f, 'Begin the watch.');
+    heroSheet(f, { hope: 2, traits: { ...heroOf(f).traits, agility: 2 } });
+    f.ai.actions.write(campaign, 'combat', 'fear', { kind: 'fear', value: 0 });
+    const card = openRoll(f, { trait: 'agility', difficulty: 12, reason: 'Read the sigil.' });
+    const before = heroOf(f);
+
+    ai.resolve(user.id, campaign, card.id, { advantage: 'normal', dice: { hope: 8, fear: 5 } });
+    await finished(ai, user.id, campaign);
+
+    const after = heroOf(f);
+    assert.equal(after.hope, before.hope + 1, 'the Hope result grants exactly one Hope');
+    assert.equal(fearValue(f), 0, 'a Hope result gains no Fear');
+    assert.equal(ai.session(user.id, campaign).messages.find(message => message.id === card.id)?.interaction?.resolved, true);
+
+    const rollMessage = ai.session(user.id, campaign).messages.filter(message => message.role === 'roll').at(-1)!;
+    assert.match(rollMessage.text, /Hope 8, Fear 5, modifier 2: 15 vs 12 — Success with Hope\./);
+    assert.ok(rollMessage.text.endsWith(' (player-reported dice)'), 'the result is marked player-reported');
+    const event = ai.journalPage(user.id, campaign, { kind: 'event' }).entries.find(entry => /^Roll · Ash · success$/.test(entry.title))!;
+    assert.ok(event, 'a roll event was written');
+    assert.ok(event.body.endsWith(' (player-reported dice)'), 'the journal body is marked player-reported');
+
+    assert.equal(f.rolls.filter(entry => entry.kind === 'duality').length, 1);
+    const published = f.rolls.find(entry => entry.kind === 'duality')!.result as { source?: string; hope: number; fear: number; total: number };
+    assert.equal(published.source, 'player', 'the published roll says the player reported it');
+    assert.deepEqual([published.hope, published.fear, published.total], [8, 5, 15]);
+
+    const resources = heroOf(f);
+    const publishedCount = f.rolls.length;
+    assert.deepEqual(ai.resolve(user.id, campaign, card.id, { advantage: 'advantage', dice: { hope: 1, fear: 12, advantageDie: 6 } }), { resolved: true }, 'a second submission is a no-op');
+    assert.deepEqual(heroOf(f), resources, 'a second submission changes no resource');
+    assert.equal(fearValue(f), 0, 'a second submission adds no Fear');
+    assert.equal(f.rolls.length, publishedCount, 'a second submission creates no roll');
+    assert.equal(ai.session(user.id, campaign).messages.filter(message => message.role === 'roll').length, 1);
+  } finally {
+    await f.close();
+  }
+});
+
+test('a physical Fear-winning roll adds exactly one Fear and no Hope', async () => {
+  const f = await fixture(request => request.tools ? completion('The watch falters. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    await runTurn(f, 'Begin the watch.');
+    heroSheet(f, { hope: 2, traits: { ...heroOf(f).traits, agility: 2 } });
+    f.ai.actions.write(campaign, 'combat', 'fear', { kind: 'fear', value: 0 });
+    const card = openRoll(f, { trait: 'agility', difficulty: 10, reason: 'Hold the line.' });
+    const before = heroOf(f);
+
+    ai.resolve(user.id, campaign, card.id, { advantage: 'normal', dice: { hope: 3, fear: 9 } });
+    await finished(ai, user.id, campaign);
+
+    assert.equal(fearValue(f), 1, 'a Fear result gains exactly one Fear');
+    assert.equal(heroOf(f).hope, before.hope, 'a Fear result grants no Hope');
+    assert.match(ai.session(user.id, campaign).messages.filter(message => message.role === 'roll').at(-1)!.text, /: 14 vs 10 — Success with Fear\. \(player-reported dice\)$/);
+  } finally {
+    await f.close();
+  }
+});
+
+test('invalid physical dice are rejected with Invalid dice and leave the card unresolved', async () => {
+  const f = await fixture(request => request.tools ? completion('The dice wait. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    await runTurn(f, 'Begin the watch.');
+    heroSheet(f, { traits: { ...heroOf(f).traits, agility: 2 } });
+    const card = openRoll(f, { trait: 'agility', difficulty: 10, reason: 'Read the runes.' });
+    const before = heroOf(f);
+
+    for (const dice of [{ hope: 0, fear: 5 }, { hope: 13, fear: 5 }, { hope: 2.5, fear: 5 }, { hope: 5, fear: 13 }, { hope: '8', fear: 5 }]) {
+      assert.throws(() => ai.resolve(user.id, campaign, card.id, { advantage: 'normal', dice }), { message: /^Invalid dice/ }, JSON.stringify(dice));
+    }
+    assert.throws(() => ai.resolve(user.id, campaign, card.id, { advantage: 'advantage', dice: { hope: 8, fear: 5 } }), { message: 'Invalid dice: report the advantage d6' });
+    assert.throws(() => ai.resolve(user.id, campaign, card.id, { advantage: 'normal', dice: { hope: 8, fear: 5, advantageDie: 6 } }), { message: /^Invalid dice/ });
+
+    const held = ai.session(user.id, campaign).messages.find(message => message.id === card.id)!;
+    assert.equal(held.interaction?.resolved, false, 'the card stays unresolved');
+    assert.deepEqual(heroOf(f), before, 'no resource changed');
+    assert.equal(f.rolls.filter(entry => entry.kind === 'duality').length, 0, 'no roll was published');
+    assert.equal(ai.session(user.id, campaign).messages.filter(message => message.role === 'roll').length, 0, 'no roll message was written');
+  } finally {
+    await f.close();
+  }
+});
+
+test('a hit with physical weapon damage marks adversary HP per its thresholds and requires the damage dice', async () => {
+  const f = await fixture(request => request.tools ? completion('The blow lands. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    await runTurn(f, 'Begin the fight.');
+    heroSheet(f, { traits: { ...heroOf(f).traits, agility: 2 } });
+    const source = adversaries.find(entry => entry.id === 'glass-snake')!;
+    assert.ok(source.thresholds, 'the fixture adversary has thresholds');
+    const turn = currentTurn(f);
+    act(f, turn, 'create_scene', { name: 'The alley' });
+    const enemy = act(f, turn, 'add_adversary', { catalogId: source.id }) as { adversaryId: string };
+    const card = openRoll(f, { trait: 'agility', difficulty: source.difficulty, reason: 'Strike the ruffian.', enemyId: enemy.adversaryId });
+
+    ai.resolve(user.id, campaign, card.id, { advantage: 'normal', dice: { hope: 8, fear: 5 }, damageDice: [7] });
+    await finished(ai, user.id, campaign);
+
+    assert.equal(f.ai.actions.read<Record<string, any>>(campaign, 'combat', enemy.adversaryId)?.hpMarked, 2, '7 damage is Major for this adversary (2 HP)');
+    assert.match(ai.session(user.id, campaign).messages.filter(message => message.role === 'roll').at(-1)!.text, /deals 7 damage to Glass Snake; marked HP 2\/5\. \(player-reported dice\)$/);
+    const damageRoll = f.rolls.filter(entry => entry.kind === 'dice').at(-1)!.result;
+    assert.deepEqual(damageRoll, { notation: '1d8', total: 7, rolls: [7], modifier: 0 });
+
+    const second = openRoll(f, { trait: 'agility', difficulty: source.difficulty, reason: 'Strike again.', enemyId: enemy.adversaryId });
+    assert.throws(() => ai.resolve(user.id, campaign, second.id, { advantage: 'normal', dice: { hope: 8, fear: 5 } }), { message: 'Invalid dice: report the damage dice' });
+    assert.equal(ai.session(user.id, campaign).messages.find(message => message.id === second.id)?.interaction?.resolved, false, 'the rejected hit stays unresolved');
+    assert.equal(f.ai.actions.read<Record<string, any>>(campaign, 'combat', enemy.adversaryId)?.hpMarked, 2, 'the rejected hit marks no HP');
+    assert.throws(() => ai.resolve(user.id, campaign, second.id, { advantage: 'normal', dice: { hope: 8, fear: 5 }, damageDice: [0] }), { message: /^Invalid dice/ });
+    assert.equal(ai.session(user.id, campaign).messages.find(message => message.id === second.id)?.interaction?.resolved, false, 'an out-of-range damage face stays unresolved');
+  } finally {
+    await f.close();
+  }
+});
+
+test('session-start Prayer Dice roll once on the first Begin and never again on reopen, pause/resume or a refused second Begin', async () => {
+  const f = await fixture(request => request.tools ? completion('The light answers. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    heroSheet(f, { classId: 'seraph', subclassId: 'divine-wielder', traits: { ...heroOf(f).traits, strength: 2 } });
+    const chat = ai.createChat(user.id, campaign, { title: 'Seraph session' }).chat.id;
+    ai.begin(user.id, campaign, { chatId: chat });
+    await finished(ai, user.id, campaign);
+
+    const rolled = heroOf(f);
+    assert.equal(rolled.resources?.featuresStartedFor, chat, 'the sheet records which chat rolled its features');
+    assert.equal(rolled.resources?.prayerDice?.length, 2, 'Strength +2 rolls two d4 Prayer Dice');
+    assert.ok(rolled.resources!.prayerDice!.every(die => Number.isInteger(die) && die >= 1 && die <= 4));
+    const dice = [...rolled.resources!.prayerDice!];
+
+    ai.session(user.id, campaign, chat);
+    assert.deepEqual(heroOf(f).resources?.prayerDice, dice, 'reopening the session does not reroll');
+    assert.throws(() => ai.begin(user.id, campaign, { chatId: chat }), /already begun/);
+    assert.deepEqual(heroOf(f).resources?.prayerDice, dice, 'a refused second Begin does not reroll');
+
+    ai.pauseChat(user.id, campaign, { chatId: chat });
+    await finished(ai, user.id, campaign);
+    ai.resumeChat(user.id, campaign, { chatId: chat });
+    await finished(ai, user.id, campaign);
+    assert.deepEqual(heroOf(f).resources?.prayerDice, dice, 'pause and resume do not reroll');
+    assert.equal(heroOf(f).resources?.featuresStartedFor, chat);
+
+    ai.endChat(user.id, campaign, { chatId: chat, force: true });
+    await finished(ai, user.id, campaign);
+    assert.deepEqual(heroOf(f).resources?.prayerDice, [], 'ending the session clears unspent Prayer Dice');
+  } finally {
+    await f.close();
+  }
+});
+
+test('spending a Prayer Die before damage reduces the stored damage and consumes exactly that die', async t => {
+  const f = await fixture(request => request.tools ? completion('The blow lands. What do you do?') : summaryReply());
+  try {
+    t.mock.method(Math, 'random', () => 0.999);
+    const { ai, user, campaign } = f;
+    heroSheet(f, { classId: 'seraph', subclassId: 'divine-wielder', traits: { ...heroOf(f).traits, strength: 2 } });
+    const chat = ai.createChat(user.id, campaign, { title: 'Damage session' }).chat.id;
+    ai.begin(user.id, campaign, { chatId: chat });
+    await finished(ai, user.id, campaign);
+    heroSheet(f, { resources: { ...heroOf(f).resources, prayerDice: [4, 2] } });
+
+    const turn = currentTurn(f);
+    const foe = adversaries.find(entry => entry.type !== 'Minion')!;
+    act(f, turn, 'create_scene', { name: 'Shrine' });
+    const enemy = act(f, turn, 'add_adversary', { catalogId: foe.id }) as { adversaryId: string };
+    act(f, turn, 'adversary_attack', { adversaryId: enemy.adversaryId, heroId: f.setup.heroId, reason: 'Strikes the hero.' });
+    const card = ai.session(user.id, campaign).messages.find(message => message.interaction?.kind === 'damage')!;
+    const incoming = card.interaction!.damage!;
+    assert.ok(incoming > 2, 'the incoming damage can absorb the die');
+    const before = heroOf(f);
+    const expectedDamage = incoming - 2;
+    const expectedMarks = damageHp(damageSeverity(expectedDamage, damageThresholds(before)), false);
+
+    ai.resolve(user.id, campaign, card.id, { useArmor: false, prayerDie: { index: 1 } });
+    await finished(ai, user.id, campaign);
+
+    const after = heroOf(f);
+    assert.deepEqual(after.resources?.prayerDice, [4], 'the spent die is removed and the other stays');
+    assert.equal(after.hpMarked, before.hpMarked + expectedMarks, 'HP marked follows the reduced damage');
+    const stored = ai.session(user.id, campaign).messages.find(message => message.id === card.id)!;
+    assert.equal(stored.interaction?.damage, expectedDamage, 'the pending damage value is updated before the consequence is stored');
+    assert.equal(stored.interaction?.resolved, true);
+    const result = ai.session(user.id, campaign).messages.filter(message => message.role === 'roll').at(-1)!;
+    assert.match(result.text, new RegExp('spends a Prayer Die \\(2\\) to reduce the damage to ' + String(expectedDamage)));
+    assert.match(result.text, new RegExp('takes ' + String(expectedDamage) + ' damage'));
+  } finally {
+    await f.close();
+  }
+});
+
+test('a Prayer Die adds to a roll result after the roll, and an invalid die is refused with the card unresolved', async () => {
+  const f = await fixture(request => request.tools ? completion('The sigil waits. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    heroSheet(f, { classId: 'seraph', subclassId: 'divine-wielder', traits: { ...heroOf(f).traits, strength: 2 } });
+    const chat = ai.createChat(user.id, campaign, { title: 'Prayer session' }).chat.id;
+    ai.begin(user.id, campaign, { chatId: chat });
+    await finished(ai, user.id, campaign);
+    heroSheet(f, { resources: { ...heroOf(f).resources, prayerDice: [4, 3] } });
+
+    const card = openRoll(f, { trait: 'instinct', difficulty: 12, reason: 'Read the glyph.' });
+    const before = heroOf(f);
+    assert.throws(() => ai.resolve(user.id, campaign, card.id, { advantage: 'normal', prayerDie: { index: 5 } }), { message: /^Invalid action: / });
+    assert.equal(ai.session(user.id, campaign).messages.find(message => message.id === card.id)?.interaction?.resolved, false, 'the invalid spend leaves the card unresolved');
+    assert.deepEqual(heroOf(f), before, 'the invalid spend changes nothing');
+    assert.throws(() => ai.resolve(user.id, campaign, card.id, { advantage: 'normal', prayerDie: { index: 0.5 } }), { message: /^Invalid action: / });
+    assert.equal(ai.session(user.id, campaign).messages.find(message => message.id === card.id)?.interaction?.resolved, false);
+
+    // Hope 5 + Fear 4 + instinct modifier, plus the die, turns a failure into a success.
+    ai.resolve(user.id, campaign, card.id, { advantage: 'normal', dice: { hope: 5, fear: 4 }, prayerDie: { index: 0 } });
+    await finished(ai, user.id, campaign);
+    const after = heroOf(f);
+    assert.deepEqual(after.resources?.prayerDice, [3], 'only the spent die is consumed');
+    const result = ai.session(user.id, campaign).messages.filter(message => message.role === 'roll').at(-1)!;
+    assert.match(result.text, /Success with Hope\. Prayer Die \+4 added to the result \(total 14\)\./);
+
+    // A choice card does not allow a Prayer Die spend.
+    const choices = act(f, currentTurn(f), 'offer_choices', { prompt: 'Pick a path.', choices: ['Left', 'Right'] }) as { requestId: string };
+    assert.throws(() => ai.resolve(user.id, campaign, choices.requestId, { prayerDie: { index: 0 } }), { message: /^Invalid action: a choice card has no Prayer Die timing/ });
+    assert.equal(ai.session(user.id, campaign).messages.find(message => message.id === choices.requestId)?.interaction?.resolved, false);
+  } finally {
+    await f.close();
+  }
+});
+
+test('Ranger’s Focus persists across a restart, marks Stress on damage and clears when its target is defeated', async () => {
+  const f = await fixture(request => request.tools ? completion('The hunt continues. What do you do?') : summaryReply());
+  let restarted: AiService | null = null;
+  try {
+    const { ai, user, campaign } = f;
+    heroSheet(f, { classId: 'ranger', subclassId: 'wayfinder', hope: 3 });
+    await runTurn(f, 'Begin the hunt.');
+    const foe = adversaries.find(entry => entry.id === 'construct')!;
+    assert.equal(foe.hp, 9);
+    let turn = currentTurn(f);
+    act(f, turn, 'create_scene', { name: 'Trail' });
+    const enemy = act(f, turn, 'add_adversary', { catalogId: foe.id }) as { adversaryId: string };
+    const card = openRoll(f, { trait: 'instinct', difficulty: foe.difficulty, reason: 'Mark the quarry.', enemyId: enemy.adversaryId });
+    const before = heroOf(f);
+
+    ai.resolve(user.id, campaign, card.id, { advantage: 'normal', focus: true, dice: { hope: 12, fear: 11 }, damageDice: [1] });
+    await finished(ai, user.id, campaign);
+
+    const focused = heroOf(f);
+    assert.equal(focused.resources?.focusTargetId, enemy.adversaryId, 'a successful Focus attack marks the target');
+    assert.equal(focused.hope, Math.min(6, before.hope - 1 + 1), 'Focus spends 1 Hope and the Hope result grants 1 back');
+    assert.ok(focused.resources?.prayerDice === undefined, 'the Ranger has no Prayer Dice');
+    const foeDoc = ai.actions.read<Record<string, any>>(campaign, 'combat', enemy.adversaryId)!;
+    assert.ok(foeDoc.hpMarked < foe.hp, 'the target survives the setup hit');
+    assert.equal(foeDoc.stressMarked, 1, 'damaging the Focus makes it mark a Stress');
+
+    const view = act(f, currentTurn(f), 'get_character', { heroId: f.setup.heroId });
+    assert.equal(view.resources.focusTargetId, enemy.adversaryId, 'get_character exposes the Focus target');
+    assert.deepEqual(view.resources.prayerDice, []);
+
+    restarted = new AiService(f.db, f.campaigns, f.vault, f.provider, () => {}, () => {});
+    assert.equal(restarted.actions.read<Sheet>(campaign, 'sheets', f.setup.heroId)?.resources?.focusTargetId, enemy.adversaryId, 'Focus survives a fresh service over the same database');
+
+    // One more hit defeats the Focus, which must clear it.
+    const current = ai.actions.read<Record<string, any>>(campaign, 'combat', enemy.adversaryId)!;
+    ai.actions.write(campaign, 'combat', enemy.adversaryId, { ...current, hpMarked: foe.hp - 1 });
+    turn = currentTurn(f);
+    const finish = openRoll(f, { trait: 'instinct', difficulty: foe.difficulty, reason: 'Finish the quarry.', enemyId: enemy.adversaryId });
+    restarted.resolve(user.id, campaign, finish.id, { advantage: 'normal', dice: { hope: 12, fear: 11 }, damageDice: [1] });
+    await finished(restarted, user.id, campaign);
+
+    const cleared = restarted.actions.read<Sheet>(campaign, 'sheets', f.setup.heroId)!;
+    assert.equal(cleared.resources?.focusTargetId, null, 'defeating the Focus clears it');
+    const defeated = restarted.actions.read<Record<string, any>>(campaign, 'combat', enemy.adversaryId)!;
+    assert.ok(defeated.hpMarked >= foe.hp, 'the Focus target is defeated');
+  } finally {
+    await restarted?.close();
+    await f.close();
+  }
+});
+
+test('the setup block lists the whole party when no player hero is chosen, and the chosen hero otherwise', async () => {
+  const f = await fixture(request => request.tools ? completion('The dock waits. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    const hero = heroOf(f);
+    const seraph: Sheet = { ...hero, id: 'hero-seraph', name: 'Bramble', classId: 'seraph', level: 3 };
+    ai.actions.write(campaign, 'sheets', seraph.id, seraph);
+    ai.configure(user.id, campaign, { heroId: '' });
+    await runTurn(f, 'Begin.');
+    const setup = memoryBlocks(lastTurnRequest(f).body).find(block => block.startsWith('Campaign setup'));
+    assert.ok(setup, 'the setup block is present');
+    const warriorName = classes.find(entry => entry.id === 'warrior')!.name;
+    const seraphName = classes.find(entry => entry.id === 'seraph')!.name;
+    assert.ok(setup!.includes('Ash (' + warriorName + ', level 1)'), 'the first hero is listed');
+    assert.ok(setup!.includes('Bramble (' + seraphName + ', level 3)'), 'the other hero is listed');
+    assert.match(setup!, /^Party: .+ \(.+, level \d+\); .+ \(.+, level \d+\)$/m, 'the party line uses the documented format');
+    assert.ok(!setup!.includes('Player hero:'), 'no single player hero is named');
+
+    ai.configure(user.id, campaign, { heroId: f.setup.heroId });
+    await runTurn(f, 'I look around.');
+    const single = memoryBlocks(lastTurnRequest(f).body).find(block => block.startsWith('Campaign setup'))!;
+    assert.ok(single.includes('Player hero: Ash'), 'the chosen hero is named');
+    assert.ok(!single.includes('Party:'), 'the party line is replaced');
+  } finally {
+    await f.close();
+  }
+});
+
+test('the setup block reports no party when no hero sheet exists', async () => {
+  const f = await fixture(request => request.tools ? completion('The dock waits. What do you do?') : summaryReply());
+  try {
+    for (const doc of f.ai.actions.docs(f.campaign, 'sheets')) f.db.prepare('DELETE FROM campaign_docs WHERE campaign_id = ? AND ns = ? AND id = ?').run(f.campaign, 'sheets', doc.id);
+    f.ai.configure(f.user.id, f.campaign, { heroId: '' });
+    await runTurn(f, 'Begin.');
+    const setup = memoryBlocks(lastTurnRequest(f).body).find(block => block.startsWith('Campaign setup'))!;
+    assert.ok(setup.includes('Party: none yet'), 'an empty party is stated');
+  } finally {
+    await f.close();
+  }
+});
+
+test('the campaign persona is saved, rendered as GM direction, clipped to 1500 characters and validated', async () => {
+  const f = await fixture(request => request.tools ? completion('The hearth crackles. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    const saved = ai.configure(user.id, campaign, { heroId: f.setup.heroId, persona: 'x'.repeat(1500) });
+    assert.equal(saved.persona, 'x'.repeat(1500));
+    assert.equal(ai.session(user.id, campaign).setup.persona, 'x'.repeat(1500), 'configure saves the persona');
+    assert.throws(() => ai.configure(user.id, campaign, { heroId: f.setup.heroId, persona: 'x'.repeat(1501) }), /Invalid text/);
+    assert.equal(ai.session(user.id, campaign).setup.persona, 'x'.repeat(1500), 'a refused persona changes nothing');
+
+    await runTurn(f, 'Begin.');
+    const setup = memoryBlocks(lastTurnRequest(f).body).find(block => block.startsWith('Campaign setup'))!;
+    assert.ok(setup.includes('GM direction (campaign persona, follow it): ' + 'x'.repeat(1500)), 'the persona is in the memory');
+
+    const legacy = { ...ai.session(user.id, campaign).setup, persona: 'y'.repeat(1700) };
+    f.db.prepare('UPDATE campaign_ai SET setup = ? WHERE campaign_id = ?').run(JSON.stringify(legacy), campaign);
+    await runTurn(f, 'I sit by the fire.');
+    const clipped = memoryBlocks(lastTurnRequest(f).body).find(block => block.startsWith('Campaign setup'))!;
+    const line = clipped.split('\n').find(item => item.startsWith('GM direction (campaign persona, follow it):'))!;
+    assert.equal(line, 'GM direction (campaign persona, follow it): ' + 'y'.repeat(1500), 'a longer stored persona is clipped to 1500 characters');
+  } finally {
+    await f.close();
+  }
+});
+
+test('the GM system prompt frames the players as a party and carries the current prompt version', async () => {
+  const f = await fixture(request => request.tools ? completion('The dock waits. What do you do?') : summaryReply());
+  try {
+    await runTurn(f, 'Begin.');
+    const system = (lastTurnRequest(f).body.messages as { role: string; content: string | null }[])[0]!;
+    assert.equal(system.role, 'system');
+    assert.ok(system.content!.includes('The players control one or more heroes'));
+    assert.ok(system.content!.includes('Never speak or decide for any hero'));
+    assert.ok(system.content!.includes('give each hero the spotlight in turn'));
+    assert.ok(system.content!.includes('Call get_character before resolving or describing a hero’s class feature'));
+    assert.ok(!system.content!.includes('The player controls one hero'), 'the single-hero framing is gone');
+    assert.ok(system.content!.includes('gm-prompt-3'), 'the prompt version is current');
+    const stored = f.db.prepare('SELECT prompt_version FROM ai_turns ORDER BY rowid DESC LIMIT 1').get() as { prompt_version: string };
+    assert.equal(stored.prompt_version, 'gm-prompt-3', 'the turn records the current prompt version');
   } finally {
     await f.close();
   }

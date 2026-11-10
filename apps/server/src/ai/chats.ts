@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { AiChat } from '@daggery/shared';
 
-export interface ChatRow { id: string; campaign_id: string; ordinal: number; title: string; status: 'open' | 'ended'; summary: string; summarized_through: number; summary_updated: string | null; created: string; updated: string; ended_at: string | null }
+export interface ChatRow { id: string; campaign_id: string; ordinal: number; title: string; status: 'open' | 'paused' | 'ended'; summary: string; summarized_through: number; summary_updated: string | null; resume_note: string | null; created: string; updated: string; ended_at: string | null }
 type ChatView = ChatRow & { messageCount: number };
 
 const COUNTED_SQL = "SELECT c.*, (SELECT COUNT(*) FROM ai_messages m WHERE m.chat_id = c.id AND m.role IN ('player','gm','roll')) AS messageCount FROM ai_chats c";
@@ -58,6 +58,23 @@ export class AiChats {
 
   end(campaign: string, chat: string, at: string): void {
     this.db.prepare("UPDATE ai_chats SET status = 'ended', ended_at = ?, updated = ? WHERE campaign_id = ? AND id = ?").run(at, at, campaign, chat);
+  }
+
+  /** Pausing is not ending: open cards stay unresolved and the transcript stays writable after resume. */
+  pause(campaign: string, chat: string, at: string, note: string): void {
+    this.db.prepare("UPDATE ai_chats SET status = 'paused', resume_note = ?, updated = ? WHERE campaign_id = ? AND id = ?").run(note, at, campaign, chat);
+  }
+
+  /**
+   * Resume keeps the saved resume_note. The GM overwrites it with set_resume_note the next time play
+   * stops, so the last "Where we stopped" line stays available; this keeps resume a single status write.
+   */
+  resume(campaign: string, chat: string, at: string): void {
+    this.db.prepare("UPDATE ai_chats SET status = 'open', updated = ? WHERE campaign_id = ? AND id = ?").run(at, campaign, chat);
+  }
+
+  setResumeNote(campaign: string, chat: string, note: string): void {
+    this.db.prepare('UPDATE ai_chats SET resume_note = ?, updated = ? WHERE campaign_id = ? AND id = ?').run(note, new Date().toISOString(), campaign, chat);
   }
 
   touch(chat: string, at: string): void {

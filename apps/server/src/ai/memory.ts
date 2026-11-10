@@ -175,7 +175,7 @@ export function snapshotFor(db: Database.Database, source: DocSource, campaign: 
   };
 }
 
-export interface MemoryPart { kind: 'setup' | 'preparation' | 'digest' | 'chapter' | 'secrets' | 'state' | 'summary'; text: string }
+export interface MemoryPart { kind: 'setup' | 'preparation' | 'canon' | 'digest' | 'chapter' | 'secrets' | 'state' | 'summary' | 'resume'; text: string }
 
 /** Cuts text to at most room characters and ends it with a note. The first lines are kept. */
 export function shorten(text: string, room: number, note: string): string {
@@ -184,7 +184,7 @@ export function shorten(text: string, room: number, note: string): string {
   return keep > 0 ? text.slice(0, keep).trimEnd() + NL + note : '';
 }
 
-/** Keeps the memory parts within maxChars. Older chapters go first, then preparations and secrets are shortened. */
+/** Keeps the memory parts within maxChars. Older chapters go first, then canon titles, preparations and secrets are shortened. */
 export function fitMemory(parts: MemoryPart[], maxChars: number): MemoryPart[] {
   const kept = parts.map(part => ({ ...part }));
   const total = () => kept.reduce((sum, part) => sum + part.text.length, 0);
@@ -193,8 +193,8 @@ export function fitMemory(parts: MemoryPart[], maxChars: number): MemoryPart[] {
     if (oldest < 0) break;
     kept.splice(oldest, 1);
   }
-  const notes = { preparation: '(preparations shortened to fit the memory limit)', secrets: '(GM secrets shortened to fit the memory limit)' };
-  for (const kind of ['preparation', 'secrets'] as const) {
+  const notes = { canon: '(canon titles shortened to fit the memory limit)', preparation: '(preparations shortened to fit the memory limit)', secrets: '(GM secrets shortened to fit the memory limit)' };
+  for (const kind of ['canon', 'preparation', 'secrets'] as const) {
     const over = total() - maxChars;
     if (over <= 0) break;
     const part = kept.find(item => item.kind === kind);

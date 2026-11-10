@@ -38,6 +38,19 @@ export interface BackgroundAnswer {
   answer: string;
 }
 
+/**
+ * Class-feature resources that live on the sheet. Optional so sheets saved before these
+ * features existed stay valid. They persist with the whole sheet document.
+ */
+export interface SheetResources {
+  /** The adversary this hero's Ranger's Focus feature currently marks. */
+  focusTargetId?: string | null;
+  /** Face values of the Seraph's unspent Prayer Dice (d4s). */
+  prayerDice?: number[];
+  /** The session chat whose opening rolled the session-start features. Guards against a second roll. */
+  featuresStartedFor?: string | null;
+}
+
 export type DamageSeverity = 'none' | 'minor' | 'major' | 'severe' | 'massive';
 
 /**
@@ -108,6 +121,8 @@ export interface Sheet {
   multiclassSubclassId?: string | null;
   /** Advancement ids already chosen at the current level (two per level). */
   advancements: string[];
+  /** Current class-feature resources and targets. Absent on older sheets. */
+  resources?: SheetResources;
   /**
    * History of advancements taken, used to enforce once-per-tier options (Core Rulebook
    * level-up sheet). Optional for backward compatibility with older sheets.

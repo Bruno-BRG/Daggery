@@ -1,10 +1,12 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { adversaries } from '@daggery/content';
-import { canReuseAiKey, getGameSystem, getRuleset, maxDiceTotal, roll, rollDice, type AiAdventure, type AiBudget, type AiConnection, type AiInteraction, type AiJournalEntry, type AiJournalPage, type AiMessage, type AiProvider, type AiRun, type AiSetup, type AiTurnKind, type SoloState, type TraitName } from '@daggery/shared';
-import { applyDualityEffects, armorScore, damageHp, damageNotation, damageSeverity, damageThresholds, hpMax, weaponForSlot, weaponModifier } from '@daggery/shared/daggerheart';
+import { canReuseAiKey, DiceNotationError, getGameSystem, getRuleset, maxDiceTotal, resolveDiceFaces, resolveDuality, roll, rollDice, type AiAdventure, type AiBudget, type AiConnection, type AiInteraction, type AiJournalEntry, type AiJournalPage, type AiMessage, type AiProvider, type AiRun, type AiSetup, type AiTurnKind, type DiceRoll, type DualityResult, type SoloState, type TraitName } from '@daggery/shared';
+import { applyDualityEffects, armorScore, damageHp, damageNotation, damageSeverity, damageThresholds, getClass, hpMax, weaponForSlot, weaponModifier } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
+import { clearFocusTarget, focusTargetId, hasRangersFocus, rollPrayerDice, setFocusTarget, spendPrayerDie } from './abilities';
+import { canonBody, canonKind, canonTitle, canonVisibility } from './canon';
 import type { AiChats, ChatRow } from './chats';
 import type { AiJournal } from './journal';
 import { GmActions, GM_TOOLS } from './tools';
@@ -20,17 +22,20 @@ export class AiConflict extends Error {}
 const NL = String.fromCharCode(10);
 const BUDGET_NAMES = ['lean', 'balanced', 'rich', 'maximum'];
 const BEGIN_MESSAGE = 'Begin our adventure. Introduce the opening scene and give me a meaningful decision.';
-const DEFAULT_SETUP: AiSetup = { premise: '', tone: 'Adventurous mystery', heroId: '' };
+const DEFAULT_SETUP: AiSetup = { premise: '', tone: 'Adventurous mystery', heroId: '', persona: '' };
 const SUMMARY_MAX_TOKENS = 1800;
 /** Estimated tokens of messages in one summarizer request. A larger backlog takes several requests, each with its own chapter. */
 const COMPACT_BATCH_TOKENS = 40000;
 const TURN_STEPS = 12;
 const TURN_ACTIONS = 24;
+/** Canon reads return a whole source record, so they get room for a full body plus its metadata. */
+const TOOL_RESULT_OVERRIDES: Record<string, number> = { canon_read: 9000, canon_write: 9000 };
 /** The whole turn, including its compaction rounds, must finish within this time. */
 const TURN_TIMEOUT_MS = 300000;
 const TRANSCRIPT_PAGE = 60;
 const SUMMARIZED_NOTICE = 'Earlier messages were summarized for the GM.';
 const ENDED_NOTICE = 'This session has ended. Its transcript is read only. Start a new session to keep playing.';
+const PAUSED_NOTICE = 'This session is paused. Pending cards stay open; resume it to keep playing.';
 const SETTING_FIELDS = ['premise', 'tone', 'locations', 'factions', 'secrets', 'agreements'];
 const SCENARIO_FIELDS = ['hook', 'stakes', 'scenes', 'cast', 'rewards', 'aftermath'];
 
@@ -57,6 +62,29 @@ type PublishRoll = (campaign: string, kind: string, result: unknown, author?: st
 
 function clip(value: string, max: number): string {
   return value.length > max ? value.slice(0, max) : value;
+}
+
+interface PhysicalDice { hope: number; fear: number; advantageDie?: number }
+
+/** Reads the player-reported Duality faces. Integer and range checks run in resolveDuality. */
+function physicalDiceOf(value: unknown): PhysicalDice {
+  let input: Record<string, unknown>;
+  try {
+    input = record(value);
+  } catch {
+    throw new Error('Invalid dice: report the Hope and Fear faces');
+  }
+  const { hope, fear, advantageDie } = input;
+  if (typeof hope !== 'number' || typeof fear !== 'number' || (advantageDie !== undefined && typeof advantageDie !== 'number')) {
+    throw new Error('Invalid dice: report the Hope and Fear faces');
+  }
+  return advantageDie === undefined ? { hope, fear } : { hope, fear, advantageDie };
+}
+
+/** Reads the player-reported damage faces. Count and range checks run in resolveDiceFaces. */
+function physicalDamageOf(value: unknown): number[] {
+  if (!Array.isArray(value) || value.some(face => typeof face !== 'number')) throw new Error('Invalid dice: report the damage dice');
+  return value as number[];
 }
 
 function budgetOf(settings: Settings | undefined): AiBudget {
@@ -289,7 +317,7 @@ export class AiService {
         this.actions.write(campaign, 'sheets', heroId, created);
       }
       if (heroId && !this.actions.read(campaign, 'sheets', heroId)) throw new Error('Invalid hero');
-      const next: AiSetup = { premise: text(value.premise, 3000, ''), tone: text(value.tone, 300, 'Adventurous mystery'), heroId };
+      const next: AiSetup = { premise: text(value.premise, 3000, ''), tone: text(value.tone, 300, 'Adventurous mystery'), heroId, persona: text(value.persona, 1500, '') };
       this.db.prepare("INSERT INTO campaign_ai(campaign_id,owner_id,enabled,setup,memory,updated,context_budget) VALUES (?,?,1,?,'',?,?) ON CONFLICT(campaign_id) DO UPDATE SET owner_id=excluded.owner_id,enabled=1,setup=excluded.setup,context_budget=excluded.context_budget,updated=excluded.updated")
         .run(campaign, user, JSON.stringify(next), new Date().toISOString(), budget);
       if (!this.chats.defaultId(campaign)) this.chats.create(campaign);
@@ -339,6 +367,37 @@ export class AiService {
     return this.chats.defaultId(campaign) ?? this.chats.create(campaign);
   }
 
+  /** Reads and shape-checks `input.prayerDie = { index }`. A missing field is not a spend. */
+  private prayerDieIndex(value: unknown): number | undefined {
+    if (value === undefined) return undefined;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid action: Prayer Die must name an index');
+    const index = (value as Record<string, unknown>).index;
+    if (typeof index !== 'number' || !Number.isInteger(index) || index < 0) throw new Error('Invalid action: Prayer Die index is invalid');
+    return index;
+  }
+
+  /**
+   * Session-start class features. Seraph Prayer Dice are rolled once for the chat that opens
+   * play. The chat marker on the sheet makes this idempotent across retries and restarts, and
+   * neither pausing, resuming nor refreshing a transcript calls it. It never rests the party or
+   * changes anything besides the dice and their marker.
+   */
+  private startSessionFeatures(campaign: string, chat: string): void {
+    if (this.db.prepare('SELECT 1 FROM ai_messages WHERE chat_id = ? LIMIT 1').get(chat)) return;
+    for (const doc of this.actions.docs(campaign, 'sheets')) {
+      const sheet = doc.value as unknown as Sheet;
+      if (sheet.classId !== 'seraph' || sheet.resources?.featuresStartedFor === chat) continue;
+      const dice = rollPrayerDice(sheet);
+      const next: Sheet = {
+        ...sheet,
+        resources: { ...sheet.resources, prayerDice: dice, featuresStartedFor: chat },
+        updatedAt: new Date().toISOString(),
+      };
+      this.actions.write(campaign, 'sheets', sheet.id, next);
+      this.publish(campaign, 'sheets', sheet.id, next);
+    }
+  }
+
   /** Creates an empty session. Nothing runs until someone presses Begin. */
   createChat(user: string, campaign: string, raw: unknown) {
     this.authorize(user, campaign);
@@ -358,7 +417,9 @@ export class AiService {
     this.authorize(user, campaign);
     const chat = this.requireChat(campaign, text(record(raw).chatId, 120));
     if (chat.status === 'ended') throw new Error('Invalid action: this session has ended. Start a new session to keep playing.');
+    if (chat.status === 'paused') throw new Error('Invalid action: this session is paused. Resume it to keep playing.');
     if (this.db.prepare('SELECT 1 FROM ai_messages WHERE chat_id = ? LIMIT 1').get(chat.id)) throw new Error('Invalid action: this session has already begun. Send a message to continue.');
+    this.startSessionFeatures(campaign, chat.id);
     const recap = this.journal.hasEntries(campaign);
     return this.enqueue(user, campaign, chat.id, 'turn', (recap ? 'open:' : 'begin:') + randomUUID(), recap ? null : BEGIN_MESSAGE);
   }
@@ -396,19 +457,47 @@ export class AiService {
   endChat(user: string, campaign: string, raw: unknown) {
     this.authorize(user, campaign);
     this.campaigns.requireGm(user, campaign);
-    const chat = this.requireChat(campaign, text(record(raw).chatId, 120));
+    const input = record(raw);
+    const chat = this.requireChat(campaign, text(input.chatId, 120));
     if (chat.status === 'ended') throw new Error('Invalid action: this session has already ended');
+    if (input.force !== true && this.hasPendingCards(chat.id)) throw new Error('Invalid action: resolve or pause first — there are pending cards.');
     return { turn: this.enqueue(user, campaign, chat.id, 'end', 'end:' + randomUUID(), null) };
+  }
+
+  /** Stops play without ending it: open cards keep their ids and paid costs, and resolving them after resume counts once. */
+  pauseChat(user: string, campaign: string, raw: unknown) {
+    this.authorize(user, campaign);
+    this.campaigns.requireGm(user, campaign);
+    const chat = this.requireChat(campaign, text(record(raw).chatId, 120));
+    if (chat.status === 'ended') throw new Error('Invalid action: this session has ended');
+    if (chat.status === 'paused') throw new Error('Invalid action: this session is already paused');
+    return { turn: this.enqueue(user, campaign, chat.id, 'pause', 'pause:' + randomUUID(), null) };
+  }
+
+  resumeChat(user: string, campaign: string, raw: unknown) {
+    this.authorize(user, campaign);
+    this.campaigns.requireGm(user, campaign);
+    const chat = this.requireChat(campaign, text(record(raw).chatId, 120));
+    if (chat.status === 'ended') throw new Error('Invalid action: this session has ended');
+    if (chat.status !== 'paused') throw new Error('Invalid action: this session is not paused');
+    this.assertIdle(campaign, 'Wait for the GM turn to finish before resuming this session.');
+    this.db.transaction(() => this.chats.resume(campaign, chat.id, new Date().toISOString()))();
+    return { chat: this.chats.view(campaign, chat.id)! };
+  }
+
+  private hasPendingCards(chat: string): boolean {
+    return !!this.db.prepare("SELECT 1 FROM ai_messages WHERE chat_id = ? AND interaction IS NOT NULL AND json_extract(interaction, '$.resolved') = 0 AND json_extract(interaction, '$.kind') IN ('roll','choices','damage') LIMIT 1").get(chat);
   }
 
   start(user: string, campaign: string, raw: unknown) {
     this.authorize(user, campaign);
     const input = record(raw);
     const requestId = text(input.requestId, 100);
-    if (!/^[\w:-]{1,100}$/.test(requestId) || /^(open|begin|compact|end|resolve):/.test(requestId)) throw new Error('Invalid request ID');
+    if (!/^[\w:-]{1,100}$/.test(requestId) || /^(open|begin|compact|end|pause|resolve):/.test(requestId)) throw new Error('Invalid request ID');
     const body = text(input.message, 4000);
     if (!body) throw new Error('Invalid message');
     const chat = this.chatFor(campaign, text(input.chatId, 120, '') || null);
+    this.startSessionFeatures(campaign, chat);
     return this.enqueue(user, campaign, chat, 'turn', requestId, body);
   }
 
@@ -418,7 +507,9 @@ export class AiService {
     this.campaigns.requireGm(settings.owner_id, campaign);
     const previous = this.db.prepare('SELECT id, status FROM ai_turns WHERE campaign_id = ? AND request_id = ?').get(campaign, requestId) as { id: string; status: string } | undefined;
     if (previous) return previous;
-    if (this.requireChat(campaign, chat).status === 'ended') throw new Error('Invalid action: this session has ended. Start a new session to keep playing.');
+    const chatRow = this.requireChat(campaign, chat);
+    if (chatRow.status === 'ended') throw new Error('Invalid action: this session has ended. Start a new session to keep playing.');
+    if (chatRow.status === 'paused' && kind === 'turn') throw new Error('Invalid action: this session is paused. Resume it to keep playing.');
     this.assertIdle(campaign, 'The GM is already taking a turn.');
     const id = randomUUID();
     const at = new Date().toISOString();
@@ -484,20 +575,35 @@ export class AiService {
     return this.housekeeping(rt, settings, budgetTokens(budgetOf(settings), credential.context_window), row.kind);
   }
 
-  /** Compact now, or end a session. Neither counts toward the turn's model-response limit. */
+  /** Compact now, end a session, or pause it. None counts toward the turn's model-response limit. */
   private async housekeeping(rt: Runtime, settings: Settings, tokens: number, kind: AiTurnKind) {
     const usage = this.assemble(rt.campaign, settings, rt.chat, tokens);
     await this.compact(rt, kind === 'end' ? 'final' : 'manual', usage.messageBudget);
     const at = new Date().toISOString();
+    const cleared: { ns: string; id: string; value: unknown }[] = [];
     this.db.transaction(() => {
       rt.assertActive();
       if (kind === 'end') {
         this.db.prepare("UPDATE ai_messages SET interaction = json_set(interaction, '$.resolved', json('true')) WHERE chat_id = ? AND interaction IS NOT NULL AND json_extract(interaction, '$.kind') IN ('roll', 'choices') AND json_extract(interaction, '$.resolved') = 0").run(rt.chat);
         this.chats.end(rt.campaign, rt.chat, at);
         this.actions.message(rt.campaign, rt.chat, rt.turn, 'notice', ENDED_NOTICE);
+        // Prayer Dice: "At the end of each session, clear all unspent Prayer Dice."
+        for (const doc of this.actions.docs(rt.campaign, 'sheets')) {
+          const sheet = doc.value as unknown as Sheet;
+          if (!sheet.resources?.prayerDice?.length || sheet.resources.featuresStartedFor !== rt.chat) continue;
+          const next: Sheet = { ...sheet, resources: { ...sheet.resources, prayerDice: [] }, updatedAt: at };
+          this.actions.write(rt.campaign, 'sheets', sheet.id, next);
+          cleared.push({ ns: 'sheets', id: sheet.id, value: next });
+        }
+      } else if (kind === 'pause') {
+        // Unlike end, pause leaves every open roll, choice and damage card untouched.
+        const chat = this.requireChat(rt.campaign, rt.chat);
+        this.chats.pause(rt.campaign, rt.chat, at, chat.resume_note ?? '');
+        this.actions.message(rt.campaign, rt.chat, rt.turn, 'notice', PAUSED_NOTICE);
       }
       this.db.prepare("UPDATE ai_turns SET status = 'complete', error = '', checkpoint = '[]', updated = ? WHERE id = ?").run(at, rt.turn);
     })();
+    for (const doc of cleared) this.publish(rt.campaign, doc.ns, doc.id, doc.value);
   }
 
   private async prepare(rt: Runtime, settings: Settings, tokens: number, instruction: string | null): Promise<ModelMessage[]> {
@@ -533,7 +639,7 @@ export class AiService {
           rt.assertActive();
           result = { error: error instanceof Error && /^(Invalid|Forbidden)/.test(error.message) ? error.message : 'Tool could not be completed. Read the current context and use a legal action.' };
         }
-        conversation.push({ role: 'tool', tool_call_id: call.id, content: fitJson(result, TOOL_RESULT_CHARS) });
+        conversation.push({ role: 'tool', tool_call_id: call.id, content: fitJson(result, TOOL_RESULT_OVERRIDES[call.function.name] ?? TOOL_RESULT_CHARS) });
         save();
       }
       const steps = (this.db.prepare('SELECT steps FROM ai_turns WHERE id = ?').get(rt.turn) as { steps: number }).steps;
@@ -627,6 +733,16 @@ export class AiService {
     return rows.map(row => ({ ...row, tokens: estimateTokens(clip(row.text, MESSAGE_CHARS)) }));
   }
 
+  /** The party line for the setup block: compact names, classes, and levels, up to six heroes. */
+  private partyLine(campaign: string): string {
+    const party = this.actions.docs(campaign, 'sheets').slice(0, 6).map(doc => {
+      const sheet = doc.value as unknown as Sheet;
+      const className = getClass(sheet.classId)?.name ?? sheet.classId;
+      return sheet.name + ' (' + className + ', level ' + String(sheet.level) + ')';
+    });
+    return 'Party: ' + (party.length ? party.join('; ') : 'none yet');
+  }
+
   /** Memory parts in prompt order. They are rebuilt for every request, so edits take effect at once. */
   private blocks(campaign: string, settings: Settings, chat: string | null): MemoryPart[] {
     const limits = limitsFor(budgetOf(settings));
@@ -640,31 +756,67 @@ export class AiService {
         'System: ' + (getRuleset(config)?.name ?? config.rulesetId),
         'Premise: ' + (clip(setup.premise, 1500) || 'not written yet'),
         'Tone: ' + setup.tone,
-        'Player hero: ' + (hero ? hero.name : 'not chosen'),
-      ].join(NL),
+        setup.persona.trim() ? 'GM direction (campaign persona, follow it): ' + clip(setup.persona, 1500) : '',
+        hero ? 'Player hero: ' + hero.name : setup.heroId ? 'Player hero: not chosen' : this.partyLine(campaign),
+      ].filter(line => line !== '').join(NL),
     }];
     const preparation = this.preparations(campaign, limits.prepChars);
     if (preparation) parts.push({ kind: 'preparation', text: preparation });
+    const canon = this.canonPart(campaign);
+    if (canon) parts.push({ kind: 'canon', text: canon });
     if (settings.digest) parts.push({ kind: 'digest', text: 'Campaign digest (rolling memory of the whole campaign):' + NL + clip(settings.digest, 1800) });
     for (const chapter of this.journal.recentChapters(campaign, limits.chapters)) parts.push({ kind: 'chapter', text: 'Chapter the players have already read: ' + chapter.title + NL + clip(chapter.body, 1300) });
     if (settings.memory) parts.push({ kind: 'secrets', text: 'GM-only secrets and plans (never reveal these):' + NL + clip(settings.memory, SECRETS_LIMIT) });
     const state = this.actions.readState(campaign);
     if (JSON.stringify(state) !== JSON.stringify(emptyState())) parts.push({ kind: 'state', text: 'Campaign state (GM only; authoritative, change it with update_state):' + NL + renderState(state, limits.stateChars) });
-    const summary = chat ? (this.chats.row(campaign, chat)?.summary ?? '') : '';
+    const chatRow = chat ? this.chats.row(campaign, chat) : undefined;
+    const summary = chatRow?.summary ?? '';
     if (summary) parts.push({ kind: 'summary', text: 'Summary of this session so far:' + NL + clip(summary, 2000) });
+    if (chatRow?.resume_note) parts.push({ kind: 'resume', text: 'Where we stopped: ' + clip(chatRow.resume_note, 1500) });
     return parts;
   }
 
-  /** GM preparations: the setting and the two newest scenarios, shortened to the room the memory size leaves for them. */
+  /**
+   * GM preparations: the setting and two scenarios, shortened to the room the memory size leaves for them.
+   * The active scenario is pinned first, so preparing a future one never displaces the current adventure.
+   */
   private preparations(campaign: string, room: number): string {
     const docs = this.actions.docs(campaign, 'gm').filter(doc => doc.value.kind === 'setting' || doc.value.kind === 'scenario');
     const setting = docs.find(doc => doc.value.kind === 'setting');
-    const scenarios = docs.filter(doc => doc.value.kind === 'scenario').slice(0, 2);
+    const scenarios = docs.filter(doc => doc.value.kind === 'scenario');
+    const pinned = scenarios.find(doc => doc.value.status === 'active') ?? scenarios[0];
+    const chosen = pinned ? [pinned] : [];
+    for (const scenario of scenarios) {
+      if (chosen.length >= 2) break;
+      if (!chosen.includes(scenario)) chosen.push(scenario);
+    }
     const lines: string[] = [];
     if (setting) lines.push('Setting: ' + clip(String(setting.value.title ?? 'Untitled'), 200), ...fieldLines(setting.value.fields, SETTING_FIELDS));
-    for (const scenario of scenarios) lines.push('Scenario: ' + clip(String(scenario.value.title ?? 'Untitled'), 200), ...fieldLines(scenario.value.fields, SCENARIO_FIELDS));
+    for (const scenario of chosen) lines.push('Scenario: ' + clip(String(scenario.value.title ?? 'Untitled'), 200), ...fieldLines(scenario.value.fields, SCENARIO_FIELDS));
     if (!lines.length) return '';
     return shorten(['GM preparations (GM only):', ...lines].join(NL), room, '(preparations shortened to fit the memory limit)');
+  }
+
+  /** Active canon titles, newest first, within about 1500 characters, so the GM knows what it can retrieve. */
+  private canonPart(campaign: string): string {
+    const entries = this.actions.canon.listTitles(campaign);
+    if (!entries.length) return '';
+    const header = 'Canon in this campaign (GM only; use canon_search or canon_read for the full entry):';
+    const lines: string[] = [];
+    const render = () => header + (lines.length ? NL + lines.join(NL) : '');
+    for (const entry of entries) {
+      const line = entry.kind + ': ' + entry.title + ' (id ' + entry.id + ')';
+      if (render().length + 1 + line.length > 1440) break;
+      lines.push(line);
+    }
+    const hidden = entries.length - lines.length;
+    if (hidden <= 0) return render();
+    let note = '(' + String(hidden) + ' more; use canon_search)';
+    while (lines.length && render().length + 1 + note.length > 1500) {
+      lines.pop();
+      note = '(' + String(entries.length - lines.length) + ' more; use canon_search)';
+    }
+    return render() + NL + note;
   }
 
   /** The memory parts after the cap is applied, ready to send as system messages. */
@@ -724,7 +876,10 @@ export class AiService {
       const row = this.db.prepare('SELECT interaction, chat_id FROM ai_messages WHERE id = ? AND campaign_id = ?').get(messageId, campaign) as { interaction: string | null; chat_id: string | null } | undefined;
       if (!row?.interaction) throw new Error('Invalid action card');
       const interaction = JSON.parse(row.interaction) as AiInteraction;
-      if (!row.chat_id || this.requireChat(campaign, row.chat_id).status === 'ended') throw new Error('Invalid action: this session has ended, so its cards are read only');
+      if (!row.chat_id) throw new Error('Invalid action card');
+      const status = this.requireChat(campaign, row.chat_id).status;
+      if (status === 'ended') throw new Error('Invalid action: this session has ended, so its cards are read only');
+      if (status === 'paused') throw new Error('Invalid action: this session is paused. Resume it to keep playing.');
       if (interaction.resolved) return false;
       chatId = row.chat_id;
       const put = (ns: string, id: string, value: unknown) => {
@@ -732,6 +887,8 @@ export class AiService {
         changes.push({ ns, id, value });
       };
       if (interaction.kind === 'choices') {
+        if (input.prayerDie !== undefined) throw new Error('Invalid action: a choice card has no Prayer Die timing');
+        if (input.focus !== undefined) throw new Error('Invalid action: Ranger’s Focus applies to an attack roll');
         const choice = text(input.choice, 300);
         if (!interaction.choices?.includes(choice)) throw new Error('Invalid choice');
         resultText = choice;
@@ -739,7 +896,12 @@ export class AiService {
       } else {
         let sheet = this.actions.read<Sheet>(campaign, 'sheets', interaction.heroId!);
         if (!sheet) throw new Error('Invalid hero');
+        const prayerIndex = this.prayerDieIndex(input.prayerDie);
         if (interaction.kind === 'roll') {
+          if (input.focus !== undefined && typeof input.focus !== 'boolean') throw new Error('Invalid action: Focus must be true or false');
+          const focus = input.focus === true;
+          if (focus && !interaction.enemyId) throw new Error('Invalid action: Ranger’s Focus requires an attack against an adversary');
+          if (focus && !hasRangersFocus(sheet)) throw new Error('Invalid action: only a Ranger can use Ranger’s Focus');
           let modifier = sheet.traits[interaction.trait as TraitName];
           const weapon = interaction.enemyId ? weaponForSlot(sheet, 'primary') : undefined;
           if (interaction.enemyId && !weapon) throw new Error('Invalid attack: equip a primary weapon in Characters');
@@ -761,17 +923,41 @@ export class AiService {
             put('solo', 'state', solo);
             applied = applied === 'disadvantage' ? undefined : 'advantage';
           }
-          const rolled = roll({ modifier, advantage: applied });
+          if (focus) {
+            if (sheet.hope < 1) throw new Error('Invalid action: Ranger’s Focus costs 1 Hope');
+            sheet = { ...sheet, hope: sheet.hope - 1 };
+          }
+          const physical = input.dice === undefined ? undefined : physicalDiceOf(input.dice);
+          const damageFaces = input.damageDice === undefined ? undefined : physicalDamageOf(input.damageDice);
+          let rolled: DualityResult;
+          if (physical) {
+            if (applied && physical.advantageDie === undefined) throw new Error('Invalid dice: report the advantage d6');
+            try {
+              rolled = resolveDuality(physical.hope, physical.fear, { modifier, advantage: applied, advantageDie: physical.advantageDie });
+            } catch (error) {
+              if (error instanceof RangeError) throw new Error('Invalid dice: ' + error.message);
+              throw error;
+            }
+          } else {
+            rolled = roll({ modifier, advantage: applied });
+          }
+          let prayerNote = '';
+          if (prayerIndex !== undefined) {
+            const spent = spendPrayerDie(sheet, prayerIndex);
+            sheet = spent.sheet;
+            rolled = { ...rolled, total: rolled.total + spent.value };
+            prayerNote = ' Prayer Die +' + String(spent.value) + ' added to the result (total ' + String(rolled.total) + ').';
+          }
           const success = rolled.critical || rolled.total >= interaction.difficulty!;
           sheet = applyDualityEffects(sheet, rolled).sheet;
-          dice.push({ kind: 'duality', result: rolled });
+          dice.push({ kind: 'duality', result: physical ? { ...rolled, source: 'player' } : rolled });
           if (rolled.withFear) {
             const fear = this.actions.read<{ value: number }>(campaign, 'combat', 'fear') ?? { value: 0 };
             put('combat', 'fear', { kind: 'fear', value: Math.min(12, fear.value + 1) });
           }
           const advantageNote = rolled.advantageDie ? ', ' + String(rolled.advantage) + ' d6 ' + String(rolled.advantageDie) : '';
           const outcome = rolled.critical ? 'Critical success' : (success ? 'Success' : 'Failure') + ' with ' + (rolled.withFear ? 'Fear' : 'Hope');
-          resultText = sheet.name + ': Hope ' + String(rolled.hope) + ', Fear ' + String(rolled.fear) + advantageNote + ', modifier ' + String(modifier) + ': ' + String(rolled.total) + ' vs ' + String(interaction.difficulty) + ' — ' + outcome + '.';
+          resultText = sheet.name + ': Hope ' + String(rolled.hope) + ', Fear ' + String(rolled.fear) + advantageNote + ', modifier ' + String(modifier) + ': ' + String(rolled.total) + ' vs ' + String(interaction.difficulty) + ' — ' + outcome + '.' + (focus ? ' Spent 1 Hope for Ranger’s Focus.' : '') + prayerNote;
           eventTitle = 'Roll · ' + sheet.name + ' · ' + (rolled.critical ? 'critical success' : success ? 'success' : 'failure');
           eventHidden = !!interaction.enemyId && this.actions.isHiddenCombat(campaign, interaction.enemyId);
           if (success && weapon && interaction.enemyId) {
@@ -779,7 +965,18 @@ export class AiService {
             const source = adversaries.find(entry => entry.id === enemy?.catalogId);
             if (!enemy || !source) throw new Error('Invalid attack target');
             const notation = damageNotation(weapon.damage, sheet.proficiency);
-            const damage = rollDice(notation);
+            let damage: DiceRoll;
+            if (damageFaces) {
+              try {
+                damage = resolveDiceFaces(notation, damageFaces);
+              } catch (error) {
+                if (error instanceof DiceNotationError || error instanceof RangeError) throw new Error('Invalid dice: ' + error.message);
+                throw error;
+              }
+            } else {
+              if (physical) throw new Error('Invalid dice: report the damage dice');
+              damage = rollDice(notation);
+            }
             const total = damage.total + (rolled.critical ? maxDiceTotal(notation) : 0);
             dice.push({ kind: 'dice', result: damage });
             if (source.type === 'Minion') {
@@ -790,16 +987,45 @@ export class AiService {
               const marks = total <= 0 ? 0 : thresholds ? (thresholds.severe !== null && total >= thresholds.severe ? 3 : total >= thresholds.major ? 2 : 1) : 1;
               enemy.hpMarked = Math.min(source.hp, enemy.hpMarked + marks);
             }
+            // Ranger's Focus: the success makes this adversary the Focus. A hero already focusing
+            // this target keeps it. Damaging the Focus forces it to mark 1 Stress.
+            const wasFocused = focusTargetId(sheet) === interaction.enemyId;
+            if (focus) sheet = setFocusTarget(sheet, interaction.enemyId);
+            const focused = focus || wasFocused;
+            if (focused && total > 0) enemy.stressMarked = Math.min(source.stress ?? Infinity, (enemy.stressMarked ?? 0) + 1);
             put('combat', interaction.enemyId, enemy);
             resultText += ' ' + weapon.name + ' deals ' + String(total) + ' damage to ' + String(enemy.name) + '; marked HP ' + String(enemy.hpMarked) + '/' + String(source.hp) + '.';
+            if (focused && total > 0) resultText += ' The Focused target marks 1 Stress.';
+            const defeated = source.type === 'Minion' ? (enemy.defeated ?? 0) >= (enemy.groupSize ?? 1) : enemy.hpMarked >= source.hp;
+            if (defeated) {
+              // The printed Focus ends when its target is defeated; clear it wherever it points here.
+              sheet = clearFocusTarget(sheet);
+              for (const doc of this.actions.docs(campaign, 'sheets')) {
+                if (doc.id === sheet.id) continue;
+                const other = doc.value as unknown as Sheet;
+                if (focusTargetId(other) === interaction.enemyId) put('sheets', doc.id, { ...clearFocusTarget(other), updatedAt: new Date().toISOString() });
+              }
+              resultText += ' ' + String(enemy.name) + ' is defeated; Ranger’s Focus ends.';
+            }
           }
+          if (physical) resultText += ' (player-reported dice)';
         } else if (interaction.kind === 'damage') {
+          if (input.focus !== undefined) throw new Error('Invalid action: Ranger’s Focus applies to an attack roll');
+          let damage = interaction.damage ?? 0;
+          let prayerNote = '';
+          if (prayerIndex !== undefined) {
+            const spent = spendPrayerDie(sheet, prayerIndex);
+            sheet = spent.sheet;
+            damage = Math.max(0, damage - spent.value);
+            interaction.damage = damage;
+            prayerNote = sheet.name + ' spends a Prayer Die (' + String(spent.value) + ') to reduce the damage to ' + String(damage) + '. ';
+          }
           const armor = input.useArmor === true && !interaction.direct && sheet.armorSlotsMarked < armorScore(sheet);
-          const severity = damageSeverity(interaction.damage ?? 0, damageThresholds(sheet));
+          const severity = damageSeverity(damage, damageThresholds(sheet));
           const marks = damageHp(severity, armor);
           sheet = { ...sheet, hpMarked: Math.min(hpMax(sheet), sheet.hpMarked + marks), armorSlotsMarked: sheet.armorSlotsMarked + (armor && marks < damageHp(severity, false) ? 1 : 0) };
-          resultText = sheet.name + ' takes ' + String(interaction.damage) + ' damage: ' + String(marks) + ' HP marked' + (armor ? ', using Armor' : '') + '. HP marked ' + String(sheet.hpMarked) + '/' + String(hpMax(sheet)) + '.' + (sheet.hpMarked >= hpMax(sheet) ? ' A death move is required; the player chooses it.' : '');
-          eventTitle = 'Damage · ' + sheet.name + ' takes ' + String(interaction.damage) + ' (' + String(marks) + ' HP)';
+          resultText = prayerNote + sheet.name + ' takes ' + String(damage) + ' damage: ' + String(marks) + ' HP marked' + (armor ? ', using Armor' : '') + '. HP marked ' + String(sheet.hpMarked) + '/' + String(hpMax(sheet)) + '.' + (sheet.hpMarked >= hpMax(sheet) ? ' A death move is required; the player chooses it.' : '');
+          eventTitle = 'Damage · ' + sheet.name + ' takes ' + String(damage) + ' (' + String(marks) + ' HP)';
         }
         put('sheets', sheet.id, { ...sheet, updatedAt: new Date().toISOString() });
       }
@@ -814,6 +1040,25 @@ export class AiService {
     for (const entry of dice) this.publishRoll(campaign, entry.kind, entry.result, actor);
     if (changed) return this.enqueue(user, campaign, chatId, 'turn', 'resolve:' + messageId, null);
     return { resolved: true };
+  }
+
+  /** Imports up to 50 Markdown documents as durable canon entries. Each document is stored whole, with import provenance. */
+  importCanon(user: string, campaign: string, raw: unknown) {
+    this.authorize(user, campaign);
+    this.campaigns.requireGm(user, campaign);
+    const input = record(raw);
+    if (!Array.isArray(input.documents)) throw new Error('Invalid canon import: documents must be a list');
+    const documents: unknown[] = input.documents;
+    if (documents.length === 0) throw new Error('Invalid canon import: at least one document is required');
+    if (documents.length > 50) throw new Error('Invalid canon import: at most 50 documents');
+    const entries = this.db.transaction(() => documents.map((rawDocument: unknown) => {
+      const doc = record(rawDocument);
+      const title = canonTitle(doc.title);
+      const kind = doc.kind === undefined ? 'history' : canonKind(doc.kind);
+      const visibility = canonVisibility(doc.visibility);
+      return this.actions.canon.upsert(campaign, { kind, title, body: canonBody(doc.body), visibility, source: 'import:' + title });
+    }))();
+    return { imported: entries.length, entries };
   }
 
   journalPage(user: string, campaign: string, query: Record<string, unknown>): AiJournalPage {

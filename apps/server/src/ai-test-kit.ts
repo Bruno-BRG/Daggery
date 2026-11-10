@@ -109,10 +109,11 @@ export async function fixture(handler: Handler, budget = 'balanced') {
     return handler(request);
   }) as typeof fetch);
   const vault = new SecretVault(randomBytes(32));
-  const ai = new AiService(db, campaigns, vault, provider, () => {});
+  const rolls: { kind: string; result: any }[] = [];
+  const ai = new AiService(db, campaigns, vault, provider, () => {}, (_campaign, kind, result) => { rolls.push({ kind, result }); });
   await ai.saveConnection(user.id, { provider: 'opencode', model: MODEL, apiKey: 'test-secret-never-in-context' });
   const setup = ai.configure(user.id, campaign, { premise: 'Find the vanished keeper', budget, quickHero: { name: 'Ash', classId: 'warrior' } });
-  return { ai, db, campaigns, user, campaign, requests, setup, provider, vault, close: async () => { await ai.close(); db.close(); } };
+  return { ai, db, campaigns, user, campaign, requests, setup, provider, vault, rolls, close: async () => { await ai.close(); db.close(); } };
 }
 
 /** Waits until the newest turn of the campaign leaves the running state, then returns the session view. */
