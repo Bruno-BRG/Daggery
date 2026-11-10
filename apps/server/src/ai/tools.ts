@@ -87,7 +87,7 @@ function cardView(id: string): Record<string, unknown> {
 
 /** A compact but complete read of one hero sheet, with catalog IDs next to every name. */
 function characterView(sheet: Sheet): Record<string, unknown> {
-  const cls = getClass(sheet.classId), subclass = getSubclass(sheet.classId, sheet.subclassId), community = getCommunity(sheet.communityId), equipped = getArmor(sheet.armorId);
+  const cls = getClass(sheet.classId), subclass = getSubclass(sheet.classId, sheet.subclassId), community = getCommunity(sheet.communityId), equipped = getArmor(sheet.armorId, sheet);
   const slot = (name: 'primary' | 'secondary') => {
     const entry = sheet.weapons.find(item => item.slot === name);
     return entry ? { id: entry.weaponId, name: weaponForSlot(sheet, name)?.name ?? null } : null;

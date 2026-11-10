@@ -12,7 +12,7 @@ import {
 } from '@daggery/content';
 import type { DualityResult } from '../../dice';
 import type { TraitName, Traits } from '../../types';
-import type { DamageSeverity, Sheet } from './sheet-types';
+import type { DamageSeverity, InlineArmor, InlineWeapon, Sheet } from './sheet-types';
 
 export const TRAIT_ORDER: TraitName[] = [
   'agility',
@@ -79,6 +79,11 @@ export type AncestryEntry = (typeof ancestries)[number];
 export type CommunityEntry = (typeof communities)[number];
 export type ArmorEntry = (typeof armor)[number];
 export type WeaponEntry = (typeof weapons)[number];
+/** A weapon resolved from the catalog or from a player-made inventory entry. */
+export type WeaponStats = WeaponEntry | InlineWeapon;
+/** Armor resolved from the catalog or from a player-made inventory entry. */
+export type ArmorStats = ArmorEntry | InlineArmor;
+export type { InlineArmor, InlineWeapon };
 export type DomainCardEntry = (typeof domainCards)[number];
 export type ContentItem = (typeof items)[number];
 export type Consumable = (typeof consumables)[number];
@@ -114,12 +119,29 @@ export function getCommunity(id: string | null | undefined): CommunityEntry | un
   return id ? communities.find((entry) => entry.id === id) : undefined;
 }
 
-export function getArmor(id: string | null | undefined): ArmorEntry | undefined {
-  return id ? armor.find((entry) => entry.id === id) : undefined;
+/** Player-made gear keeps its stats on the inventory entry that owns it. */
+function inlineWeapon(sheet: Sheet | undefined, id: string | null | undefined): InlineWeapon | undefined {
+  if (!sheet || !id) return undefined;
+  const entry = sheet.inventory.find(
+    (item) => item.kind === 'weapon' && item.weapon && (item.weapon.id === id || item.equipmentId === id),
+  );
+  return entry?.weapon;
 }
 
-export function getWeapon(id: string | null | undefined): WeaponEntry | undefined {
-  return id ? weapons.find((entry) => entry.id === id) : undefined;
+function inlineArmor(sheet: Sheet | undefined, id: string | null | undefined): InlineArmor | undefined {
+  if (!sheet || !id) return undefined;
+  const entry = sheet.inventory.find(
+    (item) => item.kind === 'armor' && item.armor && (item.armor.id === id || item.equipmentId === id),
+  );
+  return entry?.armor;
+}
+
+export function getArmor(id: string | null | undefined, sheet?: Sheet): ArmorStats | undefined {
+  return (id ? armor.find((entry) => entry.id === id) : undefined) ?? inlineArmor(sheet, id);
+}
+
+export function getWeapon(id: string | null | undefined, sheet?: Sheet): WeaponStats | undefined {
+  return (id ? weapons.find((entry) => entry.id === id) : undefined) ?? inlineWeapon(sheet, id);
 }
 
 export function getDomainCard(id: string | null | undefined): DomainCardEntry | undefined {
@@ -354,7 +376,7 @@ export function canGainMastery(sheet: Sheet, chosen: readonly string[] = []): bo
 }
 
 /** Attack modifier for a weapon: its trait, or the subclass Spellcast trait for Spellcast weapons. */
-export function weaponModifier(sheet: Sheet, weapon: WeaponEntry): number {
+export function weaponModifier(sheet: Sheet, weapon: WeaponStats): number {
   if (weapon.trait === 'Spellcast') return spellcastTraitValue(sheet);
   const trait = traitNameFromWeapon(weapon.trait);
   return trait ? sheet.traits[trait] : 0;
@@ -370,7 +392,7 @@ function featureModifierToEvasion(text: string | undefined): number {
 }
 
 export function armorScore(sheet: Sheet): number {
-  const equipped = getArmor(sheet.armorId);
+  const equipped = getArmor(sheet.armorId, sheet);
   if (!equipped) return 0;
   const heritage = heritageBonuses(sheet).armorScoreBonus;
   return Math.min(MAX_ARMOR_SCORE, equipped.baseScore + heritage);
@@ -380,7 +402,7 @@ export function evasion(sheet: Sheet): number {
   const cls = getClass(sheet.classId);
   const base = cls?.startingEvasion ?? 10;
   let bonus = sheet.evasionBonus + heritageBonuses(sheet).evasionBonus;
-  const equipped = getArmor(sheet.armorId);
+  const equipped = getArmor(sheet.armorId, sheet);
   bonus += featureModifierToEvasion(equipped?.feature?.text);
   for (const weapon of getEquippedWeapons(sheet)) {
     bonus += featureModifierToEvasion(weapon.feature?.text);
@@ -395,7 +417,7 @@ export interface Thresholds {
 
 /** Armor base thresholds + level (+ Spellcast trait for the "Enchanted" feature + Earthkin Stoneskin). */
 export function damageThresholds(sheet: Sheet): Thresholds {
-  const equipped = getArmor(sheet.armorId);
+  const equipped = getArmor(sheet.armorId, sheet);
   const enchantBonus = equipped?.feature?.name === 'Enchanted' ? spellcastTraitValue(sheet) : 0;
   const heritage = heritageBonuses(sheet).thresholdsBonus;
   if (!equipped) {
@@ -421,14 +443,14 @@ export function stressMax(sheet: Sheet): number {
   return Math.min(MAX_STRESS, 6 + sheet.bonusStressSlots + heritage);
 }
 
-export function getEquippedWeapons(sheet: Sheet): WeaponEntry[] {
+export function getEquippedWeapons(sheet: Sheet): WeaponStats[] {
   return sheet.weapons
-    .map((entry) => getWeapon(entry.weaponId))
-    .filter((entry): entry is WeaponEntry => entry !== undefined);
+    .map((entry) => getWeapon(entry.weaponId, sheet))
+    .filter((entry): entry is WeaponStats => entry !== undefined);
 }
 
-export function weaponForSlot(sheet: Sheet, slot: 'primary' | 'secondary'): WeaponEntry | undefined {
-  return getWeapon(sheet.weapons.find((entry) => entry.slot === slot)?.weaponId);
+export function weaponForSlot(sheet: Sheet, slot: 'primary' | 'secondary'): WeaponStats | undefined {
+  return getWeapon(sheet.weapons.find((entry) => entry.slot === slot)?.weaponId, sheet);
 }
 
 /** Turns a weapon damage string into the number of dice granted by Proficiency: d8+3 -> 2d8+3. */

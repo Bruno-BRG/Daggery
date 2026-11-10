@@ -9,13 +9,41 @@ export interface Experience {
 
 export type WeaponSlot = 'primary' | 'secondary';
 
-/** An equipped weapon. Equipment is looked up in @daggery/content by id. */
+/** An equipped weapon. Catalog gear is looked up in @daggery/content by id; player-made gear
+ * carries its stats on the source inventory entry, found through `equipmentId`. */
 export interface SheetWeapon {
   weaponId: string;
   slot: WeaponSlot;
 }
 
 export type InventoryKind = 'item' | 'consumable' | 'weapon' | 'armor' | 'custom';
+
+/**
+ * Full stats for a weapon the player invented. Stored inline on the inventory entry so it keeps
+ * working without a content-catalog entry. Matches the @daggery/content weapon shape.
+ */
+export interface InlineWeapon {
+  id: string;
+  name: string;
+  category: string;
+  tier: number;
+  trait: string;
+  range: string;
+  damage: string;
+  damageType: string;
+  burden: string;
+  feature?: { name: string; text: string } | null;
+}
+
+/** Full stats for armor the player invented. Matches the @daggery/content armor shape. */
+export interface InlineArmor {
+  id: string;
+  name: string;
+  tier: number;
+  baseThresholds: { major: number; severe: number };
+  baseScore: number;
+  feature?: { name: string; text: string } | null;
+}
 
 export interface InventoryEntry {
   id: string;
@@ -27,10 +55,15 @@ export interface InventoryEntry {
   catalogId?: string;
   /** Optional decorative icon chosen for a custom item. Older sheets infer it from the item. */
   icon?: string;
-  /** Catalog identity for stowed gear, allowing it to be equipped again. */
+  /** Catalog identity for stowed gear, allowing it to be equipped again. For player-made gear
+   * this is the inline weapon/armor id instead of a catalog id. */
   equipmentId?: string;
   /** Damage belongs to this armor, including while it is stowed. */
   armorSlotsMarked?: number;
+  /** Inline stats for a player-made weapon (kind 'weapon'). Absent on catalog gear. */
+  weapon?: InlineWeapon;
+  /** Inline stats for player-made armor (kind 'armor'). Absent on catalog gear. */
+  armor?: InlineArmor;
 }
 
 export interface BackgroundAnswer {

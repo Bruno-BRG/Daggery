@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { weapons, armor } from '@daggery/content';
-import { equipEquipment } from './equipment';
-import { armorScore, damageThresholds, evasion } from './rules';
+import { equipEquipment, inventoryEquipmentId, inventoryEquipmentSlot, secondaryBlocked } from './equipment';
+import { armorScore, damageNotation, damageThresholds, evasion, weaponForSlot } from './rules';
 import type { Sheet } from './types';
-import { addInventoryItem, INVENTORY_CATALOG } from './inventory';
+import { addInventoryItem, customWeaponDamage, INVENTORY_CATALOG, inventoryCatalogEntry, type CustomWeaponInput } from './inventory';
 
 const oneHanded = weapons.find(w=>w.tier===1&&w.category==='Primary'&&w.burden==='One-Handed')!;
 const twoHanded = weapons.find(w=>w.tier===1&&w.category==='Primary'&&w.burden==='Two-Handed')!;
@@ -107,4 +107,78 @@ test('existing catalog-named inventory stacks equip one copy and leave the rest 
   assert.equal(source.inventory[0]?.qty,2);
   const restored=equipEquipment(changed,'primary',oneHanded.id);
   assert.equal(restored.inventory.find(item=>item.id==='legacy')?.qty,2);
+});
+
+test('player-made weapons store full stats, equip, derive damage, and stow back',()=>{
+  const base:Sheet={...makeSheet(),weapons:[],armorId:null,armorSlotsMarked:0};
+  const weapon:CustomWeaponInput={trait:'Finesse',range:'Close',category:'Primary',damage:customWeaponDamage(2,'d6',3),damageType:'mag',burden:'One-Handed',tier:2,feature:{name:'Moonlit',text:'+1 to Evasion'}};
+  const added=addInventoryItem(base,{kind:'custom',name:'Moonlit blade',description:'A silvered blade.',qty:1,weapon});
+  const entry=added.inventory[0]!;
+  assert.equal(entry.kind,'weapon');
+  assert.equal(entry.weapon?.damage,'2d6+3');
+  assert.equal(entry.weapon?.damageType,'mag');
+  assert.equal(inventoryEquipmentSlot(entry),'primary');
+  assert.equal(inventoryEquipmentId(entry),entry.weapon?.id);
+  assert.equal(inventoryCatalogEntry(entry)?.weapon?.name,'Moonlit blade');
+  const equipped=equipEquipment(added,'primary',inventoryEquipmentId(entry)!,entry.id);
+  const primary=weaponForSlot(equipped,'primary')!;
+  assert.equal(primary.name,'Moonlit blade');
+  assert.equal(damageNotation(primary.damage,equipped.proficiency),'2d6+3');
+  assert.equal(evasion(equipped),evasion(base)+1);
+  assert.equal(equipped.inventory.find(item=>item.id===entry.id)?.qty,0,'inline stats stay resolvable while equipped');
+  const stowed=equipEquipment(equipped,'primary',null);
+  assert.equal(weaponForSlot(stowed,'primary'),undefined);
+  const back=stowed.inventory.find(item=>item.id===entry.id)!;
+  assert.equal(back.qty,1);
+  assert.equal(back.weapon?.name,'Moonlit blade');
+});
+
+test('player-made two-handed weapons occupy both hands and stow the secondary',()=>{
+  const added=addInventoryItem(makeSheet(),{kind:'custom',name:'Great maul',description:'',qty:1,weapon:{trait:'Strength',range:'Melee',category:'Primary',damage:'2d10+2',damageType:'phy',burden:'Two-Handed',tier:2}});
+  const entry=added.inventory[0]!;
+  const id=inventoryEquipmentId(entry)!;
+  const equipped=equipEquipment(added,'primary',id,entry.id);
+  assert.deepEqual(equipped.weapons,[{slot:'primary',weaponId:id}]);
+  assert.equal(secondaryBlocked(equipped),true);
+  assert.ok(equipped.inventory.some(item=>item.equipmentId===secondary.id&&item.qty===1));
+  assert.ok(equipped.inventory.some(item=>item.equipmentId===oneHanded.id&&item.qty===1));
+});
+
+test('player-made armor drives armor score, thresholds, evasion, and stows back',()=>{
+  const base:Sheet={...makeSheet(),weapons:[],armorId:null,armorSlotsMarked:0};
+  const added=addInventoryItem(base,{kind:'custom',name:'Thornweave coat',description:'Woven from briars.',qty:1,armor:{baseThresholds:{major:6,severe:12},baseScore:3,tier:2,feature:{name:'Spiked',text:'+2 to Evasion'}}});
+  const entry=added.inventory[0]!;
+  assert.equal(entry.kind,'armor');
+  assert.equal(entry.armor?.baseScore,3);
+  assert.equal(inventoryEquipmentSlot(entry),'armor');
+  const equipped=equipEquipment(added,'armor',inventoryEquipmentId(entry)!,entry.id);
+  assert.equal(armorScore(equipped),3);
+  assert.deepEqual(damageThresholds(equipped),{major:6+equipped.level,severe:12+equipped.level});
+  assert.equal(evasion(equipped),evasion(base)+2);
+  assert.equal(equipped.inventory.find(item=>item.id===entry.id)?.qty,0);
+  const stowed=equipEquipment(equipped,'armor',null);
+  assert.equal(armorScore(stowed),0);
+  assert.equal(stowed.inventory.find(item=>item.id===entry.id)?.qty,1);
+});
+
+test('player-made gear validates traits, tiers, thresholds, damage, and dupe rules',()=>{
+  const base=makeSheet();
+  assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad blade',description:'',qty:1,weapon:{trait:'Luck',range:'Melee',category:'Primary',damage:'d8',damageType:'phy',burden:'One-Handed',tier:1}}),/trait/);
+  assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad blade',description:'',qty:1,weapon:{trait:'Agility',range:'Melee',category:'Primary',damage:'d8',damageType:'phy',burden:'One-Handed',tier:5}}),/tier/);
+  assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad blade',description:'',qty:1,weapon:{trait:'Agility',range:'Melee',category:'Primary',damage:'d7',damageType:'phy',burden:'One-Handed',tier:1}}),/damage/);
+  assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad armor',description:'',qty:1,armor:{baseThresholds:{major:12,severe:6},baseScore:2,tier:1}}),/severe/);
+  assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad armor',description:'',qty:1,armor:{baseThresholds:{major:4,severe:8},baseScore:13,tier:1}}),/Armor Score/);
+  assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad weapon',description:'',qty:1,weapon:{trait:'Agility',range:'Nowhere',category:'Primary',damage:'d8',damageType:'phy',burden:'One-Handed',tier:1}}),/range/);
+  assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad weapon',description:'',qty:1,weapon:{trait:'Agility',range:'Melee',category:'Primary',damage:'d8',damageType:'fire',burden:'One-Handed',tier:1}}),/physical or magic/);
+});
+
+test('identical player-made gear stacks while different stats stay separate',()=>{
+  const weapon:CustomWeaponInput={trait:'Strength',range:'Melee',category:'Primary',damage:'d10',damageType:'phy',burden:'Two-Handed',tier:1};
+  const first=addInventoryItem(makeSheet(),{kind:'custom',name:'Maul',description:'',qty:1,weapon});
+  const second=addInventoryItem(first,{kind:'custom',name:'Maul',description:'',qty:2,weapon});
+  assert.equal(second.inventory.length,1);
+  assert.equal(second.inventory[0]?.qty,3);
+  assert.equal(second.inventory[0]?.weapon?.damage,'d10');
+  const different=addInventoryItem(second,{kind:'custom',name:'Maul',description:'',qty:1,weapon:{...weapon,damage:'2d10'}});
+  assert.equal(different.inventory.length,2);
 });

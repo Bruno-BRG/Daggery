@@ -40,8 +40,8 @@ import {
   weaponForSlot,
   weaponModifier,
   applyDualityEffects,
-  type ArmorEntry,
-  type WeaponEntry,
+  type ArmorStats,
+  type WeaponStats,
 } from './rules';
 import { ancestries } from '@daggery/content';
 import { sendRoll } from '../../sync/rollSocket';
@@ -146,7 +146,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   const heritage = ancestryFeatures(sheet);
   const bonuses = heritageBonuses(sheet);
   const community = getCommunity(sheet.communityId);
-  const equippedArmor = getArmor(sheet.armorId);
+  const equippedArmor = getArmor(sheet.armorId, sheet);
   const primary = weaponForSlot(sheet, 'primary');
   const secondary = weaponForSlot(sheet, 'secondary');
   const multiclass = getClass(sheet.multiclassId);
@@ -254,7 +254,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
     rollDuality(modifier, `${TRAIT_LABELS[trait]} roll`, { spendExperience: selectedExperience !== undefined });
   }
 
-  function attack(weapon: WeaponEntry) {
+  function attack(weapon: WeaponStats) {
     const modifier = weaponModifier(sheetRef.current, weapon) + experienceModifier;
     const notation = damageNotation(weapon.damage, sheetRef.current.proficiency);
     rollDuality(modifier, `Attack · ${weapon.name}`, { damage: notation, spendExperience: selectedExperience !== undefined });
@@ -343,7 +343,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
     mutate((current) => ({ ...current, inventory: current.inventory.filter((entry) => entry.id !== id) }));
   }
 
-  const filteredInventory = sheet.inventory.filter(entry=>(inventoryFilter==='all'||entry.kind===inventoryFilter)&&`${entry.name} ${entry.description??''}`.toLowerCase().includes(inventoryQuery.toLowerCase()));
+  const filteredInventory = sheet.inventory.filter(entry=>entry.qty>0&&(inventoryFilter==='all'||entry.kind===inventoryFilter)&&`${entry.name} ${entry.description??''}`.toLowerCase().includes(inventoryQuery.toLowerCase()));
   const hpRemaining = currentHpMax - sheet.hpMarked;
   const stressRemaining = currentStressMax - sheet.stressMarked;
   const art = classArt(sheet.classId);
@@ -573,7 +573,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
       {(tab === 'details' || tab === 'equipment') && (
         <div className="sheet-details">
           {tab === 'equipment' && <section className="sheet-panel">
-            <PanelHead icon="backpack" title="Equipment" note={`${sheet.inventory.length} items`} />
+            <PanelHead icon="backpack" title="Equipment" note={`${sheet.inventory.filter(entry=>entry.qty>0).length} items`} />
             <div className="sheet-equip">
               <div className="sheet-equip-col">
                 <p className="sheet-mini-label">Weapons</p>
@@ -601,7 +601,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
                       <button type="button" onClick={() => removeItem(entry.id)} className="sheet-remove" aria-label={`Remove ${entry.name}`}><Icon name="trash" /></button>
                     </li>
                   ))}
-                  {filteredInventory.length === 0 && <li className="sheet-empty">{sheet.inventory.length?'No items match your search.':'No carried items yet. Use Add items to fill your inventory.'}</li>}
+                  {filteredInventory.length === 0 && <li className="sheet-empty">{sheet.inventory.some(entry=>entry.qty>0)?'No items match your search.':'No carried items yet. Use Add items to fill your inventory.'}</li>}
                 </ul>
               </div>
             </div>
@@ -667,7 +667,7 @@ const TRAIT_ACTIONS: Record<TraitName, string[]> = {
   knowledge: ['Recall', 'Analyze', 'Comprehend'],
 };
 
-function armorHint(equipped: ArmorEntry | undefined): string {
+function armorHint(equipped: ArmorStats | undefined): string {
   if (!equipped) return 'No armor: Major = level, Severe = 2× level';
   return `${equipped.name}: ${equipped.baseThresholds.major}/${equipped.baseThresholds.severe} base + level`;
 }
@@ -704,7 +704,7 @@ function PanelHead({ title, note, icon }: { title: string; note?: string; icon?:
   );
 }
 
-function WeaponCard({ weapon, slot, modifier, damage, disabled, onAttack, onChange, onUnequip }: { weapon: WeaponEntry; slot: string; modifier: number; damage: string; disabled: boolean; onAttack: () => void; onChange:()=>void; onUnequip:()=>void }) {
+function WeaponCard({ weapon, slot, modifier, damage, disabled, onAttack, onChange, onUnequip }: { weapon: WeaponStats; slot: string; modifier: number; damage: string; disabled: boolean; onAttack: () => void; onChange:()=>void; onUnequip:()=>void }) {
   return <article className="sheet-weapon session-gear-card">
     <header className="session-gear-heading"><ItemGlyph item={{kind:'weapon',name:weapon.name}} /><div><small>{slot} weapon · Tier {weapon.tier}</small><h4>{weapon.name}</h4></div><button type="button" className="sheet-ghost session-gear-change" aria-label={`Change ${slot.toLowerCase()} weapon`} onClick={onChange}><Icon name="swap" />Change</button></header>
     <div className="session-gear-management"><span>{weapon.burden}</span><button type="button" onClick={onUnequip} aria-label={`Unequip ${slot.toLowerCase()} weapon`}>Unequip</button></div>
@@ -715,7 +715,7 @@ function WeaponCard({ weapon, slot, modifier, damage, disabled, onAttack, onChan
   </article>;
 }
 
-function ArmorCard({ armor, score, thresholds, onChange, onUnequip }: { armor: ArmorEntry | undefined; score: number; thresholds: { major: number; severe: number }; onChange:()=>void; onUnequip:()=>void }) {
+function ArmorCard({ armor, score, thresholds, onChange, onUnequip }: { armor: ArmorStats | undefined; score: number; thresholds: { major: number; severe: number }; onChange:()=>void; onUnequip:()=>void }) {
   return <article className="sheet-armor-card session-gear-card"><header className="session-gear-heading"><ItemGlyph item={{kind:'armor',name:armor?.name??'Armor'}} /><div><small>{armor ? 'Equipped armor' : 'No armor equipped'}</small><h4>{armor?.name ?? 'Unarmored'}</h4></div><button type="button" className="sheet-ghost session-gear-change" aria-label={armor?'Change armor':'Equip armor'} onClick={onChange}><Icon name="swap" />{armor?'Change':'Equip'}</button></header>
     {armor && <div className="session-gear-management"><span>Tier {armor.tier}</span><button type="button" onClick={onUnequip} aria-label="Unequip armor">Unequip</button></div>}
     <div className="session-gear-value"><strong>{score}</strong><span>Armor Score</span></div>

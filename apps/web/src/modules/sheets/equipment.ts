@@ -1,5 +1,5 @@
-import { armorScore, getArmor, getWeapon, makeId, weaponForSlot } from './rules';
-import type { InventoryEntry, Sheet } from './types';
+import { armorScore, getArmor, getWeapon, makeId, weaponForSlot, type ArmorStats, type WeaponStats } from './rules';
+import type { InlineArmor, InlineWeapon, InventoryEntry, Sheet } from './types';
 import { armor, weapons } from '@daggery/content';
 
 export type EquipmentSlot = 'primary' | 'secondary' | 'armor';
@@ -14,9 +14,9 @@ export function secondaryBlocked(sheet: Sheet): boolean {
 export function equipEquipment(sheet: Sheet, slot: EquipmentSlot, id: string | null, inventoryEntryId?: string): Sheet {
   const currentId = slot === 'armor' ? sheet.armorId : sheet.weapons.find(w=>w.slot===slot)?.weaponId ?? null;
   if (id===currentId && !inventoryEntryId) return sheet;
-  const picked = slot==='armor' ? getArmor(id) : getWeapon(id);
+  const picked = slot==='armor' ? getArmor(id, sheet) : getWeapon(id, sheet);
   if (id && !picked) throw new Error('Equipment not found.');
-  if (id && slot!=='armor' && getWeapon(id)?.category !== (slot==='primary'?'Primary':'Secondary')) throw new Error('This weapon belongs in a different slot.');
+  if (id && slot!=='armor' && getWeapon(id, sheet)?.category !== (slot==='primary'?'Primary':'Secondary')) throw new Error('This weapon belongs in a different slot.');
   if (id && slot==='secondary' && secondaryBlocked(sheet)) throw new Error('A secondary weapon needs a one-handed primary weapon.');
   let inventory = sheet.inventory.map(entry=>({...entry}));
   const kind = slot==='armor' ? 'armor' : 'weapon';
@@ -24,13 +24,20 @@ export function equipEquipment(sheet: Sheet, slot: EquipmentSlot, id: string | n
   if (id && ownedIndex<0) throw new Error('Add this item to your inventory before equipping it.');
   const owned = ownedIndex>=0 ? inventory[ownedIndex] : undefined;
   const armorMarks = owned?.armorSlotsMarked ?? 0;
-  if (ownedIndex>=0) inventory = inventory.flatMap((entry,index)=>index!==ownedIndex ? [entry] : entry.qty>1 ? [{...entry,qty:entry.qty-1}] : []);
+  if (ownedIndex>=0) inventory = inventory.flatMap((entry,index)=>{
+    if (index!==ownedIndex) return [entry];
+    if (entry.qty>1) return [{...entry,qty:entry.qty-1}];
+    // Player-made gear keeps its inline stats on the entry so it can be resolved while equipped.
+    return entry.weapon||entry.armor ? [{...entry,qty:0}] : [];
+  });
   const stow = (gearId: string | null, gearKind: 'armor'|'weapon', marks?: number) => {
-    const gear = gearKind==='armor' ? getArmor(gearId) : getWeapon(gearId);
+    const gear: ArmorStats | WeaponStats | undefined = gearKind==='armor' ? getArmor(gearId, sheet) : getWeapon(gearId, sheet);
     if (!gear) return;
+    const inlineArmor: InlineArmor | undefined = gearKind==='armor' && !armor.some(item=>item.id===gear.id) ? gear as InlineArmor : undefined;
+    const inlineWeapon: InlineWeapon | undefined = gearKind==='weapon' && !weapons.some(item=>item.id===gear.id) ? gear as InlineWeapon : undefined;
     const existing = inventory.find(entry=>inventoryEquipmentId(entry)===gear.id && entry.kind===gearKind && (gearKind!=='armor' || (entry.armorSlotsMarked??0)===(marks??0)));
     if (existing) { existing.qty+=1; existing.equipmentId=gear.id; }
-    else inventory.push({id:makeId('gear'),equipmentId:gear.id,name:gear.name,kind:gearKind,qty:1,...(gearKind==='armor'?{armorSlotsMarked:marks??0}:{})});
+    else inventory.push({id:makeId('gear'),equipmentId:gear.id,name:gear.name,kind:gearKind,qty:1,...(gearKind==='armor'?{armorSlotsMarked:marks??0}:{}),...(inlineArmor?{armor:inlineArmor}:{}),...(inlineWeapon?{weapon:inlineWeapon}:{})});
   };
   if (slot==='armor') {
     stow(sheet.armorId,'armor',sheet.armorSlotsMarked);
@@ -39,7 +46,7 @@ export function equipEquipment(sheet: Sheet, slot: EquipmentSlot, id: string | n
   }
   stow(currentId,'weapon');
   let equipped = sheet.weapons.filter(weapon=>weapon.slot!==slot);
-  if (slot==='primary' && (!id || getWeapon(id)?.burden==='Two-Handed')) {
+  if (slot==='primary' && (!id || getWeapon(id, sheet)?.burden==='Two-Handed')) {
     equipped.filter(weapon=>weapon.slot==='secondary').forEach(weapon=>stow(weapon.weaponId,'weapon'));
     equipped = equipped.filter(weapon=>weapon.slot!=='secondary');
   }
@@ -48,6 +55,8 @@ export function equipEquipment(sheet: Sheet, slot: EquipmentSlot, id: string | n
 }
 
 export function inventoryEquipmentId(entry: InventoryEntry): string | null {
+  if (entry.kind==='weapon' && entry.weapon) return entry.weapon.id;
+  if (entry.kind==='armor' && entry.armor) return entry.armor.id;
   const catalog = entry.kind==='armor' ? armor : entry.kind==='weapon' ? weapons : [];
   if (entry.equipmentId && catalog.some(item=>item.id===entry.equipmentId)) return entry.equipmentId;
   const matches = catalog.filter(item=>item.name.toLowerCase()===entry.name.trim().toLowerCase());
@@ -55,10 +64,12 @@ export function inventoryEquipmentId(entry: InventoryEntry): string | null {
 }
 
 export function inventoryEquipmentSlot(entry: InventoryEntry): EquipmentSlot | null {
-  const id = inventoryEquipmentId(entry);
-  if (entry.kind==='armor' && getArmor(id)) return 'armor';
+  if (entry.kind==='armor') {
+    if (entry.armor || getArmor(inventoryEquipmentId(entry))) return 'armor';
+    return null;
+  }
   if (entry.kind==='weapon') {
-    const weapon = getWeapon(id);
+    const weapon = entry.weapon ?? getWeapon(inventoryEquipmentId(entry));
     if (weapon) return weapon.category==='Secondary'?'secondary':'primary';
   }
   return null;

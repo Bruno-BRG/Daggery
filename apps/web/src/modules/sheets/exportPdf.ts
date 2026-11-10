@@ -23,7 +23,7 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
   const form = pdf.getForm();
   const mapping = ORIGINAL_SHEETS[sheet.classId];
   const indices = [mapping?.sheet ?? 21];
-  const inventoryPageCount = Math.max(1, Math.ceil(sheet.inventory.length / 5));
+  const inventoryPageCount = Math.max(1, Math.ceil(sheet.inventory.filter(item => item.qty > 0).length / 5));
   for (let i = 1; i < inventoryPageCount; i++) indices.push(21);
   if (options.guide && mapping) indices.push(mapping.guide);
   if (options.references && mapping?.references) indices.push(...mapping.references);
@@ -104,27 +104,28 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
   };
   weaponFields('weapon_primary', weaponForSlot(sheet, 'primary'), 193);
   weaponFields('weapon_secondary', weaponForSlot(sheet, 'secondary'), 286);
-  const armor = getArmor(sheet.armorId);
+  const armor = getArmor(sheet.armorId, sheet);
   field('armor_name', armor?.name, 295, 391, 151, 17);
   field('armor_thresholds', armor ? `${armor.baseThresholds.major} / ${armor.baseThresholds.severe}` : '', 454, 391, 69, 17, false, true);
   field('armor_base_score', armor?.baseScore, 539, 391, 49, 17, false, true);
   field('armor_feature', armor?.feature ? `${armor.feature.name}: ${armor.feature.text}` : '', 298, 421, 292, 14);
   // Each ruled line is a separate field. Extra items use another original generic sheet.
+  const inventoryItems = sheet.inventory.filter(item => item.qty > 0);
   for (let inventoryPage = 0; inventoryPage < inventoryPageCount; inventoryPage++) {
     page = pages[inventoryPage]!;
     if (inventoryPage > 0) field(`inventory_page_${inventoryPage}_name`, sheet.name, 233, 10, 160, 14);
     for (let row = 0; row < 5; row++) {
       const index = inventoryPage * 5 + row;
-      const item = sheet.inventory[index];
+      const item = inventoryItems[index];
       const input = field(`inventory_${index}`, item ? `${item.qty} x ${item.name}` : '', 294, 489 + row * 20.22, 296, 16);
       if (item?.description && !options.blank) input.acroField.dict.set(PDFName.of('TU'), PDFHexString.fromText(item.description));
     }
   }
   page = pages[0]!;
-  const stowed = sheet.inventory.filter(item => item.kind === 'weapon');
+  const stowed = sheet.inventory.filter(item => item.kind === 'weapon' && item.qty > 0);
   for (let i = 0; i < 2; i++) {
     const item = stowed[i];
-    const weapon = getWeapon(item?.equipmentId ?? item?.catalogId ?? null);
+    const weapon = getWeapon(item?.equipmentId ?? item?.catalogId ?? null, sheet);
     weaponFields(`inventory_weapon_${i}`, weapon, 614 + i * 90.5);
     check(`inventory_weapon_${i}_primary`, weapon?.category === 'Primary', 499.107, 606.6 + i * 90.539, 7.164, 7.164);
     check(`inventory_weapon_${i}_secondary`, weapon?.category === 'Secondary', 548.995, 606.6 + i * 90.539, 7.164, 7.164);
