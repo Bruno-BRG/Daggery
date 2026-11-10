@@ -60,7 +60,14 @@
 /* Discover meaning, in balanced columns on wide screens */
 .solo-meaning-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; }
 .solo-meaning-grid .solo-reference-table { margin: 0; }
+.solo-meaning-table { table-layout: fixed; }
+.solo-meaning-table tr > :first-child { width: 64px; }
 .solo-meaning-table th, .solo-meaning-table td { padding: 6px 8px; font-size: 12.5px; }
+.solo-meaning-table td { overflow-wrap: anywhere; }
+/* The single, continuous table is the mobile layout; the chunked grid is the wide one. */
+.solo-meaning-single { display: none; }
+.solo-meaning-single .solo-reference-table { margin: 0; }
+.solo-col-short { display: none; }
 
 /* Reference tables */
 .solo-tables-group > h2 { font-size: 16px; font-weight: 650; margin-bottom: 10px; }
@@ -118,7 +125,21 @@
   .solo-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 8px; overflow: visible; }
   .solo-tabs button { min-width: 0; font-size: 13px; line-height: 1.3; padding: 8px 2px; }
   .solo-panel { padding: 18px; }
-  .solo-meaning-grid { grid-template-columns: minmax(0, 1fr); }
+  /* One continuous meaning table with a single header on narrow screens. */
+  .solo-meaning-grid { display: none; }
+  .solo-meaning-single { display: block; }
+  .solo-meaning-table tr > :first-child { width: 58px; }
+  .solo-meaning-table th, .solo-meaning-table td { padding: 5px 6px; font-size: 12px; }
+  /* Fit the odds chart without horizontal scrolling. */
+  .solo-oracle-chart-wrap { overflow-x: visible; }
+  .solo-oracle-chart { min-width: 0; table-layout: fixed; }
+  .solo-oracle-chart thead th { position: static; white-space: normal; }
+  .solo-oracle-chart tbody th { white-space: normal; overflow-wrap: anywhere; }
+  .solo-oracle-chart thead th:first-child { width: 32%; }
+  .solo-oracle-chart th, .solo-oracle-chart td { padding: 6px 4px; font-size: 11.5px; }
+  .solo-oracle-chart .solo-range { white-space: normal; }
+  .solo-col-full { display: none; }
+  .solo-col-short { display: inline; }
   .solo-dice-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .solo-dice-notation { flex-wrap: wrap; }
   .solo-dice-notation .solo-field { flex-basis: 100%; }

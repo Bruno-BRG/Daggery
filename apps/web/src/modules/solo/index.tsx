@@ -14,10 +14,10 @@ const errorMessage = (error: unknown) => error instanceof Error ? error.message 
 const root = () => `/api/campaigns/${encodeURIComponent(getActiveCampaign().id)}/solo`;
 const CHAOS_KEY = 'daggery:chaos';
 const RANGE_COLUMNS = [
-  { key: 'exceptionalYes', label: 'Exceptional Yes' },
-  { key: 'yes', label: 'Yes' },
-  { key: 'no', label: 'No' },
-  { key: 'exceptionalNo', label: 'Exceptional No' },
+  { key: 'exceptionalYes', label: 'Exceptional Yes', short: 'Exc. Yes' },
+  { key: 'yes', label: 'Yes', short: 'Yes' },
+  { key: 'no', label: 'No', short: 'No' },
+  { key: 'exceptionalNo', label: 'Exceptional No', short: 'Exc. No' },
 ] as const;
 const TABLE_GROUPS: { source: MythicSource; label: string }[] = [
   { source: 'adventureCrafter', label: 'Adventure Crafter' },
@@ -179,7 +179,10 @@ function OracleTab({ mythic }: { mythic: MythicData | null }) {
           <thead>
             <tr>
               <th scope="col">Odds</th>
-              {RANGE_COLUMNS.map(column => <th scope="col" key={column.key}>{column.label}</th>)}
+              {RANGE_COLUMNS.map(column => <th scope="col" key={column.key}>
+                <span className="solo-col-full">{column.label}</span>
+                <span className="solo-col-short">{column.short}</span>
+              </th>)}
             </tr>
           </thead>
           <tbody>
@@ -205,23 +208,32 @@ function OracleTab({ mythic }: { mythic: MythicData | null }) {
       <p className="solo-muted">Roll d100 and read the Action and Description pairing.</p>
       {meaningRows.length === 0
         ? <p className="solo-empty">The meaning table is unavailable.</p>
-        : <div className="solo-meaning-grid">
-          {meaningColumns.map((group, groupIndex) => <div className="solo-reference-table" key={groupIndex}>
-            <table className="solo-meaning-table">
-              <thead>
-                <tr><th scope="col">Range</th><th scope="col">Action</th><th scope="col">Description</th></tr>
-              </thead>
-              <tbody>
-                {group.map((entry, index) => <tr key={entry.range?.join('-') ?? index}>
-                  <td className="solo-range">{formatRange(entry.range)}</td>
-                  <td>{entry.cells?.[0] ?? entry.text ?? '—'}</td>
-                  <td>{entry.cells?.[1] ?? ''}</td>
-                </tr>)}
-              </tbody>
-            </table>
-          </div>)}
-        </div>}
+        : <>
+          <div className="solo-meaning-grid">
+            {meaningColumns.map((group, groupIndex) => <MeaningTable key={groupIndex} rows={group} />)}
+          </div>
+          <div className="solo-meaning-single">
+            <MeaningTable rows={meaningRows} />
+          </div>
+        </>}
     </section>
+  </div>;
+}
+
+function MeaningTable({ rows }: { rows: MythicTableEntry[] }) {
+  return <div className="solo-reference-table">
+    <table className="solo-meaning-table">
+      <thead>
+        <tr><th scope="col">Range</th><th scope="col">Action</th><th scope="col">Description</th></tr>
+      </thead>
+      <tbody>
+        {rows.map((entry, index) => <tr key={entry.range?.join('-') ?? index}>
+          <td className="solo-range">{formatRange(entry.range)}</td>
+          <td>{entry.cells?.[0] ?? entry.text ?? '—'}</td>
+          <td>{entry.cells?.[1] ?? ''}</td>
+        </tr>)}
+      </tbody>
+    </table>
   </div>;
 }
 
