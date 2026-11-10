@@ -1,5 +1,7 @@
 
 sources/
+# Copyrighted source material extracted from purchased PDFs.
+packages/content/mythic/
 *.tmp.ts
 node_modules/
 data/

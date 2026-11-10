@@ -10,6 +10,7 @@ import fastifyStatic from '@fastify/static';
 import { backupDatabase, CURRENT_VERSION, openCampaignDatabase } from './campaign-db';
 import { CampaignService } from './campaign-service';
 import { registerCampaignRoutes } from './campaign-routes';
+import { registerMythicRoutes } from './mythic';
 import { registerSecureGame } from './secure-game';
 import { EmailAuth } from './email-auth';
 import { createMailer } from './mailer';
@@ -55,6 +56,7 @@ export async function startServer(): Promise<void> {
   const mailer = createMailer(process.env);
   const emailAuth = mailer ? new EmailAuth(db, mailer, allowRegistration) : undefined;
   await registerCampaignRoutes(app, { service, origin, secureCookies: production, allowRegistration, emailAuth });
+  registerMythicRoutes(app, { service, secureCookies: production });
   await registerSecureGame(app, { db, service, origin, secureCookies: production, assetsDir, aiVault: openAiVault(dataDir) });
   app.get('/health', async () => ({ ok: true }));
   if (production && !(await registerWebApp(app, fileURLToPath(new URL('../../web/dist/', import.meta.url))))) throw new Error('The web app is not built. Run npm run build -w @daggery/web before starting in production.');

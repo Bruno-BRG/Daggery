@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { hasFeature, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_WORLD_MOVES, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone } from '@daggery/shared';
+import { hasFeature, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_WORLD_MOVES, type MythicData, type MythicTable, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone } from '@daggery/shared';
 import type { CampaignService } from './campaign-service';
 import { readSessionToken } from './campaign-routes';
+import { loadMythic } from './mythic';
 
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid solo data');
@@ -17,9 +18,52 @@ const integer = (value: unknown, min: number, max: number) => {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) throw new Error('Invalid solo number');
   return value;
 };
+const MYTHIC_SOURCES = ['oracle', 'adventureCrafter', 'locationCrafting', 'collectedTables'] as const;
+type MythicSource = (typeof MYTHIC_SOURCES)[number];
+const mythicSource = (data: MythicData, value: string) => {
+  if (!(MYTHIC_SOURCES as readonly string[]).includes(value)) throw new Error('Invalid Mythic source');
+  const file = data[value as MythicSource];
+  if (!file) throw new Error('Invalid Mythic source');
+  return file;
+};
+const dieSides = (die: string) => {
+  const match = /^d(\d+)$/i.exec(die);
+  if (!match) throw new Error('Invalid Mythic table die');
+  return Number(match[1]);
+};
+const inRange = (range: readonly [number, number] | undefined, value: number) => !!range && value >= range[0] && value <= range[1];
+/** Mythic random events happen on doubles 11-99. A d100 of 100 is not a double. */
+const isDouble = (value: number) => value >= 11 && value <= 99 && value % 11 === 0;
 export class SoloConflict extends Error { constructor() { super('Preparation changed in another window. Reload the latest version before saving.'); } }
 export class SoloService {
-  constructor(private db: Database.Database, private campaigns: CampaignService, private publish: (campaignId: string, ns: string, id: string, value: unknown) => void = () => {}) {}
+  constructor(
+    private db: Database.Database,
+    private campaigns: CampaignService,
+    private publish: (campaignId: string, ns: string, id: string, value: unknown) => void = () => {},
+    private mythicData: () => MythicData = loadMythic,
+    private rng: Rng = Math.random,
+  ) {}
+  private cachedMythic: MythicData | null = null;
+  private mythicTables(): MythicData {
+    const data = this.cachedMythic ?? (this.cachedMythic = this.mythicData());
+    if (!data.available) throw new Error('Invalid request: Mythic tables are not installed on this server');
+    return data;
+  }
+  private rollMythicEntry(table: MythicTable, column?: number) {
+    const sides = dieSides(table.die);
+    const roll = rollDie(sides, this.rng);
+    const entry = table.entries.find(item => inRange(item.range, roll));
+    if (!entry) throw new Error('Invalid Mythic table roll');
+    let value: string;
+    if (column !== undefined) {
+      if (!table.columns || column < 0 || column >= table.columns.length) throw new Error('Invalid Mythic table column');
+      value = entry.cells?.[column] ?? entry.text ?? '';
+    } else {
+      value = entry.cells ? entry.cells.join(' · ') : entry.text ?? '';
+    }
+    if (!value.trim()) throw new Error('Invalid Mythic table entry');
+    return { sides, roll, entry, value };
+  }
   authorize(userId: string, campaignId: string) {
     this.campaigns.requireGm(userId, campaignId);
     if (!hasFeature(this.campaigns.configuration(campaignId), 'daggerheart.solo')) throw new Error('Forbidden');
@@ -88,7 +132,7 @@ export class SoloService {
     if (!/^[a-zA-Z0-9-]{1,80}$/.test(id)) throw new Error('Invalid request ID');
     const previous = this.read<SoloEntry>(campaign, 'solo', `entry:${id}`);
     if (previous) return previous;
-    const question = string(input.question ?? '', 2000);
+    let question = string(input.question ?? '', 2000);
     const state = this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
     let result: SoloResult;
     if (kind === 'oracle') {
@@ -108,6 +152,51 @@ export class SoloService {
       if (!table) throw new Error('Invalid prompt table');
       const die = rollDie(12);
       result = { title: table.entries[die - 1]!, detail: `${table.name} · interpret in context. This prompt grants no new abilities, damage, or extra actions.`, total: die, tone: 'neutral' };
+    } else if (kind === 'mythic-oracle') {
+      const data = this.mythicTables();
+      if (!question.trim()) throw new Error('Invalid question');
+      const table = data.oracle?.tables.find(item => item.id === 'ask-the-game-master');
+      if (!table) throw new Error('Invalid Mythic oracle table');
+      const odds = string(input.odds, 80);
+      const row = table.entries.find(item => item.id === odds);
+      if (!row || !row.ranges) throw new Error('Invalid Mythic odds');
+      const roll = rollDie(100, this.rng);
+      const answer = (['exceptionalYes', 'yes', 'no', 'exceptionalNo'] as const).find(key => inRange(row.ranges![key], roll));
+      if (!answer) throw new Error('Invalid Mythic odds');
+      const labels = { exceptionalYes: 'Exceptional Yes', yes: 'Yes', no: 'No', exceptionalNo: 'Exceptional No' } as const;
+      const tones: Record<typeof answer, SoloTone> = { exceptionalYes: 'revelation', yes: 'hope', no: 'fear', exceptionalNo: 'fear' };
+      const lines = [`d100: ${roll} · Odds: ${row.label ?? odds}`];
+      if (isDouble(roll)) {
+        const meaning = data.oracle?.tables.find(item => item.id === 'discover-meaning');
+        const pair = meaning ? this.rollMythicEntry(meaning).entry.cells?.slice(0, 2).join(' / ') : undefined;
+        if (pair && pair.trim()) lines.push(`Random event: ${pair}`);
+      }
+      result = { title: labels[answer], detail: lines.join('\n'), tone: tones[answer], total: roll };
+    } else if (kind === 'mythic-meaning') {
+      const data = this.mythicTables();
+      const count = integer(input.count, 1, 4);
+      const table = data.oracle?.tables.find(item => item.id === 'discover-meaning');
+      if (!table) throw new Error('Invalid Mythic meaning table');
+      const lines: string[] = [];
+      let firstPair = '';
+      for (let index = 0; index < count; index++) {
+        const { roll, entry } = this.rollMythicEntry(table);
+        const pair = entry.cells?.slice(0, 2).join(' / ') || entry.text || '';
+        if (index === 0) firstPair = pair;
+        lines.push(`d100 ${roll}: ${pair}`);
+      }
+      result = { title: count === 1 && firstPair ? firstPair : 'Discover Meaning', detail: lines.join('\n'), tone: 'neutral' };
+    } else if (kind === 'mythic-table') {
+      const data = this.mythicTables();
+      const source = mythicSource(data, string(input.source, 30));
+      const tableId = string(input.tableId, 120);
+      const table = source.tables.find(item => item.id === tableId);
+      if (!table) throw new Error('Invalid Mythic table');
+      const column = input.column === undefined || input.column === null ? undefined : integer(input.column, 0, 1000);
+      const { sides, roll, value } = this.rollMythicEntry(table, column);
+      const label = column === undefined ? table.title : `${table.title} · ${table.columns![column]}`;
+      question = question.trim() ? question : table.title;
+      result = { title: value, detail: `${label} · d${sides}: ${roll}`, tone: 'neutral', total: roll };
     } else if (kind === 'journal') {
       if (!question.trim()) throw new Error('Invalid journal entry');
       result = { title: 'Journal note', detail: '', tone: 'neutral' };
