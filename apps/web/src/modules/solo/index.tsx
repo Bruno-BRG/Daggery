@@ -1,24 +1,53 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getRuleset, hasFeature, rollDice, type DiceRoll, type MythicData, type SoloEntry, type SoloEntryPage, type SoloSnapshot } from '@daggery/shared';
+import { getRuleset, hasFeature, rollDice, type DiceRoll, type MythicData, type MythicRange, type MythicTable, type MythicTableEntry, type MythicTablesFile, type SoloEntry, type SoloEntryPage, type SoloSnapshot } from '@daggery/shared';
 import { api } from '../../api';
 import { getActiveCampaign } from '../../campaign-context';
 import { Icon } from '../../components/Icon';
 import { useDiceTray } from '../../dice3d';
+import { CHAOS_DEFAULT, CHAOS_MAX, CHAOS_MIN, clampChaos, shiftOddsRows } from './chaos';
 import './solo.css';
 
 type Tab = 'oracle' | 'tables' | 'dice' | 'notes';
-type MythicSource = 'oracle' | 'adventureCrafter' | 'locationCrafting' | 'collectedTables';
+type MythicSource = 'adventureCrafter' | 'locationCrafting' | 'collectedTables';
 type Roll = (kind: string, values: Record<string, unknown>) => Promise<SoloEntry | null>;
-type Accept = (entry: SoloEntry, interpretation: string) => Promise<void>;
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Could not complete the action.';
 const root = () => `/api/campaigns/${encodeURIComponent(getActiveCampaign().id)}/solo`;
-const MYTHIC_GROUPS: { source: MythicSource; label: string }[] = [
-  { source: 'oracle', label: 'Oracle' },
+const CHAOS_KEY = 'daggery:chaos';
+const RANGE_COLUMNS = [
+  { key: 'exceptionalYes', label: 'Exceptional Yes' },
+  { key: 'yes', label: 'Yes' },
+  { key: 'no', label: 'No' },
+  { key: 'exceptionalNo', label: 'Exceptional No' },
+] as const;
+const TABLE_GROUPS: { source: MythicSource; label: string }[] = [
   { source: 'adventureCrafter', label: 'Adventure Crafter' },
   { source: 'locationCrafting', label: 'Location Crafting' },
   { source: 'collectedTables', label: 'Collected Tables' },
 ];
 const KIND_LABELS: Record<string, string> = { 'mythic-oracle': 'Oracle', 'mythic-meaning': 'Meaning', 'mythic-table': 'Table', journal: 'Note' };
+
+const readChaos = () => {
+  try {
+    const stored = Number(localStorage.getItem(CHAOS_KEY));
+    return Number.isInteger(stored) && stored >= CHAOS_MIN && stored <= CHAOS_MAX ? stored : CHAOS_DEFAULT;
+  } catch {
+    return CHAOS_DEFAULT;
+  }
+};
+const sameRange = (a?: MythicRange, b?: MythicRange) => a?.[0] === b?.[0] && a?.[1] === b?.[1];
+const formatRange = (range?: MythicRange) => (range ? (range[0] === range[1] ? `${range[0]}` : `${range[0]}–${range[1]}`) : '—');
+const chunk = <T,>(items: readonly T[], parts: number): T[][] => {
+  if (items.length === 0) return [];
+  const size = Math.ceil(items.length / parts);
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) chunks.push(items.slice(index, index + size));
+  return chunks;
+};
+/** Skip a collected table when the same id and entries already appear in Location Crafting. */
+const withoutLocationDuplicates = (tables: MythicTable[], other: MythicTablesFile | null): MythicTable[] =>
+  other
+    ? tables.filter(table => !other.tables.some(candidate => candidate.id === table.id && JSON.stringify(candidate.entries) === JSON.stringify(table.entries)))
+    : tables;
 
 export default function SoloPlay({ author: _author }: { author: string }) {
   if (!hasFeature(getActiveCampaign().configuration, 'daggerheart.solo') || getActiveCampaign().role !== 'gm') return <p>Solo play is not enabled for this campaign.</p>;
@@ -33,7 +62,6 @@ function Workspace() {
   const [mythic, setMythic] = useState<MythicData | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +80,7 @@ function Workspace() {
   }, []);
 
   async function roll(kind: string, values: Record<string, unknown>): Promise<SoloEntry | null> {
-    setBusy(true); setError(''); setNotice('');
+    setBusy(true); setError('');
     try {
       const { entry } = await api<{ entry: SoloEntry }>(`${root()}/roll`, 'POST', { kind, requestId: crypto.randomUUID(), ...values });
       setEntries(previous => [entry, ...previous.filter(item => item.id !== entry.id)]);
@@ -60,19 +88,6 @@ function Workspace() {
     } catch (value) {
       setError(errorMessage(value));
       return null;
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function accept(entry: SoloEntry, interpretation: string) {
-    setBusy(true); setError(''); setNotice('');
-    try {
-      const result = await api<{ entry: SoloEntry }>(`${root()}/entries/${encodeURIComponent(entry.id)}`, 'PUT', { interpretation });
-      setEntries(previous => previous.map(item => item.id === entry.id ? result.entry : item));
-      setNotice('Saved to your notes.');
-    } catch (value) {
-      setError(errorMessage(value));
     } finally {
       setBusy(false);
     }
@@ -99,7 +114,7 @@ function Workspace() {
       <div>
         <p className="solo-kicker">{getRuleset(campaign.configuration)?.name} · Solo</p>
         <h1><Icon name="spark" />Solo play</h1>
-        <p>Ask the oracle, draw from the tables, roll dice, and keep what becomes true.</p>
+        <p>Read the oracle charts, browse the tables, roll dice, and keep what becomes true.</p>
       </div>
       <button type="button" className="daggery-primary solo-sheet-link" onClick={openSheet}><Icon name="sheet" />Open character sheet</button>
     </header>
@@ -108,9 +123,8 @@ function Workspace() {
         <button key={id} type="button" aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>{label}</button>)}
     </nav>
     {error && <p role="alert" className="solo-alert">{error}</p>}
-    {notice && <p role="status" className="solo-notice">{notice}</p>}
-    {tab === 'oracle' && <OracleTab mythic={mythic} entries={entries} busy={busy} roll={roll} accept={accept} />}
-    {tab === 'tables' && <TablesTab mythic={mythic} busy={busy} roll={roll} />}
+    {tab === 'oracle' && <OracleTab mythic={mythic} />}
+    {tab === 'tables' && <TablesTab mythic={mythic} />}
     {tab === 'dice' && <DiceTab />}
     {tab === 'notes' && <NotesTab entries={entries} nextCursor={nextCursor} busy={busy} roll={roll} older={older} />}
   </div>;
@@ -120,164 +134,151 @@ function NotInstalled() {
   return <section className="solo-panel solo-empty-state">
     <Icon name="book" />
     <h2>Oracle tables are not installed</h2>
-    <p>Add the oracle table JSON files to the content folder to unlock the oracle and its tables.</p>
+    <p>Add the oracle table JSON files to the content folder to unlock the oracle reference.</p>
   </section>;
 }
 
-function OracleTab({ mythic, entries, busy, roll, accept }: { mythic: MythicData | null; entries: SoloEntry[]; busy: boolean; roll: Roll; accept: Accept }) {
-  const [question, setQuestion] = useState('');
-  const [oddsId, setOddsId] = useState('');
-  const [oracleResult, setOracleResult] = useState<SoloEntry | null>(null);
-  const [meaningResult, setMeaningResult] = useState<SoloEntry | null>(null);
-  const [extraWords, setExtraWords] = useState<string[]>([]);
-  const [meaningWords, setMeaningWords] = useState<string[]>([]);
+function OracleTab({ mythic }: { mythic: MythicData | null }) {
+  const [chaos, setChaos] = useState(readChaos);
+
+  useEffect(() => {
+    try { localStorage.setItem(CHAOS_KEY, String(chaos)); } catch { /* storage may be unavailable */ }
+  }, [chaos]);
 
   const oddsRows = useMemo(() => {
     const table = mythic?.oracle?.tables.find(item => item.id === 'ask-the-game-master');
-    return [...(table?.entries ?? [])].sort((a, b) => (a.ranges?.exceptionalYes?.[1] ?? 0) - (b.ranges?.exceptionalYes?.[1] ?? 0));
+    return [...(table?.entries ?? [])].sort((a, b) => (b.ranges?.exceptionalYes?.[1] ?? 0) - (a.ranges?.exceptionalYes?.[1] ?? 0));
   }, [mythic]);
-
-  useEffect(() => {
-    if (oddsId || oddsRows.length === 0) return;
-    setOddsId(oddsRows.find(row => row.id === '50-50-or-unknown')?.id ?? oddsRows[Math.floor(oddsRows.length / 2)]?.id ?? '');
-  }, [oddsId, oddsRows]);
-  useEffect(() => { setExtraWords([]); }, [oracleResult?.id]);
-  useEffect(() => { setMeaningWords([]); }, [meaningResult?.id]);
+  const meaningRows = useMemo(
+    () => mythic?.oracle?.tables.find(item => item.id === 'discover-meaning')?.entries ?? [],
+    [mythic],
+  );
+  const shiftedRows = useMemo(() => shiftOddsRows(oddsRows, chaos), [oddsRows, chaos]);
+  const meaningColumns = useMemo(() => chunk(meaningRows, 3), [meaningRows]);
 
   if (!mythic) return <p className="solo-empty">Loading oracle tables…</p>;
   if (!mythic.available) return <NotInstalled />;
 
-  const recent = entries.filter(entry => entry.kind === 'mythic-oracle').slice(0, 6);
+  const shifted = chaos !== CHAOS_DEFAULT;
 
-  async function ask() {
-    const entry = await roll('mythic-oracle', { question, odds: oddsId });
-    if (entry) setOracleResult(entry);
-  }
-  async function discover() {
-    const entry = await roll('mythic-meaning', { count: 1 });
-    if (entry) setMeaningResult(entry);
-  }
-  async function anotherWord(target: SoloEntry | null) {
-    const entry = await roll('mythic-meaning', { question: target?.question ?? '', count: 1 });
-    if (!entry) return;
-    if (target === meaningResult) setMeaningWords(previous => [...previous, entry.result.title]);
-    else setExtraWords(previous => [...previous, entry.result.title]);
-  }
+  return <div className="solo-stack">
+    <section className="solo-panel solo-chaos-panel" aria-label="Chaos factor">
+      <div className="solo-chaos-stepper" role="group" aria-label="Chaos factor">
+        <button type="button" aria-label="Decrease chaos" disabled={chaos <= CHAOS_MIN} onClick={() => setChaos(value => clampChaos(value - 1))}>−</button>
+        <span className="solo-chaos-value" aria-live="polite">Chaos <strong>{chaos}</strong></span>
+        <button type="button" aria-label="Increase chaos" disabled={chaos >= CHAOS_MAX} onClick={() => setChaos(value => clampChaos(value + 1))}>+</button>
+      </div>
+      <p className="solo-chaos-caption">Chaos 5 = chart as printed. Higher chaos shifts every row toward Yes; lower shifts toward No.</p>
+    </section>
 
-  return <div className="solo-oracle-layout">
-    <div className="solo-stack">
-      <form className="solo-panel" onSubmit={event => { event.preventDefault(); void ask(); }}>
-        <h2>Ask the oracle</h2>
-        <p className="solo-muted">Pick how likely the answer is, then ask a yes/no question.</p>
-        <label className="solo-field">Your question
-          <input required maxLength={2000} value={question} onChange={event => setQuestion(event.target.value)} placeholder="Is the lighthouse occupied?" />
-        </label>
-        <fieldset className="solo-odds-field">
-          <legend>Odds</legend>
-          <div className="solo-segment" role="group" aria-label="Odds">
-            {oddsRows.map(row => <button type="button" key={row.id} aria-pressed={oddsId === row.id} onClick={() => { if (row.id) setOddsId(row.id); }}>{row.label}</button>)}
-          </div>
-        </fieldset>
-        <div className="solo-actions">
-          <button className="daggery-primary" disabled={busy || !question.trim() || !oddsId}><Icon name="dice" />Ask</button>
-          <button type="button" className="daggery-roll-toggle" disabled={busy} onClick={() => void discover()}><Icon name="spark" />Discover Meaning</button>
-        </div>
-      </form>
-      <section className="solo-panel solo-log">
-        <h2>Recent oracle</h2>
-        {recent.length === 0
-          ? <p className="solo-empty">No questions asked yet.</p>
-          : <ol className="solo-log-list">{recent.map(entry => <li key={entry.id}>
-            <div><strong>{entry.result.title}</strong><span>{entry.question}</span></div>
-            <small>d100 {entry.result.total} · {new Date(entry.at).toLocaleTimeString()}</small>
-          </li>)}</ol>}
-      </section>
-    </div>
-    <div className="solo-stack">
-      {oracleResult
-        ? <ResultCard entry={oracleResult} busy={busy} accept={accept} extraWords={extraWords} onRollAnother={() => anotherWord(oracleResult)} />
-        : <section className="solo-panel solo-empty-state"><Icon name="dice" /><h2>The oracle waits</h2><p>Ask a question to reveal an answer, and watch for a random event on a double.</p></section>}
-      {meaningResult && <ResultCard entry={meaningResult} busy={busy} accept={accept} extraWords={meaningWords} onRollAnother={() => anotherWord(meaningResult)} />}
-    </div>
+    <section className="solo-panel">
+      <h2>Ask the oracle</h2>
+      <p className="solo-muted">Find your odds, then read across for the answer.</p>
+      <div className="solo-reference-table solo-oracle-chart-wrap">
+        <table className="solo-oracle-chart">
+          <thead>
+            <tr>
+              <th scope="col">Odds</th>
+              {RANGE_COLUMNS.map(column => <th scope="col" key={column.key}>{column.label}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {shiftedRows.map((row, index) => {
+              const mid = row.id === '50-50-or-unknown' || /50\s*\/\s*50/i.test(row.label ?? '');
+              return <tr key={row.id ?? index} className={mid ? 'is-mid' : undefined}>
+                <th scope="row">{row.label ?? '—'}</th>
+                {RANGE_COLUMNS.map(column => {
+                  const range = row.ranges?.[column.key];
+                  const moved = shifted && !sameRange(range, oddsRows[index]?.ranges?.[column.key]);
+                  return <td key={column.key} className={moved ? 'solo-range is-shifted' : 'solo-range'}>{formatRange(range)}</td>;
+                })}
+              </tr>;
+            })}
+          </tbody>
+        </table>
+      </div>
+      {shifted && <p className="solo-shift-note">Accented ranges are shifted by the chaos factor.</p>}
+    </section>
+
+    <section className="solo-panel">
+      <h2>Discover meaning</h2>
+      <p className="solo-muted">Roll d100 and read the Action and Description pairing.</p>
+      {meaningRows.length === 0
+        ? <p className="solo-empty">The meaning table is unavailable.</p>
+        : <div className="solo-meaning-grid">
+          {meaningColumns.map((group, groupIndex) => <div className="solo-reference-table" key={groupIndex}>
+            <table className="solo-meaning-table">
+              <thead>
+                <tr><th scope="col">Range</th><th scope="col">Action</th><th scope="col">Description</th></tr>
+              </thead>
+              <tbody>
+                {group.map((entry, index) => <tr key={entry.range?.join('-') ?? index}>
+                  <td className="solo-range">{formatRange(entry.range)}</td>
+                  <td>{entry.cells?.[0] ?? entry.text ?? '—'}</td>
+                  <td>{entry.cells?.[1] ?? ''}</td>
+                </tr>)}
+              </tbody>
+            </table>
+          </div>)}
+        </div>}
+    </section>
   </div>;
 }
 
-function ResultCard({ entry, busy, accept, extraWords, onRollAnother }: { entry: SoloEntry; busy: boolean; accept: Accept; extraWords: string[]; onRollAnother?: () => Promise<void> }) {
-  const lines = entry.result.detail.split('\n').filter(line => line.trim());
-  const eventLine = lines.find(line => line.startsWith('Random event:'));
-  const base = lines.filter(line => !line.startsWith('Random event:'));
-  const pair = eventLine?.replace(/^Random event:\s*/, '');
-  const wordBlock = !!eventLine || extraWords.length > 0 || entry.kind === 'mythic-meaning';
-  return <article className={`solo-panel solo-result tone-${entry.result.tone}`}>
-    <p className="solo-kicker">{KIND_LABELS[entry.kind] ?? entry.kind} · {new Date(entry.at).toLocaleTimeString()}</p>
-    {entry.question && <p className="solo-question">{entry.question}</p>}
-    {entry.result.total !== undefined && <div className="solo-result-meta"><span className="solo-chip">Roll {entry.result.total}</span></div>}
-    <h2 className="solo-result-answer">{entry.result.title}</h2>
-    {base.length > 0 && <p className="solo-result-detail">{base.join('\n')}</p>}
-    {wordBlock && <div className="solo-random-event">
-      <p className="solo-kicker">{eventLine ? 'Random event' : 'Discover Meaning'}</p>
-      {pair && <p className="solo-word-pair">{pair}</p>}
-      {extraWords.length > 0 && <div className="solo-words">{extraWords.map((word, index) => <span className="solo-word" key={index}>{word}</span>)}</div>}
-      {onRollAnother && <button type="button" className="daggery-roll-toggle" disabled={busy} onClick={() => void onRollAnother()}><Icon name="dice" />Roll another word</button>}
-    </div>}
-    <Interpretation entry={entry} busy={busy} accept={accept} />
-  </article>;
-}
-
-function Interpretation({ entry, busy, accept }: { entry: SoloEntry; busy: boolean; accept: Accept }) {
-  const [text, setText] = useState(entry.interpretation);
-  useEffect(() => { setText(entry.interpretation); }, [entry.id, entry.interpretation]);
-  return <>
-    <label className="solo-field solo-interpret-field">Your interpretation
-      <textarea rows={3} maxLength={6000} value={text} onChange={event => setText(event.target.value)} placeholder="What does this mean? What happens next?" />
-    </label>
-    <button type="button" className="daggery-primary" disabled={busy || !text.trim()} onClick={() => void accept(entry, text)}>
-      <Icon name="check" />{entry.accepted ? 'Update note' : 'Save to notes'}
-    </button>
-  </>;
-}
-
-function TablesTab({ mythic, busy, roll }: { mythic: MythicData | null; busy: boolean; roll: Roll }) {
-  const [columns, setColumns] = useState<Record<string, number>>({});
-  const [results, setResults] = useState<Record<string, SoloEntry>>({});
+function TablesTab({ mythic }: { mythic: MythicData | null }) {
   if (!mythic) return <p className="solo-empty">Loading oracle tables…</p>;
   if (!mythic.available) return <NotInstalled />;
 
-  async function rollTable(source: MythicSource, tableId: string, column?: number) {
-    const key = `${source}:${tableId}`;
-    const entry = await roll('mythic-table', { source, tableId, ...(column === undefined ? {} : { column }) });
-    if (entry) setResults(previous => ({ ...previous, [key]: entry }));
-  }
+  const groups = TABLE_GROUPS
+    .map(group => {
+      const file = mythic[group.source];
+      if (!file || file.tables.length === 0) return null;
+      const tables = group.source === 'collectedTables'
+        ? withoutLocationDuplicates(file.tables, mythic.locationCrafting)
+        : file.tables;
+      return { ...group, tables };
+    })
+    .filter((group): group is { source: MythicSource; label: string; tables: MythicTable[] } => group !== null);
+
+  if (groups.length === 0) return <p className="solo-empty">No reference tables are installed.</p>;
 
   return <div className="solo-stack">
-    {MYTHIC_GROUPS.map(({ source, label }) => {
-      const file = mythic[source];
-      if (!file || file.tables.length === 0) return null;
-      return <section className="solo-panel" key={source}>
-        <h2>{label}</h2>
-        <div className="solo-table-list">{file.tables.map(table => {
-          const key = `${source}:${table.id}`;
-          const selected = columns[key] ?? 0;
-          const result = results[key];
-          return <article className="solo-table-card" key={key}>
-            <header>
-              <h3>{table.title}</h3>
-              <span className="solo-chip">{table.die}</span>
-            </header>
-            {table.columns && table.columns.length > 1 && <div className="solo-segment solo-segment-small" role="group" aria-label={`${table.title} column`}>
-              {table.columns.map((column, index) => <button type="button" key={column} aria-pressed={selected === index} onClick={() => setColumns(previous => ({ ...previous, [key]: index }))}>{column}</button>)}
-            </div>}
-            <button type="button" className="daggery-roll-toggle" disabled={busy} onClick={() => void rollTable(source, table.id, table.columns && table.columns.length > 1 ? selected : undefined)}>
-              <Icon name="dice" />Roll {table.die}
-            </button>
-            {result && <div className="solo-table-result">
-              <strong>{result.result.title}</strong>
-              <span>{result.result.detail}</span>
-            </div>}
-          </article>;
-        })}</div>
-      </section>;
-    })}
+    {groups.map((group, groupIndex) => <section className="solo-tables-group" key={group.source} aria-labelledby={`solo-group-${group.source}`}>
+      <h2 id={`solo-group-${group.source}`}>{group.label}</h2>
+      <div className="solo-table-stack">
+        {group.tables.map(table => <details className="solo-table" key={`${group.source}:${table.id}`} open={groupIndex === 0 ? true : undefined}>
+          <summary>
+            <span className="solo-table-title">{table.title}</span>
+            <span className="solo-chip">{table.die}</span>
+          </summary>
+          <TableBody table={table} />
+        </details>)}
+      </div>
+    </section>)}
+  </div>;
+}
+
+function TableBody({ table }: { table: MythicTable }) {
+  const columns = table.columns && table.columns.length > 0 ? table.columns : null;
+  return <div className="solo-reference-table solo-table-scroll">
+    <table className="solo-lookup-table">
+      <thead>
+        <tr>
+          <th scope="col">Roll</th>
+          {columns ? columns.map((column, index) => <th scope="col" key={`${column}-${index}`}>{column}</th>) : <th scope="col">Result</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {table.entries.map((entry: MythicTableEntry, index) => <tr key={entry.range?.join('-') ?? index}>
+          <td className="solo-range">{formatRange(entry.range)}</td>
+          {columns && entry.text !== undefined
+            ? <td colSpan={columns.length}>{entry.text}{entry.unclear ? ' ?' : ''}</td>
+            : columns
+              ? columns.map((_, column) => <td key={column}>{entry.cells?.[column] ?? ''}</td>)
+              : <td>{entry.text ?? entry.cells?.join(' · ') ?? ''}{entry.unclear ? ' ?' : ''}</td>}
+        </tr>)}
+      </tbody>
+    </table>
   </div>;
 }
 
