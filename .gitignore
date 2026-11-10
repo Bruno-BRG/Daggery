@@ -1,6 +1,5 @@
 
-sources/
-# Copyrighted source material extracted from purchased PDFs.
+# Source PDFs are tracked through Git LFS on purpose (the repo is private).
 *.tmp.ts
 node_modules/
 data/
