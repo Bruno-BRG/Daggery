@@ -15,6 +15,8 @@ import { registerSecureGame } from './secure-game';
 import { EmailAuth } from './email-auth';
 import { createMailer } from './mailer';
 import { openAiVault } from './ai/vault';
+import { localEmbedderProvider } from './ai/local-embedder';
+import { RAG_ENABLED } from './ai/embeddings';
 import { registerWebApp } from './web-static';
 
 export async function startServer(): Promise<void> {
@@ -57,7 +59,10 @@ export async function startServer(): Promise<void> {
   const emailAuth = mailer ? new EmailAuth(db, mailer, allowRegistration) : undefined;
   await registerCampaignRoutes(app, { service, origin, secureCookies: production, allowRegistration, emailAuth });
   registerMythicRoutes(app, { service, secureCookies: production });
-  await registerSecureGame(app, { db, service, origin, secureCookies: production, assetsDir, aiVault: openAiVault(dataDir) });
+  // Semantic retrieval is local and optional. The provider is lazy: no model is loaded (or
+  // downloaded) until a turn or a background backfill asks for it. DAGGERY_RAG=off disables it.
+  const aiEmbedder = RAG_ENABLED() ? localEmbedderProvider({ modelsDir: join(dataDir, 'models') }) : undefined;
+  await registerSecureGame(app, { db, service, origin, secureCookies: production, assetsDir, aiVault: openAiVault(dataDir), aiEmbedder });
   app.get('/health', async () => ({ ok: true }));
   if (production && !(await registerWebApp(app, fileURLToPath(new URL('../../web/dist/', import.meta.url))))) throw new Error('The web app is not built. Run npm run build -w @daggery/web before starting in production.');
   await app.listen({ port, host });

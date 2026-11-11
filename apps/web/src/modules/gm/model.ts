@@ -4,9 +4,11 @@ import { rollDie, type Rng } from '@daggery/shared';
 export type LootTable = 'items' | 'consumables';
 export const RARITIES = { Common: [1, 2], Uncommon: [2, 3], Rare: [3, 4], Legendary: [4, 5] } as const;
 // The core catalog preserves the SRD table order. Consumables also carry explicit roll numbers.
+// Supplements add entries to the compendium/inventory, but the d12 loot tables stay core-only.
 export function lootEntries(table: LootTable) {
-  return table === 'items' ? items.map((item, index) => ({ ...item, roll: index + 1 }))
-    : consumables.map(item => ({ ...item, roll: item.rollTable!.roll }));
+  return table === 'items'
+    ? items.filter(item => item.source === 'core').map((item, index) => ({ ...item, roll: index + 1 }))
+    : consumables.filter(item => item.source === 'core').map(item => ({ ...item, roll: item.rollTable!.roll }));
 }
 export function rollLoot(table: LootTable, count: number, rng?: Rng) {
   if (!Number.isInteger(count) || count < 1 || count > 5) throw new Error('Choose 1 to 5 d12s.');

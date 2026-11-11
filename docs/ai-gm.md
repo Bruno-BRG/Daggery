@@ -42,6 +42,63 @@ References: [OpenCode Console API](https://opencode.ai/docs/console/api),
 [OpenCode inference](https://opencode.ai/docs/console/api/inference),
 [OpenRouter tool calling](https://openrouter.ai/docs/guides/features/tool-calling).
 
+## Reasoning and context
+
+DeepSeek reasoning models on OpenCode Go always run at the top effort in their catalog:
+Daggery sends `reasoning_effort: "max"` for any model whose id contains `deepseek`.
+GM turns on those models request up to 32,000 output tokens because reasoning tokens
+count toward the limit; compaction keeps its own smaller budget. If the catalog omits
+the context window or reports less than 1,000,000 for a DeepSeek V4 model, memory
+budgeting uses 1,000,000 tokens, so Maximum has room for a long campaign in view.
+
+## Sourcebooks and campaign frames
+
+The GM can search the printed books, read a page, and cite it as “Title, p. N” with
+`search_sourcebook` and `read_sourcebook_page`. Catalog lookups still use `search_rules`.
+
+Every shipped PDF is extracted by `tools/extract_sources.py --all`, which knows the
+stable id, title and page offset of each file in `sources/`:
+
+```sh
+python tools/extract_sources.py --all          # all 11 PDFs, with OCR fallback
+python tools/extract_sources.py --all --no-ocr # text layer only
+```
+
+The output is committed under `sources/rules/*.json` (the repository is private); the
+PDFs themselves are excluded from the Docker image. The server loads both
+`sources/rules/` and `<DAGGERY_DATA_DIR>/rules/`, with a data-directory file overriding
+the committed copy of the same id, so a local re-extraction wins without a code change.
+`sources/rules` resolves against the module first and then the working directory, which
+covers `tsx src/index.ts`, the compiled output and the Docker image (checkout at `/app`,
+server run from `/app/apps/server`). The folder may be absent, in which case the tools
+report that no sourcebooks are installed. Set `DAGGERY_REPO_RULES=off` to ignore the
+committed copy (the fixture tests do this).
+
+Page records carry `printed` when the book prints a folio (the core rulebook offset is 1:
+PDF 255 is printed 254, “The Witherwild”); front matter and the card sheets at the end
+are unnumbered. Pages with no text layer are rendered at 200 dpi and read with RapidOCR
+(`pip install rapidocr-onnxruntime`) and marked `"ocr": true`. A pure map or illustration
+page whose OCR result is unusable stays in the book with `"imageOnly": true` and a short
+generated label, so it still appears in listings and can be cited. Batch extraction
+prints per-PDF page, character, OCR and image-only counts, and verifies each book's
+detected printed offset against the value taken from its contents page.
+
+Overlapping releases are kept as separate sources, but `search_sourcebook` collapses
+near-duplicate pages (identical normalized text or 90% token containment) and represents
+each cluster with the most authoritative source: the book first, then the newest
+supplement, then card sheets and guides, then older tiles and maps. Results and
+`listSourcebooks` include a `sourceLabel`/`label` (Book, Cards, Sheets, Guides, Campaign
+frame, Map, Supplement) so citations are unambiguous.
+
+Adventure setup can select a published campaign frame: the six core rulebook frames
+(The Witherwild, Five Banners Burning, Beast Feast, The Age of Umbra, Motherboard,
+Colossus of the Drylands), the Hope & Fear frames (Reign of the Weredragon, Journey to
+Horizon) and the Sablewood location. The GM calls `list_campaign_frames` and
+`load_campaign_frame`; the first load seeds brief prep and canon (premise, tone,
+factions, key NPCs, locations, hooks), and later calls read the printed pages in chunks.
+The frame summaries in the registry are authored; the printed pages are read at runtime
+and are never committed.
+
 ## Play and control
 
 In this guide, the owner is the campaign GM who set up the AI GM, and the GM is the AI
@@ -51,12 +108,13 @@ ledger. The owner can edit the GM secrets, change setup or connection, pause or 
 GM, stop any turn, or remove the key. A player can stop a turn that the player started.
 Rolls and document changes also update the existing table and sheets through live sync.
 
-Typed GM actions cover campaign context, catalog searches, GM secrets, campaign state,
-journal notes and searches, setting and scenario preparation, notes on the Notes page,
-scenes, miniatures, drawings, fog, conditions, spotlight, adversaries, standard attacks,
-requested hero rolls, Fear costs, countdowns, loot, inventory rewards and choices. In Solo
-campaigns the GM can consult the configured oracles, themes and weighted pool. The engine
-generates the dice and provides their results to the model.
+Typed GM actions cover campaign context, catalog and printed-source searches, sourcebook
+page reads, campaign frames, GM secrets, campaign state, journal notes and searches,
+setting and scenario preparation, notes on the Notes page, scenes, miniatures, drawings,
+fog, conditions, spotlight, adversaries, standard attacks, requested hero rolls, Fear
+costs, countdowns, loot, inventory rewards and choices. In Solo campaigns the GM can
+consult the configured oracles, themes and weighted pool. The engine generates the dice
+and provides their results to the model.
 
 Action cards use actual sheet traits, Experience costs, Hope/Fear and critical Stress
 recovery. Basic attacks with an equipped weapon update adversary HP. Incoming damage requires
@@ -84,8 +142,8 @@ or compacting a session fails with a conflict. The transcript loads 60 messages 
 
 Creating a session starts no GM turn. The owner or a member presses **Begin the adventure**
 in an empty session to open it. When the journal has entries, the GM recaps the story so far
-from the campaign digest, the recent chapters and the journal, and no player message is
-stored. When the journal is empty, Begin stores a short opening message from the player, and
+from the campaign digest, the previous session summary, the recent chapters and the journal,
+and no player message is stored. When the journal is empty, Begin stores a short opening message from the player, and
 the GM opens the scene in reply. A session that already has messages cannot be begun again.
 
 Ending a session makes it read only. The GM writes a final chapter from the messages that
@@ -127,15 +185,35 @@ blocks below follow as system messages, in this order:
 
 1. Campaign setup: the game system, the premise, the tone and the player's hero.
 2. GM preparations: the setting and the two newest scenarios. See below.
-3. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
-4. The last three chapters.
-5. The GM secrets and plans, visible only to the owner.
-6. The campaign state, visible only to the owner.
-7. The session summary, a working summary of the current session of up to 300 words.
-8. The recent messages of the session that fit in the budget.
-9. The table snapshot, which comes last on every request.
+3. Canon: the active entry titles, newest first, with their IDs. The room for this list scales
+   with the model's context window (about 1,500 characters by default, more on a large model).
+4. Relevant memory: proactive recall of at most six canon entries and six journal entries that
+   match the latest player messages, the location, the objective, the open thread titles and the
+   active scene. Each hit carries its ID, and journal hits also carry their session label and
+   date. The block is left out when nothing scores above the recall threshold.
+5. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
+6. The recent chapters (three by default; more when the context window allows).
+7. The GM secrets and plans, visible only to the owner.
+8. The campaign state, visible only to the owner.
+9. The session summary, a working summary of the current session of up to 300 words. When the
+   current session has no summary yet, the newest previous session summary appears instead, so
+   the opening recap can use it.
+10. The recent messages of the session that fit in the budget.
+11. The table snapshot, which comes last on every request.
 
 The blocks are rebuilt on every request, so changes apply at once.
+
+`search_journal` and `canon_search` use ranked multi-term retrieval rather than a whole-phrase
+substring. Queries are lowercased, stripped of accents and stopwords, and lightly stemmed, so
+possessives and plurals match ("miller debt" finds "the miller's unpaid debt", "debts" finds
+"debt", and "cafe" finds "café"). A title match ranks above a body match, BM25 supplies the base
+score, and the most recently updated entry wins a tie. An empty query lists the newest entries.
+The journal search covers every session of the campaign, labels each hit with its session and
+date, and down-weights engine events so notes and chapters surface first while a uniquely
+matching event is still found. Campaign scoping, the shared-only rule for non-GM readers, the
+kinds filter and the archived rule are unchanged. Search snippets are 600 characters by default
+and grow to 1,000, 1,200 or 1,500 as the memory size and the model's context window allow. The paginated journal list also
+matches any query term, while keeping newest-first order and its cursor.
 
 GM preparations are the setting and the scenarios saved with `write_prep`. The GM sees the
 setting and the two most recently saved scenarios as one GM only block of at most 2,500
@@ -152,13 +230,13 @@ is saved with a limit of 300 characters. The digest is sent up to 1,800 characte
 chapter up to 1,300 characters of text, the GM secrets up to 4,000 characters, the campaign
 state up to 6,000 characters, and the session summary up to 2,000 characters.
 
-All memory blocks together stay within 17,000 characters, about 4,860 estimated tokens. When
-they are over that, the oldest chapter goes first, one at a time, until they fit. If they are
-still over after every chapter has gone, the preparations block is cut and ends with the line
-"(preparations shortened to fit the memory limit)". The setup, the digest, the campaign state
-and the session summary are never trimmed by the cap. These four blocks and the secrets fit
-under the cap together even at their largest sizes, so the preparations absorb any excess and
-the secrets are not cut in practice.
+Lean, Balanced and Rich stay within 17,000 characters by default, about 4,860 estimated tokens;
+Maximum allows 60,000. When the blocks are over that cap, the oldest chapter goes first, one at
+a time, until they fit. The proactive recall block is dropped whole next, before any durable
+text is touched. If they are still over after every chapter and the recall block have gone, the
+preparations block and then the canon title list are cut, each ending with a note that says it
+was shortened, and the secrets are shortened last. The setup, the digest, the campaign state
+and the session summary are never trimmed by the cap.
 
 The GM secrets hold plans and facts that players must not see. `set_memory` rewrites them in
 full, and the owner can also edit them in the app. Both refuse text longer than 4,000
@@ -193,17 +271,21 @@ that is too long loses items from its longest list.
 The memory size sets the token budget for memory and messages together. Lean is 12,000
 estimated tokens, Balanced is 24,000 (the default) and Rich is 48,000. Maximum is 60 percent
 of the model's context window, so a model with a 1,000,000-token window gets 600,000 tokens.
-Memory uses no more than its 17,000 characters, and recent messages get the rest of the
-budget, with a floor of 1,000 tokens. The GM prompt and tool schemas add about 4,600
-estimated tokens on top of the budget, and the snapshot adds up to 4,000 characters more.
-When the catalog reports a context window for the model, the fixed sizes are capped at 60
-percent of that window too. Until a connection is saved with its window, Maximum uses 48,000
-tokens. Tokens are estimated as characters divided by 3.5.
+Memory uses no more than its cap, and recent messages get the rest of the budget, with a floor
+of 1,000 tokens. The GM prompt and tool schemas add about 4,600 estimated tokens on top of the
+budget, and the snapshot adds up to 4,000 characters more. When the catalog reports a context
+window for the model, the fixed sizes are capped at 60 percent of that window too. Until a
+connection is saved with its window, Maximum uses 48,000 tokens. Tokens are estimated as
+characters divided by 3.5.
 
-Maximum also raises the memory limits. Its memory may use up to 60,000 characters, the GM
-sees up to twelve recent chapters instead of three, the GM preparations take up to 12,000
-characters, and the campaign state up to 20,000 characters. The digest, the GM secrets and
-the session summary keep their own limits. A Maximum request is therefore far larger than a
+The memory caps scale with the model's context window. Lean keeps its small fixed caps on every
+model: 17,000 characters, three chapters, 2,500 preparation characters and 6,000 state
+characters. Balanced, Rich and Maximum grow once the window reaches 80,000 tokens, and grow
+further at 200,000 or more. On a 1,000,000-token model, Balanced allows 42,000 memory
+characters and nine chapters, Rich allows 65,000 and fourteen chapters, and Maximum allows
+150,000 and thirty chapters. The canon title list, the recall block and the search snippet
+length grow with the same tiers. Maximum without a known window keeps its original caps:
+60,000 characters and twelve chapters. A Maximum request is therefore far larger than a
 Balanced one, so it costs more and can take longer. The setup form shows the estimated budget
 for each size.
 
@@ -224,12 +306,22 @@ The owner can also compact an open session now. That skips the 60 percent trigge
 the same 30 percent tail. If every unsummarized message fits in that tail, a manual
 compaction writes nothing.
 
-A compaction is one request to the owner's model with no tools. The reply must be a JSON
-object with three text fields: `chapter`, `working` and `digest`. Each field is cut to its
-word limit: 180 words for the chapter, 300 for the working summary and 250 for the digest. A
-reply with an empty field counts as unreadable. Text around the object, such as a code fence,
-is ignored. If the reply cannot be read, the server asks the model once more. A valid reply
-writes the chapter to the journal and replaces the session summary and the campaign digest.
+A compaction is one request to the owner's model with no tools. It carries the previous session
+summary, the campaign digest, the existing canon titles and the messages to summarize. The reply
+must be a JSON object with three text fields: `chapter`, `working` and `digest`, plus an optional
+`canon` array. Each text field is cut to its word limit: 180 words for the chapter, 300 for the
+working summary and 250 for the digest. A reply with an empty required field counts as
+unreadable. Text around the object, such as a code fence, is ignored. If the reply cannot be
+read, the server asks the model once more. A valid reply writes the chapter to the journal and
+replaces the session summary and the campaign digest.
+
+The optional `canon` array may hold up to five durable new facts, people, places, factions,
+promises or plans that the digest might lose. Each item has a `kind`, `title` and `body`, is
+validated against the canon kinds and length limits, and is written with source `compaction`
+and GM-only visibility. The server keeps at most six per compaction, dedupes them by title
+within the reply, and skips any title that already exists in canon, so a compaction never
+duplicates or resurrects an archived entry. Invalid items are ignored. The digest therefore
+stays a short rolling summary while long-term facts become retrievable canon entries.
 
 If the second reply also fails, the server writes a fallback chapter of at most 1,200
 characters. It is made from the titles of up to 12 shared events from the period the batch
@@ -242,7 +334,75 @@ in a turn.
 Compaction uses the owner's selected model. A GM reply can use up to 2,400 output tokens, and
 a compaction reply up to 1,800.
 
-## Persistence and recovery
+## Semantic retrieval (RAG)
+
+Search is hybrid. BM25 stays the base, and a small local sentence model adds meaning-based hits, so a
+player who writes “innkeeper” finds an entry that says “tavern keeper”, in Portuguese or English.
+No embedding request goes to a provider, so RAG costs nothing and does not depend on OpenCode or
+OpenRouter offering an embeddings endpoint.
+
+- Model: `Xenova/paraphrase-multilingual-MiniLM-L12-v2` through Transformers.js and onnxruntime-node,
+  384 dimensions, multilingual (Portuguese and English included). Set `DAGGERY_RAG_MODEL` to use
+  another Transformers.js model; its dimension is assumed to be 384 unless changed in code.
+- Cache: the model downloads once into `<DAGGERY_DATA_DIR>/models`. Loading is lazy, so server start
+  and GM turns never wait for a download. If the model cannot be loaded (offline, unsupported
+  platform), the failure is logged once and search silently stays BM25-only.
+- Disable: set `DAGGERY_RAG=off`. The server then creates no embedder and no vectors are read or
+  written.
+
+Vectors are stored in SQLite (`ai_embeddings`, schema version 9): one row per campaign, kind
+(`canon` or `journal`) and entry, with a SHA-256 of the embedded text, the model id, the dimension
+and a Float32 BLOB. The campaign foreign key cascades, so deleting a campaign removes its vectors.
+Ranking is hybrid reciprocal-rank fusion over the BM25 ranking (title-weighted, phrase bonus) and
+the cosine ranking. A semantic hit must clear a minimum similarity (0.32) before it can appear on its
+own, so unrelated text is not returned; BM25-only entries remain findable before they are embedded.
+
+Live indexing keeps the index current during play. Every canon upsert, journal insert or edit
+(GM notes, engine events, chapters, owner edits), and every compaction chapter or promoted canon
+enqueues a debounced background job. Jobs are coalesced by entry and text hash, so save-as-is never
+re-embeds; archiving canon and deleting a journal entry remove their vector. A turn never waits on
+this queue. On startup the server backfills any missing or stale vectors for existing campaigns.
+Tests can await the queue with `AiService.flushEmbeddings()` (or `EmbeddingIndex.flush()`).
+
+Hybrid ranking is used by `canon_search`, `search_journal`, `search_sourcebook`, proactive recall
+(the query built from the latest player messages, location, objective, open threads and scene), and
+`search_rules` for the structured catalog. Result shapes, campaign scoping, visibility rules
+(non-GM readers see only shared, non-secret entries), archived handling and the kinds filter are
+unchanged; semantic hits pass through the same SQL filters. Recall includes up to two catalog rules
+found by meaning, and the GM’s query is embedded once per turn.
+
+Sourcebook pages get vectors too. Each installed book gets a `<source>.vec` cache under
+`<DAGGERY_DATA_DIR>/rules/` (never beside the committed JSON in `sources/rules/`), keyed
+by the book’s content hash, model and dimension; a book is re-embedded only when its text
+or the model changes. The rule folders are rescanned by directory signature, so a book
+extracted or replaced while the server runs becomes BM25-searchable on the next
+`search_sourcebook` and is embedded by the background rescan, without a restart. Every
+page — including OCR text and image-only labels — participates.
+
+The entire structured catalog bundled in `@daggery/content` is embedded: the core book
+plus Hope & Fear and Sablewood, across adversaries, ancestries, communities, environments,
+items, consumables, weapons, armor, domain cards, classes (with subclasses), domains,
+transformations, conditions and ranges. The in-memory index is backed by
+`<DAGGERY_DATA_DIR>/catalog-index.vec`, keyed by a content hash plus model id and
+dimension, so a normal start loads it instead of embedding ~1,000 entries again. Nothing
+is committed; changing the content package or model rebuilds it on the next start. On
+this machine a cold build of all 1,235 entries took about 38 s; loading the cache takes
+about 0.2 s. The build runs on the existing background startup queue, so it never blocks
+a turn.
+
+`npx tsx tools/check_rag_coverage.ts` verifies the whole pipeline against the installed
+PDFs: every PDF page must exist in the JSON, every text page must have a vector, and eight
+automatically chosen rare 3–5 word phrases per source must return their originating page
+in the top 3 of hybrid search. It also runs hand-written semantic questions and writes
+`docs/rag-coverage.md` with per-PDF counts, OCR/image-only statistics, hit rates and known
+gaps. `apps/server/src/ai-rag-coverage.test.ts` unit-tests the phrase picker,
+near-duplicate detection and the book-over-tile preference.
+
+Docker: the `node:22-bookworm` image installs onnxruntime-node and the model is fetched on first use
+into the mounted data directory (about 130 MB for the quantized model). The first semantic query after
+a cold start may fall back to BM25 while the model loads, then improve by itself.
+
+
 
 Sessions, messages, journal entries, actions, setup, memory and campaign state persist in
 SQLite. Each campaign permits one active turn, a timeout of five minutes that includes any
@@ -293,11 +453,21 @@ credential for external agents.
 
 ## Verification
 
-The server suite has 65 tests, and all 65 pass. Of these, 40 are in
-`apps/server/src/ai-memory.test.ts`. The other 25 are in the existing server test files,
-and nine of those are in `apps/server/src/ai.test.ts`. The shared fixtures in
-`apps/server/src/ai-test-kit.ts` keep databases in memory and replace the model provider
-with a fake fetch.
+The server suite runs every `apps/server/src/*.test.ts`, and all tests pass. The AI memory
+tests live in `apps/server/src/ai-memory.test.ts` and `apps/server/src/ai-retrieval.test.ts`;
+the latter covers ranked multi-term search, proactive recall, scaled limits, cross-session
+search, the previous-session recap and canon promotion from compaction. `ai-rag.test.ts` covers the
+semantic layer with a deterministic fake embedder (no model download): live indexing on write, edit,
+archive and remove, text-hash coalescing, fallback when the embedder is missing or fails, backfill,
+visibility and archived filtering for semantic hits, a synonym query that BM25 misses, sourcebook
+vector cache rebuilds and a newly added book, the in-memory catalog index (now covering
+every bundled source and category with an on-disk content-hashed cache), and the mid-session
+guarantee that a `canon_write` becomes semantically retrievable on the next turn after `flush()`.
+`ai-rag-coverage.test.ts` covers the distinctive-phrase picker, near-duplicate collapsing and
+the book-over-tile citation preference. `tools/check_rag_coverage.ts` is the end-to-end
+coverage proof and writes `docs/rag-coverage.md`.
+The shared fixtures in `apps/server/src/ai-test-kit.ts` keep databases in memory and replace the
+model provider with a fake fetch.
 
 The 40 tests in `ai-memory.test.ts` cover:
 
@@ -336,13 +506,23 @@ The 40 tests in `ai-memory.test.ts` cover:
 - HTTP routes: the session, Begin, journal, setup, compaction, ending and deletion routes, their
   errors for ended sessions and invalid input, and the Origin check on writes.
 - Memory limits: `set_memory` and `PUT /memory` refuse more than 4,000 characters and save
-  nothing. When memory is over the cap, the oldest chapter goes first, and the preparations
-  are cut before the secrets. The preparations block, `get_context`, the campaign state text
-  and the snapshot each have tests for their limits.
+  nothing. When memory is over the cap, the oldest chapter goes first, then the recall block is
+  dropped, then the preparations and the secrets are shortened. The preparations block,
+  `get_context`, the campaign state text and the snapshot each have tests for their limits.
+- Ranked retrieval: multi-word, possessive, plural and accent matches; title matches above
+  body matches; visibility, archived handling and the kinds filter; cross-session journal
+  search with labels and dates; and engine events ranked below notes.
+- Recall: the relevant-memory block appears with IDs, session labels and dates, is left out
+  when nothing matches, and is dropped before canon or secrets when memory is tight.
+- Scaled limits: Lean keeps its small caps, Balanced and Rich grow on a large context window,
+  Maximum grows further, and the canon list and search snippets grow with them.
+- Compaction promotion: valid `canon` items become GM-only canon with source `compaction`,
+  capped, deduped within a reply and skipped when the title already exists.
 
 Four unit tests check `fitMemory` directly. The oldest chapter goes first, the preparations
 are shortened once every chapter is gone, the secrets are shortened last with their own
-notice, and memory under the cap is left alone. End to end, requests never reach the secrets
+notice, and memory under the cap is left alone. A fifth unit test checks that the recall block
+is dropped before canon and secrets are shortened. End to end, requests never reach the secrets
 branch, so only the unit test covers it.
 
 The nine tests in `ai.test.ts` cover encryption isolation, migration, OpenCode Go routing,

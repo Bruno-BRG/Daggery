@@ -579,7 +579,10 @@ export function subclassImage(sheet: Sheet): string | undefined {
 
 /** Full-art class illustration used as the character sheet banner. */
 export function classArt(classId: string | null | undefined): string | undefined {
-  return classId ? cardUrl(`class/${classId}.webp`) : undefined;
+  if (!classId) return undefined;
+  const entry = classes.find((item) => item.id === classId);
+  if (!entry || entry.art === false) return undefined;
+  return cardUrl(`class/${classId}.webp`);
 }
 
 export function makeId(prefix: string): string {

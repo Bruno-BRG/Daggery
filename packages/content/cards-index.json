@@ -4156,5 +4156,929 @@
       576.0,
       774.0
     ]
+  },
+  {
+    "id": "avatar-of-terror",
+    "name": "Avatar of Terror",
+    "kind": "domain",
+    "file": "domain/dread/avatar-of-terror.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 200,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ],
+    "domain": "dread",
+    "level": 10
+  },
+  {
+    "id": "blighting-strike",
+    "name": "Blighting Strike",
+    "kind": "domain",
+    "file": "domain/dread/blighting-strike.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 198,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ],
+    "domain": "dread",
+    "level": 1
+  },
+  {
+    "id": "chains-of-affliction",
+    "name": "Chains of Affliction",
+    "kind": "domain",
+    "file": "domain/dread/chains-of-affliction.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 198,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ],
+    "domain": "dread",
+    "level": 4
+  },
+  {
+    "id": "damnation",
+    "name": "Damnation",
+    "kind": "domain",
+    "file": "domain/dread/damnation.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 199,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ],
+    "domain": "dread",
+    "level": 9
+  },
+  {
+    "id": "dark-army",
+    "name": "Dark Army",
+    "kind": "domain",
+    "file": "domain/dread/dark-army.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 199,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ],
+    "domain": "dread",
+    "level": 8
+  },
+  {
+    "id": "darkfire",
+    "name": "Darkfire",
+    "kind": "domain",
+    "file": "domain/dread/darkfire.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 199,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ],
+    "domain": "dread",
+    "level": 6
+  },
+  {
+    "id": "dire-strike",
+    "name": "Dire Strike",
+    "kind": "domain",
+    "file": "domain/dread/dire-strike.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 199,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ],
+    "domain": "dread",
+    "level": 5
+  },
+  {
+    "id": "dread-touched",
+    "name": "Dread-Touched",
+    "kind": "domain",
+    "file": "domain/dread/dread-touched.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 199,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ],
+    "domain": "dread",
+    "level": 7
+  },
+  {
+    "id": "eldritch-flesh",
+    "name": "Eldritch Flesh",
+    "kind": "domain",
+    "file": "domain/dread/eldritch-flesh.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 199,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ],
+    "domain": "dread",
+    "level": 8
+  },
+  {
+    "id": "hideous-retribution",
+    "name": "Hideous Retribution",
+    "kind": "domain",
+    "file": "domain/dread/hideous-retribution.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 198,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ],
+    "domain": "dread",
+    "level": 2
+  },
+  {
+    "id": "invoke-torment",
+    "name": "Invoke Torment",
+    "kind": "domain",
+    "file": "domain/dread/invoke-torment.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 200,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ],
+    "domain": "dread",
+    "level": 10
+  },
+  {
+    "id": "jump-scare",
+    "name": "Jump Scare",
+    "kind": "domain",
+    "file": "domain/dread/jump-scare.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 199,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ],
+    "domain": "dread",
+    "level": 6
+  },
+  {
+    "id": "savor-the-anguish",
+    "name": "Savor the Anguish",
+    "kind": "domain",
+    "file": "domain/dread/savor-the-anguish.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 200,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ],
+    "domain": "dread",
+    "level": 9
+  },
+  {
+    "id": "shared-trauma",
+    "name": "Shared Trauma",
+    "kind": "domain",
+    "file": "domain/dread/shared-trauma.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 198,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ],
+    "domain": "dread",
+    "level": 3
+  },
+  {
+    "id": "siphon-essence",
+    "name": "Siphon Essence",
+    "kind": "domain",
+    "file": "domain/dread/siphon-essence.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 198,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ],
+    "domain": "dread",
+    "level": 2
+  },
+  {
+    "id": "spectral-mist",
+    "name": "Spectral Mist",
+    "kind": "domain",
+    "file": "domain/dread/spectral-mist.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 199,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ],
+    "domain": "dread",
+    "level": 5
+  },
+  {
+    "id": "summon-horror",
+    "name": "Summon Horror",
+    "kind": "domain",
+    "file": "domain/dread/summon-horror.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 198,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ],
+    "domain": "dread",
+    "level": 4
+  },
+  {
+    "id": "terrify",
+    "name": "Terrify",
+    "kind": "domain",
+    "file": "domain/dread/terrify.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 198,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ],
+    "domain": "dread",
+    "level": 3
+  },
+  {
+    "id": "umbral-veil",
+    "name": "Umbral Veil",
+    "kind": "domain",
+    "file": "domain/dread/umbral-veil.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 198,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ],
+    "domain": "dread",
+    "level": 1
+  },
+  {
+    "id": "voice-of-dread",
+    "name": "Voice of Dread",
+    "kind": "domain",
+    "file": "domain/dread/voice-of-dread.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 198,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ],
+    "domain": "dread",
+    "level": 1
+  },
+  {
+    "id": "wall-of-hunger",
+    "name": "Wall of Hunger",
+    "kind": "domain",
+    "file": "domain/dread/wall-of-hunger.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 199,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ],
+    "domain": "dread",
+    "level": 7
+  },
+  {
+    "id": "executioners-guild-foundation",
+    "name": "Executioners Guild",
+    "kind": "subclass",
+    "file": "subclass/executioners-guild-foundation.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 200,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "executioners-guild-specialization",
+    "name": "Executioners Guild",
+    "kind": "subclass",
+    "file": "subclass/executioners-guild-specialization.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 200,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "executioners-guild-mastery",
+    "name": "Executioners Guild",
+    "kind": "subclass",
+    "file": "subclass/executioners-guild-mastery.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 200,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "hedge-foundation",
+    "name": "Hedge",
+    "kind": "subclass",
+    "file": "subclass/hedge-foundation.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 202,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "hedge-specialization",
+    "name": "Hedge",
+    "kind": "subclass",
+    "file": "subclass/hedge-specialization.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 202,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "hedge-mastery",
+    "name": "Hedge",
+    "kind": "subclass",
+    "file": "subclass/hedge-mastery.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 202,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "juggernaut-foundation",
+    "name": "Juggernaut",
+    "kind": "subclass",
+    "file": "subclass/juggernaut-foundation.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 201,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "juggernaut-specialization",
+    "name": "Juggernaut",
+    "kind": "subclass",
+    "file": "subclass/juggernaut-specialization.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 201,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "juggernaut-mastery",
+    "name": "Juggernaut",
+    "kind": "subclass",
+    "file": "subclass/juggernaut-mastery.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 201,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "martial-artist-foundation",
+    "name": "Martial Artist",
+    "kind": "subclass",
+    "file": "subclass/martial-artist-foundation.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 201,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "martial-artist-specialization",
+    "name": "Martial Artist",
+    "kind": "subclass",
+    "file": "subclass/martial-artist-specialization.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 201,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "martial-artist-mastery",
+    "name": "Martial Artist",
+    "kind": "subclass",
+    "file": "subclass/martial-artist-mastery.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 201,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "moon-foundation",
+    "name": "Moon",
+    "kind": "subclass",
+    "file": "subclass/moon-foundation.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 202,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "moon-specialization",
+    "name": "Moon",
+    "kind": "subclass",
+    "file": "subclass/moon-specialization.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 202,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "moon-mastery",
+    "name": "Moon",
+    "kind": "subclass",
+    "file": "subclass/moon-mastery.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 202,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "pact-of-the-endless-foundation",
+    "name": "Pact of the Endless",
+    "kind": "subclass",
+    "file": "subclass/pact-of-the-endless-foundation.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 201,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "pact-of-the-endless-specialization",
+    "name": "Pact of the Endless",
+    "kind": "subclass",
+    "file": "subclass/pact-of-the-endless-specialization.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 201,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "pact-of-the-endless-mastery",
+    "name": "Pact of the Endless",
+    "kind": "subclass",
+    "file": "subclass/pact-of-the-endless-mastery.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 201,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "pact-of-the-wrathful-foundation",
+    "name": "Pact of the Wrathful",
+    "kind": "subclass",
+    "file": "subclass/pact-of-the-wrathful-foundation.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 202,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "pact-of-the-wrathful-specialization",
+    "name": "Pact of the Wrathful",
+    "kind": "subclass",
+    "file": "subclass/pact-of-the-wrathful-specialization.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 202,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "pact-of-the-wrathful-mastery",
+    "name": "Pact of the Wrathful",
+    "kind": "subclass",
+    "file": "subclass/pact-of-the-wrathful-mastery.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 202,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "poisoners-guild-foundation",
+    "name": "Poisoners Guild",
+    "kind": "subclass",
+    "file": "subclass/poisoners-guild-foundation.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 200,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "poisoners-guild-specialization",
+    "name": "Poisoners Guild",
+    "kind": "subclass",
+    "file": "subclass/poisoners-guild-specialization.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 200,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "poisoners-guild-mastery",
+    "name": "Poisoners Guild",
+    "kind": "subclass",
+    "file": "subclass/poisoners-guild-mastery.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 200,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "duneborne",
+    "name": "Duneborne",
+    "kind": "community",
+    "file": "community/duneborne.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 203,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "freeborne",
+    "name": "Freeborne",
+    "kind": "community",
+    "file": "community/freeborne.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 203,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "frostborne",
+    "name": "Frostborne",
+    "kind": "community",
+    "file": "community/frostborne.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 203,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
+  },
+  {
+    "id": "hearthborne",
+    "name": "Hearthborne",
+    "kind": "community",
+    "file": "community/hearthborne.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 204,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "reborne",
+    "name": "Reborne",
+    "kind": "community",
+    "file": "community/reborne.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 204,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "warborne",
+    "name": "Warborne",
+    "kind": "community",
+    "file": "community/warborne.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 204,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "aetheris",
+    "name": "Aetheris",
+    "kind": "ancestry",
+    "file": "ancestry/aetheris.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 203,
+    "bbox": [
+      36.0,
+      18.0,
+      216.0,
+      270.0
+    ]
+  },
+  {
+    "id": "earthkin",
+    "name": "Earthkin",
+    "kind": "ancestry",
+    "file": "ancestry/earthkin.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 203,
+    "bbox": [
+      216.0,
+      18.0,
+      396.0,
+      270.0
+    ]
+  },
+  {
+    "id": "emberkin",
+    "name": "Emberkin",
+    "kind": "ancestry",
+    "file": "ancestry/emberkin.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 203,
+    "bbox": [
+      396.0,
+      18.0,
+      576.0,
+      270.0
+    ]
+  },
+  {
+    "id": "gnome",
+    "name": "Gnome",
+    "kind": "ancestry",
+    "file": "ancestry/gnome.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 203,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "skykin",
+    "name": "Skykin",
+    "kind": "ancestry",
+    "file": "ancestry/skykin.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 203,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "tidekin",
+    "name": "Tidekin",
+    "kind": "ancestry",
+    "file": "ancestry/tidekin.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 203,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "demigod",
+    "name": "Demigod",
+    "kind": "transformation",
+    "file": "transformation/demigod.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 204,
+    "bbox": [
+      36.0,
+      270.0,
+      216.0,
+      522.0
+    ]
+  },
+  {
+    "id": "ghost",
+    "name": "Ghost",
+    "kind": "transformation",
+    "file": "transformation/ghost.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 204,
+    "bbox": [
+      216.0,
+      270.0,
+      396.0,
+      522.0
+    ]
+  },
+  {
+    "id": "reanimated",
+    "name": "Reanimated",
+    "kind": "transformation",
+    "file": "transformation/reanimated.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 204,
+    "bbox": [
+      396.0,
+      270.0,
+      576.0,
+      522.0
+    ]
+  },
+  {
+    "id": "shapeshifter",
+    "name": "Shapeshifter",
+    "kind": "transformation",
+    "file": "transformation/shapeshifter.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 204,
+    "bbox": [
+      36.0,
+      522.0,
+      216.0,
+      774.0
+    ]
+  },
+  {
+    "id": "vampire",
+    "name": "Vampire",
+    "kind": "transformation",
+    "file": "transformation/vampire.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 204,
+    "bbox": [
+      216.0,
+      522.0,
+      396.0,
+      774.0
+    ]
+  },
+  {
+    "id": "werewolf",
+    "name": "Werewolf",
+    "kind": "transformation",
+    "file": "transformation/werewolf.webp",
+    "sourcePdf": "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf",
+    "page": 204,
+    "bbox": [
+      396.0,
+      522.0,
+      576.0,
+      774.0
+    ]
   }
 ]

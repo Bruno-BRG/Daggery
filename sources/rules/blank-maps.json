@@ -1,0 +1,26 @@
+{
+ "sourceId": "blank-maps",
+ "title": "Daggerheart Blank Maps",
+ "label": "Map",
+ "pdfPageCount": 3,
+ "pages": [
+  {
+   "pdf": 1,
+   "printed": null,
+   "text": "TheRupture,SapphireCove,rystalsle,TheSleepingGod,TheRuinsofix,\nThePortalofHyrien,TheLostPassage,Illiat'sTower,NorthguardCastle,\nTheCapitalCityofBarrow,TheCavesofCordellius,BillowforthFalls,\nTheShatteredMountains,TheForbiddenVale,TheQuietLands,\nTheVoid,Sandburrow,TheOldKingdom,TheHealingFields\n四國\nAarosova,Verdona,WoTaKi,TheLambentReach\nDevari,Corris,Xenith,TheSuncrestKingdom,",
+   "ocr": true
+  },
+  {
+   "pdf": 2,
+   "printed": null,
+   "text": "The Isles of Old Gods,The Dead Road,Wyvern's Fire, The Scorched City,\nTheForestoftheFaintDivinities,ThePathof theSeeker,Direridge,\nTheNineFireGarrison,AxiellesHarbor,ThievesHollow,SireValley,\nThePitofContrition,TheEyeofEliniah,TheHiddenCityofHighdark\nConstellation,llfrostPeaks,TheFallowPass,TheCavesofUltrn,\nTheNarrows,TheScatteredWastes,TheLiving CityofUnion,\nTheLandofEverhale,TheSpine,TheThousandYearWaters,\nTheGrthuhfn\nArdentia,Cascadan,TheFifthExpanse,Shantio,",
+   "ocr": true
+  },
+  {
+   "pdf": 3,
+   "printed": null,
+   "text": "TheStillPlains,Kraken'sHarbor,TheSouthernSpire,TheDeadLock,\nTheRedLandsofEltaryn,TheTempleofTyfar,HighRentara,\nNestof theFourDragons,TheWailingWood,EnchantedDell,\nTheHallowedWall,Dayshadow,TheRealmof theLostColossus,\nThe ForgottenKingdom,Galassian School,The Hinting Pass,\nHighMine,TheSiniserianShrine,TheForbiddenSepulcher,\nTheWayofMyren,TheSempiternal Jungle,TheAetherPools\nNiren,Sarelia,TheShatter,Arashimm,Vanish,\nJa-TeSoon,TheTopof theWorld,Syphir",
+   "ocr": true
+  }
+ ]
+}

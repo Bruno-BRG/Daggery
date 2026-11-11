@@ -81,6 +81,11 @@ export class AiChats {
     this.db.prepare('UPDATE ai_chats SET updated = ? WHERE id = ?').run(at, chat);
   }
 
+  /** The newest non-empty working summary, optionally excluding the current session. Used by the opening recap. */
+  latestSummary(campaign: string, exclude: string | null): { title: string; summary: string } | undefined {
+    return this.db.prepare("SELECT title, summary FROM ai_chats WHERE campaign_id = ? AND summary != '' AND (? IS NULL OR id != ?) ORDER BY ordinal DESC LIMIT 1").get(campaign, exclude, exclude) as { title: string; summary: string } | undefined;
+  }
+
   setSummary(chat: string, summary: string, through: number, at: string): void {
     this.db.prepare('UPDATE ai_chats SET summary = ?, summarized_through = ?, summary_updated = ?, updated = ? WHERE id = ?').run(summary, through, at, at, chat);
   }

@@ -6,13 +6,17 @@ import { applyDualityEffects, armorScore, damageHp, damageNotation, damageSeveri
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { clearFocusTarget, focusTargetId, hasRangersFocus, rollPrayerDice, setFocusTarget, spendPrayerDie } from './abilities';
-import { canonBody, canonKind, canonTitle, canonVisibility } from './canon';
+import { CANON_BODY_CHARS, CANON_TITLE_CHARS, canonBody, canonKind, canonTitle, canonVisibility, isCanonKind, type CanonKind } from './canon';
+import { catalogSemantic } from './catalog-index';
 import type { AiChats, ChatRow } from './chats';
+import { EmbeddingIndex, type Embedder } from './embeddings';
 import type { AiJournal } from './journal';
 import { GmActions, GM_TOOLS } from './tools';
-import { ModelProvider, PROVIDERS, ProviderError, type ModelMessage, type ToolCall } from './provider';
+import { ModelProvider, PROVIDERS, ProviderError, effectiveContextWindow, type ModelMessage, type ToolCall } from './provider';
+import { CAMPAIGN_FRAMES, findCampaignFrame, framePrompt } from './frames';
 import { COMPACT_TAIL, COMPACT_TRIGGER, MESSAGE_CHARS, SECRETS_LIMIT, TOOL_RESULT_CHARS, budgetTable, budgetTokens, emptyState, estimateTokens, fitJson, fitMemory, limitsFor, renderState, shorten, snapshotText, type MemoryPart } from './memory';
 import { COMPACTION_PROMPT, GM_PROMPT, GM_PROMPT_VERSION, OPENING_INSTRUCTION } from './prompts';
+import { hasQueryTerms } from './retrieval';
 import { QUICK_CLASSES, quickHero } from './daggerheart';
 import { SecretVault } from './vault';
 import { record, text } from './validation';
@@ -22,14 +26,20 @@ export class AiConflict extends Error {}
 const NL = String.fromCharCode(10);
 const BUDGET_NAMES = ['lean', 'balanced', 'rich', 'maximum'];
 const BEGIN_MESSAGE = 'Begin our adventure. Introduce the opening scene and give me a meaningful decision.';
-const DEFAULT_SETUP: AiSetup = { premise: '', tone: 'Adventurous mystery', heroId: '', persona: '' };
+const DEFAULT_SETUP: AiSetup = { premise: '', tone: 'Adventurous mystery', heroId: '', persona: '', frame: '' };
 const SUMMARY_MAX_TOKENS = 1800;
 /** Estimated tokens of messages in one summarizer request. A larger backlog takes several requests, each with its own chapter. */
 const COMPACT_BATCH_TOKENS = 40000;
-const TURN_STEPS = 12;
+const TURN_STEPS = 16;
+/** Recall hits below this BM25 score are ignored, so an unrelated player message injects nothing. */
+const RECALL_MIN_SCORE = 0.8;
+/** A compaction may promote at most this many durable facts to canon. */
+const CANON_PER_COMPACTION = 6;
 const TURN_ACTIONS = 24;
+/** Tools whose query is embedded for hybrid (BM25 + semantic) retrieval. */
+const SEMANTIC_TOOLS = new Set(['search_journal', 'canon_search', 'search_sourcebook', 'search_rules']);
 /** Canon reads return a whole source record, so they get room for a full body plus its metadata. */
-const TOOL_RESULT_OVERRIDES: Record<string, number> = { canon_read: 9000, canon_write: 9000 };
+const TOOL_RESULT_OVERRIDES: Record<string, number> = { canon_read: 9000, canon_write: 9000, search_sourcebook: 12000, read_sourcebook_page: 9000, load_campaign_frame: 9000 };
 /** The whole turn, including its compaction rounds, must finish within this time. */
 const TURN_TIMEOUT_MS = 300000;
 const TRANSCRIPT_PAGE = 60;
@@ -55,13 +65,19 @@ interface MessageRow { seq: number; id: string; role: string; text: string; inte
 interface RunRow { id: string; kind: AiTurnKind; chat_id: string | null; status: AiRun['status']; error: string; steps: number; cost: number; at: string }
 interface ActionRow { id: string; tool: string; label: string; result: string; at: string }
 interface Pending { seq: number; role: string; text: string; created: string; tokens: number }
-interface Summary { chapter: string; working: string; digest: string }
+interface SummaryCanon { kind: CanonKind; title: string; body: string }
+interface Summary { chapter: string; working: string; digest: string; canon: SummaryCanon[] }
 interface Runtime { campaign: string; owner: string; turn: string; chat: string; provider: AiProvider; model: string; key: string; temperature: boolean; signal: AbortSignal; assertActive: () => void }
 type Publish = (campaign: string, ns: string, id: string, value: unknown) => void;
 type PublishRoll = (campaign: string, kind: string, result: unknown, author?: string) => void;
 
 function clip(value: string, max: number): string {
   return value.length > max ? value.slice(0, max) : value;
+}
+
+/** Collapses whitespace so a multi-line snippet fits on one recall line. */
+function oneLine(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
 }
 
 interface PhysicalDice { hope: number; fear: number; advantageDie?: number }
@@ -107,6 +123,27 @@ function words(value: unknown, max: number): string {
   return parts.length > max ? parts.slice(0, max).join(' ') : trimmed;
 }
 
+/** Reads the optional canon promotions of a compaction reply: valid entries only, capped and deduped by title. */
+function summaryCanon(value: unknown): SummaryCanon[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const entries: SummaryCanon[] = [];
+  for (const raw of value) {
+    if (entries.length >= CANON_PER_COMPACTION) break;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const item = raw as Record<string, unknown>;
+    if (!isCanonKind(item.kind) || typeof item.title !== 'string' || typeof item.body !== 'string') continue;
+    const title = item.title.trim().slice(0, CANON_TITLE_CHARS);
+    const body = item.body.trim().slice(0, CANON_BODY_CHARS);
+    if (!title || !body) continue;
+    const key = title.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push({ kind: item.kind, title, body });
+  }
+  return entries;
+}
+
 /** Reads the model's JSON reply. Surrounding prose or code fences are ignored. */
 export function parseSummary(content: string | null | undefined): Summary | null {
   if (!content) return null;
@@ -121,7 +158,7 @@ export function parseSummary(content: string | null | undefined): Summary | null
   }
   if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
   const value = data as Record<string, unknown>;
-  const summary = { chapter: words(value.chapter, 180), working: words(value.working, 300), digest: words(value.digest, 250) };
+  const summary = { chapter: words(value.chapter, 180), working: words(value.working, 300), digest: words(value.digest, 250), canon: summaryCanon(value.canon) };
   return summary.chapter && summary.working && summary.digest ? summary : null;
 }
 
@@ -157,13 +194,14 @@ function transcript(batch: Pending[]): string {
   return batch.map(item => (item.role === 'gm' ? 'GM' : item.role === 'roll' ? 'Dice' : 'Player') + ': ' + clip(item.text, MESSAGE_CHARS)).join(NL + NL);
 }
 
-function compactionInput(summary: string, digest: string, batch: Pending[], retry: boolean): string {
+function compactionInput(summary: string, digest: string, canonTitles: string, batch: Pending[], retry: boolean): string {
   const parts = [
     'Previous session summary:' + NL + (summary || 'None yet.'),
     'Campaign digest so far:' + NL + (digest || 'None yet.'),
+    'Existing canon titles (do not repeat these):' + NL + (canonTitles || 'None yet.'),
     'Messages to summarize, oldest first:' + NL + transcript(batch),
   ];
-  if (retry) parts.push('Your previous reply could not be read. Reply with only the JSON object that contains the fields chapter, working, and digest.');
+  if (retry) parts.push('Your previous reply could not be read. Reply with only the JSON object that contains the fields chapter, working, digest, and optionally canon.');
   return parts.join(NL + NL);
 }
 
@@ -179,11 +217,20 @@ function unanswered(conversation: ModelMessage[]): ToolCall[] {
 
 export class AiService {
   readonly actions: GmActions;
+  readonly embeddings: EmbeddingIndex;
   private running = new Map<string, { turn: string; controller: AbortController; job?: Promise<void> }>();
 
-  constructor(private db: Database.Database, private campaigns: CampaignService, private vault = new SecretVault(randomBytes(32)), private provider = new ModelProvider(), private publish: Publish = () => {}, private publishRoll: PublishRoll = () => {}) {
-    this.actions = new GmActions(db, campaigns);
+  constructor(private db: Database.Database, private campaigns: CampaignService, private vault = new SecretVault(randomBytes(32)), private provider = new ModelProvider(), private publish: Publish = () => {}, private publishRoll: PublishRoll = () => {}, embedderProvider?: () => Promise<Embedder | null>) {
+    this.embeddings = new EmbeddingIndex(db, embedderProvider);
+    this.actions = new GmActions(db, campaigns, this.embeddings);
     db.prepare("UPDATE ai_turns SET status = 'failed', error = 'The server restarted. Retry to continue from the saved checkpoint.', updated = ? WHERE status = 'running'").run(new Date().toISOString());
+    // Background: index existing campaigns and the books. A turn never waits for this.
+    this.embeddings.start();
+  }
+
+  /** Awaits every queued embedding. Tests use it to make a write searchable at once. */
+  async flushEmbeddings(): Promise<void> {
+    await this.embeddings.flush();
   }
 
   private get chats(): AiChats {
@@ -211,7 +258,7 @@ export class AiService {
 
   connection(user: string): AiConnection | null {
     const row = this.credential(user);
-    return row ? { provider: row.provider, model: row.model, keyHint: row.key_hint, contextWindow: row.context_window } : null;
+    return row ? { provider: row.provider, model: row.model, keyHint: row.key_hint, contextWindow: effectiveContextWindow(row.model, row.context_window) } : null;
   }
 
   async models(provider: unknown) {
@@ -269,8 +316,9 @@ export class AiService {
     const earlierCursor = rows.length > TRANSCRIPT_PAGE && page[0] ? String(page[0].seq) : null;
     const credential = settings ? this.credential(settings.owner_id) : undefined;
     const budget = budgetOf(settings);
-    const tokens = budgetTokens(budget, credential?.context_window ?? 0);
-    const budgets = budgetTable(credential?.context_window ?? 0);
+    const contextWindow = credential ? effectiveContextWindow(credential.model, credential.context_window) : 0;
+    const tokens = budgetTokens(budget, contextWindow);
+    const budgets = budgetTable(contextWindow);
     const usage = settings && active ? this.assemble(campaign, settings, active, tokens) : null;
     const latest = this.db.prepare('SELECT id, kind, chat_id, status, error, steps, cost, updated AS at FROM ai_turns WHERE campaign_id = ? ORDER BY rowid DESC LIMIT 1').get(campaign) as RunRow | undefined;
     const actions = gm && active
@@ -282,6 +330,7 @@ export class AiService {
       ready: !!settings && !!credential,
       connection: gm ? this.connection(user) : null,
       setup: settings ? setupOf(settings) : { ...DEFAULT_SETUP },
+      frames: CAMPAIGN_FRAMES.map(frame => ({ id: frame.id, title: frame.title, summary: frame.summary })),
       budget,
       budgets,
       memory: gm && settings ? settings.memory : '',
@@ -317,7 +366,9 @@ export class AiService {
         this.actions.write(campaign, 'sheets', heroId, created);
       }
       if (heroId && !this.actions.read(campaign, 'sheets', heroId)) throw new Error('Invalid hero');
-      const next: AiSetup = { premise: text(value.premise, 3000, ''), tone: text(value.tone, 300, 'Adventurous mystery'), heroId, persona: text(value.persona, 1500, '') };
+      const frame = text(value.frame, 120, '');
+      if (frame && !findCampaignFrame(frame)) throw new Error('Invalid campaign frame');
+      const next: AiSetup = { premise: text(value.premise, 3000, ''), tone: text(value.tone, 300, 'Adventurous mystery'), heroId, persona: text(value.persona, 1500, ''), frame };
       this.db.prepare("INSERT INTO campaign_ai(campaign_id,owner_id,enabled,setup,memory,updated,context_budget) VALUES (?,?,1,?,'',?,?) ON CONFLICT(campaign_id) DO UPDATE SET owner_id=excluded.owner_id,enabled=1,setup=excluded.setup,context_budget=excluded.context_budget,updated=excluded.updated")
         .run(campaign, user, JSON.stringify(next), new Date().toISOString(), budget);
       if (!this.chats.defaultId(campaign)) this.chats.create(campaign);
@@ -572,7 +623,7 @@ export class AiService {
       key: this.vault.open(credential.encrypted_key, owner), temperature: credential.temperature === 1, signal, assertActive,
     };
     if (row.kind === 'turn') return this.takeTurn(rt, row, settings, credential);
-    return this.housekeeping(rt, settings, budgetTokens(budgetOf(settings), credential.context_window), row.kind);
+    return this.housekeeping(rt, settings, budgetTokens(budgetOf(settings), effectiveContextWindow(credential.model, credential.context_window)), row.kind);
   }
 
   /** Compact now, end a session, or pause it. None counts toward the turn's model-response limit. */
@@ -616,7 +667,7 @@ export class AiService {
   }
 
   private async takeTurn(rt: Runtime, row: TurnRow, settings: Settings, credential: Credential) {
-    const tokens = budgetTokens(budgetOf(settings), credential.context_window);
+    const tokens = budgetTokens(budgetOf(settings), effectiveContextWindow(credential.model, credential.context_window));
     let conversation = (JSON.parse(row.checkpoint || '[]') as ModelMessage[]).filter(message => message.role !== 'system');
     const save = () => this.db.prepare('UPDATE ai_turns SET checkpoint = ?, updated = ? WHERE id = ?').run(JSON.stringify(conversation), new Date().toISOString(), rt.turn);
     if (!conversation.length) {
@@ -626,6 +677,8 @@ export class AiService {
     }
     const tools = GM_TOOLS.filter(tool => tool.name !== 'solo_oracle' || this.campaigns.configuration(rt.campaign).rulesetId === 'solo');
     const context = { campaign: rt.campaign, owner: rt.owner, turn: rt.turn, chat: rt.chat, assertActive: rt.assertActive, publish: this.publish, publishRoll: this.publishRoll };
+    // Semantic recall is computed once per turn; a cold or unavailable model simply falls back to BM25.
+    const recallVector = await this.embeddings.embedQuery(this.recallQuery(rt.campaign, rt.chat));
     for (;;) {
       rt.assertActive();
       for (const call of unanswered(conversation)) {
@@ -634,7 +687,10 @@ export class AiService {
         if (used >= TURN_ACTIONS) throw new ProviderError('This turn reached its game-action limit. Send a new message to continue.');
         let result: unknown;
         try {
-          result = this.actions.execute(call.function.name, JSON.parse(call.function.arguments), { ...context, callId: call.id });
+          const args = JSON.parse(call.function.arguments) as Record<string, unknown>;
+          let queryVector: Float32Array | null = null;
+          if (SEMANTIC_TOOLS.has(call.function.name) && typeof args.query === 'string') queryVector = await this.embeddings.embedQuery(args.query);
+          result = this.actions.execute(call.function.name, args, { ...context, callId: call.id, queryVector });
         } catch (error) {
           rt.assertActive();
           result = { error: error instanceof Error && /^(Invalid|Forbidden)/.test(error.message) ? error.message : 'Tool could not be completed. Read the current context and use a legal action.' };
@@ -644,7 +700,7 @@ export class AiService {
       }
       const steps = (this.db.prepare('SELECT steps FROM ai_turns WHERE id = ?').get(rt.turn) as { steps: number }).steps;
       if (steps >= TURN_STEPS) throw new ProviderError('The GM reached this turn’s request limit. Send a new message to continue; completed actions are saved.');
-      const request = [...this.systemMessages(rt.campaign, rt.chat), ...conversation, this.snapshotMessage(rt)];
+      const request = [...this.systemMessages(rt.campaign, rt.chat, recallVector), ...conversation, this.snapshotMessage(rt)];
       const response = await this.provider.complete(rt.provider, rt.key, rt.model, request, tools, rt.signal, rt.chat, rt.temperature ? { temperature: 0.85 } : {});
       rt.assertActive();
       this.db.prepare('UPDATE ai_turns SET steps = steps + 1, cost = cost + ?, updated = ? WHERE id = ?').run(response.cost, new Date().toISOString(), rt.turn);
@@ -691,12 +747,13 @@ export class AiService {
     const through = batch[batch.length - 1]!.seq;
     const chat = this.requireChat(rt.campaign, rt.chat);
     const digest = this.settings(rt.campaign)?.digest ?? '';
+    const canonTitles = this.actions.canon.listTitles(rt.campaign, 80).map(entry => entry.title).join('; ');
     let summary: Summary | null = null;
     let cost = 0;
     for (let attempt = 0; attempt < 2 && !summary; attempt++) {
       const response = await this.provider.complete(rt.provider, rt.key, rt.model, [
         { role: 'system', content: COMPACTION_PROMPT },
-        { role: 'user', content: compactionInput(chat.summary, digest, batch, attempt > 0) },
+        { role: 'user', content: compactionInput(chat.summary, digest, canonTitles, batch, attempt > 0) },
       ], [], rt.signal, rt.chat, rt.temperature ? { maxTokens: SUMMARY_MAX_TOKENS, temperature: 0.2 } : { maxTokens: SUMMARY_MAX_TOKENS });
       rt.assertActive();
       cost += response.cost;
@@ -709,6 +766,7 @@ export class AiService {
         this.journal.chapter(rt.campaign, rt.chat, rt.turn, summary.chapter, options.final);
         this.chats.setSummary(rt.chat, summary.working, through, at);
         this.db.prepare('UPDATE campaign_ai SET digest = ?, updated = ? WHERE campaign_id = ?').run(summary.digest, at, rt.campaign);
+        this.promoteCanon(rt.campaign, summary.canon);
       } else {
         this.journal.chapter(rt.campaign, rt.chat, rt.turn, this.fallbackChapter(rt, batch), options.final);
         this.chats.setSummary(rt.chat, chat.summary, through, at);
@@ -743,9 +801,16 @@ export class AiService {
     return 'Party: ' + (party.length ? party.join('; ') : 'none yet');
   }
 
+  /** The owner's model context window, used to scale the memory caps. 0 when unknown. */
+  private contextWindowFor(campaign: string): number {
+    const settings = this.settings(campaign);
+    const credential = settings ? this.credential(settings.owner_id) : undefined;
+    return credential ? effectiveContextWindow(credential.model, credential.context_window) : 0;
+  }
+
   /** Memory parts in prompt order. They are rebuilt for every request, so edits take effect at once. */
-  private blocks(campaign: string, settings: Settings, chat: string | null): MemoryPart[] {
-    const limits = limitsFor(budgetOf(settings));
+  private blocks(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null): MemoryPart[] {
+    const limits = limitsFor(budgetOf(settings), this.contextWindowFor(campaign));
     const config = this.campaigns.configuration(campaign);
     const setup = setupOf(settings);
     const hero = setup.heroId ? this.actions.read<Sheet>(campaign, 'sheets', setup.heroId) : undefined;
@@ -762,18 +827,97 @@ export class AiService {
     }];
     const preparation = this.preparations(campaign, limits.prepChars);
     if (preparation) parts.push({ kind: 'preparation', text: preparation });
-    const canon = this.canonPart(campaign);
+    const canon = this.canonPart(campaign, limits.canonChars);
     if (canon) parts.push({ kind: 'canon', text: canon });
+    const chapters = this.journal.recentChapters(campaign, limits.chapters);
+    // Recall must not repeat chapters that are already in the memory block.
+    const recall = this.recallPart(campaign, chat, limits.recallChars, new Set(chapters.map(chapter => chapter.id)), queryVector);
+    if (recall) parts.push(recall);
     if (settings.digest) parts.push({ kind: 'digest', text: 'Campaign digest (rolling memory of the whole campaign):' + NL + clip(settings.digest, 1800) });
-    for (const chapter of this.journal.recentChapters(campaign, limits.chapters)) parts.push({ kind: 'chapter', text: 'Chapter the players have already read: ' + chapter.title + NL + clip(chapter.body, 1300) });
+    for (const chapter of chapters) parts.push({ kind: 'chapter', text: 'Chapter the players have already read: ' + chapter.title + NL + clip(chapter.body, 1300) });
     if (settings.memory) parts.push({ kind: 'secrets', text: 'GM-only secrets and plans (never reveal these):' + NL + clip(settings.memory, SECRETS_LIMIT) });
     const state = this.actions.readState(campaign);
     if (JSON.stringify(state) !== JSON.stringify(emptyState())) parts.push({ kind: 'state', text: 'Campaign state (GM only; authoritative, change it with update_state):' + NL + renderState(state, limits.stateChars) });
     const chatRow = chat ? this.chats.row(campaign, chat) : undefined;
     const summary = chatRow?.summary ?? '';
     if (summary) parts.push({ kind: 'summary', text: 'Summary of this session so far:' + NL + clip(summary, 2000) });
+    else {
+      // A fresh session opens with the last working summary, so the recap instruction can use it.
+      const previous = this.chats.latestSummary(campaign, chat);
+      if (previous) parts.push({ kind: 'summary', text: 'Summary of the previous session (' + previous.title + '):' + NL + clip(previous.summary, 2000) });
+    }
     if (chatRow?.resume_note) parts.push({ kind: 'resume', text: 'Where we stopped: ' + clip(chatRow.resume_note, 1500) });
     return parts;
+  }
+
+  /**
+   * Proactive recall: before a GM turn, rank canon and the journal against the latest player
+   * messages, the location, the objective, open thread titles and the active scene. The compact
+   * block carries ids so the GM can read the full entry with canon_read or journal_read.
+   */
+  private recallPart(campaign: string, chat: string | null, room: number, excludeJournal: Set<string>, queryVector?: Float32Array | null): MemoryPart | null {
+    if (!chat) return null;
+    const query = this.recallQuery(campaign, chat);
+    if (!hasQueryTerms(query)) return null;
+    const canon = this.actions.canon.search(campaign, query, 6, undefined, false, { gm: true, minScore: RECALL_MIN_SCORE, queryVector });
+    const journal = this.actions.journal.search(campaign, true, query, 20, { snippetChars: 260, minScore: RECALL_MIN_SCORE, queryVector }).filter(entry => !excludeJournal.has(entry.id)).slice(0, 6);
+    // Rules the words may have missed: a handful of catalog entries retrieved by meaning.
+    const rules = queryVector ? catalogSemantic(queryVector, { limit: 2, minSimilarity: 0.45 }) : [];
+    if (!canon.length && !journal.length && !rules.length) return null;
+    const lines = ['Relevant memory (recall; use canon_read or journal_read for the full text):'];
+    if (canon.length) {
+      lines.push('Canon:');
+      for (const entry of canon) lines.push('- [' + entry.kind + '] ' + entry.title + ' (id ' + entry.id + '): ' + oneLine(entry.body).slice(0, 220));
+    }
+    if (journal.length) {
+      lines.push('Journal:');
+      for (const entry of journal) {
+        const label = entry.chat || 'unassigned session';
+        const date = entry.at.slice(0, 10);
+        lines.push('- [' + entry.kind + '] ' + entry.title + ' (id ' + entry.id + '; ' + label + ', ' + date + '): ' + oneLine(entry.body).slice(0, 220));
+      }
+    }
+    if (rules.length) {
+      lines.push('Rules (call search_rules with the category and id for details):');
+      for (const hit of rules) lines.push('- [' + hit.entry.category + '] ' + hit.entry.name + ' (id ' + hit.entry.id + ')');
+    }
+    const text = shorten(lines.join(NL), room, '(relevant memory shortened to fit the memory limit)');
+    return text ? { kind: 'recall', text } : null;
+  }
+
+  /** The recall query: latest player messages plus location, objective, open threads and the scene. */
+  private recallQuery(campaign: string, chat: string): string {
+    const recent = this.db.prepare("SELECT text FROM ai_messages WHERE chat_id = ? AND role = 'player' ORDER BY rowid DESC LIMIT 3").all(chat) as { text: string }[];
+    const state = this.actions.readState(campaign);
+    const scene = this.activeSceneName(campaign);
+    return [
+      ...recent.map(item => item.text),
+      state.location,
+      state.objective,
+      ...state.threads.filter(thread => thread.status !== 'resolved').map(thread => thread.title),
+      scene,
+    ].filter(value => value !== '').join(' ').slice(0, 1200);
+  }
+
+  /** Promotes durable facts from a compaction reply to canon, capped per compaction and deduped by title. */
+  private promoteCanon(campaign: string, entries: SummaryCanon[]): void {
+    let written = 0;
+    const seen = new Set<string>();
+    for (const entry of entries) {
+      if (written >= CANON_PER_COMPACTION) break;
+      const key = entry.title.trim().toLowerCase();
+      if (!key || seen.has(key) || this.actions.canon.titleExists(campaign, entry.title)) continue;
+      seen.add(key);
+      this.actions.canon.upsert(campaign, { kind: entry.kind, title: entry.title, body: entry.body, visibility: 'gm', source: 'compaction' });
+      written++;
+    }
+  }
+
+  /** Name of the active map scene, used as one of the recall cues. */
+  private activeSceneName(campaign: string): string {
+    const active = this.actions.read<{ sceneId?: string }>(campaign, 'map', 'active');
+    const scene = active?.sceneId ? this.actions.read<{ name?: string }>(campaign, 'map', 'scene:' + active.sceneId) : undefined;
+    return typeof scene?.name === 'string' ? scene.name : '';
   }
 
   /**
@@ -797,8 +941,8 @@ export class AiService {
     return shorten(['GM preparations (GM only):', ...lines].join(NL), room, '(preparations shortened to fit the memory limit)');
   }
 
-  /** Active canon titles, newest first, within about 1500 characters, so the GM knows what it can retrieve. */
-  private canonPart(campaign: string): string {
+  /** Active canon titles, newest first, within the room the memory size allows, so the GM knows what it can retrieve. */
+  private canonPart(campaign: string, room: number): string {
     const entries = this.actions.canon.listTitles(campaign);
     if (!entries.length) return '';
     const header = 'Canon in this campaign (GM only; use canon_search or canon_read for the full entry):';
@@ -806,13 +950,13 @@ export class AiService {
     const render = () => header + (lines.length ? NL + lines.join(NL) : '');
     for (const entry of entries) {
       const line = entry.kind + ': ' + entry.title + ' (id ' + entry.id + ')';
-      if (render().length + 1 + line.length > 1440) break;
+      if (render().length + 1 + line.length > room - 60) break;
       lines.push(line);
     }
     const hidden = entries.length - lines.length;
     if (hidden <= 0) return render();
     let note = '(' + String(hidden) + ' more; use canon_search)';
-    while (lines.length && render().length + 1 + note.length > 1500) {
+    while (lines.length && render().length + 1 + note.length > room) {
       lines.pop();
       note = '(' + String(entries.length - lines.length) + ' more; use canon_search)';
     }
@@ -820,14 +964,19 @@ export class AiService {
   }
 
   /** The memory parts after the cap is applied, ready to send as system messages. */
-  private memoryParts(campaign: string, settings: Settings, chat: string | null): MemoryPart[] {
-    return fitMemory(this.blocks(campaign, settings, chat), limitsFor(budgetOf(settings)).memoryChars);
+  private memoryParts(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null): MemoryPart[] {
+    return fitMemory(this.blocks(campaign, settings, chat, queryVector), limitsFor(budgetOf(settings), this.contextWindowFor(campaign)).memoryChars);
   }
 
-  private systemMessages(campaign: string, chat: string | null): ModelMessage[] {
+  private systemMessages(campaign: string, chat: string | null, queryVector?: Float32Array | null): ModelMessage[] {
     const settings = this.settings(campaign);
     if (!settings) throw new Error('AI turn stopped');
-    return [{ role: 'system', content: GM_PROMPT }, ...this.memoryParts(campaign, settings, chat).map(part => ({ role: 'system' as const, content: part.text }))];
+    const messages: ModelMessage[] = [{ role: 'system', content: GM_PROMPT }];
+    const setup = setupOf(settings);
+    const frame = setup.frame ? findCampaignFrame(setup.frame) : undefined;
+    if (frame) messages.push({ role: 'system', content: framePrompt(frame) });
+    messages.push(...this.memoryParts(campaign, settings, chat, queryVector).map(part => ({ role: 'system' as const, content: part.text })));
+    return messages;
   }
 
   /** Memory plus the recent messages that fit. Messages get whatever budget the memory leaves. */
@@ -857,6 +1006,7 @@ export class AiService {
   async close() {
     const jobs = [...this.running.values()];
     for (const running of jobs) running.controller.abort();
+    this.embeddings.close();
     await Promise.allSettled(jobs.map(running => running.job));
   }
 

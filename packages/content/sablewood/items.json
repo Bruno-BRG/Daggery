@@ -1,0 +1,23 @@
+[
+  {
+    "id": "returning-stone",
+    "name": "Returning Stone",
+    "description": "This small stone can be placed anywhere, and will teleport to your hand under one of the following conditions: somebody comes within close range, somebody within very close range is dealt damage, a certain amount of time passes, when you speak a keyword.",
+    "feature": null,
+    "source": "sablewood"
+  },
+  {
+    "id": "ward-of-the-whitefire-arcanist",
+    "name": "Ward of the Whitefire Arcanist",
+    "description": "A carved figurine in the shape of a ratcoon. While carrying this in the Sablewood, it gives you +1 to your Evasion.",
+    "feature": null,
+    "source": "sablewood"
+  },
+  {
+    "id": "sableleaf-shoes",
+    "name": "Sableleaf Shoes",
+    "description": "A set of shoes sewn out of the leaves of sablewood trees. They are light and flexible. Wearing them lets you spend Hope to take advantage on agility rolls while in the Sablewood.",
+    "feature": null,
+    "source": "sablewood"
+  }
+]

@@ -1,0 +1,527 @@
+[
+  {
+    "id": "mage-robes",
+    "name": "Mage Robes",
+    "tier": 1,
+    "baseThresholds": {
+      "major": 4,
+      "severe": 10
+    },
+    "baseScore": 2,
+    "feature": {
+      "name": "Enchanted",
+      "text": "Gain a bonus to your damage thresholds equal to your Spellcast trait."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "brigandine-armor",
+    "name": "Brigandine Armor",
+    "tier": 1,
+    "baseThresholds": {
+      "major": 6,
+      "severe": 12
+    },
+    "baseScore": 3,
+    "feature": {
+      "name": "Lined",
+      "text": "Mark a Stress to negate Minor damage."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "scale-mail-armor",
+    "name": "Scale Mail Armor",
+    "tier": 1,
+    "baseThresholds": {
+      "major": 7,
+      "severe": 14
+    },
+    "baseScore": 3,
+    "feature": {
+      "name": "Cumbersome",
+      "text": "−1 to Finesse"
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "banded-armor",
+    "name": "Banded Armor",
+    "tier": 1,
+    "baseThresholds": {
+      "major": 8,
+      "severe": 16
+    },
+    "baseScore": 4,
+    "feature": {
+      "name": "Bulky",
+      "text": "−1 to Evasion; when you take Severe damage, you must mark a Stress."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "improved-mage-robes",
+    "name": "Improved Mage Robes",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 6,
+      "severe": 15
+    },
+    "baseScore": 3,
+    "feature": {
+      "name": "Enchanted",
+      "text": "Gain a bonus to your damage thresholds equal to your Spellcast trait."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "improved-brigandine-armor",
+    "name": "Improved Brigandine Armor",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 9,
+      "severe": 19
+    },
+    "baseScore": 4,
+    "feature": {
+      "name": "Lined",
+      "text": "Mark a Stress to negate Minor damage."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "improved-scale-mail-armor",
+    "name": "Improved Scale Mail Armor",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 11,
+      "severe": 23
+    },
+    "baseScore": 4,
+    "feature": {
+      "name": "Cumbersome",
+      "text": "−1 to Finesse"
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "improved-banded-armor",
+    "name": "Improved Banded Armor",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 13,
+      "severe": 27
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Bulky",
+      "text": "−1 to Evasion; when you take Severe damage, you must mark a Stress."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "enchanters-robes",
+    "name": "Enchanter's Robes",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 9,
+      "severe": 20
+    },
+    "baseScore": 4,
+    "feature": {
+      "name": "Mnemonic",
+      "text": "Once per scene, you can recall a domain card from your vault without paying its Recall Cost."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "hawkguards-mantle",
+    "name": "Hawkguard's Mantle",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 9,
+      "severe": 20
+    },
+    "baseScore": 4,
+    "feature": {
+      "name": "Gliding",
+      "text": "You can glide up to Far range and are immune to damage from falling."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "spidersilk-tunic",
+    "name": "Spidersilk Tunic",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 9,
+      "severe": 20
+    },
+    "baseScore": 4,
+    "feature": {
+      "name": "Wall-Crawling",
+      "text": "+1 Evasion; you can walk on walls as easily as on the ground."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "stormthread-habit",
+    "name": "Stormthread Habit",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 9,
+      "severe": 20
+    },
+    "baseScore": 4,
+    "feature": {
+      "name": "Absorbing",
+      "text": "Once per scene when you take magic damage, you can clear an Armor Slot."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "wyrdwood-splint-armor",
+    "name": "Wyrdwood Splint Armor",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 10,
+      "severe": 21
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Quick-Striding",
+      "text": "You can’t be Restrained and can move up to Far range as part of an action roll."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "trollhide-cuirass",
+    "name": "Trollhide Cuirass",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 11,
+      "severe": 23
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Self-Healing",
+      "text": "When you take a rest, clear an Armor Slot."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "gilded-sunplate",
+    "name": "Gilded Sunplate",
+    "tier": 2,
+    "baseThresholds": {
+      "major": 12,
+      "severe": 26
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Resplendent",
+      "text": "Once per scene when you spend Hope, you can clear an Armor Slot."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "advanced-mage-robes",
+    "name": "Advanced Mage Robes",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 8,
+      "severe": 22
+    },
+    "baseScore": 4,
+    "feature": {
+      "name": "Enchanted",
+      "text": "Gain a bonus to your damage thresholds equal to your Spellcast trait."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "advanced-brigandine-armor",
+    "name": "Advanced Brigandine Armor",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 11,
+      "severe": 26
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Lined",
+      "text": "Mark a Stress to negate Minor damage."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "advanced-scale-mail-armor",
+    "name": "Advanced Scale Mail Armor",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 13,
+      "severe": 30
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Cumbersome",
+      "text": "−1 to Finesse"
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "advanced-banded-armor",
+    "name": "Advanced Banded Armor",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 15,
+      "severe": 34
+    },
+    "baseScore": 6,
+    "feature": {
+      "name": "Bulky",
+      "text": "−1 to Evasion; when you take Severe damage, you must mark a Stress."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "granminsters-finery",
+    "name": "Granminster's Finery",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 11,
+      "severe": 27
+    },
+    "baseScore": 2,
+    "feature": {
+      "name": "Magnificent",
+      "text": "Gain a bonus to your Armor Score equal to your Presence."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "astral-raiment",
+    "name": "Astral Raiment",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 11,
+      "severe": 27
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Stellar",
+      "text": "Mark a Stress to gain advantage on a Spellcast roll."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "cloverweave-cloak",
+    "name": "Cloverweave Cloak",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 11,
+      "severe": 27
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Fortune-Favored",
+      "text": "Once per scene, you can change a failure with Hope into a success with Fear."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "skywardens-lamellar",
+    "name": "Skywarden's Lamellar",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 11,
+      "severe": 27
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Vigilant",
+      "text": "+2 to Evasion"
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "bloodstone-plate-armor",
+    "name": "Bloodstone Plate Armor",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 13,
+      "severe": 35
+    },
+    "baseScore": 6,
+    "feature": {
+      "name": "Bloodthirsty",
+      "text": "When you critically succeed on a weapon attack within Melee range, clear a Hit Point."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "deep-forged-coral-armor",
+    "name": "Deep-Forged Coral Armor",
+    "tier": 3,
+    "baseThresholds": {
+      "major": 13,
+      "severe": 35
+    },
+    "baseScore": 6,
+    "feature": {
+      "name": "Aquatic",
+      "text": "You can breathe underwater and gain advantage on Agility Rolls while submerged."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "legendary-mage-robes",
+    "name": "Legendary Mage Robes",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 10,
+      "severe": 31
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Enchanted",
+      "text": "Gain a bonus to your damage thresholds equal to your Spellcast trait."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "legendary-brigandine-armor",
+    "name": "Legendary Brigandine Armor",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 13,
+      "severe": 35
+    },
+    "baseScore": 6,
+    "feature": {
+      "name": "Lined",
+      "text": "Mark a Stress to negate Minor damage."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "legendary-scale-mail-armor",
+    "name": "Legendary Scale Mail Armor",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 15,
+      "severe": 39
+    },
+    "baseScore": 6,
+    "feature": {
+      "name": "Cumbersome",
+      "text": "−1 to Finesse"
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "legendary-banded-armor",
+    "name": "Legendary Banded Armor",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 17,
+      "severe": 43
+    },
+    "baseScore": 7,
+    "feature": {
+      "name": "Bulky",
+      "text": "−1 to Evasion; when you take Severe damage, you must mark a Stress."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "darkweave-shroud",
+    "name": "Darkweave Shroud",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 13,
+      "severe": 36
+    },
+    "baseScore": 5,
+    "feature": {
+      "name": "Ghostwalker",
+      "text": "Once per rest, mark a Stress to move up to Close range through solid objects."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "godbound-laminar",
+    "name": "Godbound Laminar",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 13,
+      "severe": 36
+    },
+    "baseScore": 6,
+    "feature": {
+      "name": "Divine",
+      "text": "When you mark an Armor Slot, gain a Hope."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "circle-forged-dreadplate",
+    "name": "Circle-Forged Dreadplate",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 14,
+      "severe": 38
+    },
+    "baseScore": 6,
+    "feature": {
+      "name": "Accursed",
+      "text": "When you mark any number of Hit Points from an attack, roll a d4. On a result of 4, the attacker must mark an equal number of Stress."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "rune-forged-exosuit",
+    "name": "Rune-Forged Exosuit",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 12,
+      "severe": 39
+    },
+    "baseScore": 7,
+    "feature": {
+      "name": "Attuned",
+      "text": "The maximum number of domain cards in your loadout is reduced by one, but you gain a bonus to your damage thresholds equal to your tier."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "hallowed-heroplate",
+    "name": "Hallowed Heroplate",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 13,
+      "severe": 35
+    },
+    "baseScore": 7,
+    "feature": {
+      "name": "Blessed",
+      "text": "Once per long rest, you can spend any number of Hope before you make the Risk It All death move. You gain a bonus to the result of your Hope Die equal to the number of Hope spent."
+    },
+    "source": "hope-and-fear"
+  },
+  {
+    "id": "resonant-harness",
+    "name": "Resonant Harness",
+    "tier": 4,
+    "baseThresholds": {
+      "major": 15,
+      "severe": 40
+    },
+    "baseScore": 7,
+    "feature": {
+      "name": "Vitreous",
+      "text": "When you would take Severe or greater damage, you can mark 2 Armor Slots to negate that damage. If you do, you gain a −5 penalty to your damage thresholds until you choose to repair your armor as a downtime move."
+    },
+    "source": "hope-and-fear"
+  }
+]

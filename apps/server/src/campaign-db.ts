@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
  * the old tables and never exposes these new ones.
  */
 export const LEGACY_CAMPAIGN_ID = 'legacy-unclaimed';
-export const CURRENT_VERSION = 8;
+export const CURRENT_VERSION = 9;
 
 /** Schema 6 adds AI sessions and the adventure journal. It only adds tables and columns, then backfills Session 1 for each AI campaign. Every step is idempotent. */
 function migrateAiSessions(db: Database.Database): void {
@@ -264,6 +264,24 @@ export function migrateCampaignDatabase(db: Database.Database): void {
           updated TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ai_canon_campaign ON ai_canon(campaign_id, kind);
+      `);
+    }
+    // Version 9 adds the semantic index. One row per embedded canon or journal entry; vectors are
+    // Float32 BLOBs and the campaign foreign key cascades, so deleting a campaign removes them.
+    if (version < 9) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ai_embeddings (
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL CHECK(kind IN ('canon','journal')),
+          ref_id TEXT NOT NULL,
+          text_hash TEXT NOT NULL,
+          model TEXT NOT NULL,
+          dim INTEGER NOT NULL,
+          vector BLOB NOT NULL,
+          updated TEXT NOT NULL,
+          PRIMARY KEY(campaign_id, kind, ref_id)
+        );
+        CREATE INDEX IF NOT EXISTS ai_embeddings_kind ON ai_embeddings(campaign_id, kind);
       `);
     }
   })();

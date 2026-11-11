@@ -1,0 +1,135 @@
+[
+  {
+    "id": "bullfrog",
+    "name": "Bullfrog",
+    "tier": 1,
+    "type": "Bruiser",
+    "description": "An amphibious bull-sized hybrid with springing legs.",
+    "motives": "Leap Out of Danger, Spear with Horns, Lash with Tongue",
+    "difficulty": 11,
+    "thresholds": {
+      "major": 8,
+      "severe": 13
+    },
+    "hp": 4,
+    "stress": 2,
+    "attack": {
+      "modifier": 1,
+      "name": "Horns",
+      "range": "Melee",
+      "damage": "1d8+6",
+      "damageType": "phy"
+    },
+    "experiences": [
+      {
+        "name": "Territorial",
+        "bonus": 5
+      }
+    ],
+    "features": [
+      {
+        "name": "Tongue Strike",
+        "kind": "Action",
+        "text": "Make an attack against a target within Close range. On a success, deal 1d8+4 phy damage and pull the target into melee."
+      },
+      {
+        "name": "Powerful Gore",
+        "kind": "Action",
+        "text": "Mark a Stress to leap forward, making an attack with the bullfrog’s horns against all enemies in a straight line within close range. Any that are hit take 2d4+8 phy damage and mark one armor slot that does not reduce any damage. The PC may still mark armor to reduce damage."
+      },
+      {
+        "name": "Leaping Dodge",
+        "kind": "Reaction",
+        "text": "Whenever an attack against this creature misses, the bullfrog may leap anywhere within Far range."
+      }
+    ],
+    "source": "sablewood"
+  },
+  {
+    "id": "strixwolf",
+    "name": "Strixwolf",
+    "tier": 1,
+    "type": "Skulk",
+    "description": "A wolf-owl pack hunter with wings and a rotating head.",
+    "motives": "Stalk, Surround, Protect Pack",
+    "difficulty": 13,
+    "thresholds": {
+      "major": 5,
+      "severe": 10
+    },
+    "hp": 4,
+    "stress": 2,
+    "attack": {
+      "modifier": 2,
+      "name": "Bite and Claw",
+      "range": "Melee",
+      "damage": "1d6+3",
+      "damageType": "phy"
+    },
+    "experiences": [
+      {
+        "name": "Tracker",
+        "bonus": 4
+      }
+    ],
+    "features": [
+      {
+        "name": "Pack Tactics",
+        "kind": "Passive",
+        "text": "When making a Bite & Claw attack, if another Strixwolf is also in melee range of the target, deal 2d8+2 phy damage instead."
+      },
+      {
+        "name": "Powerful Senses",
+        "kind": "Passive",
+        "text": "This creature ignores the Hidden condition on anyone within close range."
+      },
+      {
+        "name": "Fly",
+        "kind": "Action",
+        "text": "Mark a Stress to make the Strixwolf take flight, increasing their Difficulty by +2 and making their attacks worth +2 damage until the Strixwolf lands."
+      }
+    ],
+    "source": "sablewood"
+  },
+  {
+    "id": "eeligator",
+    "name": "Eeligator",
+    "tier": 1,
+    "type": "Solo",
+    "description": "A large reptile-fish hybrid with a powerful jaw.",
+    "motives": "Hide, Hunt, Subsume",
+    "difficulty": 14,
+    "thresholds": {
+      "major": 12,
+      "severe": 25
+    },
+    "hp": 7,
+    "stress": 5,
+    "attack": {
+      "modifier": 3,
+      "name": "Bite",
+      "range": "Very Close",
+      "damage": "1d12+4",
+      "damageType": "phy"
+    },
+    "experiences": [],
+    "features": [
+      {
+        "name": "Healing Skin",
+        "kind": "Action",
+        "text": "Mark a Stress to heal 1 HP."
+      },
+      {
+        "name": "Pull Under",
+        "kind": "Action",
+        "text": "If a target is within close range of a body of water, you can spend a Fear to make an attack against them. On a success, deal 1d20 phy damage, then move both the Eeligator and the target into the water that’s within close range. The Eeligator pulls the target under, making them Restrained and Drowning. While Drowning, that target must mark a Stress for every action roll that is made."
+      },
+      {
+        "name": "Death Grip",
+        "kind": "Action",
+        "text": "On a successful Bite attack, mark a Stress to lock this creature’s jaw onto the target, dealing 1 additional hit point and making them Restrained until the Eeligator is dealt Major damage. When released, the target must mark a Stress."
+      }
+    ],
+    "source": "sablewood"
+  }
+]

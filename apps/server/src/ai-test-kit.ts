@@ -5,6 +5,7 @@ import { openCampaignDatabase } from './campaign-db';
 import { registerCampaignRoutes } from './campaign-routes';
 import { CampaignService } from './campaign-service';
 import { ModelProvider } from './ai/provider';
+import type { Embedder } from './ai/embeddings';
 import { registerAiRoutes } from './ai/routes';
 import { AiService } from './ai/service';
 import { SecretVault } from './ai/vault';
@@ -94,7 +95,7 @@ export function schemaFiveDatabase(): Database.Database {
 }
 
 /** A GM campaign with one hero and a connected model. The default session is "Session 1". */
-export async function fixture(handler: Handler, budget = 'balanced') {
+export async function fixture(handler: Handler, budget = 'balanced', embedder?: () => Promise<Embedder | null>) {
   const db = openCampaignDatabase(':memory:');
   const campaigns = new CampaignService(db);
   const user = await campaigns.register('gmtest', 'a strong temporary test password');
@@ -110,7 +111,7 @@ export async function fixture(handler: Handler, budget = 'balanced') {
   }) as typeof fetch);
   const vault = new SecretVault(randomBytes(32));
   const rolls: { kind: string; result: any }[] = [];
-  const ai = new AiService(db, campaigns, vault, provider, () => {}, (_campaign, kind, result) => { rolls.push({ kind, result }); });
+  const ai = new AiService(db, campaigns, vault, provider, () => {}, (_campaign, kind, result) => { rolls.push({ kind, result }); }, embedder);
   await ai.saveConnection(user.id, { provider: 'opencode', model: MODEL, apiKey: 'test-secret-never-in-context' });
   const setup = ai.configure(user.id, campaign, { premise: 'Find the vanished keeper', budget, quickHero: { name: 'Ash', classId: 'warrior' } });
   return { ai, db, campaigns, user, campaign, requests, setup, provider, vault, rolls, close: async () => { await ai.close(); db.close(); } };

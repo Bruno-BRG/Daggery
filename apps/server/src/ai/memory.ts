@@ -21,13 +21,50 @@ export const MAXIMUM_CONTEXT_SHARE = 0.6;
 /** Maximum budget while the model's context window is unknown. It equals Rich. */
 export const MAXIMUM_FALLBACK_TOKENS = 48000;
 
-/** Caps for the memory blocks. Lean, Balanced and Rich share the base caps. Maximum keeps much more of the campaign in view. */
-export interface MemoryLimits { memoryChars: number; chapters: number; prepChars: number; stateChars: number }
-const BASE_LIMITS: MemoryLimits = { memoryChars: MEMORY_CHARS, chapters: 3, prepChars: PREP_CHARS, stateChars: STATE_CHARS };
-const MAXIMUM_LIMITS: MemoryLimits = { memoryChars: 60000, chapters: 12, prepChars: 12000, stateChars: 20000 };
+/**
+ * Caps for the memory blocks. Lean keeps its small caps on every model. Balanced, Rich and Maximum
+ * grow with the model's context window, so a 1M-token model keeps far more chapters, canon titles
+ * and state in view.
+ */
+export interface MemoryLimits {
+  memoryChars: number; chapters: number; prepChars: number; stateChars: number;
+  /** Room for the active canon title list in the prompt. */
+  canonChars: number;
+  /** Room for the proactive recall block. */
+  recallChars: number;
+  /** Characters returned per search hit by search_journal and canon_search. */
+  snippetChars: number;
+}
+const BASE_LIMITS: MemoryLimits = { memoryChars: MEMORY_CHARS, chapters: 3, prepChars: PREP_CHARS, stateChars: STATE_CHARS, canonChars: 1500, recallChars: 2400, snippetChars: 600 };
+const MAXIMUM_LIMITS: MemoryLimits = { memoryChars: 60000, chapters: 12, prepChars: 12000, stateChars: 20000, canonChars: 6000, recallChars: 5000, snippetChars: 1500 };
+/** From this context window on, Balanced and Rich get more room than the fixed tiers. */
+export const MID_CONTEXT_WINDOW = 80_000;
+/** A very large window (DeepSeek V4's 1M) gets the largest memory caps. */
+export const LARGE_CONTEXT_WINDOW = 200_000;
+const MID_LIMITS: Record<Exclude<AiBudget, 'lean'>, MemoryLimits> = {
+  balanced: { memoryChars: 30000, chapters: 6, prepChars: 6000, stateChars: 11000, canonChars: 3500, recallChars: 3200, snippetChars: 1000 },
+  rich: { memoryChars: 45000, chapters: 9, prepChars: 9000, stateChars: 16000, canonChars: 5500, recallChars: 4200, snippetChars: 1200 },
+  maximum: { memoryChars: 100000, chapters: 18, prepChars: 20000, stateChars: 32000, canonChars: 10000, recallChars: 7000, snippetChars: 1500 },
+};
+const LARGE_LIMITS: Record<Exclude<AiBudget, 'lean'>, MemoryLimits> = {
+  balanced: { memoryChars: 42000, chapters: 9, prepChars: 9000, stateChars: 15000, canonChars: 5000, recallChars: 4000, snippetChars: 1200 },
+  rich: { memoryChars: 65000, chapters: 14, prepChars: 14000, stateChars: 22000, canonChars: 8000, recallChars: 6000, snippetChars: 1500 },
+  maximum: { memoryChars: 150000, chapters: 30, prepChars: 30000, stateChars: 50000, canonChars: 16000, recallChars: 10000, snippetChars: 1500 },
+};
 
-export function limitsFor(budget: AiBudget): MemoryLimits {
-  return budget === 'maximum' ? MAXIMUM_LIMITS : BASE_LIMITS;
+/** Memory caps for one budget and context window. An unknown window (0) keeps the original fixed caps. */
+export function limitsFor(budget: AiBudget, contextWindow = 0): MemoryLimits {
+  if (budget === 'lean') return { ...BASE_LIMITS };
+  if (contextWindow >= LARGE_CONTEXT_WINDOW) return { ...LARGE_LIMITS[budget] };
+  if (contextWindow >= MID_CONTEXT_WINDOW) return { ...MID_LIMITS[budget] };
+  return { ...(budget === 'maximum' ? MAXIMUM_LIMITS : BASE_LIMITS) };
+}
+
+/** Snippet length for journal and canon searches: 600 characters, growing with the context window. */
+export function snippetCharsFor(contextWindow: number): number {
+  if (contextWindow >= LARGE_CONTEXT_WINDOW) return 1500;
+  if (contextWindow >= MID_CONTEXT_WINDOW) return 1000;
+  return 600;
 }
 
 const THREAD_STATUSES = ['open', 'stalled', 'resolved'];
@@ -175,7 +212,7 @@ export function snapshotFor(db: Database.Database, source: DocSource, campaign: 
   };
 }
 
-export interface MemoryPart { kind: 'setup' | 'preparation' | 'canon' | 'digest' | 'chapter' | 'secrets' | 'state' | 'summary' | 'resume'; text: string }
+export interface MemoryPart { kind: 'setup' | 'preparation' | 'canon' | 'recall' | 'digest' | 'chapter' | 'secrets' | 'state' | 'summary' | 'resume'; text: string }
 
 /** Cuts text to at most room characters and ends it with a note. The first lines are kept. */
 export function shorten(text: string, room: number, note: string): string {
@@ -184,7 +221,11 @@ export function shorten(text: string, room: number, note: string): string {
   return keep > 0 ? text.slice(0, keep).trimEnd() + NL + note : '';
 }
 
-/** Keeps the memory parts within maxChars. Older chapters go first, then canon titles, preparations and secrets are shortened. */
+/**
+ * Keeps the memory parts within maxChars. Older chapters go first, then the proactive recall block
+ * is dropped whole (it is a convenience, not canon), and only then are canon titles, preparations
+ * and secrets shortened.
+ */
 export function fitMemory(parts: MemoryPart[], maxChars: number): MemoryPart[] {
   const kept = parts.map(part => ({ ...part }));
   const total = () => kept.reduce((sum, part) => sum + part.text.length, 0);
@@ -192,6 +233,10 @@ export function fitMemory(parts: MemoryPart[], maxChars: number): MemoryPart[] {
     const oldest = kept.findIndex(part => part.kind === 'chapter');
     if (oldest < 0) break;
     kept.splice(oldest, 1);
+  }
+  if (total() > maxChars) {
+    const recall = kept.findIndex(part => part.kind === 'recall');
+    if (recall >= 0) kept.splice(recall, 1);
   }
   const notes = { canon: '(canon titles shortened to fit the memory limit)', preparation: '(preparations shortened to fit the memory limit)', secrets: '(GM secrets shortened to fit the memory limit)' };
   for (const kind of ['canon', 'preparation', 'secrets'] as const) {

@@ -7,7 +7,9 @@ export interface AiConnection { provider: AiProvider; model: string; keyHint: st
 export type AiBudget = 'lean' | 'balanced' | 'rich' | 'maximum';
 /** Estimated tokens for memory plus recent messages in the fixed tiers. Maximum depends on the model's context window. The static prompt and tool schemas are counted separately. */
 export const AI_BUDGET_TOKENS: Record<Exclude<AiBudget, 'maximum'>, number> = { lean: 12000, balanced: 24000, rich: 48000 };
-export interface AiSetup { premise: string; tone: string; heroId: string; persona: string }
+export interface AiSetup { premise: string; tone: string; heroId: string; persona: string; /** Campaign frame ID, or '' for a custom world. */ frame: string }
+/** A campaign frame the GM can run from an installed sourcebook. */
+export interface AiFrame { id: string; title: string; summary: string }
 export interface AiInteraction {
   kind: 'roll' | 'damage' | 'choices'; resolved: boolean; heroId?: string;
   trait?: string; difficulty?: number; enemyId?: string; damage?: number; direct?: boolean; choices?: string[];
@@ -42,6 +44,8 @@ export interface AiMemoryStatus { chapters: number; contextTokens: number; budge
 export interface AiAdventure {
   enabled: boolean; ready: boolean; connection: AiConnection | null;
   setup: AiSetup; budget: AiBudget;
+  /** Campaign frames offered by the installed sourcebooks that this GM can run. */
+  frames: AiFrame[];
   /** Estimated input tokens for each memory size with the owner's model. */
   budgets: Record<AiBudget, number>;
   memory: string; digest: string; state: AiState | null; chatSummary: string;

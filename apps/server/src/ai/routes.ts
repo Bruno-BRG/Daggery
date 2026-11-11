@@ -3,16 +3,18 @@ import type Database from 'better-sqlite3';
 import type { CampaignService } from '../campaign-service';
 import { readSessionToken } from '../campaign-routes';
 import { AiConflict, AiService } from './service';
+import type { Embedder } from './embeddings';
 import { ModelProvider, ProviderError } from './provider';
 import type { SecretVault } from './vault';
 import { record, text } from './validation';
 
 export function registerAiRoutes(app: FastifyInstance, options: {
   db: Database.Database; service: CampaignService; secureCookies: boolean; vault?: SecretVault; provider?: ModelProvider;
+  embedder?: () => Promise<Embedder | null>;
   publish: (campaign: string, ns: string, id: string, value: unknown) => void;
   publishRoll: (campaign: string, kind: string, result: unknown, author?: string) => void;
 }) {
-  const ai = new AiService(options.db, options.service, options.vault, options.provider, options.publish, options.publishRoll);
+  const ai = new AiService(options.db, options.service, options.vault, options.provider, options.publish, options.publishRoll, options.embedder);
   app.addHook('onClose', () => ai.close());
   const user = (request: FastifyRequest) => {
     const current = options.service.session(readSessionToken(request.headers.cookie, options.secureCookies));

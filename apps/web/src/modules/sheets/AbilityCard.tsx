@@ -6,6 +6,7 @@ import './ability.css';
 const DOMAINS: Record<string, { color: string; icon: IconName }> = {
   arcana: { color: 'light-dark(#7750a5, #bba0f6)', icon: 'magic' }, blade: { color: 'light-dark(#a04460, #eaa0b2)', icon: 'weapon' },
   bone: { color: 'light-dark(#846027, #dfc18e)', icon: 'bone' }, codex: { color: 'light-dark(#426ca5, #9ebef4)', icon: 'book' },
+  dread: { color: 'light-dark(#5b3f74, #c5a9df)', icon: 'adversary' },
   grace: { color: 'light-dark(#8f4d87, #dca8d5)', icon: 'feather' }, midnight: { color: 'light-dark(#71509d, #b4a4e7)', icon: 'moon' },
   sage: { color: 'light-dark(#3d7554, #9bcdad)', icon: 'leaf' }, splendor: { color: 'light-dark(#886a22, #ead19c)', icon: 'sun' },
   valor: { color: 'light-dark(#376c85, #9ecbdf)', icon: 'shield' },

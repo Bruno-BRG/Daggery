@@ -7,6 +7,7 @@ import { linkedTokenImage, sheetEntry } from '../map/sheetToken';
 const sheet = { name: 'Hero', classId: 'guardian', ancestryId: 'human', hpMarked: 0, stressMarked: 0 } as Sheet;
 test('separate character images fall back to portrait and class art for existing sheets', () => {
   assert.ok(portraitImage(sheet)?.startsWith('/cards/class/'));
+  assert.equal(portraitImage({ ...sheet, classId: 'assassin' }), '/cards/class/assassin.webp', 'Hope & Fear classes use their extracted class art');
   const portrait = { ...sheet, portraitUrl: '/portrait.webp' };
   assert.equal(portraitImage(portrait), '/portrait.webp');
   assert.equal(tokenImage(portrait), '/portrait.webp');

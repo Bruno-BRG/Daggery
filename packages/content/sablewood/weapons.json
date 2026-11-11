@@ -1,0 +1,34 @@
+[
+  {
+    "id": "sableblade",
+    "name": "Sableblade",
+    "category": "Primary",
+    "tier": 1,
+    "trait": "Agility",
+    "range": "Melee",
+    "damage": "d10+1",
+    "damageType": "phy",
+    "burden": "One-Handed",
+    "feature": {
+      "name": "Ancient Power",
+      "text": "Mark stress before a damage roll to increase your damage total by +3."
+    },
+    "source": "sablewood"
+  },
+  {
+    "id": "eeligator-scale-shield",
+    "name": "Eeligator Scale Shield",
+    "category": "Secondary",
+    "tier": 1,
+    "trait": "Finesse",
+    "range": "Melee",
+    "damage": "d4",
+    "damageType": "phy",
+    "burden": "One-Handed",
+    "feature": {
+      "name": "Sharp",
+      "text": "Add +1 to your damage thresholds, add +2 to your damage rolls."
+    },
+    "source": "sablewood"
+  }
+]

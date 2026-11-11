@@ -1,0 +1,106 @@
+[
+  {
+    "id": "bandit-hideout",
+    "name": "Bandit Hideout",
+    "tier": 1,
+    "type": "Exploration",
+    "description": "A shabby but well-defended hideout nestled among the brambles of the Sablewood.",
+    "impulses": "Keep Out Intruders, Take Watch, Maintain Readiness to Fight",
+    "difficulty": 12,
+    "potentialAdversaries": "Jagged Knife Bandits (Bandit, Shadow, Hexer, Sniper, Lieutenant, Lackey, Kneebreaker)",
+    "features": [
+      {
+        "name": "Thorn Fence",
+        "kind": "Passive",
+        "text": "Make an attack against a target within Close range. On a success, deal 1d8+4 phy damage and pull the target into melee. How would the bandits notice the brambles have been disturbed? How did the wall get there—do they have a druid or ranger among their number?"
+      },
+      {
+        "name": "Patrols",
+        "kind": "Passive",
+        "text": "The bandits post a constant watch, mostly directed outside the camp. Entrance will require stealth (Finesse), deception (Presence), or special information (Knowledge). When do they change the watch? What weapons do they have prepared in case of attack?"
+      },
+      {
+        "name": "Fight Your Way Through",
+        "kind": "Passive",
+        "text": "If the party decides to fight their way through but you want to abstract the battle to save time, call for a Group Action, asking each member of the party how they contribute to the fight, with one PC making the main roll for the group. On a success with Fear, each PC must mark Stress and 1 HP or 1 armor slot. On a failure, each PC must mark 2 Stress and some combination of 2 HP and/or armor slots. What defenses do the bandits have to bring to bear? Does anyone notice the combat or is it over before other bandits take notice?"
+      },
+      {
+        "name": "On The Hunt",
+        "kind": "Action",
+        "text": "Spend a Fear to have a pack of 1d4+2 hungry Strixwolves infiltrate the hideout, desperate for food. Do the PCs avoid the animals? Do they try to use them as a distraction or backup? Do the PCs have food on them that would draw the animals’ attention?"
+      },
+      {
+        "name": "Alarm",
+        "kind": "Reaction",
+        "text": "On a failure or success with fear, some of the bandits grow suspicious and more actively patrol. Attempts to pass through the hideout using stealth have disadvantage for the rest of the scene or until the actively patrolling bandits are defeated or distracted by something else. How is it clear the bandits are on higher alert? What additional defense tactics are they preparing?"
+      }
+    ],
+    "source": "sablewood"
+  },
+  {
+    "id": "underroot-tunnels",
+    "name": "Underroot Tunnels",
+    "tier": 1,
+    "type": "Traversal",
+    "description": "Fortified and well-kept tunnels leading to underborne communities within the great forest.",
+    "impulses": "Confound Travelers, Bar Passage, Connect Communities",
+    "difficulty": 11,
+    "potentialAdversaries": "Acid Burrower, Stonewraith, Jagged Knife Bandits",
+    "features": [
+      {
+        "name": "Hidden Entrance",
+        "kind": "Passive",
+        "text": "The first challenge of the Underroot Tunnels is finding them. PCs must complete a Progress Countdown (3) to find a viable entrance to the tunnels (Instinct and Knowledge are most applicable, though Finesse could be used to search manually for a seam or switch and Presence could be used to gain information from a denizen of the Sablewood). How do they camouflage the tunnels so well? What traps might they leave in the way?"
+      },
+      {
+        "name": "A Series of Passageways, All Alike",
+        "kind": "Passive",
+        "text": "Navigating to a particular location in the tunnels requires a Progress Countdown (4 for most known settlements, 6 for less well-known or more-remote destinations). Potential Challenges include identical passageways, damaged stairwells leading to a lower level, root blockage, flooded tunnel. How was this place built to purposefully confuse outsiders? How are patrols run within the tunnels?"
+      },
+      {
+        "name": "Root Blockage",
+        "kind": "Action",
+        "text": "Reveal that the path ahead has been blocked by the shifting of a great Sablewood tree. The party can dig around the root (Finesse), try to cut through it (Strength), or double back to find another path (Instinct). What other obstacles did the Underroot community build their passages around? What unique approach have they taken to dealing with them?"
+      },
+      {
+        "name": "Toll-Keepers",
+        "kind": "Action",
+        "text": "Spend a Fear to introduce a number of Jagged Knife Lackeys equal to the size of the party plus two Jagged Knife Bandits and a Jagged Knife Lieutenant seeking a ‘toll’ of two handfuls of gold per character for passing through their “protected territory.” How do the Underroot folk feel about these toll-keepers? What else might they be guarding?"
+      }
+    ],
+    "source": "sablewood"
+  },
+  {
+    "id": "village-of-hush",
+    "name": "Village of Hush",
+    "tier": 1,
+    "type": "Social",
+    "description": "A small but friendly village nestled into the heart of the Sablewood.",
+    "impulses": "Display Hospitality, Provide Respite from Danger",
+    "difficulty": 10,
+    "potentialAdversaries": "Merchant, Bladed Guards, Strixwolves",
+    "features": [
+      {
+        "name": "Guest Privileges",
+        "kind": "Passive",
+        "text": "Any overnight visitor is taken in by a family and given shelter for three nights. During this time, the guest's needs have priority and they can use anything that belongs to their hosts. After three nights, the visitors must trade families or leave the town. Which family takes in the PCs? What visitor has been abusing guest privileges and what do they want here?"
+      },
+      {
+        "name": "Clover’s Tavern",
+        "kind": "Passive",
+        "text": "At the center of the town is a massive six-story tavern built around the trunk of an ancient tree. The tavern is where most of the village gathers in the evening. Here, PCs can learn rumors, meet the villagers, and relax. When they leave, the shoes they put up on the clothing line have minor trinkets inside that reflect how the villagers see them or that provide some minor portent of challenges to come. What’s the talk of the tavern? What clues do the trinkets left in the PC’s shoes/boots provide?"
+      },
+      {
+        "name": "Preparations",
+        "kind": "Action",
+        "text": "A prominent member of the community approaches the PCs asking for help with unique preparations for the arrival of the town's leaders, the Faceless Six. Why are the Faceless Six coming to town? What preparations must be done that the party is particularly equipped to help with?"
+      },
+      {
+        "name": "Leave it to the Trees",
+        "kind": "Reaction",
+        "text": "Spend a Fear when someone abuses guest privileges to summon twelve Young Dryads. They kidnap the culprit and drag them off to face the justice of the Sablewoods. Do the villagers notice when this happens? How do they alert the guardians to these abuses, or do the dryads just know? What is the origin of the guest privilege custom?"
+      }
+    ],
+    "source": "sablewood"
+  }
+]

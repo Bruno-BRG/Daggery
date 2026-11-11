@@ -12,6 +12,28 @@ export const PROVIDERS = {
 } as const;
 export class ProviderError extends Error {}
 
+/** DeepSeek reasoning models run at the top effort their catalog offers. */
+export const DEEPSEEK_REASONING_EFFORT = 'max';
+/** The DeepSeek V4 family advertises a 1M-token context; use it when the catalog is silent or lower. */
+export const DEEPSEEK_CONTEXT_WINDOW = 1_000_000;
+/** GM turns on a reasoning model: reasoning tokens count toward this, so leave real room for narration and tool calls. */
+export const DEEPSEEK_MAX_TOKENS = 32000;
+const DEFAULT_MAX_TOKENS = 2400;
+
+export function isDeepSeekModel(model: string): boolean {
+  return model.toLowerCase().includes('deepseek');
+}
+
+export function isDeepSeekV4Model(model: string): boolean {
+  return /deepseek[-_.]?v4/i.test(model);
+}
+
+/** The context window used for memory budgeting. DeepSeek V4 is budgeted at 1M even if a catalog omits or lowers it. */
+export function effectiveContextWindow(model: string, contextWindow: number): number {
+  if (isDeepSeekV4Model(model) && contextWindow < DEEPSEEK_CONTEXT_WINDOW) return DEEPSEEK_CONTEXT_WINDOW;
+  return contextWindow;
+}
+
 function isOpenCode(provider: AiProvider): boolean { return provider === 'opencode' || provider === 'opencode-go'; }
 function positiveNumber(value: unknown): number { const parsed = Number(value); return Number.isFinite(parsed) && parsed > 0 ? parsed : 0; }
 
@@ -25,7 +47,7 @@ export class ModelProvider {
       if (isOpenCode(provider)) return item.type === 'chat' && item.capabilities?.tools?.supported && (provider === 'opencode-go' || Number(item.cost?.text?.input?.price ?? 0) > 0);
       return Array.isArray(item.supported_parameters) && item.supported_parameters.includes('tools');
     }).map((item): AiModel => {
-      const contextWindow = positiveNumber(isOpenCode(provider) ? item.limit?.context : item.context_length);
+      const contextWindow = effectiveContextWindow(String(item.id), positiveNumber(isOpenCode(provider) ? item.limit?.context : item.context_length));
       const temperature = isOpenCode(provider) ? item.capabilities?.temperature === true : Array.isArray(item.supported_parameters) && item.supported_parameters.includes('temperature');
       return { id: String(item.id), name: String(item.name ?? item.id), ...(contextWindow > 0 ? { contextWindow } : {}), temperature };
     });
@@ -33,7 +55,9 @@ export class ModelProvider {
     return models.sort((a, b) => a.name.localeCompare(b.name));
   }
   async complete(provider: AiProvider, key: string, model: string, messages: ModelMessage[], tools: ToolDefinition[], signal: AbortSignal, session: string, options: CompletionOptions = {}): Promise<Completion> {
-    const body: Record<string, unknown> = { model, messages, max_tokens: options.maxTokens ?? 2400, stream: false };
+    const reasoning = isDeepSeekModel(model);
+    const body: Record<string, unknown> = { model, messages, max_tokens: options.maxTokens ?? (reasoning ? DEEPSEEK_MAX_TOKENS : DEFAULT_MAX_TOKENS), stream: false };
+    if (reasoning) body.reasoning_effort = DEEPSEEK_REASONING_EFFORT;
     if (tools.length) Object.assign(body, { tools: tools.map(tool => ({ type: 'function', function: tool })), tool_choice: 'auto', parallel_tool_calls: false });
     if (options.temperature !== undefined) body.temperature = options.temperature;
     let response: Response;

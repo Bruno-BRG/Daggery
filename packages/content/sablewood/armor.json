@@ -1,0 +1,17 @@
+[
+  {
+    "id": "thistlefolk-armor",
+    "name": "Thistlefolk Armor",
+    "tier": 1,
+    "baseThresholds": {
+      "major": 6,
+      "severe": 13
+    },
+    "baseScore": 3,
+    "feature": {
+      "name": "Seamless",
+      "text": "When you take minor damage, roll a d12. If it rolls your level or lower, you can mark a Stress instead."
+    },
+    "source": "sablewood"
+  }
+]

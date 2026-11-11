@@ -1,16 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
-import { adversaries, ancestries, armor, classes, communities, consumables, domainCards, environments, items, weapons } from '@daggery/content';
-import { hasFeature, maxDiceTotal, rollDice, rollDie, type AiInteraction, type AiState } from '@daggery/shared';
+import { adversaries, ancestries, armor, classes, communities, consumables, domainCards, environments, items, transformations, weapons } from '@daggery/content';
+import { hasFeature, maxDiceTotal, rollDice, rollDie, type AiBudget, type AiInteraction, type AiState } from '@daggery/shared';
 import { armorScore, evasion, getArmor, getClass, getCommunity, getDomainCard, getSubclass, heritageDisplayName, hpMax, MAX_HOPE, sheetAncestries, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { SoloService } from '../solo';
-import type { ToolDefinition } from './provider';
+import { effectiveContextWindow, type ToolDefinition } from './provider';
 import { AiCanon, CANON_KINDS, canonKind } from './canon';
+import { catalogSemantic } from './catalog-index';
 import { AiChats } from './chats';
+import type { EmbeddingIndex } from './embeddings';
+import { CAMPAIGN_FRAMES, findCampaignFrame } from './frames';
 import { AiJournal } from './journal';
-import { applyStatePatch, emptyState, normalizeState, SECRETS_LIMIT, snapshotFor } from './memory';
+import { listSourcebooks, readSourcebookPage, searchSourcebooks } from './sourcebook';
+import { applyStatePatch, emptyState, limitsFor, normalizeState, SECRETS_LIMIT, snapshotFor } from './memory';
 import { integer, number, record, text } from './validation';
 
 const s = { type: 'string' }, n = { type: 'number' };
@@ -18,7 +22,9 @@ const schema = (properties: Record<string, unknown>, required: string[] = Object
 const tool = (name: string, description: string, properties: Record<string, unknown>, required?: string[]): ToolDefinition => ({ name, description, parameters: schema(properties, required) });
 export const GM_TOOLS: ToolDefinition[] = [
   tool('get_context', 'Read the table snapshot: heroes, the active scene, countdowns, present adversaries, pending cards, the campaign state, the GM preparations, and the image assets that can serve as scene maps, with their IDs. Use it only when a needed fact is missing.', {}),
-  tool('search_rules', 'Find actual catalog rules, adversaries, environments, items, abilities, ancestries or communities. Without id, a substring search returns at most six results trimmed to 280 characters per field. With id (an exact catalog ID from a search result, get_character or get_adversary), returns that one entry in full.', { query: s, id: s, category: { type: 'string', enum: ['adversaries', 'ancestries', 'communities', 'environments', 'items', 'consumables', 'weapons', 'armor', 'cards', 'classes'] } }, ['category']),
+  tool('search_rules', 'Find actual catalog rules, adversaries, environments, items, abilities, ancestries or communities, including the Hope & Fear and Sablewood material. Without id, a ranked search returns at most six results trimmed to 280 characters per field; findings can also match by meaning. With id (an exact catalog ID from a search result, get_character or get_adversary), returns that one entry in full.', { query: s, id: s, category: { type: 'string', enum: ['adversaries', 'ancestries', 'communities', 'environments', 'items', 'consumables', 'weapons', 'armor', 'cards', 'classes', 'transformations'] } }, ['category']),
+  tool('search_sourcebook', 'Search the installed printed sourcebooks (the core rulebook, Hope & Fear material, Sablewood and other supplements) for rules, mechanics, adversary behaviour, items or lore. Use it whenever you are unsure about anything the table would look up, before inventing a ruling. Returns source, title, page (printed when known, otherwise PDF), pdfPage, score and a snippet. Cite as “Title, p. N”. Then read the page with read_sourcebook_page.', { query: s, source: s, limit: n }, ['query']),
+  tool('read_sourcebook_page', 'Read the full printed text of a sourcebook page found with search_sourcebook. `page` is the page value from a search hit (printed if known, otherwise PDF). Optional `pages` reads that page and the next one, at most 2. Cite as “Title, p. N”.', { source: s, page: n, pages: n }, ['source', 'page']),
   tool('get_character', 'Read one hero sheet: level, class and subclass, heritage, community, traits, HP/Stress/Hope/armor marks with maxima, evasion, equipped weapons and armor, Experiences, loadout domain cards, inventory, and source IDs. Read-only. Use search_rules with category cards and a card ID for full card text.', { heroId: s }, ['heroId']),
   tool('get_adversary', 'Read one present adversary: its catalog stats and full feature text, plus its current marks, defeated count, group size, and active conditions. Read-only.', { adversaryId: s }, ['adversaryId']),
   tool('set_memory', 'Rewrite the GM-only secrets and plans as one short text of at most 4000 characters. Players never see it, and the new text replaces the previous one entirely.', { memory: s }),
@@ -34,11 +40,13 @@ export const GM_TOOLS: ToolDefinition[] = [
     removeIds: { type: 'array', items: s },
   }, []),
   tool('journal_add', 'Write an adventure note: a discovery, decision, promise, or changed relationship. Dice, damage, and scene changes are already recorded automatically. Shared notes are visible to players; others are for the GM only. At most three per turn.', { title: s, body: s, shared: { type: 'boolean' } }, ['title', 'body']),
-  tool('search_journal', 'Search the adventure journal by keyword. Returns at most six entries with trimmed text. Use it before inventing a detail that may already exist.', { query: s, limit: n }, ['query']),
+  tool('search_journal', 'Search the adventure journal across every session of the campaign by ranked keywords (several words may match different parts of an entry). Returns at most six entries with trimmed text, each with its session label and date. Use it before inventing a detail that may already exist.', { query: s, limit: n }, ['query']),
   tool('journal_read', 'Read one complete journal entry by ID, including the full body and any GM-only note. Use search_journal first to find the ID.', { id: s }, ['id']),
   tool('canon_write', 'Create or update a durable canon entry: a person, location, faction, promise, fact, history, plan, rumor, or secret. Bodies may be up to 6000 characters. Canon is never deleted to make room; archive obsolete entries instead. An entry with visibility "gm", including the kind "secret", is GM only; "shared" records it as player-safe.', { id: s, kind: { type: 'string', enum: [...CANON_KINDS] }, title: s, body: s, visibility: { type: 'string', enum: ['shared', 'gm'] }, source: s }, ['kind', 'title', 'body']),
-  tool('canon_search', 'Search durable canon by name or text. Returns active entries with id, kind, title and a trimmed body. Canon survives state compaction and fact eviction, so search here before inventing a detail. Entries with visibility "gm" or kind "secret" are GM only.', { query: s, kind: { type: 'string', enum: [...CANON_KINDS] }, limit: n }, ['query']),
+  tool('canon_search', 'Search durable canon by ranked keywords; title matches rank highest and several words may match different parts of an entry. Returns active entries with id, kind, title and a trimmed body. Canon survives state compaction and fact eviction, so search here before inventing a detail. Entries with visibility "gm" or kind "secret" are GM only.', { query: s, kind: { type: 'string', enum: [...CANON_KINDS] }, limit: n }, ['query']),
   tool('canon_read', 'Read one complete canon entry by ID, including its full body. Use canon_search first to find the ID. Entries with visibility "gm" or kind "secret" are GM only.', { id: s }, ['id']),
+  tool('list_campaign_frames', 'List the campaign frames available from the installed sourcebooks, with their source, page range, one-sentence summary and whether the sourcebook is installed. A game can run a published frame or a custom world.', {}),
+  tool('load_campaign_frame', 'Open a campaign frame. The first call for a campaign also writes brief seed prep and canon (premise, tone, factions, key NPCs, locations, starting hooks) so the frame survives memory compaction. Returns a chunk of the frame’s printed pages; pass `page` from `nextPage` to continue reading. Use it before the opening and at the start of each session when the campaign uses a frame.', { id: s, page: n }, ['id']),
   tool('write_prep', 'Create/update GM preparations. Setting field keys: premise, tone, locations, factions, secrets, agreements. Scenario field keys: hook, stakes, scenes, cast, rewards, aftermath. Values are prose. An existing scenario ID preserves that scenario.', { kind: { type: 'string', enum: ['setting', 'scenario'] }, title: s, fields: { type: 'object', additionalProperties: s }, id: s }, ['kind', 'title', 'fields']),
   tool('write_note', 'Create a campaign note for the Notes page, shared or GM-only. Never overwrite another author’s private note. For adventure records, use journal_add.', { title: s, body: s, shared: { type: 'boolean' } }),
   tool('create_scene', 'Create a table scene and make it active. For its map, use the ID of an image asset listed by get_context, or leave assetId blank for a grid.', { name: s, cols: n, rows: n, assetId: s }, ['name']),
@@ -63,13 +71,15 @@ export const GM_TOOLS: ToolDefinition[] = [
 ];
 
 const ACTION_LABELS: Record<string, string> = {
-  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
+  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
 };
 
 export interface ActionContext {
   campaign: string; owner: string; turn: string; callId: string;
   /** Session that receives messages and journal entries. Defaults to the open session. */
   chat?: string;
+  /** Query embedding for hybrid search tools, computed by the service before the call. */
+  queryVector?: Float32Array | null;
   assertActive: () => void;
   publish: (campaign: string, ns: string, id: string, value: unknown) => void;
   publishRoll: (campaign: string, kind: string, result: unknown) => void;
@@ -124,10 +134,20 @@ export class GmActions {
   readonly journal: AiJournal;
   readonly chats: AiChats;
   readonly canon: AiCanon;
-  constructor(private db: Database.Database, private campaigns: CampaignService) {
-    this.journal = new AiJournal(db);
+  constructor(private db: Database.Database, private campaigns: CampaignService, readonly embeddings?: EmbeddingIndex) {
+    this.journal = new AiJournal(db, embeddings);
     this.chats = new AiChats(db);
-    this.canon = new AiCanon(db);
+    this.canon = new AiCanon(db, embeddings);
+  }
+
+  /** Snippet length for journal and canon searches: larger budgets and context windows get longer hits. */
+  private snippetChars(campaign: string): number {
+    const settings = this.db.prepare('SELECT owner_id, context_budget FROM campaign_ai WHERE campaign_id = ?').get(campaign) as { owner_id: string; context_budget: string } | undefined;
+    if (!settings) return 600;
+    const credential = this.db.prepare('SELECT model, context_window FROM ai_credentials WHERE user_id = ?').get(settings.owner_id) as { model: string; context_window: number } | undefined;
+    const contextWindow = credential ? effectiveContextWindow(credential.model, credential.context_window) : 0;
+    const budget: AiBudget = ['lean', 'balanced', 'rich', 'maximum'].includes(settings.context_budget) ? settings.context_budget as AiBudget : 'balanced';
+    return limitsFor(budget, contextWindow).snippetChars;
   }
   read<T = Record<string, any>>(campaign: string, ns: string, id: string): T | undefined {
     const row = this.db.prepare('SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = ? AND id = ?').get(campaign, ns, id) as { value: string } | undefined;
@@ -234,15 +254,48 @@ export class GmActions {
       ctx.assertActive();
       if (name === 'get_context') result = { ...this.snapshot(ctx.campaign, ctx.owner), preparations: this.preparationDocs(ctx.campaign), assets: this.imageAssets(ctx.campaign) };
       else if (name === 'search_rules') {
-        const catalog: Record<string, readonly { id: string }[]> = { adversaries, ancestries, communities, environments, items, consumables, weapons, armor, cards: domainCards, classes };
+        const catalog: Record<string, readonly { id: string }[]> = { adversaries, ancestries, communities, environments, items, consumables, weapons, armor, cards: domainCards, classes, transformations };
         const category = text(args.category, 30), query = text(args.query, 200, '').toLowerCase(), id = text(args.id, 120, '');
         if (!Object.hasOwn(catalog, category)) throw new Error('Invalid catalog category');
         if (id) {
           const entry = catalog[category]!.find(item => item.id === id);
           if (!entry) throw new Error('Invalid rule ID');
           result = entry;
+        } else {
+          void this.embeddings?.ensureCatalog();
+          const matches = catalog[category]!.filter(item => JSON.stringify(item).toLowerCase().indexOf(query) >= 0);
+          const semantic = ctx.queryVector ? catalogSemantic(ctx.queryVector, { category, limit: 12 }) : [];
+          if (!semantic.length) result = matches.slice(0, 6).map(compactRule);
+          else {
+            const chosen: string[] = matches.slice(0, 6).map(item => item.id);
+            const merged: Record<string, unknown>[] = matches.slice(0, 6).map(compactRule);
+            for (const hit of semantic) {
+              if (chosen.includes(hit.entry.id) || chosen.length >= 6) continue;
+              chosen.push(hit.entry.id);
+              merged.push(compactRule(hit.entry.entry));
+            }
+            result = merged;
+          }
         }
-        else result = catalog[category]!.filter(item => JSON.stringify(item).toLowerCase().indexOf(query) >= 0).slice(0, 6).map(item => compactRule(item));
+      }
+      else if (name === 'search_sourcebook') {
+        const query = text(args.query, 500);
+        if (!query) throw new Error('Invalid search: a query is required');
+        const source = text(args.source, 80, '');
+        // Pick up a sourcebook added at runtime and (re)embed only books whose content changed.
+        void this.embeddings?.ensureSourcebooks();
+        const hits = searchSourcebooks(query, { source: source || undefined, limit: integer(args.limit, 1, 12, 6), queryVector: ctx.queryVector, embedderModel: this.embeddings?.model ?? undefined });
+        const sources = listSourcebooks();
+        result = {
+          results: hits,
+          sources,
+          ...(hits.length ? {} : { note: sources.length ? 'No matching page. Try fewer or different words, or another source.' : 'No sourcebooks are installed. The GM can still use search_rules and canon.' }),
+        };
+      }
+      else if (name === 'read_sourcebook_page') {
+        const read = readSourcebookPage(text(args.source, 80), integer(args.page, 1, 100000), integer(args.pages, 1, 2, 1));
+        if (!read) throw new Error('Invalid sourcebook page: use search_sourcebook to find the source and page first');
+        result = read;
       }
       else if (name === 'get_character') result = characterView(hero(args.heroId));
       else if (name === 'get_adversary') {
@@ -282,7 +335,7 @@ export class GmActions {
         result = { id, shared };
       }
       else if (name === 'search_journal') {
-        result = this.journal.search(ctx.campaign, true, text(args.query, 200, ''), integer(args.limit, 1, 6, 4));
+        result = this.journal.search(ctx.campaign, true, text(args.query, 200, ''), integer(args.limit, 1, 6, 4), { snippetChars: this.snippetChars(ctx.campaign), queryVector: ctx.queryVector });
       }
       else if (name === 'journal_read') {
         const entry = this.journal.view(ctx.campaign, text(args.id, 120), true);
@@ -296,13 +349,72 @@ export class GmActions {
       else if (name === 'canon_search') {
         const kind = text(args.kind, 30, '');
         if (kind) canonKind(kind);
-        result = this.canon.search(ctx.campaign, text(args.query, 200, ''), integer(args.limit, 1, 10, 6), kind ? [kind] : undefined)
-          .map(entry => ({ id: entry.id, kind: entry.kind, title: entry.title, body: entry.body.slice(0, 600) }));
+        result = this.canon.search(ctx.campaign, text(args.query, 200, ''), integer(args.limit, 1, 10, 6), kind ? [kind] : undefined, false, { queryVector: ctx.queryVector })
+          .map(entry => ({ id: entry.id, kind: entry.kind, title: entry.title, body: entry.body.slice(0, this.snippetChars(ctx.campaign)) }));
       }
       else if (name === 'canon_read') {
         const entry = this.canon.get(ctx.campaign, text(args.id, 120));
         if (!entry) throw new Error('Invalid canon entry');
         result = entry;
+      }
+      else if (name === 'list_campaign_frames') {
+        const installed = new Set(listSourcebooks().map(book => book.sourceId));
+        result = CAMPAIGN_FRAMES.map(frame => ({
+          id: frame.id, title: frame.title, source: frame.source,
+          pageStart: frame.pageStart, pageEnd: frame.pageEnd,
+          summary: frame.summary, installed: installed.has(frame.source),
+        }));
+      }
+      else if (name === 'load_campaign_frame') {
+        const frame = findCampaignFrame(text(args.id, 120));
+        if (!frame) throw new Error('Invalid campaign frame');
+        const marker = 'frame:' + frame.id;
+        let seeded = false;
+        if (!this.read(ctx.campaign, 'gm', marker)) {
+          const at = new Date().toISOString();
+          const fields = {
+            premise: frame.summary,
+            tone: frame.seed.tone,
+            locations: frame.seed.locations.join('; '),
+            factions: frame.seed.factions.join('; '),
+            secrets: '',
+            agreements: '',
+            hook: frame.seed.hooks.join('; '),
+            stakes: '',
+            scenes: '',
+            cast: frame.seed.npcs.join('; '),
+            rewards: '',
+            aftermath: '',
+          };
+          put('gm', 'scenario:' + marker, { kind: 'scenario', title: frame.title + ' (campaign frame)', fields, environmentId: '', status: 'planned', updated: at });
+          if (!this.docs(ctx.campaign, 'gm').some(doc => doc.value.kind === 'setting')) {
+            put('gm', 'setting', {
+              kind: 'setting',
+              title: frame.title + ' (campaign frame)',
+              fields: { premise: frame.summary, tone: frame.seed.tone, locations: frame.seed.locations.join('; '), factions: frame.seed.factions.join('; '), secrets: '', agreements: '' },
+              environmentId: '', status: 'planned', updated: at,
+            });
+          }
+          const seeds: { kind: string; title: string; body: string }[] = [
+            { kind: 'fact', title: frame.title + ' · premise', body: frame.summary },
+            { kind: 'fact', title: frame.title + ' · tone', body: frame.seed.tone },
+            ...frame.seed.factions.map(name => ({ kind: 'faction', title: name, body: 'Frame faction from ' + frame.title + '.' })),
+            ...frame.seed.npcs.map(name => ({ kind: 'person', title: name, body: 'Frame NPC from ' + frame.title + '.' })),
+            ...frame.seed.locations.map(name => ({ kind: 'location', title: name, body: 'Frame location from ' + frame.title + '.' })),
+            ...frame.seed.hooks.map(hook => ({ kind: 'rumor', title: hook, body: 'Starting hook from ' + frame.title + '.' })),
+          ];
+          for (const seed of seeds) this.canon.upsert(ctx.campaign, { ...seed, visibility: 'gm', source: frame.title });
+          this.write(ctx.campaign, 'gm', marker, { frameId: frame.id, loadedAt: at });
+          seeded = true;
+        }
+        const page = integer(args.page, frame.pageStart, frame.pageEnd, frame.pageStart);
+        const read = readSourcebookPage(frame.source, page, Math.min(2, frame.pageEnd - page + 1));
+        if (!read) throw new Error('Invalid campaign frame pages: install its sourcebook with tools/extract_sources.py first');
+        const nextPage = page + read.pages.length <= frame.pageEnd ? page + read.pages.length : null;
+        result = {
+          frame: { id: frame.id, title: frame.title, source: frame.source, pageStart: frame.pageStart, pageEnd: frame.pageEnd, summary: frame.summary },
+          seeded, page, nextPage, text: read.text, truncated: read.truncated,
+        };
       }
       else if (name === 'write_prep') {
         const kind = text(args.kind, 20); if (!['setting', 'scenario'].includes(kind)) throw new Error('Invalid preparation kind');

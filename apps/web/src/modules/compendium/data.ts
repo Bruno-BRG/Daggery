@@ -27,6 +27,11 @@ export interface Feature {
   kind?: string;
 }
 
+/** Optional provenance carried by the combined content catalog. */
+interface Sourced {
+  source?: string;
+}
+
 export interface SubclassData {
   id: string;
   name: string;
@@ -37,7 +42,7 @@ export interface SubclassData {
   mastery: Feature[];
 }
 
-export interface ClassData {
+export interface ClassData extends Sourced {
   id: string;
   name: string;
   description: string;
@@ -52,7 +57,7 @@ export interface ClassData {
   connections: string[];
 }
 
-export interface DomainCardData {
+export interface DomainCardData extends Sourced {
   id: string;
   name: string;
   domain: string;
@@ -62,21 +67,21 @@ export interface DomainCardData {
   text: string;
 }
 
-export interface AncestryData {
+export interface AncestryData extends Sourced {
   id: string;
   name: string;
   description: string;
   features: Feature[];
 }
 
-export interface CommunityData {
+export interface CommunityData extends Sourced {
   id: string;
   name: string;
   description: string;
   features: Feature[];
 }
 
-export interface TransformationData {
+export interface TransformationData extends Sourced {
   id: string;
   name: string;
   description: string;
@@ -84,7 +89,7 @@ export interface TransformationData {
   questions: string[];
 }
 
-export interface WeaponData {
+export interface WeaponData extends Sourced {
   id: string;
   name: string;
   category: string;
@@ -97,7 +102,7 @@ export interface WeaponData {
   feature: Feature | null;
 }
 
-export interface ArmorData {
+export interface ArmorData extends Sourced {
   id: string;
   name: string;
   tier: number;
@@ -106,21 +111,21 @@ export interface ArmorData {
   feature: Feature | null;
 }
 
-export interface ItemData {
+export interface ItemData extends Sourced {
   id: string;
   name: string;
   description: string;
   feature: Feature | null;
 }
 
-export interface ConsumableData {
+export interface ConsumableData extends Sourced {
   id: string;
   name: string;
   description: string;
   rollTable: { name: string; roll: number } | null;
 }
 
-export interface AdversaryData {
+export interface AdversaryData extends Sourced {
   id: string;
   name: string;
   tier: number;
@@ -142,7 +147,7 @@ export interface AdversaryData {
   features: Feature[];
 }
 
-export interface EnvironmentData {
+export interface EnvironmentData extends Sourced {
   id: string;
   name: string;
   tier: number;
@@ -154,19 +159,19 @@ export interface EnvironmentData {
   features: Feature[];
 }
 
-export interface ConditionData {
+export interface ConditionData extends Sourced {
   id: string;
   name: string;
   text: string;
 }
 
-export interface RangeData {
+export interface RangeData extends Sourced {
   id: string;
   name: string;
   distance: string;
 }
 
-export interface DomainData {
+export interface DomainData extends Sourced {
   id: string;
   name: string;
   description: string;
@@ -271,6 +276,7 @@ export const CATEGORIES: Category[] = [
   { id: 'domainCards', label: 'Domains / Cards', kinds: ['domainCard'] },
   { id: 'ancestries', label: 'Ancestries', kinds: ['ancestry'] },
   { id: 'communities', label: 'Communities', kinds: ['community'] },
+  { id: 'transformations', label: 'Transformations', kinds: ['transformation'] },
   { id: 'weapons', label: 'Weapons', kinds: ['weapon'] },
   { id: 'armor', label: 'Armor', kinds: ['armor'] },
   { id: 'items', label: 'Items', kinds: ['item'] },
@@ -382,6 +388,7 @@ const domainCardArt = new Map<string, CardIndexEntry>();
 const ancestryArt = new Map<string, CardIndexEntry>();
 const communityArt = new Map<string, CardIndexEntry>();
 const subclassArt = new Map<string, CardIndexEntry>();
+const transformationArt = new Map<string, CardIndexEntry>();
 const normalizeCardName = (name: string) => normalize(name).replace(/[^a-z0-9]/g, '');
 
 for (const card of cardEntries) {
@@ -393,6 +400,8 @@ for (const card of cardEntries) {
     communityArt.set(card.id, card);
   } else if (card.kind === 'subclass') {
     subclassArt.set(card.id, card);
+  } else if (card.kind === 'transformation') {
+    transformationArt.set(card.id, card);
   }
 }
 
@@ -409,6 +418,7 @@ export function cardFileForEntry(entry: Entry): string | null {
   }
   if (entry.kind === 'ancestry') return ancestryArt.get(entry.id)?.file ?? null;
   if (entry.kind === 'community') return communityArt.get(entry.id)?.file ?? null;
+  if (entry.kind === 'transformation') return transformationArt.get(entry.id)?.file ?? null;
   return null;
 }
 

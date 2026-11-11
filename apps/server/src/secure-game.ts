@@ -13,9 +13,10 @@ import { canReadDocument, canWriteDocument, hasFeature, isRealtimeDocument } fro
 import { registerSoloRoutes } from './solo';
 import { registerAiRoutes } from './ai/routes';
 import type { SecretVault } from './ai/vault';
+import type { Embedder } from './ai/embeddings';
 import type { ModelProvider } from './ai/provider';
 
-interface Options { db: Database.Database; service: CampaignService; origin: string; secureCookies: boolean; assetsDir: string; aiVault?: SecretVault; aiProvider?: ModelProvider }
+interface Options { db: Database.Database; service: CampaignService; origin: string; secureCookies: boolean; assetsDir: string; aiVault?: SecretVault; aiProvider?: ModelProvider; aiEmbedder?: () => Promise<Embedder | null> }
 interface Peer { socket: WebSocket; session: string; userId: string; campaignId: string }
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const params = (request: FastifyRequest): Record<string, string> => request.params as Record<string, string>;
@@ -115,7 +116,7 @@ export async function registerSecureGame(app: FastifyInstance, options: Options)
   });
 
   registerSoloRoutes(app, { db, service, secureCookies, publish: (campaign, ns, id, value) => broadcast(campaign, { type: 'doc:set', ns, id, value }, ns, id) });
-  registerAiRoutes(app, { db, service, secureCookies, vault: options.aiVault, provider: options.aiProvider,
+  registerAiRoutes(app, { db, service, secureCookies, vault: options.aiVault, provider: options.aiProvider, embedder: options.aiEmbedder,
     publish: (campaign, ns, id, value) => broadcast(campaign, { type: 'doc:set', ns, id, value }, ns, id),
     publishRoll: (campaign, kind, result, author = 'AI GM') => {
       const at = new Date().toISOString();

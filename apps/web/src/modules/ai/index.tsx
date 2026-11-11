@@ -526,12 +526,15 @@ function Connection({ connection, onClose, onSaved }: { connection: AiConnection
 }
 function Setup({ base, session, heroes, onClose, onSaved }: { base: string; session: AiAdventure; heroes: Sheet[]; onClose: () => void; onSaved: () => Promise<void> }) {
   const [premise, setPremise] = useState(session.setup.premise), [tone, setTone] = useState(session.setup.tone), [persona, setPersona] = useState(session.setup.persona), [heroId, setHeroId] = useState(session.setup.heroId || heroes[0]?.id || 'new');
+  const [frame, setFrame] = useState(session.setup.frame ?? '');
   const [budget, setBudget] = useState<AiBudget>(session.budget);
   const [name, setName] = useState('Ash'), [classId, setClassId] = useState('warrior'), [classes, setClasses] = useState<{ id: string; name: string }[]>([]), [busy, setBusy] = useState(false), [error, setError] = useState('');
   useEffect(() => { void api<{ classes: { id: string; name: string }[] }>(`${base}/options`).then(value => setClasses(value.classes)).catch(error => setError(errorText(error))); }, [base]);
-  async function save(event: FormEvent) { event.preventDefault(); setBusy(true); setError(''); try { await api(`${base}/setup`, 'PUT', { premise, tone, persona, budget, ...(heroId === 'new' ? { quickHero: { name, classId } } : { heroId }) }); await onSaved(); } catch (error) { setError(errorText(error)); } finally { setBusy(false); } }
+  async function save(event: FormEvent) { event.preventDefault(); setBusy(true); setError(''); try { await api(`${base}/setup`, 'PUT', { premise, tone, persona, frame, budget, ...(heroId === 'new' ? { quickHero: { name, classId } } : { heroId }) }); await onSaved(); } catch (error) { setError(errorText(error)); } finally { setBusy(false); } }
   return <Dialog open onClose={onClose} title="Adventure setup"><form className="ai-form" onSubmit={save}>
     <p>Give your GM a starting point. Leave the premise open and discover it together.</p>
+    <label>Campaign frame<select aria-label="Campaign frame" value={frame} onChange={event => setFrame(event.target.value)}><option value="">Custom world · no published frame</option>{session.frames.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}</select></label>
+    <small>Choose a published frame and the GM will read its printed pages, then seed its premise, factions, locations, NPCs and hooks.</small>
     <label>Adventure premise<textarea rows={4} maxLength={3000} value={premise} onChange={event => setPremise(event.target.value)} placeholder="A missing courier, a town swallowed by mist, a debt to an old friend…" /></label>
     <label>Tone & boundaries<input maxLength={300} value={tone} onChange={event => setTone(event.target.value)} placeholder="Hopeful fantasy, mystery, no graphic violence" /></label>
     <label>GM persona & table style<textarea rows={3} maxLength={1500} value={persona} onChange={event => setPersona(event.target.value)} placeholder="Warm, wry narrator; slow-burn mystery; NPCs speak in short sentences" /></label>

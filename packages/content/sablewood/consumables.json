@@ -1,0 +1,23 @@
+[
+  {
+    "id": "bugbane-berry",
+    "name": "Bugbane Berry",
+    "description": "A delicacy among the residents here, this is a large, red-orange berry with a small insect floating in its center like a pit. When consumed, it provides resistance to magic damage until your next short rest.",
+    "rollTable": null,
+    "source": "sablewood"
+  },
+  {
+    "id": "sable-sap",
+    "name": "Sable Sap",
+    "description": "The sweet sap from the sablewood trees can be drizzled over food or eaten by the spoonful. Once per long rest, when you have a calm moment to consume this, you may clear 2 Stress.",
+    "rollTable": null,
+    "source": "sablewood"
+  },
+  {
+    "id": "vial-of-briarpowder",
+    "name": "Vial of Briarpowder",
+    "description": "Made from shaving thorns of the Wandering Briar, when used on an enemy, it inhibits the clotting of blood. After coating a blade with this powder, the next successful attack you deal one additional hit point.",
+    "rollTable": null,
+    "source": "sablewood"
+  }
+]

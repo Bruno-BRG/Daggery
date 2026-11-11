@@ -1,7 +1,9 @@
 **/node_modules
 **/dist
 data
-sources
+sources/*.pdf
+sources/**/*.pdf
+sources/**/*.vec
 docs/*
 !docs/solo-rules.md
 !docs/solo-themes.md
