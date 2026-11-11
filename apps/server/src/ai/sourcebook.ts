@@ -1,14 +1,15 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { bundledPaths, runtimePaths } from '../storage';
+export { dataDirectory } from '../storage';
 import type { Embedder } from './embeddings';
 import { isNearDuplicate, sourceLabel, sourcePriority } from './rag-coverage';
 import { DEFAULT_MIN_SIMILARITY, fuseRanked, type Scored } from './retrieval';
 
 /**
  * Installed source books. tools/extract_sources.py writes one JSON file per book under
- * sources/rules/ (committed; the repository is private) and, when used locally, under
+ * sources/rules/ (committed) and, when used locally, under
  * <DAGGERY_DATA_DIR>/rules/ (gitignored). Both folders are loaded; a data-directory file
  * with the same id wins, so a local re-extraction can override the committed copy. The
  * folder may be absent altogether; every lookup then reports that nothing is installed.
@@ -68,35 +69,14 @@ let ensured: { signature: string; model: string; dim: number } | null = null;
 /** Page vectors stay in memory: a search must not re-parse every `.vec` file. */
 let pageVectorCache: { signature: string; books: Map<string, BookVectors | null> } | null = null;
 
-export function dataDirectory(): string {
-  return process.env.DAGGERY_DATA_DIR ?? fileURLToPath(new URL('../../../../data/', import.meta.url));
-}
-
 export function rulesDirectory(): string {
-  return join(dataDirectory(), 'rules');
+  return runtimePaths().rules;
 }
 
-/**
- * The committed rules folder. It is resolved against this module first (works for tsx,
- * compiled output and the Docker image, where the checkout lives at /app and the server
- * runs from /app/apps/server), then against the current working directory. Set
- * DAGGERY_REPO_RULES=off to ignore the committed copy (tests do this so fixtures are isolated).
- */
+/** Bundled rules use the shared storage layout, never a working-directory fallback. */
 export function repoRulesDirectory(): string | null {
   if (process.env.DAGGERY_REPO_RULES === 'off') return null;
-  const candidates: string[] = [];
-  try {
-    candidates.push(fileURLToPath(new URL('../../../../sources/rules/', import.meta.url)));
-  } catch {
-    // A bundled single-file build may not expose a filesystem URL; fall through to cwd.
-  }
-  candidates.push(join(process.cwd(), 'sources', 'rules'));
-  candidates.push(join(process.cwd(), '..', 'sources', 'rules'));
-  candidates.push(join(process.cwd(), '..', '..', 'sources', 'rules'));
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate;
-  }
-  return null;
+  return existsSync(bundledPaths.rules) ? bundledPaths.rules : null;
 }
 
 /** Rule folders in load order: committed sources first, then the data directory (which wins). */

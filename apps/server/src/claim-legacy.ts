@@ -1,6 +1,5 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { runtimePaths } from './storage';
 import Database from 'better-sqlite3';
 import { CampaignService } from './campaign-service';
 import { CURRENT_VERSION } from './campaign-db';
@@ -8,8 +7,7 @@ import { CURRENT_VERSION } from './campaign-db';
 // Deliberately local only: never expose this operation through HTTP.
 const username = process.argv[2];
 if (!username || process.argv.length !== 3) throw new Error('Uso: npm run claim-legacy -w @daggery/server -- <usuário>');
-const dataDir = process.env.DAGGERY_DATA_DIR ?? fileURLToPath(new URL('../../../data/', import.meta.url));
-const dbPath = process.env.DAGGERY_DB ?? join(dataDir, 'daggery.db');
+const dbPath = runtimePaths().database;
 if (!existsSync(dbPath)) throw new Error('Banco de dados não encontrado');
 const db = new Database(dbPath, { fileMustExist: true });
 try {

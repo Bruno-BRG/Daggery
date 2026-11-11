@@ -27,6 +27,8 @@ test('the web app serves its files, page paths get the index, and missing API an
       assert.equal(file.statusCode, 200);
       assert.match(file.body, /daggery/);
       assert.equal((await app.inject({ method: 'GET', url: '/assets/missing.js' })).statusCode, 404, 'a missing asset is not replaced by the page');
+      assert.equal((await app.inject({ method: 'GET', url: '/cards/subclass/missing.webp' })).statusCode, 404, 'missing card art must not return HTML with status 200');
+      assert.equal((await app.inject({ method: 'GET', url: '/cards/missing' })).statusCode, 404, 'the entire card namespace is excluded from SPA fallback');
       const missingApi = await app.inject({ method: 'GET', url: '/api/nothing' });
       assert.equal(missingApi.statusCode, 404);
       assert.match(String(missingApi.headers['content-type']), /application\/json/);

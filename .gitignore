@@ -1,5 +1,6 @@
 
-# Source PDFs are tracked through Git LFS on purpose (the repo is private).
+# Source PDFs are tracked through Git LFS; bundled art and rules are committed.
+# Only mutable runtime data belongs under data/. See docs/storage.md.
 *.tmp.ts
 node_modules/
 data/

@@ -1,6 +1,8 @@
 **/node_modules
 **/dist
+# Runtime state is supplied by the volume; bundled cards and rules stay in the image.
 data
+# Extraction inputs are not required at runtime.
 sources/*.pdf
 sources/**/*.pdf
 sources/**/*.vec

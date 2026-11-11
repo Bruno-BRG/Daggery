@@ -1,5 +1,4 @@
-import { join } from 'node:path';
-import { dataDirectory } from './sourcebook';
+import { runtimePaths } from '../storage';
 import { RAG_ENABLED, type Embedder } from './embeddings';
 
 /**
@@ -37,7 +36,7 @@ async function loadEmbedder(options: LocalEmbedderOptions): Promise<Embedder | n
   const log = options.log ?? ((message: string) => console.warn(message));
   const model = options.model ?? process.env.DAGGERY_RAG_MODEL ?? DEFAULT_RAG_MODEL;
   const dim = options.dim ?? DEFAULT_DIM;
-  const modelsDir = options.modelsDir ?? join(dataDirectory(), 'models');
+  const modelsDir = options.modelsDir ?? runtimePaths().models;
   try {
     const transformers = await import('@huggingface/transformers');
     const { env, pipeline } = transformers;

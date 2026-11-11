@@ -13,7 +13,11 @@ Everything the server writes lives in `DAGGERY_DATA_DIR`, which the container se
 - `daggery.db`, the SQLite database with accounts, campaigns and sessions;
 - `ai-keyring.key`, which encrypts saved AI provider keys. Losing it invalidates every saved key;
 - `backups/`, written before each schema migration;
-- `campaign-assets/`, uploaded campaign files.
+- `campaign-assets/`, uploaded campaign files;
+- `rules/`, optional sourcebook JSON overrides and generated page-vector caches;
+- `models/` and `catalog-index.vec`, rebuildable local retrieval caches.
+
+See [Storage conventions](storage.md) for canonical paths, extraction outputs, and backup rules.
 
 The card images are committed under `packages/content/cards` and served at `/cards/` from the code. They do not live in the volume, because a volume mounted over `/app/data` would hide files the image puts there. A `cards/` folder left in the volume by an older deploy is ignored.
 

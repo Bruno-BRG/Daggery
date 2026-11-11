@@ -64,13 +64,12 @@ python tools/extract_sources.py --all          # all 11 PDFs, with OCR fallback
 python tools/extract_sources.py --all --no-ocr # text layer only
 ```
 
-The output is committed under `sources/rules/*.json` (the repository is private); the
-PDFs themselves are excluded from the Docker image. The server loads both
+The output is committed under `sources/rules/*.json`; the PDFs themselves are excluded
+from the Docker image. Treat both the PDFs and extracted text as licensed source material. The server loads both
 `sources/rules/` and `<DAGGERY_DATA_DIR>/rules/`, with a data-directory file overriding
 the committed copy of the same id, so a local re-extraction wins without a code change.
-`sources/rules` resolves against the module first and then the working directory, which
-covers `tsx src/index.ts`, the compiled output and the Docker image (checkout at `/app`,
-server run from `/app/apps/server`). The folder may be absent, in which case the tools
+`sources/rules` resolves through the shared, module-relative storage layout, independently
+of the working directory or data volume (see [Storage conventions](storage.md)). The folder may be absent, in which case the tools
 report that no sourcebooks are installed. Set `DAGGERY_REPO_RULES=off` to ignore the
 committed copy (the fixture tests do this).
 

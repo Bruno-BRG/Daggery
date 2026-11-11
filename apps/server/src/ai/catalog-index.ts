@@ -8,7 +8,7 @@ import {
 import type { Embedder } from './embeddings';
 import { cosine } from './embeddings';
 import { DEFAULT_MIN_SIMILARITY } from './retrieval';
-import { dataDirectory } from './sourcebook';
+import { dataDirectory } from '../storage';
 
 /**
  * Semantic index over every structured catalog entry bundled in `@daggery/content` — the

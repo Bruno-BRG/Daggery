@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Turn Daggerheart source PDFs (or an already extracted text) into rules JSON.
 
-The server reads every JSON file under `sources/rules/` (committed, private repo)
+The server reads every JSON file under `sources/rules/` (committed)
 and under `<DAGGERY_DATA_DIR>/rules/` (local, gitignored; wins on a duplicate id)
 and indexes its pages for the AI GM's sourcebook tools (`search_sourcebook`,
 `read_sourcebook_page`). The output format is:
@@ -53,9 +53,9 @@ Examples
         --metadata data/extract/corebook_pages.json \
         --id core-rulebook --title "Daggerheart Core Rulebook"
 
-The default output folder is `sources/rules/`, which is committed (the repository
-is private). `.vec` embedding caches never live there: the server keeps them under
-the gitignored data directory.
+The default output folder is `sources/rules/`, which is committed. `.vec` embedding
+caches never live there: the server keeps them under the gitignored data directory.
+See docs/storage.md for the shared storage convention.
 """
 
 from __future__ import annotations

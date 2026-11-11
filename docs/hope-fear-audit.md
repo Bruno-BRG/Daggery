@@ -10,13 +10,12 @@ Source audited: `Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pd
 - Chapter ranges used by the app: Castle High 116–127, Reign of the Weredragon
   128–143, Dark Heart of Andaluria 144–157, Journey to Horizon 158–179.
 
-Extraction command (output: `data/rules/hope-and-fear-book.json`; the current
-extractor also writes the committed copy under `sources/rules/`):
+Extraction command (canonical output: `sources/rules/hope-and-fear-book.json`):
 
 ```
 python tools/extract_sources.py sources/Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf \
   --id hope-and-fear-book --title "Daggerheart: Hope & Fear" \
-  --printed-offset 1 --front-matter 4 --back-matter 198 --engine pymupdf --out data/rules
+  --printed-offset 1 --front-matter 4 --back-matter 198 --engine pymupdf --out sources/rules
 ```
 
 Poppler (`pdftotext`) silently drops the book's display-face numerals on many
@@ -117,9 +116,10 @@ pipeline as the core set by `tools/extract_hf_cards.py`:
 - Files live under `packages/content/cards/` (shipped with the code, like core art), and the new
   entries were appended to `packages/content/cards-index.json` (now 333 entries).
 - `packages/content/index.ts` now sets `art: true` for the Hope & Fear classes;
-  the compendium also maps transformation cards. Run
-  `python tools/extract_hf_cards.py` after a fresh clone to materialise the
-  binary WebP files. The printer-friendly duplicates on PDF 205–211 are ignored.
+  the compendium also maps transformation cards. The WebP files are committed, so
+  fresh clones need no extraction. Run `python tools/extract_hf_cards.py` only to
+  regenerate the art. The printer-friendly duplicates on PDF 205–211 are ignored.
+- See [Storage conventions](storage.md) for the shared content/runtime layout.
 
 ## Other supplied sources: what exists and what the app uses
 

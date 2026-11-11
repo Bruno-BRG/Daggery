@@ -2,7 +2,7 @@
  * Campaign frames the AI GM can run from the installed sourcebooks.
  *
  * This registry is authored, short metadata only: a one-sentence summary and a few brief
- * seeds. The printed pages stay in data/rules/ (gitignored, copyrighted) and are read on
+ * seeds. The printed pages live in sources/rules/ (with optional runtime overrides) and are read on
  * demand through the sourcebook tools. Page numbers use the page value returned by
  * sourcebook search: the printed page when the book has one, otherwise the PDF page.
  */
