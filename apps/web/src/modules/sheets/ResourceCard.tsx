@@ -1,27 +1,44 @@
-import { memo } from 'react';
+import { memo, useId } from 'react';
 import { Icon, type IconName } from '../../components/Icon';
+import { changeResourceCount, resourceTrack } from './resource-track';
 
-const MAX_PIPS = 24;
+type ResourceCardProps = {
+  label: string;
+  icon: IconName;
+  /** Marked slots for HP, Stress and Armor; available points for Hope. */
+  count: number;
+  max: number;
+  tone: string;
+  kind?: 'marked' | 'held';
+  onChange: (count: number) => void;
+  extraSlots?: { value: number; onChange: (raw: string) => void };
+};
 
-/**
- * `positive` resources (Stress marked, Hope held) show `count` directly: 0 / max on a fresh sheet.
- * Other resources (HP, Armor) store marked slots but display what remains: full on a fresh sheet.
- * `max` is only the number of slots shown, so features that raise it are never clamped.
- */
-function ResourceCardBase({ label, icon, count, max, tone, positive = false, onChange }: {
-  label: string; icon: IconName; count: number; max: number; tone: string;
-  positive?: boolean; onChange: (count: number) => void;
-}) {
-  const value = positive ? Math.max(0, count) : Math.max(0, max - count);
-  const pips = Math.min(MAX_PIPS, Math.max(max, value));
-  const setValue = (next: number) => {
-    const clamped = Math.max(0, positive ? next : Math.min(max, next));
-    onChange(positive ? clamped : max - clamped);
-  };
+function ResourceCardBase({ label, icon, count, max, tone, kind = 'marked', onChange, extraSlots }: ResourceCardProps) {
+  const helpId = useId();
+  const { value, slots, canIncrease } = resourceTrack(count, max);
+  const setValue = (next: number) => onChange(changeResourceCount(count, next, max));
   return <section className={`folio-resource resource-${tone}`} aria-label={label}>
-    <div className="folio-resource-label"><Icon name={icon} /><h2>{label}</h2></div>
-    <div className="folio-resource-value"><strong>{value}</strong><span>/ {max}</span><div className="folio-resource-stepper"><button type="button" onClick={() => setValue(value - 1)} disabled={value <= 0} aria-label={`Decrease ${label}`}><Icon name="minus" /></button><button type="button" onClick={() => setValue(value + 1)} disabled={!positive && value >= max} aria-label={`Increase ${label}`}><Icon name="plus" /></button></div></div>
-    <div className="folio-resource-pips" role="group" aria-label={`${label} slots`}>{Array.from({ length: pips }, (_, i) => <button key={i} type="button" aria-label={`${label} slot ${i + 1}`} aria-pressed={i < value} className={i < value ? 'is-filled' : ''} onClick={() => setValue(i < value ? i : i + 1)} />)}</div>
+    <header className="folio-resource-header">
+      <div className="folio-resource-label"><Icon name={icon} /><h2>{label}</h2></div>
+      <span className="folio-resource-counter" aria-live="polite" aria-atomic="true"><strong>{value}<span> / {max}</span></strong>{' '}<small>{kind === 'held' ? 'available' : 'marked'}</small></span>
+    </header>
+    <div className="folio-resource-track">
+      <button className="folio-resource-control" type="button" onClick={() => setValue(value - 1)} disabled={value <= 0} aria-label={`Decrease ${label}`}><Icon name="minus" /></button>
+      <div className="folio-resource-pips" role="group" aria-label={`${label} slots`}>
+        {Array.from({ length: slots }, (_, i) => <button key={i} type="button" aria-label={`${label} slot ${i + 1}`} aria-pressed={i < value} className={i < value ? 'is-filled' : ''} onClick={() => setValue(i < value ? i : i + 1)}><span aria-hidden="true" /></button>)}
+        {slots === 0 && <span className="folio-resource-empty">No slots</span>}
+      </div>
+      <button className="folio-resource-control" type="button" onClick={() => setValue(value + 1)} disabled={!canIncrease} aria-label={`Increase ${label}`}><Icon name="plus" /></button>
+    </div>
+    {max > slots && <p className="folio-resource-overflow">Showing {slots} of {max} slots. Use − / + for the full track.</p>}
+    {extraSlots && <details className="folio-resource-adjustment">
+      <summary><Icon name="settings" /><span>Adjust maximum</span>{extraSlots.value > 0 && <small>+{extraSlots.value}</small>}<Icon name="chevron" /></summary>
+      <div>
+        <label>Extra slots<input type="number" min={0} step={1} inputMode="numeric" aria-label={`Extra ${label} slots`} aria-describedby={helpId} value={extraSlots.value} onChange={event => extraSlots.onChange(event.target.value)} /></label>
+        <p id={helpId}>From items or effects. Adds to ancestry and level-up slots without changing your marks.</p>
+      </div>
+    </details>}
   </section>;
 }
 

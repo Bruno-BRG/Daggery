@@ -6,7 +6,7 @@ import { Icon } from '../../components/Icon';
 import { bringCharacterToTable } from '../../table-navigation';
 import { getAncestry, getClass, getCommunity, getSubclass, hpMax, stressMax, tierLabel } from './rules';
 import type { Sheet } from './types';
-import { bannerImage, portraitImage } from './appearance';
+import { portraitImage } from './appearance';
 
 export default function SheetsModule({ author }: { author: string }) {
   const { items, set, remove } = useDocs<Sheet>('sheets');
@@ -104,33 +104,31 @@ function SheetCard({ sheet, onOpen, onDelete }: { sheet: Sheet; onOpen: () => vo
   const ancestry = getAncestry(sheet.ancestryId);
   const mixedAncestry = getAncestry(sheet.mixedAncestryId);
   const community = getCommunity(sheet.communityId);
+  const art = sheet.bannerUrl || portraitImage(sheet);
+  const [failedArt, setFailedArt] = useState<string | null>(null);
+  const heritage = [[ancestry?.name, mixedAncestry?.name].filter(Boolean).join(' / '), community?.name].filter(Boolean).join(' · ');
   return (
     <li className="daggery-character-card">
-      {(bannerImage(sheet) || portraitImage(sheet)) && <img className={`daggery-character-art ${sheet.bannerUrl || sheet.portraitUrl ? 'is-custom' : ''}`} src={sheet.bannerUrl || portraitImage(sheet)} alt="" />}
-      <div className="daggery-character-card-body">
-        <button type="button" onClick={onOpen} className="text-left">
-          <p className="text-lg font-semibold text-slate-100">{sheet.name}</p>
-          <p className="text-xs text-slate-400">
-            {cls?.name ?? sheet.classId}
-            {subclass ? ` · ${subclass.name}` : ''}
-          </p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {[[ancestry?.name, mixedAncestry?.name].filter(Boolean).join(' / '), community?.name].filter(Boolean).join(' · ') ||
-              'No heritage defined'}
-          </p>
-          <p className="mt-1 text-xs text-slate-500">
-            Level {sheet.level} · {tierLabel(sheet.level)} · Prof. {sheet.proficiency}
-          </p>
-        </button>
-        <div className="mt-3 grid grid-cols-3 gap-1.5 text-center text-xs">
-          <span className="rounded bg-rose-950/50 px-2 py-1 text-rose-200">
-            HP {hpMax(sheet) - sheet.hpMarked}/{hpMax(sheet)}
-          </span>
-          <span className="rounded bg-violet-950/50 px-2 py-1 text-violet-200">
-            Stress {stressMax(sheet) - sheet.stressMarked}/{stressMax(sheet)}
-          </span>
-          <span className="rounded bg-accent-950/50 px-2 py-1 text-accent-200">Hope {sheet.hope}/6</span>
+      <button type="button" onClick={onOpen} className="daggery-character-open" aria-label={`Open ${sheet.name}'s sheet`}>
+        <div className="daggery-character-cover">
+          {art && failedArt !== art
+            ? <img className={`daggery-character-art ${sheet.bannerUrl || sheet.portraitUrl ? 'is-custom' : ''}`} src={art} alt="" loading="lazy" onError={() => setFailedArt(art)} />
+            : <span className="daggery-character-placeholder"><Icon name="sheet" /></span>}
+          <span className="daggery-character-level">Level <strong>{sheet.level}</strong></span>
         </div>
+        <div className="daggery-character-identity">
+          <p className="daggery-character-class">{cls?.name ?? sheet.classId}{subclass ? ` · ${subclass.name}` : ''}</p>
+          <h2>{sheet.name}</h2>
+          <p className="daggery-character-heritage">{heritage || 'No heritage defined'}</p>
+          <p className="daggery-character-meta"><span>{tierLabel(sheet.level)}</span><span>Proficiency {sheet.proficiency}</span></p>
+        </div>
+      </button>
+      <div className="daggery-character-card-body">
+        <dl className="daggery-character-resources">
+          <div><dt><Icon name="heart" /><span>HP<small>marked</small></span></dt><dd>{sheet.hpMarked}<span> / {hpMax(sheet)}</span></dd></div>
+          <div><dt><Icon name="stress" /><span>Stress<small>marked</small></span></dt><dd>{sheet.stressMarked}<span> / {stressMax(sheet)}</span></dd></div>
+          <div><dt><Icon name="spark" /><span>Hope<small>available</small></span></dt><dd>{sheet.hope}<span> / 6</span></dd></div>
+        </dl>
         <div className="daggery-character-card-footer">
           <button
             type="button"

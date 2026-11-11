@@ -20,7 +20,7 @@ export function Button({
     <button
       type="button"
       {...rest}
-      className={`rounded-md border px-2 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${TONE[tone]} ${className}`}
+      className={`folio-combat-button rounded-md border px-2 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${TONE[tone]} ${className}`}
     />
   );
 }
@@ -29,7 +29,7 @@ export function Badge({ tone = 'slate', title, children }: { tone?: Tone; title?
   return (
     <span
       title={title}
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${TONE[tone]}`}
+      className={`folio-combat-badge inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-semibold ${TONE[tone]}`}
     >
       {children}
     </span>
@@ -38,9 +38,9 @@ export function Badge({ tone = 'slate', title, children }: { tone?: Tone; title?
 
 export function Panel({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">{title}</h2>
+    <section className="folio-panel">
+      <div className="folio-panel-heading">
+        <h2>{title}</h2>
         {action}
       </div>
       {children}

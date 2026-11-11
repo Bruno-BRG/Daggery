@@ -25,7 +25,7 @@ export function FearPanel({ ctx, fear }: { ctx: Ctx; fear: number }) {
     <Panel
       title="Game Master's Fear"
       action={
-        <span className="text-2xl font-bold tabular-nums text-accent-300">
+        <span className="text-sm font-semibold tabular-nums text-accent-300">
           {fear}
           <span className="text-sm font-normal text-slate-500">/{MAX_FEAR}</span>
         </span>

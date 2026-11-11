@@ -1,161 +1,227 @@
-/* Shared room-inspired application chrome. Module layouts keep their game rules. */
+/* Folio visual language. Layout and game rules remain owned by each module.
+   Two-class selectors below keep lazy-loaded module CSS from undoing the theme.
+   Dialogs are styled globally because their portals live outside the shell. */
+:root {
+  --folio-frame: color-mix(in srgb, var(--ds-brand) 28%, var(--ds-border));
+  --folio-header: color-mix(in srgb, var(--ds-inset) 65%, var(--ds-raised));
+  --folio-corner: 6px;
+}
 body { background-color: var(--ds-surface); }
 .daggery-shell { gap: 0; }
-.daggery-sidebar { flex-basis: 232px; width: 232px; margin: 0; padding: 24px 16px 16px; border: 0; border-right: 1px solid var(--ds-border); border-radius: 0; box-shadow: none; background: var(--ds-raised); }
-.daggery-logo { gap: 9px; padding-inline: 8px; }
-.daggery-logo-mark { width: 32px; height: 32px; border-radius: var(--radius-md); color: var(--ds-on-brand); background: var(--ds-brand); border: 0; box-shadow: none; }
+.daggery-sidebar { flex-basis: 232px; width: 232px; margin: 0; padding: 22px 14px 16px; border: 0; border-right: 1px solid var(--folio-frame); border-radius: 0; box-shadow: none; background: var(--ds-raised); }
+.daggery-logo { gap: 10px; padding-inline: 8px; }
+.daggery-logo-mark { width: 32px; height: 36px; border-radius: var(--radius-xs); color: var(--ds-brand); background: var(--ds-inset); border: 1px solid var(--ds-brand-line); box-shadow: none; }
 .daggery-logo-mark .daggery-icon { width: 21px; height: 21px; }
-.daggery-logo-text { font-family: var(--font-sans); font-weight: 750; font-size: 25px; letter-spacing: -1px; }
-.daggery-logo-text > span { font-size: 12px; letter-spacing: 1.4px; margin-top: 6px; }
-.daggery-campaign-switch { margin-top: 27px; border-radius: var(--radius-lg); padding: 11px 9px; background: color-mix(in srgb, var(--ds-surface) 55%, transparent); border-color: color-mix(in srgb, var(--ds-border) 60%, transparent); }
-.daggery-campaign-monogram { width: 29px; height: 31px; border-radius: var(--radius-md); font-family: var(--font-sans); font-size: 14px; }
-.daggery-campaign-info strong { font-size: 12px; }
-.daggery-campaign-info small { font-size: 12px; }
-.daggery-search { margin-top: 13px; margin-bottom: 24px; min-height: 37px; border-radius: var(--radius-md); font-size: 12px; border-color: color-mix(in srgb, var(--ds-border) 50%, transparent); }
-.daggery-search kbd { font-size: 12px; }
-.daggery-nav-group-label { font-size: 12px; letter-spacing: 1.2px; color: var(--color-slate-500); padding: 0 11px; margin-bottom: 8px; }
-.daggery-nav-group + .daggery-nav-group { margin-top: 25px; }
-.daggery-nav-button { min-height: 43px; padding-inline: 11px; border-radius: var(--radius-md); font-size: 12px; gap: 12px; }
-.daggery-nav-button .daggery-icon { width: 19px; height: 19px; }
-.daggery-nav-button[aria-current="page"] { background: color-mix(in srgb, var(--ds-brand) 13%, var(--ds-raised)); }
-.daggery-nav-active-dot { width: 4px; height: 4px; }
-.daggery-avatar { border-radius: 50%; width: 31px; height: 31px; background: color-mix(in srgb, var(--ds-brand) 20%, var(--ds-surface)); }
-.daggery-sidebar-footer { padding-top: 16px; gap: 8px; border-color: color-mix(in srgb, var(--ds-border) 55%, transparent); }
-.daggery-profile input { font-size: 12px; }
-.daggery-profile small { font-size: 12px; }
-.daggery-topbar { margin: 0; min-height: 64px; padding: 10px 24px; border: 0; border-bottom: 1px solid var(--ds-border); border-radius: 0; box-shadow: none; }
-.daggery-breadcrumb { font-size: 12px; }
-.daggery-roll-toggle, .daggery-theme { min-height: 34px; border-radius: var(--radius-md); padding-inline: 11px; font-size: 12px; background: transparent; border-color: color-mix(in srgb, var(--ds-border) 55%, transparent); }
-.daggery-connection { font-size: 12px; margin-right: 8px; }
-.daggery-top-actions { gap: 7px; }
-.daggery-top-actions .daggery-icon { width: 17px; height: 17px; }
-.daggery-main { background: transparent; }
-.daggery-home { max-width: 1160px; padding: 30px 30px 45px; }
-.daggery-home h1 { font-family: var(--font-sans); font-size: clamp(24px, 3vw, 32px); font-weight: 700; letter-spacing: -.8px; }
-.daggery-eyebrow { color: var(--ds-brand); font-size: 13px; font-weight: 600; }
-.daggery-overview-heading > div > p:last-child { font-size: 12px; margin-top: 9px; }
-.daggery-role-badge { font-size: 12px; padding: 7px 10px; border-radius: 999px; border-color: color-mix(in srgb, var(--ds-border) 70%, transparent); }
-.daggery-table-feature { margin-top: 24px; border-radius: var(--radius-lg); border-color: var(--ds-border); min-height: 280px; background: var(--ds-raised); }
-.daggery-table-copy { width: 52%; padding: 30px 28px; }
-.daggery-table-copy h2 { font: 600 clamp(24px, 3vw, 36px)/1.15 var(--font-sans); letter-spacing: -.9px; }
-.daggery-table-copy > p { font-size: 12px; max-width: 32ch; color: var(--ds-muted); line-height: 1.75; }
-.daggery-table-copy .daggery-primary { background: var(--ds-brand); color: var(--ds-on-brand); }
-.daggery-feature-eyebrow { color: var(--ds-brand); font-size: 13px; font-weight: 600; }
-.daggery-table-preview { position: absolute; inset: 0 0 0 45%; width: auto; height: auto; min-height: 0; border-radius: 0; overflow: hidden; }
-.daggery-table-preview > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .85; }
-.daggery-table-preview::before { content: ''; position: absolute; inset: 0; z-index: 1; opacity: 1; transform: none; background: linear-gradient(90deg, var(--ds-raised), transparent 65%), linear-gradient(0deg, var(--ds-raised), transparent 30%); }
-.daggery-table-preview::after { display: none; }
-.daggery-primary { border-radius: var(--radius-md); min-height: 39px; font-size: 12px; gap: 9px; }
-.daggery-section-title { margin-top: 28px; margin-bottom: 13px; }
-.daggery-section-title h2 { font-size: 14px; font-weight: 600; }
-.daggery-section-title > span { font-size: 12px; }
-.daggery-essential { border-radius: var(--radius-xl); padding: 18px; gap: 12px; min-height: 184px; border-color: color-mix(in srgb, var(--ds-border) 55%, transparent); }
-.daggery-shortcut { border-radius: var(--radius-lg); }
-.daggery-shortcut strong { font-size: 14px; }
-.daggery-essential .daggery-shortcut-icon { width: 36px; height: 36px; border-radius: var(--radius-lg); }
-.daggery-essential small { font-size: 12px; line-height: 1.65; }
-.daggery-essential .daggery-shortcut-link { font-size: 12px; }
-.daggery-shortcut-icon { border-radius: var(--radius-lg); }
-.daggery-story-links .daggery-shortcut { padding: 15px 17px; border-color: color-mix(in srgb, var(--ds-border) 55%, transparent); }
-.daggery-rolls { flex-basis: 288px; width: 288px; margin: 0; border: 0; border-left: 1px solid var(--ds-border); border-radius: 0; box-shadow: none; padding: 20px 18px; }
-.daggery-dialog { border-radius: var(--radius-xl); border-color: color-mix(in srgb, var(--ds-border) 65%, transparent); box-shadow: 0 18px 80px var(--ds-shadow-lg); }
-.daggery-dialog::backdrop { background: color-mix(in srgb, var(--ds-inset) 70%, transparent); }
-.daggery-dialog-header { padding: 17px 21px; }
-.daggery-dialog-header h2 { font: 650 16px/1.4 var(--font-sans); }
-.daggery-dialog-body { padding: 20px 21px; }
-.daggery-command-search { border-radius: var(--radius-lg); }
-.daggery-command-results button { border-radius: var(--radius-md); }
-.daggery-auth-card, .daggery-campaign-card { border-radius: var(--radius-lg); border-color: var(--ds-border); box-shadow: none; }
-.daggery-bottom-nav { background: var(--ds-raised); border-top-color: color-mix(in srgb, var(--ds-border) 60%, transparent); }
-.daggery-bottom-nav .daggery-icon { width: 20px; height: 20px; }
-.daggery-bottom-nav button[aria-current="page"] { color: var(--ds-brand); }
-/* Character folios use the same surfaces and purple selection states. */
-.sheet-page { --sheet-gold: var(--ds-brand); }
-.sheet-hero, .folio-resource, .sheet-panel, .folio-loadout { border-radius: var(--radius-xl); }
-.sheet-hero { border-color: color-mix(in srgb, var(--ds-brand) 35%, var(--ds-border)); }
-.folio-tabs { border-radius: var(--radius-lg); }
-.folio-resource { background: var(--sheet-panel); }
-.folio-resource .daggery-icon { stroke-width: initial; }
-.daggery-character-library { max-width: 1160px; margin: 0 auto; padding: 28px 30px; }
-.daggery-character-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 24px; }
-.daggery-character-heading h1 { margin: 0; font-size: 27px; letter-spacing: -.7px; font-weight: 700; }
-.daggery-character-heading p { margin: 7px 0 0; font-size: 12px; color: var(--ds-muted); }
-.daggery-character-heading > div { flex: 1; }
-.daggery-character-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
-.daggery-character-card { position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid color-mix(in srgb, var(--ds-border) 55%, transparent); border-radius: var(--radius-xl); background: var(--ds-raised); }
-.daggery-character-art { width: 100%; height: 136px; object-fit: cover; object-position: 50% 18%; }
-.daggery-character-card-body { padding: 5px 16px 16px; position: relative; z-index: 1; }
-.daggery-character-card-body > button { display: block; width: 100%; text-align: left; }
-.daggery-character-card-body > button p:first-child { font-size: 17px; }
-.daggery-character-card-footer { display: flex; gap: 7px; align-items: center; margin-top: 16px; }
-.daggery-character-card-footer > button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 33px; border: 1px solid color-mix(in srgb, var(--ds-border) 60%, transparent); border-radius: var(--radius-md); padding: 6px 9px; background: var(--ds-surface); font-size: 12px; cursor: pointer; }
-.daggery-character-card-footer > button:first-child { flex: 1; background: var(--ds-brand-soft); border-color: var(--ds-brand-line); color: var(--ds-brand-strong); }
-.daggery-character-card-footer > button:last-child { padding: 6px 8px; color: var(--color-rose-300); background: transparent; border: 0; }
-.daggery-character-card-footer .daggery-icon { width: 15px; height: 15px; }
-.daggery-character-card:hover { border-color: color-mix(in srgb, var(--ds-brand) 50%, var(--ds-border)); }
-/* Reading and interaction sizes: 14–15px body/control text, 12px metadata. */
-.daggery-search { font-size: 14px; min-height: 44px; gap: 9px; }
-.daggery-search kbd { display: none; }
-.daggery-nav-button { font-size: 14px; min-height: 46px; }
-.daggery-nav-group-label { text-transform: none; letter-spacing: .2px; margin-bottom: 9px; }
+.daggery-logo-text { font: 600 26px/1 var(--font-display); letter-spacing: -.7px; }
+.daggery-logo-text > span { font-size: 12px; letter-spacing: .3px; margin-top: 7px; text-transform: none; }
+.daggery-campaign-switch { margin-top: 24px; border-radius: var(--folio-corner); padding: 10px; background: var(--folio-header); border-color: var(--folio-frame); }
+.daggery-campaign-monogram { width: 30px; height: 34px; border-radius: var(--radius-xs); font-size: 17px; }
 .daggery-campaign-info strong { font-size: 13px; }
 .daggery-campaign-info small { font-size: 12px; }
+.daggery-search { margin: 12px 0 22px; min-height: 44px; border-radius: var(--radius-xs); font-size: 14px; gap: 9px; border-color: var(--ds-border); background: var(--ds-inset); }
+.daggery-search kbd { display: none; }
+.daggery-nav-group-label { font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--ds-muted); padding: 0 12px; margin-bottom: 7px; }
+.daggery-nav-group + .daggery-nav-group { margin-top: 6px; }
+.daggery-nav-button { min-height: 44px; padding-inline: 11px; border: 1px solid transparent; border-radius: var(--radius-xs); font-size: 14px; gap: 11px; }
+.daggery-nav-button .daggery-icon { width: 19px; height: 19px; }
+.daggery-nav-button[aria-current="page"] { border-color: var(--ds-brand-line); background: var(--ds-brand-soft); box-shadow: inset 2px 0 var(--ds-brand); }
+.daggery-nav-active-dot { width: 4px; height: 4px; }
+.daggery-avatar { border-radius: 50%; width: 32px; height: 32px; background: var(--ds-brand-soft); }
+.daggery-sidebar-footer { padding-top: 16px; gap: 8px; border-color: var(--ds-border); }
+.daggery-profile input { font-size: 13px; }
+.daggery-profile small { font-size: 12px; }
+.daggery-topbar { margin: 0; min-height: 64px; padding: 10px 24px; border: 0; border-bottom: 1px solid var(--folio-frame); border-radius: 0; box-shadow: none; background: var(--ds-raised); }
 .daggery-breadcrumb { font-size: 13px; }
-.daggery-roll-toggle, .daggery-theme, .daggery-primary { font-size: 14px; min-height: 40px; }
-.daggery-topbar { min-height: 64px; }
-.daggery-overview-heading > div > p:last-child, .daggery-table-copy > p { font-size: 14px; }
-.daggery-essential small, .daggery-shortcut small { font-size: 14px; line-height: 1.65; }
-.daggery-shortcut strong { font-size: 16px; }
-.daggery-shortcut-link { min-height: 30px; }
-.daggery-table-copy { width: 55%; }
-.daggery-table-copy h2 { font-size: clamp(28px, 3vw, 38px); }
-.daggery-section-title h2 { font-size: 17px; }
-.daggery-command-search input { font-size: 16px; min-height: 28px; }
+.daggery-roll-toggle, .daggery-theme { min-height: 44px; border-radius: var(--radius-xs); padding-inline: 12px; font-size: 14px; background: var(--ds-inset); border-color: var(--ds-control); }
+.daggery-roll-toggle.is-active { border-color: var(--ds-brand-line); background: var(--ds-brand-soft); }
+.daggery-connection { font-size: 12px; margin-right: 8px; }
+.daggery-top-actions { gap: 7px; }
+.daggery-top-actions .daggery-icon { width: 18px; height: 18px; }
+.daggery-main { background: transparent; }
+.daggery-home { max-width: 1160px; padding: 28px 30px 40px; }
+.daggery-home h1, .daggery-character-heading h1 { font: 600 clamp(25px, 3vw, 32px)/1.25 var(--font-display); letter-spacing: -.6px; }
+.daggery-eyebrow, .daggery-feature-eyebrow { color: var(--ds-brand); font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.daggery-overview-heading > div > p:last-child { font-size: 14px; margin-top: 8px; }
+.daggery-role-badge { font-size: 12px; padding: 7px 10px; border-radius: var(--radius-xs); border-color: var(--folio-frame); }
+/* The table art remains the one expansive element; tools below it stay quiet. */
+.daggery-table-feature { margin-top: 24px; border-radius: var(--folio-corner); border-color: var(--folio-frame); min-height: 250px; background: var(--ds-raised); }
+.daggery-table-copy { width: 55%; padding: 26px; }
+.daggery-table-copy h2 { font: 500 clamp(27px, 3vw, 36px)/1.2 var(--font-display); letter-spacing: -.6px; }
+.daggery-table-copy > p { font-size: 14px; max-width: 38ch; color: var(--ds-muted); line-height: 1.65; }
+.daggery-table-preview { position: absolute; inset: 0 0 0 45%; width: auto; height: auto; min-height: 0; border-radius: 0; overflow: hidden; }
+.daggery-table-preview > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .8; }
+.daggery-table-preview::before { content: ''; position: absolute; inset: 0; z-index: 1; opacity: 1; transform: none; background: linear-gradient(90deg, var(--ds-raised), transparent 65%), linear-gradient(0deg, var(--ds-raised), transparent 30%); }
+.daggery-table-preview::after { display: none; }
+.daggery-primary { border-radius: var(--radius-xs); min-height: 44px; font-size: 14px; font-weight: 650; gap: 8px; }
+.daggery-section-title { margin-top: 26px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--folio-frame); }
+.daggery-section-title h2 { font-size: 15px; font-weight: 650; }
+.daggery-section-title > span { font-size: 12px; }
+.daggery-essential { border-radius: var(--folio-corner); padding: 0 16px 14px; gap: 12px; min-height: 160px; border-color: var(--folio-frame); }
+.daggery-essential .daggery-shortcut-top { width: calc(100% + 32px); margin-inline: -16px; padding: 10px 16px; background: var(--folio-header); border-bottom: 1px solid var(--ds-border); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
+.daggery-shortcut { border-radius: var(--folio-corner); }
+.daggery-shortcut strong { font-size: 15px; }
+.daggery-shortcut small { font-size: 13px; line-height: 1.65; }
+.daggery-essential .daggery-shortcut-icon, .daggery-shortcut-icon { width: 32px; height: 32px; border-radius: var(--radius-xs); background: transparent; color: var(--ds-brand); }
+.daggery-shortcut-link { min-height: 32px; font-size: 13px; }
+.daggery-story-links .daggery-shortcut { padding: 13px 16px; border-color: var(--ds-border); }
+.daggery-shortcut[aria-current="true"] { border-color: var(--ds-brand); background: var(--ds-brand-soft); }
+.daggery-home-feature { border-color: var(--folio-frame); border-radius: var(--folio-corner); padding: 18px; }
+.daggery-home-feature > h2 { font: 650 15px/1.4 var(--font-sans); margin: -18px -18px 0; padding: 12px 18px; border-bottom: 1px solid var(--ds-border); background: var(--folio-header); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
+.daggery-notes-layout { min-width: 0; }
+.daggery-notes-layout > * { min-width: 0; }
+.daggery-rolls { flex-basis: 288px; width: 288px; margin: 0; border: 0; border-left: 1px solid var(--folio-frame); border-radius: 0; box-shadow: none; padding: 18px 16px; background: var(--ds-raised); }
+/* Native dialog focus/scroll behavior is unchanged. */
+.daggery-dialog { border-radius: var(--folio-corner); border-color: var(--folio-frame); box-shadow: 0 18px 64px var(--ds-shadow-lg); }
+.daggery-dialog::backdrop { background: color-mix(in srgb, var(--ds-inset) 76%, transparent); }
+.daggery-dialog .daggery-dialog-header { padding: 12px 18px; background: var(--folio-header); border-bottom: 1px solid var(--folio-frame); }
+.daggery-dialog-header h2 { font: 650 16px/1.4 var(--font-sans); }
+.daggery-dialog .daggery-dialog-header > button { min-width: 44px; min-height: 44px; }
+.daggery-dialog-body { padding: 18px; }
+.daggery-command-search { border-radius: var(--radius-xs); }
+.daggery-command-search input { font-size: 16px; min-height: 32px; }
+.daggery-command-results button { border-radius: var(--radius-xs); }
 .daggery-command-results button strong { font-size: 15px; }
 .daggery-command-results button small { font-size: 13px; line-height: 1.5; }
-.daggery-character-heading p { font-size: 14px; }
-.daggery-character-heading .daggery-primary { font-size: 14px; }
-.daggery-character-card-footer > button { font-size: 13px; min-height: 40px; }
-.sheet-page .sheet-ghost, .sheet-page .sheet-primary { font-size: 13px; min-height: 38px; }
-.character-folio .sheet-panel-note { text-transform: none; letter-spacing: 0; }
-.character-folio .sheet-effect-text, .character-folio .sheet-note, .folio-play-guide p, .folio-ability > p { font-size: 14px; line-height: 1.75; }
-.character-folio .sheet-tab { font-size: 14px; min-height: 44px; }
-.character-folio .sheet-resource-label, .folio-resource-label h2 { font-size: 13px; }
-.character-folio .sheet-section-title { font-size: 16px; }
-.folio-ability-search { min-height: 42px; font-size: 14px; }
-.folio-ability strong { font-size: 14px; }
+.daggery-auth-card, .daggery-campaign-card { border-radius: var(--folio-corner); border-color: var(--folio-frame); box-shadow: none; }
+.daggery-auth-card { border-top: 3px solid var(--ds-brand); }
+.daggery-auth-input { border-radius: var(--radius-xs); border-color: var(--ds-control); background: var(--ds-inset); font-size: 16px; }
+.daggery-bottom-nav { background: var(--ds-raised); border-top-color: var(--folio-frame); }
+.daggery-bottom-nav .daggery-icon { width: 20px; height: 20px; }
+.daggery-bottom-nav button[aria-current="page"] { color: var(--ds-brand); box-shadow: inset 0 2px var(--ds-brand); }
+.daggery-character-library { max-width: 1160px; margin: 0 auto; padding: 28px 30px; }
+.daggery-character-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--folio-frame); }
+.daggery-character-heading h1 { margin: 0; }
+.daggery-character-heading p { margin: 7px 0 0; font-size: 14px; color: var(--ds-muted); }
+.daggery-character-heading > div { flex: 1; }
+.daggery-character-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 20px; list-style: none; padding: 0; }
+.daggery-character-card { position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--folio-frame); border-radius: var(--folio-corner); background: var(--ds-raised); }
+.daggery-character-open { display: block; width: 100%; padding: 0; border: 0; text-align: left; color: var(--ds-ink); background: transparent; cursor: pointer; }
+.daggery-character-open:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: -3px; border-radius: var(--folio-corner); }
+.daggery-character-cover { position: relative; height: 176px; overflow: hidden; border-bottom: 1px solid var(--folio-frame); background: var(--ds-inset); }
+.daggery-character-art { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 25%; }
+.daggery-character-art.is-custom { object-position: center; }
+.daggery-character-placeholder { display: grid; height: 100%; place-items: center; color: var(--ds-brand); background: repeating-linear-gradient(135deg, transparent, transparent 18px, var(--ds-border) 19px, transparent 20px); }
+.daggery-character-placeholder .daggery-icon { width: 52px; height: 52px; padding: 10px; border: 1px solid var(--folio-frame); border-radius: var(--folio-corner); background: var(--ds-inset); }
+.daggery-character-level { position: absolute; top: 12px; left: 12px; display: inline-flex; align-items: center; gap: 8px; padding: 5px 9px; border: 1px solid var(--ds-brand-line); border-radius: var(--radius-xs); font-size: 12px; color: var(--ds-ink); background: var(--ds-inset); }
+.daggery-character-level strong { color: var(--ds-brand-strong); font-size: 14px; font-variant-numeric: tabular-nums; }
+.daggery-character-identity { padding: 16px 18px 14px; }
+.daggery-character-class { margin: 0 0 5px; color: var(--ds-brand-strong); font-size: 12px; font-weight: 600; line-height: 1.5; }
+.daggery-character-identity h2 { margin: 0; font: 600 23px/1.3 var(--font-display); overflow-wrap: anywhere; }
+.daggery-character-heritage { margin: 6px 0 0; color: var(--ds-muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.daggery-character-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 12px 0 0; font-size: 12px; color: var(--ds-muted); }
+.daggery-character-card-body { margin-top: auto; padding: 0 18px 16px; }
+.daggery-character-resources { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 12px 0; border-block: 1px solid var(--ds-border); background: var(--folio-header); }
+.daggery-character-resources > div { min-width: 0; padding-inline: 8px; }
+.daggery-character-resources > div + div { border-left: 1px solid var(--ds-border); }
+.daggery-character-resources dt { display: flex; align-items: flex-start; gap: 4px; color: var(--ds-muted); font-size: 12px; line-height: 1.5; }
+.daggery-character-resources dt small { display: block; font-size: 10px; font-weight: 400; }
+.daggery-character-resources dt .daggery-icon { margin-top: 3px; }
+.daggery-character-resources .daggery-icon { width: 13px; height: 13px; flex-shrink: 0; color: var(--ds-brand); }
+.daggery-character-resources dd { margin: 5px 0 0; color: var(--ds-ink); font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.daggery-character-resources dd span { color: var(--ds-muted); font-size: 12px; font-weight: 400; }
+.daggery-character-card-footer { display: flex; gap: 7px; align-items: center; padding-top: 14px; }
+.daggery-character-card-footer > button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); padding: 6px 10px; background: var(--ds-inset); font-size: 13px; cursor: pointer; }
+.daggery-character-card-footer > button:first-child { flex: 1; background: var(--ds-brand-soft); border-color: var(--ds-brand-line); color: var(--ds-brand-strong); }
+.daggery-character-card-footer > button:last-child { color: var(--color-rose-300); background: transparent; border-color: transparent; }
+.daggery-character-card-footer .daggery-icon { width: 16px; height: 16px; }
+.daggery-character-card:hover { border-color: var(--ds-brand); }
+/* Shared framed sections, also used by the utility-based combat module. */
+.folio-panel { min-width: 0; padding: 14px; border: 1px solid var(--folio-frame); border-radius: var(--folio-corner); background: var(--ds-raised); }
+.folio-panel-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: -14px -14px 14px; padding: 9px 14px; border-bottom: 1px solid var(--ds-border); border-radius: var(--folio-corner) var(--folio-corner) 0 0; background: var(--folio-header); }
+.folio-panel-heading h2 { font: 650 14px/1.5 var(--font-sans); color: var(--ds-ink); }
+.folio-combat-button { min-height: 36px; border-radius: var(--radius-xs); font-size: 13px; transition: background-color .12s, border-color .12s; }
+.folio-combat-badge { font-size: 12px; text-transform: none; letter-spacing: 0; }
+.folio-combat-card { border-color: var(--folio-frame); border-radius: var(--folio-corner); background: var(--ds-raised); }
+.folio-combat-card > header { margin: -16px -16px 0; padding: 12px 16px; background: var(--folio-header); border-bottom: 1px solid var(--ds-border); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
+/* Compendium: categories, compact index, and a quiet reading pane. */
+.daggery-compendium .compendium-browser { border-radius: var(--folio-corner); border-color: var(--folio-frame); }
+.daggery-compendium .compendium-header { padding: 16px 20px; background: var(--folio-header); border-color: var(--folio-frame); }
+.daggery-compendium .compendium-header h1 { font: 600 26px/1.25 var(--font-display); }
+.daggery-compendium .compendium-eyebrow { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.daggery-compendium .compendium-categories { background: var(--ds-raised); }
+.daggery-compendium .compendium-categories button { border-radius: var(--radius-xs); min-height: 44px; }
+.daggery-compendium .compendium-categories button[aria-current="page"] { box-shadow: inset 2px 0 var(--ds-brand); }
+.daggery-compendium .compendium-results-heading { background: var(--folio-header); border-bottom: 1px solid var(--ds-border); }
+.daggery-compendium .compendium-entry-list button { min-height: 60px; border-radius: var(--radius-xs); }
+.daggery-compendium .compendium-entry-list button[aria-current="true"] { box-shadow: inset 2px 0 var(--ds-brand); }
+.daggery-compendium :is(.compendium-search, .compendium-subclass, .compendium-loot-tables details) { border-radius: var(--folio-corner); }
+.daggery-compendium :is(.compendium-category-select, .compendium-filters select) { min-height: 44px; border-radius: var(--radius-xs); }
+.daggery-compendium .compendium-search:focus-within { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
+.daggery-compendium .compendium-reader-heading { background: var(--folio-header); }
+.daggery-compendium .compendium-reader h2 { font: 600 25px/1.3 var(--font-display); }
+.daggery-compendium .compendium-loot-tables summary { background: var(--folio-header); min-height: 44px; }
+/* Preparation, solo play and journal keep their own layouts and reading rhythm. */
+.gm-workspace .gm-heading h1, .solo-workspace .solo-heading h1, .journal-workspace .journal-heading h1, .ai-adventure .ai-heading h1 { font: 600 clamp(25px, 3vw, 30px)/1.3 var(--font-display); letter-spacing: -.5px; }
+.gm-workspace .gm-kicker, .solo-workspace .solo-kicker, .journal-workspace .journal-eyebrow, .ai-adventure .ai-eyebrow { font-size: 12px; text-transform: none; letter-spacing: 0; }
+.gm-workspace .gm-tabs, .solo-workspace .solo-tabs { gap: 4px; padding: 4px; border: 1px solid var(--folio-frame); border-radius: var(--folio-corner); background: var(--folio-header); }
+.gm-workspace .gm-tabs button, .solo-workspace .solo-tabs button { min-height: 44px; padding: 8px 14px; border: 1px solid transparent; border-radius: var(--radius-xs); }
+.gm-workspace .gm-tabs button[aria-current], .solo-workspace .solo-tabs button[aria-current] { background: var(--ds-raised); border-color: var(--ds-brand-line); }
+.gm-workspace :is(.gm-panel, .gm-editor), .solo-workspace .solo-panel { padding: 18px; border-color: var(--folio-frame); border-radius: var(--folio-corner); }
+.gm-workspace .gm-section-heading { margin: -18px -18px 18px; padding: 11px 18px; background: var(--folio-header); border-bottom: 1px solid var(--ds-border); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
+.gm-workspace .gm-section-heading h2 { font-size: 15px; }
+.solo-workspace .solo-panel > h2 { margin: -18px -18px 16px; padding: 12px 18px; font-size: 15px; border-bottom: 1px solid var(--ds-border); background: var(--folio-header); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
+.solo-workspace .solo-chaos-panel { padding: 16px 18px; }
+.solo-workspace .solo-chaos-panel > h2 { margin: 0; padding: 0; background: transparent; border: 0; }
+.solo-workspace .solo-chaos-value strong { font-size: 15px; }
+.solo-workspace .solo-chaos-stepper button { width: 44px; height: 44px; }
+.gm-workspace .gm-table th, .solo-workspace th { background: var(--folio-header); }
+.journal-workspace .journal-card, .journal-workspace .journal-form { border-color: var(--folio-frame); border-radius: var(--folio-corner); }
+.journal-workspace .journal-card-head { margin: -16px -18px 12px; padding: 10px 18px; border-bottom: 1px solid var(--ds-border); background: var(--folio-header); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
+.journal-workspace .journal-filters button { border-radius: var(--radius-xs); min-height: 44px; }
+.journal-workspace .journal-form h2 { font-size: 15px; }
+.ai-adventure :is(.ai-message-player, .ai-composer, .ai-session, .ai-action-card) { border-radius: var(--folio-corner); }
+.ai-adventure .ai-composer { border-color: var(--folio-frame); }
+.ai-adventure .ai-composer > label { display: block; margin: -16px -16px 4px; padding: 10px 16px; background: var(--folio-header); border-bottom: 1px solid var(--ds-border); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
+.ai-adventure .ai-message > header strong { text-transform: none; letter-spacing: 0; font-size: 13px; }
+.ai-adventure .ai-sessions-head { padding-bottom: 12px; border-bottom: 1px solid var(--folio-frame); }
+.ai-adventure .ai-welcome h2 { font-family: var(--font-display); }
+/* Map changes are chrome only: no canvas, token, measurement or drag alterations. */
+:root .room-workspace { --room-border: var(--folio-frame); font-family: var(--font-sans); }
+.room-workspace :is(.room-nav, .room-panel, .room-tools, .room-tray, .room-display, .room-zoom, .room-scene-label, .room-tool-options) { border-radius: var(--folio-corner); }
+.room-workspace .room-panel > header { padding: 10px 14px; border-color: var(--ds-border); background: var(--folio-header); }
+.room-workspace .room-panel h2 { font-size: 14px; font-weight: 650; }
+.room-workspace :is(.room-action, .room-primary) { border-radius: var(--radius-xs); border-color: var(--ds-control); }
+.room-workspace .room-roll-log strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+/* Field styling excludes checkboxes, swatches, range sliders and canvas controls. */
+:where(.daggery-notes-layout, .campaign-settings-form, .campaign-config-fields, .gm-workspace, .solo-workspace, .journal-workspace, .daggery-combat) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), select, textarea) { border-radius: var(--radius-xs); border-color: var(--ds-control); }
+:where(.daggery-notes-layout, .campaign-settings-form, .campaign-config-fields, .gm-workspace, .solo-workspace, .journal-workspace, .daggery-combat) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]), select) { min-height: 44px; }
 @media (max-width: 1199px) {
-  .daggery-sidebar { flex-basis: 76px; width: 76px; margin: 0; padding-inline: 12px; border-radius: 0; }
+  .daggery-sidebar { flex-basis: 76px; width: 76px; padding-inline: 12px; }
   .daggery-logo { padding: 0; }
   .daggery-sidebar .daggery-logo-text { display: none; }
   .daggery-campaign-switch { margin-top: 23px; }
   .daggery-nav-button { justify-content: center; padding-inline: 0; }
   .daggery-sidebar-footer { flex-direction: column; }
-  .daggery-topbar { margin: 0; }
   .daggery-home { padding: 24px; }
 }
 @media (max-width: 767px) {
   .daggery-shell > .daggery-sidebar { display: none; }
-  .daggery-topbar { margin: 0; min-height: 56px; padding-inline: 16px; }
-  .daggery-top-actions { gap: 5px; }
-  .daggery-top-actions .daggery-roll-toggle, .daggery-top-actions .daggery-theme { min-height: 35px; padding-inline: 9px; }
+  .daggery-topbar { min-height: 64px; padding-inline: 12px; }
+  .daggery-top-actions { gap: 4px; }
+  .daggery-top-actions .daggery-roll-toggle, .daggery-top-actions .daggery-theme { min-height: 44px; min-width: 44px; padding-inline: 10px; }
   .daggery-breadcrumb { font-size: 12px; }
-  .daggery-home { padding: 23px 16px 35px; }
-  .daggery-overview-heading > div > p:last-child { font-size: 12px; }
-  .daggery-overview-heading h1 { font-size: 25px; }
+  .daggery-home { padding: 22px 16px 32px; }
   .daggery-role-badge { display: none; }
-  .daggery-table-feature { min-height: 350px; border-radius: var(--radius-xl); }
-  .daggery-table-copy { position: relative; z-index: 3; width: 100%; padding: 24px 21px 29px; }
+  .daggery-table-feature { min-height: 300px; }
+  .daggery-table-copy { position: relative; z-index: 3; width: 100%; padding: 24px 20px; }
   .daggery-table-copy h2 { font-size: 29px; }
   .daggery-table-copy > p { max-width: 31ch; }
   .daggery-table-preview { inset: 0; }
-  .daggery-table-preview > img { opacity: .27; }
+  .daggery-table-preview > img { opacity: .22; }
   .daggery-table-preview::before { background: linear-gradient(90deg, var(--ds-raised), transparent), linear-gradient(0deg, var(--ds-raised), transparent); }
   .daggery-section-title > span { display: none; }
-  .daggery-essential { min-height: 160px; }
-  .daggery-character-library { padding: 22px 15px; }
-  .daggery-character-heading h1 { font-size: 24px; }
-  .daggery-character-heading p { font-size: 12px; }
-  .daggery-character-heading .daggery-primary { font-size: 12px; padding-inline: 10px; }
+  .daggery-character-library { padding: 22px 16px; }
+  .daggery-character-heading p { font-size: 13px; }
+  .daggery-compendium .compendium-header { padding: 14px; }
+  .solo-workspace .solo-tabs button { padding: 8px 4px; }
+  .ai-adventure .ai-composer > label { margin: -12px -12px 4px; padding-inline: 12px; }
 }
-@media (prefers-reduced-motion: reduce) { .daggery-shell * { scroll-behavior: auto !important; transition: none !important; } }
+@media (max-width: 540px) {
+  .daggery-character-heading > div { flex-basis: 100%; }
+  .daggery-combat .folio-combat-button { min-height: 44px; }
+  .daggery-notes-layout :is(input, select, textarea), .gm-workspace .gm-field :is(input, select, textarea), .solo-workspace .solo-field :is(input, textarea), .journal-workspace .journal-form :is(input, textarea) { font-size: 16px; }
+}
+@media (pointer: coarse) { .folio-combat-button { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) {
+  :where(.daggery-shell, .daggery-dialog, .daggery-auth-shell) *, :where(.daggery-shell, .daggery-dialog, .daggery-auth-shell) *::before, :where(.daggery-shell, .daggery-dialog, .daggery-auth-shell) *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}

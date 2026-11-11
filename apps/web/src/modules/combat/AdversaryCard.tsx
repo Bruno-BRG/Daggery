@@ -174,7 +174,7 @@ export function AdversaryCard({ ctx, id, doc, src }: CardProps) {
   const cardTone = defeated ? 'border-slate-700 opacity-60' : 'border-slate-700';
 
   return (
-    <article className={`flex flex-col gap-3 rounded-xl border bg-slate-900/80 p-4 ${cardTone}`}>
+    <article className={`folio-combat-card flex flex-col gap-3 border p-4 ${cardTone}`}>
       <header className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="flex flex-wrap items-center gap-2 text-base font-semibold">
