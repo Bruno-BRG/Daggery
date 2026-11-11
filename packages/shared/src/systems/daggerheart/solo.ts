@@ -89,8 +89,15 @@ export type SoloActionOutcome = 'critical' | 'success-hope' | 'success-fear' | '
 export const SOLO_ADVANCEMENT: Record<SoloActionOutcome, [number, number]> = {
   critical: [3, 0], 'success-hope': [2, 0], 'success-fear': [1, 1], 'failure-hope': [0, 2], 'failure-fear': [0, 3],
 };
+/** One line of a solo list: an open thread or a character met along the way. */
+export interface SoloTrackerItem { id: string; name: string; note: string; done: boolean }
+export const SOLO_TRACKER_LIMIT = 25;
 export interface SoloState {
   revision: number;
+  /** Chaos factor, 1 to 9. Absent on campaigns saved before it was tracked: read as 5. */
+  chaos?: number;
+  threads?: SoloTrackerItem[];
+  characters?: SoloTrackerItem[];
   scene: { title: string; goal: string; expected: string; signature: string; signatureCost: number };
   pool: string[];
   theme: string;

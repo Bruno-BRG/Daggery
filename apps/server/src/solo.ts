@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { hasFeature, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_WORLD_MOVES, type MythicData, type MythicTable, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone } from '@daggery/shared';
+import { hasFeature, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_TRACKER_LIMIT, SOLO_WORLD_MOVES, type SoloTrackerItem, type MythicData, type MythicTable, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone } from '@daggery/shared';
 import type { CampaignService } from './campaign-service';
 import { readSessionToken } from './campaign-routes';
 import { loadMythic } from './mythic';
@@ -126,6 +126,27 @@ export class SoloService {
       });
     });
   }
+  /** Saves the parts of the state the solo tracker edits. Fields left out keep their value. */
+  track(userId: string, campaign: string, value: unknown) {
+    const input = object(value);
+    const list = (raw: unknown): SoloTrackerItem[] => {
+      if (!Array.isArray(raw) || raw.length > SOLO_TRACKER_LIMIT) throw new Error('Invalid tracker list');
+      return raw.map(entry => {
+        const item = object(entry), id = string(item.id, 80), name = string(item.name, 120).trim();
+        if (!/^[a-zA-Z0-9-]{1,80}$/.test(id) || !name || typeof item.done !== 'boolean') throw new Error('Invalid tracker item');
+        return { id, name, note: string(item.note ?? '', 500), done: item.done };
+      });
+    };
+    return this.change(userId, campaign, input.revision, state => {
+      if (input.chaos !== undefined) state.chaos = integer(input.chaos, 1, 9);
+      if (input.scene !== undefined) {
+        const scene = object(input.scene);
+        state.scene = { ...state.scene, title: string(scene.title, 200), goal: string(scene.goal ?? state.scene.goal), expected: string(scene.expected) };
+      }
+      if (input.threads !== undefined) state.threads = list(input.threads);
+      if (input.characters !== undefined) state.characters = list(input.characters);
+    });
+  }
   roll(userId: string, campaign: string, value: unknown): SoloEntry {
     this.authorize(userId, campaign);
     const input = object(value), id = string(input.requestId, 80), kind = string(input.kind, 30);
@@ -160,18 +181,45 @@ export class SoloService {
       const odds = string(input.odds, 80);
       const row = table.entries.find(item => item.id === odds);
       if (!row || !row.ranges) throw new Error('Invalid Mythic odds');
+      // Chaos 5 reads the chart as printed. Each point above reads the row that many steps
+      // toward the most likely odds, each point below toward the least likely, clamped at the ends.
+      const chaos = input.chaos === undefined || input.chaos === null ? 5 : integer(input.chaos, 1, 9);
+      const ordered = [...table.entries].sort((a, b) => (b.ranges?.exceptionalYes?.[1] ?? 0) - (a.ranges?.exceptionalYes?.[1] ?? 0));
+      const shifted = ordered[Math.min(ordered.length - 1, Math.max(0, ordered.indexOf(row) - (chaos - 5)))]!;
+      const ranges = shifted.ranges ?? row.ranges;
       const roll = rollDie(100, this.rng);
-      const answer = (['exceptionalYes', 'yes', 'no', 'exceptionalNo'] as const).find(key => inRange(row.ranges![key], roll));
+      const answer = (['exceptionalYes', 'yes', 'no', 'exceptionalNo'] as const).find(key => inRange(ranges[key], roll));
       if (!answer) throw new Error('Invalid Mythic odds');
       const labels = { exceptionalYes: 'Exceptional Yes', yes: 'Yes', no: 'No', exceptionalNo: 'Exceptional No' } as const;
       const tones: Record<typeof answer, SoloTone> = { exceptionalYes: 'revelation', yes: 'hope', no: 'fear', exceptionalNo: 'fear' };
-      const lines = [`d100: ${roll} · Odds: ${row.label ?? odds}`];
+      const lines = [`d100: ${roll} · Odds: ${row.label ?? odds}${chaos === 5 ? '' : ` · Chaos ${chaos}`}`];
       if (isDouble(roll)) {
         const meaning = data.oracle?.tables.find(item => item.id === 'discover-meaning');
         const pair = meaning ? this.rollMythicEntry(meaning).entry.cells?.slice(0, 2).join(' / ') : undefined;
         if (pair && pair.trim()) lines.push(`Random event: ${pair}`);
       }
       result = { title: labels[answer], detail: lines.join('\n'), tone: tones[answer], total: roll };
+    } else if (kind === 'mythic-scene') {
+      // A d10 above the chaos factor starts the scene as expected. At or below it,
+      // an odd roll alters the scene and an even roll interrupts it with a random event.
+      const data = this.mythicTables();
+      const chaos = state.chaos ?? 5;
+      const roll = rollDie(10, this.rng);
+      const lines = [`d10: ${roll} · Chaos ${chaos}`];
+      let title = 'Expected scene', tone: SoloTone = 'neutral';
+      if (roll > chaos) lines.push('The scene begins as you expected.');
+      else if (roll % 2 === 1) {
+        title = 'Altered scene'; tone = 'fear';
+        lines.push('The scene begins, but one thing about it is not what you expected.');
+      } else {
+        title = 'Interrupt scene'; tone = 'revelation';
+        const meaning = data.oracle?.tables.find(item => item.id === 'discover-meaning');
+        const pair = meaning ? this.rollMythicEntry(meaning).entry.cells?.slice(0, 2).join(' / ') : undefined;
+        if (pair && pair.trim()) lines.push(`Event: ${pair}`);
+        lines.push('Something else happens instead of the scene you expected.');
+      }
+      question = question.trim() || state.scene.title || 'Scene test';
+      result = { title, detail: lines.join('\n'), tone, total: roll };
     } else if (kind === 'mythic-meaning') {
       const data = this.mythicTables();
       const count = integer(input.count, 1, 4);
@@ -297,6 +345,11 @@ export function registerSoloRoutes(app: FastifyInstance, options: { db: Database
   app.put(`${base}/state`, (request, reply) => {
     const id = ids(request);
     try { return { state: solo.save(id.user, id.campaign, request.body) }; }
+    catch (error) { if (error instanceof SoloConflict) return reply.code(409).send({ error: error.message }); throw error; }
+  });
+  app.put(`${base}/tracker`, (request, reply) => {
+    const id = ids(request);
+    try { return { state: solo.track(id.user, id.campaign, request.body) }; }
     catch (error) { if (error instanceof SoloConflict) return reply.code(409).send({ error: error.message }); throw error; }
   });
   app.post(`${base}/roll`, request => { const id = ids(request); return { entry: solo.roll(id.user, id.campaign, request.body) }; });

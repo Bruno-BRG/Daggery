@@ -139,6 +139,73 @@ test('mythic oracle non-doubles do not roll a random event', async () => {
   } finally { fixture.close(); }
 });
 
+test('mythic oracle shifts the odds row by the chaos factor', async () => {
+  const twoRows = (): MythicData => {
+    const data = fakeMythic();
+    data.oracle!.tables[0]!.entries.unshift({
+      id: 'certain', label: 'Certain',
+      ranges: { exceptionalYes: [1, 20], yes: [21, 95], no: [96, 99], exceptionalNo: [100, 100] },
+    });
+    return data;
+  };
+  const ask = async (odds: string, chaos: number | undefined, roll: number) => {
+    const fixture = await context(twoRows, [face(roll, 100)]);
+    try {
+      return fixture.solo.roll(fixture.user.id, fixture.campaign, { requestId: `chaos-${odds}-${chaos}`, kind: 'mythic-oracle', question: 'Q', odds, ...(chaos === undefined ? {} : { chaos }) });
+    } finally { fixture.close(); }
+  };
+  // 50 is No on the printed Impossible row and Yes on the Certain row.
+  assert.equal((await ask('impossible', undefined, 50)).result.title, 'No');
+  assert.equal((await ask('impossible', 5, 50)).result.title, 'No');
+  const raised = await ask('impossible', 6, 50);
+  assert.equal(raised.result.title, 'Yes');
+  assert.match(raised.result.detail, /Odds: Impossible · Chaos 6/);
+  assert.equal((await ask('certain', 4, 50)).result.title, 'No');
+  // The ends clamp: Certain cannot shift further toward Yes.
+  assert.equal((await ask('certain', 9, 50)).result.title, 'Yes');
+  await assert.rejects(ask('certain', 10, 50), /Invalid solo number/);
+});
+
+test('the tracker saves chaos, scene and lists without touching the rest of the state', async () => {
+  const fixture = await context();
+  try {
+    const { user, campaign, solo } = fixture;
+    const first = solo.track(user.id, campaign, { revision: 0, chaos: 7, scene: { title: 'The gate', expected: 'A quiet crossing' }, threads: [{ id: 't-1', name: ' Find the caravan ', note: '', done: false }] });
+    assert.equal(first.revision, 1);
+    assert.equal(first.chaos, 7);
+    assert.deepEqual(first.scene, { title: 'The gate', goal: '', expected: 'A quiet crossing', signature: '', signatureCost: 1 });
+    assert.deepEqual(first.threads, [{ id: 't-1', name: 'Find the caravan', note: '', done: false }]);
+    const second = solo.track(user.id, campaign, { revision: 1, characters: [{ id: 'c-1', name: 'The keeper', note: 'wary', done: false }] });
+    assert.equal(second.chaos, 7);
+    assert.equal(second.threads?.length, 1);
+    assert.equal(second.characters?.[0]?.note, 'wary');
+    assert.equal(second.pool.length, 12);
+    assert.throws(() => solo.track(user.id, campaign, { revision: 1, chaos: 5 }), /Reload the latest version/);
+    assert.throws(() => solo.track(user.id, campaign, { revision: 2, chaos: 10 }), /Invalid solo number/);
+    assert.throws(() => solo.track(user.id, campaign, { revision: 2, threads: [{ id: 't-2', name: '  ', note: '', done: false }] }), /Invalid tracker item/);
+    assert.throws(() => solo.track(user.id, campaign, { revision: 2, threads: Array.from({ length: 26 }, (_, index) => ({ id: `t-${index}`, name: 'x', note: '', done: false })) }), /Invalid tracker list/);
+    assert.equal(solo.snapshot(user.id, campaign).state.revision, 2);
+  } finally { fixture.close(); }
+});
+
+test('the scene test reads the saved chaos factor', async () => {
+  const run = async (roll: number, extra: number[] = []) => {
+    const fixture = await context(fakeMythic, [face(roll, 10), ...extra]);
+    try {
+      fixture.solo.track(fixture.user.id, fixture.campaign, { revision: 0, chaos: 6, scene: { title: 'The gate', expected: '' } });
+      return fixture.solo.roll(fixture.user.id, fixture.campaign, { requestId: `scene-${roll}`, kind: 'mythic-scene' });
+    } finally { fixture.close(); }
+  };
+  const expected = await run(7);
+  assert.equal(expected.result.title, 'Expected scene');
+  assert.equal(expected.question, 'The gate');
+  assert.match(expected.result.detail, /d10: 7 · Chaos 6/);
+  assert.equal((await run(5)).result.title, 'Altered scene');
+  const interrupt = await run(6, [face(60, 100)]);
+  assert.equal(interrupt.result.title, 'Interrupt scene');
+  assert.match(interrupt.result.detail, /Event: Betray \/ Cold/);
+});
+
 test('mythic oracle is idempotent by request id', async () => {
   const fixture = await context(fakeMythic, [face(30, 100), face(97, 100)]);
   try {

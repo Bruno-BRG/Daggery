@@ -104,6 +104,65 @@
 .solo-note-list .solo-interpretation { margin-top: 8px; }
 .solo-interpretation { font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 
+.solo-note-filter { display: inline-flex; margin-bottom: 8px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); overflow: hidden; }
+.solo-note-filter button { min-height: 40px; padding: 0 14px; border: 0; background: var(--ds-inset); color: var(--ds-muted); font-size: 13px; cursor: pointer; }
+.solo-note-filter button[aria-pressed="true"] { background: var(--ds-brand-soft); color: var(--ds-brand-strong); font-weight: 600; }
+
+/* Hero strip, scene and lists */
+.solo-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-bottom: 20px; padding: 12px 16px; border: 1px solid var(--folio-frame, var(--ds-border)); border-radius: var(--radius-xs); background: var(--ds-raised); }
+.solo-hero-name { font: 600 18px/1.3 var(--font-display); overflow-wrap: anywhere; }
+.solo-hero > select { min-height: 44px; max-width: 100%; padding: 8px 12px; font: inherit; color: var(--ds-ink); background: var(--ds-inset); border: 1px solid var(--ds-control); border-radius: var(--radius-xs); }
+.solo-hero-tracks { display: grid; grid-template-columns: repeat(4, auto); gap: 8px 18px; margin-left: auto; }
+.solo-hero-track { display: flex; align-items: center; gap: 6px; }
+.solo-hero-track > span { display: grid; margin-right: 2px; font-size: 13px; font-weight: 600; line-height: 1.3; }
+.solo-hero-track small { color: var(--ds-muted); font-size: 11px; font-weight: 400; }
+.solo-hero-track > button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-ink); font-size: 18px; line-height: 1; cursor: pointer; }
+.solo-hero-track > button:hover:not(:disabled) { border-color: var(--ds-brand); color: var(--ds-brand); }
+.solo-hero-track > b { min-width: 46px; text-align: center; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.solo-hero-track i { color: var(--ds-muted); font-size: 12px; font-style: normal; font-weight: 400; }
+.solo-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.solo-panel > form > .solo-muted { margin-bottom: 18px; }
+.solo-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.solo-tracker h2 { display: flex; align-items: center; gap: 10px; }
+.solo-tracker-list { list-style: none; margin: 0 0 16px; padding: 0; }
+.solo-tracker-list > li { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--ds-border); }
+.solo-tracker-list label { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; min-height: 44px; font-size: 14px; line-height: 1.5; cursor: pointer; }
+.solo-tracker-list label > span { min-width: 0; overflow-wrap: anywhere; }
+.solo-tracker-list input { width: 18px; height: 18px; flex: none; accent-color: var(--ds-brand); }
+.solo-tracker-list .is-done span { color: var(--ds-muted); text-decoration: line-through; }
+.solo-tracker-list > li > button { display: grid; place-items: center; width: 44px; height: 44px; flex: none; padding: 0; border: 0; background: transparent; color: var(--ds-muted); cursor: pointer; }
+.solo-tracker-list > li > button:hover:not(:disabled) { color: var(--color-rose-300); }
+.solo-tracker-list > li > button .daggery-icon { width: 16px; height: 16px; }
+.solo-tracker-add { display: flex; gap: 10px; align-items: flex-end; }
+.solo-tracker-add .solo-field { flex: 1; margin-bottom: 0; }
+.solo-tracker-add > button { flex: none; min-height: 44px; }
+@media (max-width: 860px) { .solo-lists { grid-template-columns: 1fr; } .solo-hero-tracks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin-left: 0; width: 100%; } .solo-hero-track { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; } .solo-hero-track > span { grid-column: 1 / -1; display: flex; gap: 6px; align-items: baseline; } .solo-hero-track > b { min-width: 0; } .solo-hero > select { width: 100%; } }
+
+/* Asking and rolling */
+.solo-ask { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 220px) auto; gap: 12px; align-items: end; }
+.solo-ask .solo-field, .solo-table-roll .solo-field, .solo-result-keep .solo-field, .solo-table-filter { margin-bottom: 0; }
+.solo-field select { font: inherit; font-weight: 400; min-width: 0; width: 100%; min-height: 44px; color: var(--ds-ink); background: var(--ds-inset); padding: 10px 12px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); }
+.solo-table-roll { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; padding: 14px 16px 0; }
+.solo-table-roll .solo-field { flex: 0 1 240px; }
+.solo-table > .solo-reference-table { margin-top: 14px; }
+.solo-table > div > .solo-result { margin: 14px 16px 0; }
+.solo-result { --tone: var(--ds-brand); display: grid; gap: 8px; margin-top: 16px; padding: 14px 16px; border: 1px solid var(--ds-border); border-left: 3px solid var(--tone); border-radius: var(--radius-xs); background: var(--ds-inset); }
+.solo-tone-hope { --tone: var(--ds-brand); }
+.solo-tone-fear { --tone: var(--ds-fear); }
+.solo-tone-revelation { --tone: var(--ds-brand-strong); }
+.solo-tone-neutral { --tone: var(--ds-control); }
+.solo-result-kind { margin: 0; color: var(--ds-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.solo-result-title { font: 600 22px/1.3 var(--font-display); color: var(--ds-ink); overflow-wrap: anywhere; }
+.solo-result-detail { margin: 0; color: var(--ds-muted); font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-variant-numeric: tabular-nums; }
+.solo-result-keep { display: grid; gap: 10px; justify-items: start; margin-top: 4px; }
+.solo-result-keep .solo-field { width: 100%; }
+.solo-result .solo-interpretation { display: flex; gap: 8px; align-items: flex-start; margin: 0; }
+.solo-result .solo-interpretation .daggery-icon { width: 16px; height: 16px; margin-top: 3px; flex: none; color: var(--ds-brand); }
+.solo-workspace tbody tr.is-rolled { background: var(--ds-brand-soft); box-shadow: inset 3px 0 var(--ds-brand); }
+.solo-workspace tbody tr.is-rolled > * { color: var(--ds-ink); font-weight: 600; }
+.solo-oracle-chart td.is-answer { color: var(--ds-brand-strong); font-weight: 700; outline: 1px solid var(--ds-brand); outline-offset: -3px; }
+@media (max-width: 700px) { .solo-ask { grid-template-columns: 1fr; } .solo-ask > button, .solo-table-roll > button { width: 100%; } .solo-table-roll .solo-field { flex-basis: 100%; } }
+
 /* Shared table defaults moved above the reference table rules. */
 .solo-rulebook { max-width: 850px; font-size: 14px; line-height: 1.8; }
 .solo-rulebook details { margin-top: 24px; border-top: 1px solid var(--ds-border); padding-top: 20px; }
@@ -122,7 +181,7 @@
   .solo-workspace { padding: 20px 14px; }
   .solo-heading { gap: 12px; }
   .solo-heading h1 { font-size: 24px; }
-  .solo-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 8px; overflow: visible; }
+  .solo-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0 4px; overflow: visible; }
   .solo-tabs button { min-width: 0; font-size: 13px; line-height: 1.3; padding: 8px 2px; }
   .solo-panel { padding: 18px; }
   /* One continuous meaning table with a single header on narrow screens. */
