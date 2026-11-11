@@ -2,12 +2,15 @@ import { PDFDocument, PDFHexString, PDFName, TextAlignment, drawCheckMark, rgb, 
 import fontkit from '@pdf-lib/fontkit';
 import type { Sheet } from './types';
 import guideLayout from './pdfGuideLayout.json';
-import { TRAIT_ORDER, getClass, getSubclass, getCommunity, getArmor, getWeapon, heritageDisplayName, hpMax, stressMax, armorScore, evasion, damageThresholds, weaponForSlot, weaponDamageNotation } from './rules';
+import hopeGuideLayout from './pdfHopeGuideLayout.json';
+import { TRAIT_ORDER, getClass, getSubclass, getCommunity, getArmor, getWeapon, heritageDisplayName, hpMax, stressMax, armorScore, evasion, damageThresholds, weaponForSlot, weaponDamageNotation, traitValue, spellcastTraitName, spellcastTraitValue, weaponModifier } from './rules';
 
 export interface PdfOptions { blank: boolean; guide: boolean; references: boolean }
 export const DEFAULT_PDF_OPTIONS: PdfOptions = { blank: false, guide: true, references: true };
-// Zero-based page indices in the unmodified source PDF, including its class guides.
+// Zero-based indices in the original-page bundle: 22 core pages, then 9 Hope & Fear pages.
 export const ORIGINAL_SHEETS: Record<string, { sheet: number; guide: number; references?: number[] }> = {
+  assassin: { sheet: 22, guide: 23 }, brawler: { sheet: 24, guide: 26, references: [25] },
+  warlock: { sheet: 27, guide: 28 }, witch: { sheet: 29, guide: 30 },
   bard: { sheet: 0, guide: 1 }, druid: { sheet: 2, guide: 5, references: [3, 4] },
   guardian: { sheet: 6, guide: 7 }, ranger: { sheet: 8, guide: 10, references: [9] },
   rogue: { sheet: 11, guide: 12 }, seraph: { sheet: 13, guide: 14 },
@@ -22,9 +25,10 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
   const font = await pdf.embedFont(fontBytes);
   const form = pdf.getForm();
   const mapping = ORIGINAL_SHEETS[sheet.classId];
-  const indices = [mapping?.sheet ?? 21];
-  const inventoryPageCount = Math.max(1, Math.ceil(sheet.inventory.filter(item => item.qty > 0).length / 5));
-  for (let i = 1; i < inventoryPageCount; i++) indices.push(21);
+  if (!mapping) throw new Error(`No original character sheet is available for class "${sheet.classId}". Choose a supported class before exporting.`);
+  const indices = [mapping.sheet];
+  const inventoryPageCount = options.blank ? 1 : Math.max(1, Math.ceil(sheet.inventory.filter(item => item.qty > 0).length / 5));
+  for (let i = 1; i < inventoryPageCount; i++) indices.push(mapping.sheet);
   if (options.guide && mapping) indices.push(mapping.guide);
   if (options.references && mapping?.references) indices.push(...mapping.references);
   const pages = await pdf.copyPages(source, indices);
@@ -41,7 +45,9 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
     if (centered) input.setAlignment(TextAlignment.Center);
     input.addToPage(page, { x, y: page.getHeight() - top - height, width, height, font,
       textColor: ink, borderWidth: 0, backgroundColor: undefined, borderColor: undefined });
-    input.setFontSize(fontSize);
+    // Fit ordinary long labels without making print smaller than 7pt. The full value stays editable.
+    const fittedSize = !multiline && text ? Math.max(7, Math.min(fontSize, fontSize * (width - 4) / Math.max(1, font.widthOfTextAtSize(text, fontSize)))) : fontSize;
+    input.setFontSize(fittedSize);
     input.updateAppearances(font);
     if (multiline && text.length > 1200) input.acroField.setValue(PDFHexString.fromText(text));
     return input;
@@ -61,10 +67,11 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
   field('pronouns', '', 440, 10, 89, 14);
   field('heritage', [heritageDisplayName(sheet), getCommunity(sheet.communityId)?.name].filter(Boolean).join(' / '), 236, 30, 125, 14);
   const subclass = getSubclass(sheet.classId, sheet.subclassId);
-  field('subclass', mapping ? subclass?.name : `${getClass(sheet.classId)?.name ?? sheet.classId} / ${subclass?.name ?? ''}`, 409, 30, 120, 14);
+  const secondarySubclass = getSubclass(sheet.multiclassId, sheet.multiclassSubclassId);
+  field('subclass', [subclass?.name, sheet.multiclassId ? `${getClass(sheet.multiclassId)?.name ?? sheet.multiclassId}${secondarySubclass ? `: ${secondarySubclass.name}` : ''}` : ''].filter(Boolean).join(' / '), 409, 30, 120, 14);
   field('level', sheet.level, 557, 20, 28, 25, false, true, 18);
   TRAIT_ORDER.forEach((trait, i) => {
-    field(`trait_${trait}`, sheet.traits[trait], 209 + i * 67.2, 83, 33, 24, false, true, 16);
+    field(`trait_${trait}`, traitValue(sheet, trait), 209 + i * 67.2, 83, 33, 24, false, true, 16);
     const markerX = [247.93, 316.23, 382.66, 449.29, 517.59, 584.03][i]!;
     check(`trait_mark_${trait}`, sheet.traitMarks.includes(trait), markerX, 66.9, 12.74, 12.74);
   });
@@ -79,11 +86,18 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
     check(`hp_${i}`, i < sheet.hpMarked, 36.96 + i * 18.776, 230.59, 15.29, 7.64);
     check(`stress_${i}`, i < sheet.stressMarked, 62.86 + i * 16.516, 252.65, 13.45, 7.64);
   }
-  // Tooltips retain maximums without changing any original labels or artwork.
-  form.getCheckBox('hp_0').acroField.dict.set(PDFName.of('TU'), PDFHexString.fromText(`HP marked: ${sheet.hpMarked}; maximum: ${hpMax(sheet)}`));
-  form.getCheckBox('stress_0').acroField.dict.set(PDFName.of('TU'), PDFHexString.fromText(`Stress marked: ${sheet.stressMarked}; maximum: ${stressMax(sheet)}`));
+  // Keep numeric totals visible in print, including capacities beyond the twelve printed slots.
+  field('resource_totals', `HP ${sheet.hpMarked}/${hpMax(sheet)} marked | Stress ${sheet.stressMarked}/${stressMax(sheet)} marked | Armor ${sheet.armorSlotsMarked}/${armorScore(sheet)} used`, 28, 240, 230, 10, false, false, 7);
+  // Tooltips also expose the totals to readers that support form hints.
+  if (!options.blank) {
+    form.getCheckBox('hp_0').acroField.dict.set(PDFName.of('TU'), PDFHexString.fromText(`HP marked: ${sheet.hpMarked}; maximum: ${hpMax(sheet)}`));
+    form.getCheckBox('stress_0').acroField.dict.set(PDFName.of('TU'), PDFHexString.fromText(`Stress marked: ${sheet.stressMarked}; maximum: ${stressMax(sheet)}`));
+  }
   for (let i = 0; i < 6; i++) check(`hope_${i}`, i < sheet.hope, 39.86 + i * 35.466, 302.3, 14.4, 14.4);
   for (let i = 0; i < 6; i++) check(`proficiency_${i}`, i < sheet.proficiency, 439.51 + i * 11.442, 172.5, 8.92, 8.92);
+  const castingTrait = spellcastTraitName(sheet);
+  const signed = (value: number) => `${value >= 0 ? '+' : ''}${value}`;
+  field('spellcast', castingTrait ? `Spellcast: ${castingTrait} ${signed(spellcastTraitValue(sheet))}` : '', 415, 184, 175, 9, false, false, 7.5);
   for (let i = 0; i < 5; i++) {
     const exp = sheet.experiences[i];
     field(`experience_${i}`, exp?.name, 22, 381 + i * 19.4, 193, 15);
@@ -98,9 +112,9 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
   field('gold_chests', Math.floor(sheet.gold / 100) || '', 244, 511, 12, 12, false, true);
   const weaponFields = (prefix: string, weapon: ReturnType<typeof weaponForSlot>, row: number) => {
     field(`${prefix}_name`, weapon?.name, 295, row, 115, 17);
-    field(`${prefix}_trait`, weapon ? `${weapon.trait} / ${weapon.range}` : '', 416, row, 90, 17);
+    field(`${prefix}_trait`, weapon ? `${weapon.trait} ${signed(weaponModifier(sheet, weapon))} / ${weapon.range}` : '', 416, row, 90, 17);
     field(`${prefix}_damage`, weapon ? `${weaponDamageNotation(sheet, weapon)} ${weapon.damageType}` : '', 513, row, 78, 17);
-    field(`${prefix}_feature`, weapon?.feature ? `${weapon.feature.name}: ${weapon.feature.text}` : '', 298, row + 30, 292, 14);
+    field(`${prefix}_feature`, weapon?.feature ? `${weapon.feature.name}: ${weapon.feature.text}` : '', 298, row + 30, 292, 17, false, false, 8.5);
   };
   weaponFields('weapon_primary', weaponForSlot(sheet, 'primary'), 193);
   weaponFields('weapon_secondary', weaponForSlot(sheet, 'secondary'), 286);
@@ -108,8 +122,8 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
   field('armor_name', armor?.name, 295, 391, 151, 17);
   field('armor_thresholds', armor ? `${armor.baseThresholds.major} / ${armor.baseThresholds.severe}` : '', 454, 391, 69, 17, false, true);
   field('armor_base_score', armor?.baseScore, 539, 391, 49, 17, false, true);
-  field('armor_feature', armor?.feature ? `${armor.feature.name}: ${armor.feature.text}` : '', 298, 421, 292, 14);
-  // Each ruled line is a separate field. Extra items use another original generic sheet.
+  field('armor_feature', armor?.feature ? `${armor.feature.name}: ${armor.feature.text}` : '', 298, 421, 292, 17, false, false, 8.5);
+  // Each ruled line is a separate field. Extra items keep the same original class artwork.
   const inventoryItems = sheet.inventory.filter(item => item.qty > 0);
   for (let inventoryPage = 0; inventoryPage < inventoryPageCount; inventoryPage++) {
     page = pages[inventoryPage]!;
@@ -130,11 +144,6 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
     check(`inventory_weapon_${i}_primary`, weapon?.category === 'Primary', 499.107, 606.6 + i * 90.539, 7.164, 7.164);
     check(`inventory_weapon_${i}_secondary`, weapon?.category === 'Secondary', 548.995, 606.6 + i * 90.539, 7.164, 7.164);
   }
-  if (!mapping) {
-    const cls = getClass(sheet.classId);
-    field('hope_feature', cls?.hopeFeature ? `${cls.hopeFeature.name}: ${cls.hopeFeature.text}` : '', 23, 326, 230, 23, true);
-    field('class_feature', cls?.classFeatures.map(f => `${f.name}: ${f.text}`).join('\n\n'), 23, 566, 230, 187, true);
-  }
   if (options.guide && mapping) {
     page = pages[inventoryPageCount]!;
     // Most guides have an 8.504pt bleed around the original Letter artwork; Warrior does not.
@@ -149,7 +158,9 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
       field(`background_${i}`, answer?.answer, 32 + offset, 281 + i * 54 + offset, 265, 31, true);
       field(`connection_${i}`, connection?.answer, 332 + offset, 281 + i * 54 + offset, 255, 31, true);
     }
-    const layout = (guideLayout as Record<string, { tier: number; option: string; slot: number; rect: number[] }[]>)[String(mapping.guide)]!;
+    const layouts = mapping.guide >= 22 ? hopeGuideLayout : guideLayout;
+    const layoutKey = mapping.guide >= 22 ? mapping.guide - 22 : mapping.guide;
+    const layout = (layouts as Record<string, { tier: number; option: string; slot: number; rect: number[] }[]>)[String(layoutKey)]!;
     const marked = new Set<string>();
     const history = sheet.advancementHistory ?? sheet.advancements.map(advancement => ({ level: sheet.level, advancement }));
     for (const entry of [...history].sort((a, b) => a.level - b.level)) {
@@ -185,6 +196,25 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
     training.forEach(([x,y], i) => check(`companion_training_${i}`, false, x!, y!, 9.13, 9.13));
     check('companion_hope', false, 458.33, 580.97, 10.85, 10.85);
     for (let i = 0; i < 6; i++) check(`companion_stress_${i}`, false, 207.97 + i * 20.146, 656.17 - i * .75, 18.35, 7.03 + i * .75);
+  }
+  page = pages[0]!;
+  if (sheet.classId === 'brawler') {
+    // Combo Die is derived from recorded advancement choices; other class resources have no Sheet state.
+    const history = sheet.advancementHistory ?? sheet.advancements.map(advancement => ({ level: sheet.level, advancement }));
+    const upgrades = Math.min(3, history.filter(entry => entry.advancement === 'combo-die').length);
+    [115.30, 146.30, 177.30, 209.30].forEach((x, i) => check(`combo_die_d${[4, 6, 8, 10][i]}`, i === upgrades, x, 649.24, 10.57, 10.58));
+  }
+  if (sheet.classId === 'warlock') {
+    // Do not invent Patron/Favor values that the app does not store; provide editable original spaces.
+    field('patron_name', '', 20, 672, 116, 17);
+    field('patron_sphere', '', 143, 672, 116, 17);
+    for (let i = 0; i < 6; i++) check(`favor_${i}`, false, 54.45 + i * 13, 701.18, 9.22, 9.22);
+  }
+  if (options.references && mapping.references?.includes(25)) {
+    page = pages[inventoryPageCount + (options.guide ? 1 : 0) + mapping.references.indexOf(25)]!;
+    [400.89, 431.26, 461.64, 492.02, 522.39, 552.76].forEach((x, i) => check(`martial_focus_${i}`, false, x, 172.44, 12.11, 12.12));
+    const stanceTops = [221.09, 245.12, 273.40, 299.34, 365.96, 395.25, 423.53, 451.82, 519.78, 545.72, 567.41, 591.44, 655.66, 679.70, 703.73, 728.26];
+    stanceTops.forEach((top, i) => check(`martial_stance_${i}`, false, 325.84, top, 11.34, 11.34));
   }
   pdf.setTitle(options.blank ? 'Original Daggerheart character sheet' : `${sheet.name} - original character sheet`);
   pdf.setCreator('Daggery');

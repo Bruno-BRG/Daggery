@@ -9,7 +9,9 @@
 .character-folio .sheet-hero-stat dd::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: var(--ds-brand); opacity: .8; -webkit-mask: var(--orn-octagon) center / 100% 100% no-repeat; mask: var(--orn-octagon) center / 100% 100% no-repeat; }
 .character-folio .sheet-hero::before { content: ''; position: absolute; inset: 6px; pointer-events: none; background: var(--ds-brand); opacity: .7; -webkit-mask: var(--orn-corners); mask: var(--orn-corners); }
 .character-folio :is(.sheet-trait, .sheet-threshold, .ability-card) { position: relative; }
-.character-folio :is(.sheet-trait, .sheet-threshold, .ability-card)::after { content: ''; position: absolute; inset: 3px; pointer-events: none; background: var(--ability-color, var(--ds-brand)); opacity: .7; -webkit-mask: var(--orn-corners-sm); mask: var(--orn-corners-sm); }
+.character-folio :is(.sheet-trait, .sheet-threshold)::after { content: ''; position: absolute; inset: 3px; pointer-events: none; background: var(--ability-color, var(--ds-brand)); opacity: .7; -webkit-mask: var(--orn-corners-sm); mask: var(--orn-corners-sm); }
+/* Ability cards round to 16px, so their brackets sit further in to stay inside the curve. */
+.character-folio .ability-card::after { content: ''; position: absolute; inset: 7px; pointer-events: none; background: var(--ability-color, var(--ds-brand)); opacity: .7; -webkit-mask: var(--orn-corners-sm); mask: var(--orn-corners-sm); }
 .character-folio .folio-traits-heading { position: relative; }
 .character-folio .folio-traits-heading::after { content: ''; position: absolute; inset: auto 0 0; height: 9px; pointer-events: none; background: var(--ds-brand); opacity: .6; -webkit-mask: var(--orn-rule); mask: var(--orn-rule); }
 .character-folio .sheet-trait:hover { transform: none; }
@@ -58,6 +60,8 @@
 .sheet-session-hints li { display: flex; align-items: center; gap: 12px; font-size: 15px; line-height: 1.5; }
 .sheet-session-hints .daggery-icon { width: 24px; height: 24px; color: var(--ds-brand); flex: none; }
 .character-folio .session-gear-card { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--folio-line); border-radius: var(--radius-xs); background: var(--sheet-sunken); }
+.character-folio .sheet-spellcast { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--folio-line); row-gap: 8px; }
+.character-folio .sheet-spellcast > .sheet-mini-label { margin-bottom: 0; white-space: nowrap; }
 .session-gear-heading { display: flex; align-items: center; gap: 12px; }
 .session-gear-heading > span { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid color-mix(in srgb, var(--ds-brand) 20%, transparent); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--ds-brand) 7%, transparent); color: var(--ds-brand); flex: none; }
 .session-gear-heading > span > .daggery-icon { width: 24px; height: 24px; }

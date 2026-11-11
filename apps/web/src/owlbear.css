@@ -86,6 +86,10 @@ body { background-color: var(--ds-surface); }
 .daggery-shortcut[aria-current="true"] { border-color: var(--ds-brand); background: var(--ds-brand-soft); }
 .daggery-home-feature { border-color: var(--folio-frame); border-radius: var(--folio-corner); padding: 18px; }
 .daggery-home-feature > h2 { font: 650 15px/1.4 var(--font-sans); margin: -18px -18px 0; padding: 12px 18px; border-bottom: 1px solid var(--ds-border); background: var(--folio-header); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
+.daggery-campaign-forms .daggery-home-feature > h2 { display: flex; align-items: center; gap: 10px; }
+/* Tailwind's input radius escaped the folio field normalization; keep campaign fields 4px. */
+:is(.daggery-campaign-forms, .daggery-campaign-list-header) input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]) { border-radius: var(--radius-xs); }
+.daggery-campaign-forms .daggery-home-feature > h2 > .daggery-shortcut-icon { width: 30px; height: 30px; border: 1px solid var(--folio-frame); border-radius: var(--radius-xs); }
 .daggery-notes-layout { min-width: 0; }
 .daggery-notes-layout > * { min-width: 0; }
 .daggery-rolls { flex-basis: 288px; width: 288px; margin: 0; border: 0; border-left: 1px solid var(--folio-frame); border-radius: 0; box-shadow: none; padding: 18px 16px; background: var(--ds-raised); }

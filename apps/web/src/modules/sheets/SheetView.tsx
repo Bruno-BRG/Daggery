@@ -615,7 +615,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
               {secondary ? <WeaponCard weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} onUnequip={()=>mutate(current=>equipEquipment(current,'secondary',null))} /> : <EmptyEquipment slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
             </div>
             {spellcastOptions.length > 0 && (
-              <div className="sheet-inline">
+              <div className="sheet-inline sheet-spellcast">
                 <span className="sheet-mini-label">Spellcast</span>
                 {spellcastOptions.map((trait) => (
                   <button key={trait} type="button" onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>

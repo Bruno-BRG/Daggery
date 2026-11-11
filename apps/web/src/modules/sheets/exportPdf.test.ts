@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { PDFDocument, PDFTextField, PDFCheckBox, PDFArray, PDFRawStream, PDFName } from 'pdf-lib';
 import { createCharacterPdf, characterPdfFilename, DEFAULT_PDF_OPTIONS, ORIGINAL_SHEETS } from './exportPdf';
 import type { Sheet } from './types';
+import { classes } from '@daggery/content';
 
 const font = new Uint8Array(readFileSync(new URL('../../assets/fonts/NotoSans-Regular.ttf', import.meta.url)));
 const template = new Uint8Array(readFileSync(new URL('../../assets/pdf/original-character-sheets.pdf', import.meta.url)));
@@ -70,8 +71,8 @@ test('every class uses the original source page content and original dimensions'
   }
 });
 
-test('original guide and class reference pages are optional; unknown classes use the source generic sheet', async () => {
-  for (const [classId, count] of [['druid', 4], ['ranger', 3], ['guardian', 2], ['custom', 1]] as const) {
+test('original guide and class reference pages are optional; unknown classes are rejected', async () => {
+  for (const [classId, count] of [['druid', 4], ['ranger', 3], ['guardian', 2]] as const) {
     const doc = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId }, DEFAULT_PDF_OPTIONS, font, template));
     assert.equal(doc.getPageCount(), count);
     assert.equal(doc.getPage(0).getWidth(), 612);
@@ -86,6 +87,10 @@ test('original guide and class reference pages are optional; unknown classes use
       assert.ok(edited.getForm().getCheckBox('companion_training_0').isChecked());
     }
   }
+  await assert.rejects(
+    () => createCharacterPdf({ ...sheet, classId: 'custom' }, DEFAULT_PDF_OPTIONS, font, template),
+    (error: unknown) => error instanceof Error && /custom/i.test(error.message) && /class/i.test(error.message),
+  );
 });
 
 test('inventory uses individual printed lines and continues extra items on original sheets', async () => {
@@ -102,6 +107,16 @@ test('inventory uses individual printed lines and continues extra items on origi
     assert.ok(field.acroField.dict.get(PDFName.of('TU')));
   }
   assert.ok(!fields.getFields().some(f => f.getName() === 'inventory'));
+});
+
+test('inventory continuation pages keep the class original sheet artwork', async () => {
+  const source = await PDFDocument.load(template);
+  const inventory = Array.from({ length: 8 }, (_, i) => ({ ...sheet.inventory[0]!, id: String(i), name: `Item ${i + 1}` }));
+  const doc = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId: 'guardian', inventory }, { blank: false, guide: false, references: false }, font, template));
+  assert.equal(doc.getPageCount(), 2);
+  const copied = contentBytes(doc, 1);
+  for (const stream of contentBytes(source, ORIGINAL_SHEETS.guardian!.sheet)) assert.ok(copied.includes(stream));
+  assert.equal(doc.getForm().getTextField('inventory_5').getText(), '2 x Item 6');
 });
 
 test('resource widgets match the original drawing bounds and use readable default text sizes', async () => {
@@ -140,8 +155,116 @@ test('level-up guide boxes are editable and reflect advancement history includin
   }
 });
 
+test('bundled pages preserve both original source PDFs, including all guides and references', async () => {
+  const bundle = await PDFDocument.load(template);
+  let offset = 0;
+  for (const filename of ['Character-Sheets-and-Guides-Daggerheart-Aug252026.pdf', 'CharacterGuidesAndSheetsTile_HF_2026-07-23.pdf']) {
+    const original = await PDFDocument.load(readFileSync(new URL(`../../../../../sources/${filename}`, import.meta.url)));
+    for (let i = 0; i < original.getPageCount(); i++) {
+      assert.deepEqual(bundle.getPage(offset + i).getSize(), original.getPage(i).getSize());
+      assert.deepEqual(contentBytes(bundle, offset + i), contentBytes(original, i));
+    }
+    offset += original.getPageCount();
+  }
+  assert.equal(bundle.getPageCount(), offset);
+});
+
+test('computed spellcast, attack modifiers and resource totals stay visible as editable fields', async () => {
+  const doc = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId: 'bard', subclassId: 'troubadour', traits: { ...sheet.traits, presence: 3 } }, DEFAULT_PDF_OPTIONS, font, template));
+  const form = doc.getForm();
+  assert.equal(form.getTextField('spellcast').getText(), 'Spellcast: presence +3');
+  assert.equal(form.getTextField('weapon_primary_trait').getText(), 'Agility +2 / Melee');
+  assert.match(form.getTextField('resource_totals').getText() ?? '', /^HP 2\/\d+ marked \| Stress 1\/\d+ marked \| Armor 1\/4 used$/);
+});
+
+test('Hope & Fear class-specific resource spaces remain editable without inventing absent state', async () => {
+  const brawler = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId: 'brawler', advancementHistory: [{ level: 3, advancement: 'combo-die' }] }, DEFAULT_PDF_OPTIONS, font, template));
+  const form = brawler.getForm();
+  assert.ok(form.getCheckBox('combo_die_d6').isChecked());
+  assert.equal(form.getCheckBox('combo_die_d4').isChecked(), false);
+  assert.equal(form.getFields().filter(f => f.getName().startsWith('martial_stance_')).length, 16);
+  form.getCheckBox('martial_stance_15').check();
+  form.getCheckBox('martial_focus_5').check();
+  const reopened = (await PDFDocument.load(await brawler.save())).getForm();
+  assert.ok(reopened.getCheckBox('martial_stance_15').isChecked());
+  assert.ok(reopened.getCheckBox('martial_focus_5').isChecked());
+  const warlock = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId: 'warlock' }, DEFAULT_PDF_OPTIONS, font, template));
+  assert.equal(warlock.getForm().getTextField('patron_name').getText(), undefined);
+  assert.equal(warlock.getForm().getCheckBox('favor_0').isChecked(), false);
+  warlock.getForm().getTextField('patron_name').setText('The Lantern');
+  warlock.getForm().getCheckBox('favor_2').check();
+  const saved = (await PDFDocument.load(await warlock.save())).getForm();
+  assert.equal(saved.getTextField('patron_name').getText(), 'The Lantern');
+  assert.ok(saved.getCheckBox('favor_2').isChecked());
+});
+
 test('download filename removes path and control characters', () => {
   assert.equal(characterPdfFilename('../hero:/name?'), '..heroname-sheet.pdf');
   assert.equal(characterPdfFilename('   '), 'character-sheet.pdf');
   assert.equal(characterPdfFilename('João'), 'João-sheet.pdf');
+});
+
+test('every known class, including Hope & Fear classes, has an original sheet mapping', () => {
+  assert.deepEqual(Object.keys(ORIGINAL_SHEETS).sort(), classes.map(entry => entry.id).sort());
+  assert.deepEqual(ORIGINAL_SHEETS.assassin, { sheet: 22, guide: 23 });
+  assert.deepEqual(ORIGINAL_SHEETS.brawler, { sheet: 24, guide: 26, references: [25] });
+  assert.deepEqual(ORIGINAL_SHEETS.warlock, { sheet: 27, guide: 28 });
+  assert.deepEqual(ORIGINAL_SHEETS.witch, { sheet: 29, guide: 30 });
+});
+
+test('Hope & Fear class sheets, class references and guides copy their original source pages', async () => {
+  const source = await PDFDocument.load(template);
+  for (const [classId, count, reference] of [['assassin', 2, null], ['brawler', 3, 25], ['warlock', 2, null], ['witch', 2, null]] as const) {
+    const doc = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId }, DEFAULT_PDF_OPTIONS, font, template));
+    assert.equal(doc.getPageCount(), count, classId);
+    if (reference !== null) {
+      const copied = contentBytes(doc, count - 1);
+      for (const stream of contentBytes(source, reference)) assert.ok(copied.includes(stream), classId);
+    }
+  }
+});
+
+test('Hope & Fear level-up guides expose their original advancement boxes', async () => {
+  const advanced = { ...sheet, level: 6, advancementHistory: [{ level: 2, advancement: 'hp' }, { level: 5, advancement: 'proficiency' }] };
+  for (const [classId, count] of [['assassin', 40], ['warlock', 40], ['witch', 40], ['brawler', 43]] as const) {
+    const doc = await PDFDocument.load(await createCharacterPdf({ ...advanced, classId }, DEFAULT_PDF_OPTIONS, font, template));
+    const advance = doc.getForm().getFields().filter(f => f.getName().startsWith('advance_'));
+    assert.equal(advance.length, count, classId);
+  }
+});
+
+test('Brawler combo-die advancements mark their original guide box', async () => {
+  const advanced = { ...sheet, classId: 'brawler', level: 6, advancementHistory: [{ level: 5, advancement: 'combo-die' }] };
+  const doc = await PDFDocument.load(await createCharacterPdf(advanced, DEFAULT_PDF_OPTIONS, font, template));
+  const checked = doc.getForm().getFields()
+    .filter(f => f.getName().startsWith('advance_') && f instanceof PDFCheckBox && f.isChecked())
+    .map(f => f.getName());
+  assert.ok(checked.some(name => name.includes('combo-die')), checked.join(','));
+});
+
+test('exported traits include worn gear modifiers', async () => {
+  const doc = await PDFDocument.load(await createCharacterPdf({ ...sheet, armorId: 'full-plate-armor' }, DEFAULT_PDF_OPTIONS, font, template));
+  const form = doc.getForm();
+  assert.equal(form.getTextField('trait_agility').getText(), '1');
+  assert.equal(form.getTextField('trait_strength').getText(), '1');
+});
+
+test('blank exports keep one inventory page and never expose maximums through hidden tooltips', async () => {
+  const inventory = Array.from({ length: 8 }, (_, i) => ({ ...sheet.inventory[0]!, id: String(i), name: `Item ${i + 1}` }));
+  const doc = await PDFDocument.load(await createCharacterPdf({ ...sheet, inventory }, { blank: true, guide: false, references: false }, font, template));
+  assert.equal(doc.getPageCount(), 1);
+  const form = doc.getForm();
+  assert.ok(!form.getFields().some(f => f.getName().startsWith('inventory_5')));
+  for (const name of ['hp_0', 'stress_0']) {
+    assert.equal(form.getCheckBox(name).acroField.dict.get(PDFName.of('TU')), undefined, name);
+  }
+});
+
+test('long single-line values shrink with a readable minimum and preserve the full value', async () => {
+  const longName = 'W'.repeat(20);
+  const doc = await PDFDocument.load(await createCharacterPdf({ ...sheet, name: longName }, DEFAULT_PDF_OPTIONS, font, template));
+  const field = doc.getForm().getTextField('name');
+  assert.equal(field.getText(), longName);
+  const size = Number(/(\d+(?:\.\d+)?) Tf/.exec(field.acroField.getDefaultAppearance() ?? '')?.[1]);
+  assert.ok(size >= 7 && size < 10, `expected 7 <= ${size} < 10`);
 });

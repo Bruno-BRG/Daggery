@@ -35,10 +35,10 @@ export function ExportPdfDialog({ sheet, open, onClose }: { sheet: Sheet; open: 
     <p className="daggery-dialog-description">Use the original Daggerheart sheet for {sheet.name}’s class, with its original artwork and layout. Added form fields stay editable after download.</p>
     <fieldset disabled={busy} className="sheet-export-options">
       <label className="sheet-export-check"><input type="checkbox" checked={options.guide} onChange={e => setOptions({ ...options, guide: e.target.checked })} /><span>Include the original character guide</span></label>
-      <label className="sheet-export-check"><input type="checkbox" checked={options.references} onChange={e => setOptions({ ...options, references: e.target.checked })} /><span>Include class reference sheets (Druid / Ranger)</span></label>
+      <label className="sheet-export-check"><input type="checkbox" checked={options.references} onChange={e => setOptions({ ...options, references: e.target.checked })} /><span>Include class reference sheets (Druid / Ranger / Brawler)</span></label>
       <label className="sheet-export-check"><input type="checkbox" checked={options.blank} onChange={e => setOptions({ ...options, blank: e.target.checked })} /><span>Leave all fields blank</span></label>
     </fieldset>
-    <p className="sheet-export-hint">Original page sizes and printed rules are preserved. Inventory uses one item per line; extra items continue on original sheet pages. Long field values scroll while editing. App notes and domain cards are not on the original sheets. PDF edits do not update your campaign.</p>
+    <p className="sheet-export-hint">Includes original sheets for all 13 core and Hope & Fear classes. Keep the character guide enabled for tier and level-up options. Original page sizes and printed rules are preserved; extra inventory continues on the same class sheet. Long labels fit down to 7pt, with full values editable. App notes and domain cards are not included. PDF edits do not update your campaign.</p>
     {error && <p role="alert" className="text-rose-400">{error}</p>}
     {done && <p role="status">PDF ready. You can edit and save it in a PDF reader.</p>}
     <button type="button" className="sheet-primary" disabled={busy} onClick={download}><Icon name="pdf" />{busy ? 'Preparing PDF…' : 'Download editable PDF'}</button>

@@ -1,5 +1,6 @@
-.campaign-config-fields { display: grid; gap: 14px; padding: 18px 0 0; margin-top: 8px; border: 0; border-top: 1px solid var(--ds-border); min-width: 0; }
-.campaign-config-fields legend { font-size: 14px; font-weight: 650; padding-right: 12px; }
+.campaign-config-fields { display: grid; gap: 14px; padding: 16px 0 0; margin-top: 10px; border: 0; min-width: 0; }
+.campaign-config-fields legend { display: flex; align-items: center; gap: 14px; width: 100%; padding: 0; font-size: 14px; font-weight: 650; }
+.campaign-config-fields legend::after { content: ''; flex: 1 1 auto; height: 9px; min-width: 32px; background: var(--ds-brand); opacity: .5; -webkit-mask: var(--orn-rule); mask: var(--orn-rule); }
 .campaign-config-fields label, .campaign-settings-form > label { display: grid; gap: 7px; font-size: 13px; color: var(--ds-ink); }
 .campaign-config-fields select, .campaign-settings-form input, .campaign-settings-form textarea { min-width: 0; width: 100%; padding: 10px 12px; border: 1px solid var(--ds-control); background: var(--ds-inset); color: var(--ds-ink); border-radius: var(--radius-xs); font: inherit; }
 .campaign-config-fields p { color: var(--ds-muted); font-size: 13px; line-height: 1.6; }

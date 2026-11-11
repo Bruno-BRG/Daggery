@@ -2,12 +2,37 @@
 
 Open a character and select **PDF** in the toolbar. On phones, select **Character actions** (the three dots), then **Export editable PDF**.
 
-Exports now copy pages directly from `sources/Character-Sheets-and-Guides-Daggerheart-Aug252026.pdf`. The exact source is bundled as `apps/web/src/assets/pdf/original-character-sheets.pdf`. Original artwork, class features, typography, copyright notices, page boxes and sizes remain intact. No recreated Daggery pages are added. All nine core classes select their corresponding original sheet; unknown classes use the original generic page.
+## Original pages for every class
 
-Transparent AcroForm fields overlay the original writing spaces. Text and tracker checkboxes are editable after download. Regular writing spaces default to 10pt, trait and defense values to 16pt, and level to 18pt; long values scroll rather than shrinking into tiny text. Resource rectangles and guide checkboxes follow measured bounds from the source artwork. Current traits, defenses, equipment, inventory, Experiences, gold and resource marks are filled. Armor thresholds in the equipment section are the base thresholds; the health section uses calculated thresholds. HP/Stress maximums are available in tracker tooltips. Unchecking the prefill option leaves every field empty.
+All 13 supported classes use their own original sheet: the nine core classes and Assassin, Brawler, Warlock and Witch from Hope & Fear. Unsupported class IDs produce an explicit error instead of silently selecting a generic sheet.
 
-Optional original pages include the matching character guide and Druid Beastform or Ranger companion sheets. Reference pages retain their original printed content. The Ranger companion reference includes editable name, Experiences, attack/range, damage, Stress, Hope and training fields; these start blank because companion state is managed separately from the character sheet. Every guide advancement checkbox is editable and prefills from advancement history, filling available earlier-tier slots before later ones. Proficiency and multiclass consume two slots. The guide fills background and connection answers only when their question matches an original class question; custom questions, general notes and domain cards are not part of the original form. Extra Experiences beyond its five rows are not exported. Each of the five printed inventory lines is a separate field containing item quantity and name. Descriptions remain in field tooltips. More than five items continue on additional original generic sheet pages, five items per page. Long individual values scroll within their own field. No recalculation or synchronization happens when the downloaded PDF is edited.
+The bundle at `apps/web/src/assets/pdf/original-character-sheets.pdf` contains the 22 original core pages followed by the nine Hope & Fear pages. Rebuild it with `node tools/build_character_pdf.mjs` from:
 
-The font and source PDF use Vite content-hashed asset URLs and load only on download. Generation happens locally in the browser.
+- `sources/Character-Sheets-and-Guides-Daggerheart-Aug252026.pdf`
+- `sources/CharacterGuidesAndSheetsTile_HF_2026-07-23.pdf`
 
-Verification includes source content-stream preservation for all nine classes, blank fields and trackers, editable save/reopen, page selection, inventory pagination and description retention, tracker geometry, advancement history, readable default font sizes, companion editing, rendered samples and a pixel-for-pixel comparison between the blank original Guardian export and its source page.
+Exports copy only the selected pages, preserving vector artwork, class features, printed rules, typography, copyright notices, page boxes and sizes. The source is not redrawn or flattened.
+
+## Guides and references
+
+The matching character guide and class references are enabled by default; either can be excluded explicitly. Guides contain all original tier and level-up instructions. All advancement checkboxes are editable and prefill from recorded advancement history, filling available earlier-tier slots before later ones. Proficiency and multiclass each consume two slots. Brawler includes the three Combo Die advancement options. Older characters without advancement history can only prefill their stored current-level choices; missing historical choices cannot be reconstructed.
+
+References include Druid Beastform pages, the Ranger companion and Brawler Martial Stances. Ranger companion controls, Warlock Patron name/sphere and Favor, and Brawler Martial Stances/Focus are editable blanks because those values are not stored on the exported Sheet. Brawler's main-sheet Combo Die is derived from recorded Combo Die advancements, starting at d4. No absent resource state is invented.
+
+Background and connection answers fill only when their question matches an original class question. Custom questions, general app notes and domain cards are not included. The original form has five Experience rows; additional Experiences are not exported.
+
+## Filled information and legibility
+
+Transparent AcroForm fields overlay the original writing spaces and remain editable after download. Regular writing spaces default to 10pt, traits and defenses to 16pt, and level to 18pt. Single-line labels shrink as needed, down to a 7pt floor. Extremely long text can still extend beyond the visible printed area; its full value remains editable. Multiline answers also retain their full value, but only the visible opening lines print.
+
+Traits include worn-equipment modifiers. Attack fields include computed attack modifiers, Spellcast shows the selected casting trait and modifier, and the subclass field includes multiclass identity when present. Armor thresholds in the equipment section are base thresholds; the health section uses calculated thresholds. Numeric HP/Stress/Armor usage and maximums are visible between the health trackers, including capacities beyond the twelve printed slots. HP/Stress tracker tooltips also expose those totals.
+
+Each printed inventory line is an individual quantity/name field. Descriptions are retained in field tooltips, not printed. More than five items continue on copies of the same class-specific sheet, five items per page, with only the character name and inventory filled on continuation pages. A blank export always uses one main sheet and contains no prefilled values, marks or character-specific tooltips.
+
+PDF edits do not recalculate values, update the app or synchronize with a campaign. Save changes in a PDF reader that supports AcroForm fields.
+
+## Loading and verification
+
+The font and bundled source use Vite content-hashed asset URLs and load only on download. Generation happens locally in the browser. The bundle is about 3.2 MB; exports include only the needed pages plus the embedded editable font.
+
+Regression tests cover all 13 class mappings, source-content preservation against both original PDFs, guide/reference selection, editable save/reopen, blank exports, inventory continuation, computed modifiers, resource controls, tracker geometry, font fitting and tier advancement history. Representative core and Hope & Fear exports are also rendered for visual inspection.
