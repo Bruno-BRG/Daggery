@@ -529,10 +529,9 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
             </div>
           </div>
           <div className="sheet-shields">
-            <Shield label="Evasion" value={currentEvasion} hint={armorHint(equippedArmor)} />
-            
+            <HeroStat label="Evasion" value={currentEvasion} hint={armorHint(equippedArmor)} />
+            <HeroStat label="Level" value={sheet.level} />
           </div>
-          <div className="sheet-level"><span>{sheet.level}</span><small>Level</small></div>
         </div>
 
       </section>
@@ -841,12 +840,12 @@ function Badge({ label, tone }: { label: string; tone: 'slate' | 'accent' | 'sky
   return <span className={`sheet-badge is-${tone}`}>{label}</span>;
 }
 
-function Shield({ label, value, hint }: { label: string; value: number; hint: string }) {
+function HeroStat({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
-    <div className="sheet-shield" title={hint}>
-      <span className="sheet-shield-value">{value}</span>
-      <span className="sheet-shield-label">{label}</span>
-    </div>
+    <dl className="sheet-hero-stat" title={hint}>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </dl>
   );
 }
 

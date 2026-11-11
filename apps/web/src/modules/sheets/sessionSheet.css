@@ -2,9 +2,16 @@
 .character-folio { font-size: 15px; --folio-line: var(--ds-border); }
 .character-folio .sheet-hero { padding: 22px; border-color: var(--folio-frame); border-radius: var(--folio-corner); }
 .character-folio .sheet-eyebrow { letter-spacing: 0; text-transform: none; }
-.character-folio .sheet-shield, .character-folio .sheet-level { width: 64px; height: 68px; border-radius: var(--radius-xs); background: var(--ds-inset); }
-.character-folio .sheet-shield-value, .character-folio .sheet-level > span { font: 650 22px/1.25 var(--font-sans); font-variant-numeric: tabular-nums; }
-.character-folio .sheet-shield-label, .character-folio .sheet-level > small { letter-spacing: 0; text-transform: none; }
+.character-folio .sheet-shields { flex: none; align-items: flex-start; gap: 12px; }
+.character-folio .sheet-hero-stat { display: grid; gap: 6px; width: 72px; margin: 0; text-align: center; }
+.character-folio .sheet-hero-stat dt { color: var(--ds-muted); font: 600 13px/1.4 var(--font-sans); }
+.character-folio .sheet-hero-stat dd { position: relative; display: grid; place-items: center; width: 72px; height: 72px; margin: 0; background: var(--ds-inset); color: var(--ds-ink); font: 650 28px/1 var(--font-sans); font-variant-numeric: tabular-nums; clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% calc(100% - 10px), calc(100% - 10px) 100%, 10px 100%, 0 calc(100% - 10px), 0 10px); }
+.character-folio .sheet-hero-stat dd::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: var(--ds-brand); opacity: .8; -webkit-mask: var(--orn-octagon) center / 100% 100% no-repeat; mask: var(--orn-octagon) center / 100% 100% no-repeat; }
+.character-folio .sheet-hero::before { content: ''; position: absolute; inset: 6px; pointer-events: none; background: var(--ds-brand); opacity: .7; -webkit-mask: var(--orn-corners); mask: var(--orn-corners); }
+.character-folio :is(.sheet-trait, .sheet-threshold, .ability-card) { position: relative; }
+.character-folio :is(.sheet-trait, .sheet-threshold, .ability-card)::after { content: ''; position: absolute; inset: 3px; pointer-events: none; background: var(--ability-color, var(--ds-brand)); opacity: .7; -webkit-mask: var(--orn-corners-sm); mask: var(--orn-corners-sm); }
+.character-folio .folio-traits-heading { position: relative; }
+.character-folio .folio-traits-heading::after { content: ''; position: absolute; inset: auto 0 0; height: 9px; pointer-events: none; background: var(--ds-brand); opacity: .6; -webkit-mask: var(--orn-rule); mask: var(--orn-rule); }
 .character-folio .sheet-trait:hover { transform: none; }
 .character-folio .sheet-tabs { border-color: var(--folio-frame); border-radius: var(--folio-corner); background: var(--folio-header); }
 .character-folio .sheet-tab.is-active { box-shadow: inset 0 0 0 1px var(--ds-brand-line); }
@@ -12,7 +19,7 @@
 .character-folio .sheet-panel-head { margin: -16px -16px 16px; padding: 10px 16px; align-items: center; background: var(--folio-header); border-bottom: 1px solid var(--folio-line); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
 .character-folio .folio-roll-settings { border-color: var(--folio-frame); border-radius: var(--folio-corner); }
 .character-folio .folio-roll-settings > summary { background: var(--folio-header); border-radius: var(--folio-corner); }
-.character-folio .folio-traits-heading { padding-bottom: 10px; border-bottom: 1px solid var(--folio-frame); }
+.character-folio .folio-traits-heading { padding-bottom: 18px; }
 .character-folio :is(.sheet-ghost, .sheet-primary, .sheet-danger) { min-height: 44px; font-size: 14px; }
 .character-folio .folio-toolbar-label { font-size: 13px; letter-spacing: 1px; }
 .character-folio .folio-toolbar .sheet-ghost { white-space: nowrap; }

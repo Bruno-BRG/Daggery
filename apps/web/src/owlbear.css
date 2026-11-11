@@ -5,7 +5,26 @@
   --folio-frame: color-mix(in srgb, var(--ds-brand) 28%, var(--ds-border));
   --folio-header: color-mix(in srgb, var(--ds-inset) 65%, var(--ds-raised));
   --folio-corner: 6px;
+  /* Ornaments are alpha masks, so the element's background sets their colour in both themes. */
+  --orn-tl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M.5 28V8L8 .5H28'/%3E%3Cpath d='M4.5 19V10L10 4.5H19'/%3E%3C/g%3E%3Cpath d='M12.5 9.5l3 3-3 3-3-3z'/%3E%3C/svg%3E");
+  --orn-tr: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Cg transform='matrix(-1 0 0 1 28 0)'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M.5 28V8L8 .5H28'/%3E%3Cpath d='M4.5 19V10L10 4.5H19'/%3E%3C/g%3E%3Cpath d='M12.5 9.5l3 3-3 3-3-3z'/%3E%3C/g%3E%3C/svg%3E");
+  --orn-bl: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Cg transform='matrix(1 0 0 -1 0 28)'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M.5 28V8L8 .5H28'/%3E%3Cpath d='M4.5 19V10L10 4.5H19'/%3E%3C/g%3E%3Cpath d='M12.5 9.5l3 3-3 3-3-3z'/%3E%3C/g%3E%3C/svg%3E");
+  --orn-br: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Cg transform='matrix(-1 0 0 -1 28 28)'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M.5 28V8L8 .5H28'/%3E%3Cpath d='M4.5 19V10L10 4.5H19'/%3E%3C/g%3E%3Cpath d='M12.5 9.5l3 3-3 3-3-3z'/%3E%3C/g%3E%3C/svg%3E");
+  --orn-corners: var(--orn-tl) left top / 28px 28px no-repeat, var(--orn-tr) right top / 28px 28px no-repeat, var(--orn-bl) left bottom / 28px 28px no-repeat, var(--orn-br) right bottom / 28px 28px no-repeat;
+  --orn-corners-sm: var(--orn-tl) left top / 14px 14px no-repeat, var(--orn-tr) right top / 14px 14px no-repeat, var(--orn-bl) left bottom / 14px 14px no-repeat, var(--orn-br) right bottom / 14px 14px no-repeat;
+  --orn-octagon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23000'%3E%3Cpath d='M10 .5H62L71.5 10V62L62 71.5H10L.5 62V10z'/%3E%3Cpath opacity='.45' d='M12 4.5H60L67.5 12V60L60 67.5H12L4.5 60V12z'/%3E%3C/g%3E%3Cpath d='M36 1.5l3 3-3 3-3-3zM36 64.5l3 3-3 3-3-3z'/%3E%3C/svg%3E");
+  --orn-diamond: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 9'%3E%3Cpath d='M4.5 0L9 4.5 4.5 9 0 4.5z'/%3E%3C/svg%3E");
+  --orn-rule: var(--orn-diamond) center / 9px 9px no-repeat, linear-gradient(#000 0 0) left center / calc(50% - 12px) 1px no-repeat, linear-gradient(#000 0 0) right center / calc(50% - 12px) 1px no-repeat;
 }
+/* A ruled line broken by a diamond, used under page and section headings. */
+.daggery-character-heading { position: relative; padding-bottom: 26px; border-bottom: 0; }
+.daggery-character-heading::after { content: ''; position: absolute; inset: auto 0 0; height: 9px; pointer-events: none; background: var(--ds-brand); opacity: .6; -webkit-mask: var(--orn-rule); mask: var(--orn-rule); }
+/* A diamond set on the rule under every panel, dialog and page header. */
+:is(.folio-panel-heading, .daggery-home-feature > h2, .daggery-essential .daggery-shortcut-top, .gm-workspace .gm-section-heading, .journal-workspace .journal-card-head, .daggery-compendium .compendium-header, .character-folio .sheet-panel-head) { position: relative; }
+:is(.folio-panel-heading, .daggery-home-feature > h2, .daggery-essential .daggery-shortcut-top, .gm-workspace .gm-section-heading, .journal-workspace .journal-card-head, .daggery-compendium .compendium-header, .character-folio .sheet-panel-head, .daggery-dialog .daggery-dialog-header)::after { content: ''; position: absolute; left: 50%; bottom: -5px; z-index: 1; width: 9px; height: 9px; translate: -50% 0; pointer-events: none; background: var(--ds-brand); -webkit-mask: var(--orn-diamond) center / contain no-repeat; mask: var(--orn-diamond) center / contain no-repeat; }
+/* Corner brackets frame the art: the table banner and each character cover. */
+:is(.daggery-table-feature, .daggery-character-cover)::after { content: ''; position: absolute; inset: 6px; z-index: 1; pointer-events: none; background: var(--ds-brand); opacity: .75; -webkit-mask: var(--orn-corners); mask: var(--orn-corners); }
+.daggery-character-cover .daggery-character-level { top: auto; bottom: 10px; left: 50%; translate: -50% 0; z-index: 2; white-space: nowrap; }
 body { background-color: var(--ds-surface); }
 .daggery-shell { gap: 0; }
 .daggery-sidebar { flex-basis: 232px; width: 232px; margin: 0; padding: 22px 14px 16px; border: 0; border-right: 1px solid var(--folio-frame); border-radius: 0; box-shadow: none; background: var(--ds-raised); }
