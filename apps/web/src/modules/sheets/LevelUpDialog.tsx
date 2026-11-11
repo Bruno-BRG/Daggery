@@ -1,18 +1,23 @@
 import { useMemo, useState } from 'react';
 import { RuleCard, CardText } from '../../components/RuleCard';
-import { classes } from '@daggery/content';
+import { classes, domainCards } from '@daggery/content';
 import type { TraitName } from '@daggery/shared';
 import {
   DOMAIN_LABELS,
   MAX_LEVEL,
   TRAIT_LABELS,
   TRAIT_ORDER,
+  accessibleDomains,
   canGainMastery,
   cardImage,
   eligibleDomainCards,
   getClass,
+  getDomainCard,
   getSubclass,
+  advancementSlots,
   isDoubleSlotAdvancement,
+  maxLoadout,
+  multiclassDomain,
   isValidPickCount,
   makeId,
   traitNameFromWeapon,
@@ -47,8 +52,8 @@ interface AdvanceDef {
 
 const ADVANCEMENTS: AdvanceDef[] = [
   { id: 'traits', title: 'Increase two traits', detail: 'Gain +1 to two unmarked traits, then mark them.', minTier: 1 },
-  { id: 'hp', title: 'Gain a Hit Point slot', detail: 'Permanently increase maximum Hit Points by 1 (max 12).', minTier: 1 },
-  { id: 'stress', title: 'Gain a Stress slot', detail: 'Permanently increase maximum Stress by 1 (max 12).', minTier: 1 },
+  { id: 'hp', title: 'Gain a Hit Point slot', detail: 'Permanently increase maximum Hit Points by 1.', minTier: 1 },
+  { id: 'stress', title: 'Gain a Stress slot', detail: 'Permanently increase maximum Stress by 1.', minTier: 1 },
   { id: 'experiences', title: '+1 to two Experiences', detail: 'Permanently increase two Experiences by +1.', minTier: 1 },
   { id: 'domain-card', title: 'New domain card', detail: 'Choose a card up to your new level from an accessible domain.', minTier: 1 },
   { id: 'evasion', title: 'Gain +1 Evasion', detail: 'Permanently increase your Evasion by 1.', minTier: 1 },
@@ -76,13 +81,16 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
   const [traitPicks, setTraitPicks] = useState<TraitName[]>([]);
   const [experiencePicks, setExperiencePicks] = useState<string[]>([]);
   const [domainPick, setDomainPick] = useState<string | null>(null);
+  const [levelCardPick, setLevelCardPick] = useState<string | null>(null);
   const [multiclassPick, setMulticlassPick] = useState<string | null>(null);
   const [multiclassDomainPick, setMulticlassDomainPick] = useState<string | null>(null);
   const [multiclassSubclassPick, setMulticlassSubclassPick] = useState<string | null>(null);
   const [spellcastPick, setSpellcastPick] = useState<TraitName | null>(null);
   const [newExperience, setNewExperience] = useState('');
 
-  const unmarkedTraits = TRAIT_ORDER.filter((trait) => !sheet.traitMarks.includes(trait));
+  // Marks are cleared on entering levels 5 and 8, so every trait is available again there.
+  const clearedMarks = newLevel === 5 || newLevel === 8;
+  const unmarkedTraits = TRAIT_ORDER.filter((trait) => clearedMarks || !sheet.traitMarks.includes(trait));
   const domainOptions = useMemo(() => {
     if (!levelValid) return [];
     const context = multiclassPick
@@ -90,6 +98,31 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
       : sheet;
     return eligibleDomainCards(context, newLevel);
   }, [sheet, newLevel, levelValid, multiclassPick, multiclassDomainPick]);
+  // Core Rulebook p. 112: optionally trade out one owned domain card for a different card of an
+  // equal level or lower.
+  const [tradeOutId, setTradeOutId] = useState<string | null>(null);
+  const [tradeInId, setTradeInId] = useState<string | null>(null);
+  // Core Rulebook p. 112: every level-up ends with one new domain card taken for free,
+  // separate from the optional "additional domain card" advancement.
+  const levelCardOptions = useMemo(
+    () => domainOptions.filter((card) => card.id !== domainPick && card.id !== tradeInId),
+    [domainOptions, domainPick, tradeInId],
+  );
+  const tradeOutCard = tradeOutId ? getDomainCard(tradeOutId) : undefined;
+  const tradeInOptions = useMemo(() => {
+    if (!tradeOutCard) return [];
+    const domains = accessibleDomains(sheet);
+    const chosen = multiclassDomain(sheet);
+    const multiclassCap = Math.ceil(newLevel / 2);
+    return domainCards.filter((card) => (
+      domains.includes(card.domain) &&
+      !sheet.domainCardIds.includes(card.id) &&
+      card.id !== levelCardPick &&
+      card.id !== domainPick &&
+      card.level <= tradeOutCard.level &&
+      (!chosen || card.domain !== chosen || card.level <= multiclassCap)
+    ));
+  }, [sheet, newLevel, tradeOutCard, levelCardPick, domainPick]);
   const multiclassClass = classes.find((entry) => entry.id === multiclassPick);
   const multiclassSubclass = multiclassClass?.subclasses.find((entry) => entry.id === multiclassSubclassPick);
   const primaryDomains = getClass(sheet.classId)?.domains ?? [];
@@ -115,11 +148,14 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
   void primarySpellcast;
 
   const hasDoubleSlot = chosen.some((id) => isDoubleSlotAdvancement(id));
+  const slotsUsed = chosen.reduce((total, id) => total + (isDoubleSlotAdvancement(id) ? 2 : 1), 0);
+  const countChosen = (id: AdvanceId) => chosen.filter((entry) => entry === id).length;
 
-  const takenThisTier = (id: AdvanceId): boolean =>
-    (sheet.advancementHistory ?? []).some(
+  // Uses already spent this tier, from previous level-ups in the same tier.
+  const takenThisTier = (id: AdvanceId): number =>
+    (sheet.advancementHistory ?? []).filter(
       (entry) => entry.advancement === id && entry.level >= tierMin && entry.level <= tierMax,
-    );
+    ).length;
 
   const optionUnavailable = (def: AdvanceDef): boolean => {
     if (newTier < def.minTier) return true;
@@ -127,23 +163,26 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
     if (def.id === 'experiences' && sheet.experiences.length < 2) return true;
     if (def.id === 'subclass' && !canGainMastery(sheet, chosen)) return true;
     if (def.id === 'multiclass' && sheet.multiclassId !== null) return true;
-    // Each advancement may be taken at most once per tier (Core level-up sheet).
-    if (takenThisTier(def.id)) return true;
+    // Core Rulebook p. 111: an option can be taken again while it has unmarked slots.
+    if (takenThisTier(def.id) >= advancementSlots(def.id)) return true;
     return false;
   };
 
   function toggleAdvance(id: AdvanceId) {
-    if (chosen.includes(id)) {
-      setChosen((current) => current.filter((entry) => entry !== id));
-      return;
-    }
     if (isDoubleSlotAdvancement(id)) {
       // Core Rulebook: multiclass and Proficiency require both level-up slots.
-      setChosen([id]);
+      setChosen((current) => (current.includes(id) ? [] : [id]));
       return;
     }
     if (hasDoubleSlot) return;
-    if (chosen.length >= 2) return;
+    if (countChosen(id) > 0) {
+      // Click a selected option to take one use back off.
+      const index = chosen.lastIndexOf(id);
+      setChosen((current) => [...current.slice(0, index), ...current.slice(index + 1)]);
+      return;
+    }
+    if (slotsUsed >= 2) return;
+    if (takenThisTier(id) >= advancementSlots(id)) return;
     setChosen((current) => [...current, id]);
   }
 
@@ -169,10 +208,12 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
     (!chosen.includes('traits') || traitPicks.length === 2) &&
     (!chosen.includes('experiences') || experiencePicks.length === 2) &&
     (!chosen.includes('domain-card') || domainPick !== null) &&
+    levelCardPick !== null &&
     (!chosen.includes('multiclass') ||
       (multiclassPick !== null &&
         multiclassDomainPick !== null &&
         multiclassSubclassPick !== null)) &&
+    (!tradeOutId || tradeInId !== null) &&
     (!enteringTier || newExperience.trim().length > 0);
 
   function confirm() {
@@ -196,6 +237,13 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
     }
     if (newLevel === 5 || newLevel === 8) {
       next = { ...next, traitMarks: [] };
+    }
+    if (levelCardPick) {
+      next = {
+        ...next,
+        domainCardIds: [...next.domainCardIds, levelCardPick],
+        loadoutIds: next.loadoutIds.length < maxLoadout(next) ? [...next.loadoutIds, levelCardPick] : next.loadoutIds,
+      };
     }
     for (const advance of chosen) {
       switch (advance) {
@@ -224,7 +272,7 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
             next = {
               ...next,
               domainCardIds: [...next.domainCardIds, domainPick],
-              loadoutIds: next.loadoutIds.length < 5 ? [...next.loadoutIds, domainPick] : next.loadoutIds,
+              loadoutIds: next.loadoutIds.length < maxLoadout(next) ? [...next.loadoutIds, domainPick] : next.loadoutIds,
             };
           }
           break;
@@ -250,6 +298,13 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
           break;
       }
     }
+    if (tradeOutId && tradeInId) {
+      next = {
+        ...next,
+        domainCardIds: next.domainCardIds.map((id) => (id === tradeOutId ? tradeInId : id)),
+        loadoutIds: next.loadoutIds.map((id) => (id === tradeOutId ? tradeInId : id)),
+      };
+    }
     onChange(next);
     onClose();
   }
@@ -266,7 +321,7 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
     );
   }
 
-  const slotLabel = hasDoubleSlot ? 'Uses both level-up slots' : `${chosen.length}/2 advancements chosen`;
+  const slotLabel = hasDoubleSlot ? 'Uses both level-up slots' : `${slotsUsed}/2 slots used`;
 
   return (
     <Overlay>
@@ -275,7 +330,7 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
           <div>
             <h2 className="text-lg font-semibold text-slate-100">Level up to {newLevel} <span className="text-sm font-normal text-slate-500">({tierLabel(newLevel)})</span></h2>
             <p className="mt-1 text-sm text-slate-400">
-              Choose <strong className="text-slate-200">2 advancements</strong>. Multiclass and Proficiency each use both level-up slots on their own. Level and thresholds update automatically.
+              Choose <strong className="text-slate-200">2 advancements</strong> (Hit Points and Stress can be taken twice). Multiclass and Proficiency each use both level-up slots on their own. Then take one new domain card for free. Level and thresholds update automatically.
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800">Close</button>
@@ -292,22 +347,29 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           {ADVANCEMENTS.map((advance) => {
             const unavailable = optionUnavailable(advance);
-            const selected = chosen.includes(advance.id);
+            const count = countChosen(advance.id);
+            const selected = count > 0;
             const doubleSlot = isDoubleSlotAdvancement(advance.id);
             const blockedByDouble = hasDoubleSlot && !selected && !doubleSlot;
-            const disabledReason = unavailable ? (takenThisTier(advance.id) ? 'Already taken this tier' : '') : blockedByDouble ? 'Requires both slots' : '';
+            const slots = advancementSlots(advance.id);
+            const disabledReason = unavailable
+              ? (takenThisTier(advance.id) >= slots ? 'All slots taken this tier' : '')
+              : blockedByDouble
+                ? 'Requires both slots'
+                : '';
             return (
               <button
                 key={advance.id}
                 type="button"
-                disabled={unavailable || (!selected && (doubleSlot ? (chosen.length >= 1 && !chosen.includes(advance.id) && hasDoubleSlot) : chosen.length >= 2))}
+                disabled={unavailable || (!selected && slotsUsed >= 2)}
                 onClick={() => toggleAdvance(advance.id)}
                 className={`rounded-lg border p-3 text-left transition ${selected ? 'border-accent-400 bg-accent-500/10' : 'border-slate-700 bg-slate-950 hover:border-slate-500'} disabled:cursor-not-allowed disabled:opacity-35`}
               >
                 <span className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-slate-100">
                   {advance.title}
                   {doubleSlot && <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-300">Both slots</span>}
-                  {selected && <span className="text-accent-400">✓</span>}
+                  {!doubleSlot && slots > 1 && <span className="rounded bg-slate-800 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-slate-300">{slots} per tier</span>}
+                  {selected && <span className="text-accent-400">✓{count > 1 ? `×${count}` : ''}</span>}
                 </span>
                 <span className="mt-1 block text-xs text-slate-400">{advance.detail}</span>
                 {newTier < advance.minTier && <span className="mt-1 block text-xs text-slate-500">Available from Tier {advance.minTier} (level 5+).</span>}
@@ -342,17 +404,103 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
           </Section>
         )}
 
+        <Section title={`New domain card (level ≤ ${newLevel}) — free every level`}>
+          <p className="mb-2 text-xs text-slate-500">
+            Core Rulebook p. 112: after advancements, take one new domain card at your level or lower from a domain you can access.
+            Cards from the multiclass domain are capped at level {Math.ceil(newLevel / 2)}.
+          </p>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-4 p-2">
+            {levelCardOptions.map((card) => {
+              const image = cardImage(card.id, 'domain');
+              const capped = multiclassPick && card.domain === multiclassDomainPick ? Math.ceil(newLevel / 2) : newLevel;
+              return (
+                <RuleCard
+                  key={card.id}
+                  src={image}
+                  title={card.name}
+                  selected={levelCardPick === card.id}
+                  onSelect={() => {
+                    setLevelCardPick(card.id);
+                    if (domainPick === card.id) setDomainPick(null);
+                  }}
+                >
+                  <CardText lines={[`${DOMAIN_LABELS[card.domain] ?? card.domain} · level ${card.level}/${capped} · ${card.type}`, card.text]} />
+                </RuleCard>
+              );
+            })}
+            {levelCardOptions.length === 0 && <p className="text-xs text-slate-500">No eligible cards. Pick a domain you can access.</p>}
+          </div>
+        </Section>
+
+        {sheet.domainCardIds.length > 0 && (
+          <Section title="Optional: trade out one domain card">
+            <p className="mb-2 text-xs text-slate-500">
+              You may trade one domain card you already have for a different domain card of an equal level or lower (Core Rulebook p. 112).
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {sheet.domainCardIds.map((id) => {
+                const card = getDomainCard(id);
+                if (!card) return null;
+                return (
+                  <Pill
+                    key={id}
+                    selected={tradeOutId === id}
+                    onClick={() => {
+                      if (tradeOutId === id) { setTradeOutId(null); setTradeInId(null); return; }
+                      setTradeOutId(id);
+                      setTradeInId(null);
+                    }}
+                  >
+                    {card.name} (level {card.level})
+                  </Pill>
+                );
+              })}
+            </div>
+            {tradeOutCard && (
+              <div className="mt-3">
+                <p className="mb-1.5 text-xs font-semibold text-slate-300">
+                  Replacement card (level ≤ {tradeOutCard.level})
+                </p>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-4 p-2">
+                  {tradeInOptions.map((card) => (
+                    <RuleCard
+                      key={card.id}
+                      src={cardImage(card.id, 'domain')}
+                      title={card.name}
+                      selected={tradeInId === card.id}
+                      onSelect={() => setTradeInId(card.id)}
+                    >
+                      <CardText lines={[`${DOMAIN_LABELS[card.domain] ?? card.domain} · level ${card.level}/${tradeOutCard.level} · ${card.type}`, card.text]} />
+                    </RuleCard>
+                  ))}
+                  {tradeInOptions.length === 0 && <p className="text-xs text-slate-500">No replacement cards are available in your accessible domains.</p>}
+                </div>
+                {tradeInId && <button type="button" className="mt-2 text-xs text-slate-400 underline" onClick={() => setTradeInId(null)}>Clear replacement</button>}
+              </div>
+            )}
+          </Section>
+        )}
+
         {chosen.includes('domain-card') && (
-          <Section title={`Choose 1 domain card (level ≤ ${newLevel})`}>
+          <Section title={`Choose 1 additional domain card (level ≤ ${newLevel})`}>
             <p className="mb-2 text-xs text-slate-500">
               Cards from the multiclass domain are capped at level {Math.ceil(newLevel / 2)}. All other cards use your level.
             </p>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-4 p-2">
-              {domainOptions.map((card) => {
+              {domainOptions.filter((card) => card.id !== tradeInId).map((card) => {
                 const image = cardImage(card.id, 'domain');
                 const capped = multiclassPick && card.domain === multiclassDomainPick ? Math.ceil(newLevel / 2) : newLevel;
                 return (
-                  <RuleCard key={card.id} src={image} title={card.name} selected={domainPick === card.id} onSelect={() => setDomainPick(card.id)}>
+                  <RuleCard
+                    key={card.id}
+                    src={image}
+                    title={card.name}
+                    selected={domainPick === card.id}
+                    onSelect={() => {
+                      setDomainPick(card.id);
+                      if (levelCardPick === card.id) setLevelCardPick(null);
+                    }}
+                  >
                     <CardText lines={[`${DOMAIN_LABELS[card.domain] ?? card.domain} · level ${card.level}/${capped} · ${card.type}`, card.text]} />
                   </RuleCard>
                 );

@@ -97,3 +97,16 @@
 .compendium-categories button > span { flex: 1; min-width: 0; }
 .compendium-entry-list button .compendium-entry-emblem { flex: none; width: 38px; height: 40px; border-radius: var(--radius-lg); }
 .compendium-entry-list button .compendium-entry-emblem .daggery-icon { width: 23px; height: 23px; color: inherit; }
+
+.compendium-loot-tables { display: grid; gap: 10px; padding: 0 15px 12px; max-height: 44%; overflow: auto; }
+.compendium-loot-tables details { border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--ds-surface) 70%, transparent); }
+.compendium-loot-tables summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 13px; cursor: pointer; list-style: none; }
+.compendium-loot-tables summary::-webkit-details-marker { display: none; }
+.compendium-loot-tables summary h3 { margin: 0; font-size: 14px; font-weight: 650; }
+.compendium-loot-tables summary span { color: var(--ds-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.compendium-loot-tables table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.compendium-loot-tables th, .compendium-loot-tables td { padding: 6px 13px; text-align: left; border-top: 1px solid color-mix(in srgb, var(--ds-border) 55%, transparent); }
+.compendium-loot-tables th { color: var(--ds-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.compendium-loot-tables td:first-child { width: 68px; font-variant-numeric: tabular-nums; color: var(--ds-muted); }
+.compendium-loot-tables td button { color: var(--ds-brand); font: inherit; text-align: left; }
+.compendium-loot-tables td button:hover { text-decoration: underline; }

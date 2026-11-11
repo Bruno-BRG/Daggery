@@ -5,18 +5,23 @@ import { useDiceTray } from '../../dice3d';
 import {
   DOMAIN_LABELS,
   MAX_HOPE,
-  MAX_LOADOUT,
+  MAX_SHORT_RESTS,
+  REST_MOVES,
+  advanceProject,
+  beginRest,
+  canTakeShortRest,
+  gainHope,
+  makeId,
+  maxLoadout,
+  shortRestRecovery,
+  shortRestsTaken,
   SEVERITY_LABELS,
   TRAIT_LABELS,
   TRAIT_ORDER,
   ancestryFeatures,
   armorScore,
   classArt,
-  clearArmor,
-  clearHp,
-  clearStress,
   damageHp,
-  damageNotation,
   damageSeverity,
   damageThresholds,
   evasion,
@@ -37,15 +42,17 @@ import {
   stressMax,
   tierForLevel,
   tierLabel,
+  weaponDamageNotation,
   weaponForSlot,
   weaponModifier,
+  traitValue,
   applyDualityEffects,
   type ArmorStats,
   type WeaponStats,
 } from './rules';
 import { ancestries } from '@daggery/content';
 import { sendRoll } from '../../sync/rollSocket';
-import { addFear, useSyncStatus } from '../../sync/store';
+import { addFear, useDocs, useSyncStatus } from '../../sync/store';
 import LevelUpDialog from './LevelUpDialog';
 import type { InventoryKind, Sheet } from './types';
 import './sheet.css';
@@ -82,6 +89,16 @@ const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'equipment', label: 'Equipment' },
   { id: 'details', label: 'Story' },
 ];
+
+/** The activation cost a domain card prints at the start of its text, if any. */
+function leadingCardCost(text: string): { track: 'hope' | 'stress'; amount: number } | null {
+  const match = /^(?:Spend|Mark)\s+(a|an|\d+)\s+(Hope|Stress)\b/i.exec(text.trim());
+  if (!match) return null;
+  return {
+    track: match[2]!.toLowerCase() === 'hope' ? 'hope' : 'stress',
+    amount: /^a[n]?$/i.test(match[1]!) ? 1 : Number(match[1]),
+  };
+}
 
 export default function SheetView({ sheet, author, onBack, onChange, onDelete, onPlay, backLabel = 'All characters' }: SheetViewProps) {
   const { roll } = useDiceTray();
@@ -121,6 +138,9 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   const [vaultDomain, setVaultDomain] = useState<string>('all');
   const [recovery, setRecovery] = useState<'damage' | 'rest' | null>(null);
   const [recoveryResult, setRecoveryResult] = useState('');
+  const [restSession, setRestSession] = useState<{ kind: 'short' | 'long'; moves: number } | null>(null);
+  const [projectName, setProjectName] = useState('');
+  const [projectSize, setProjectSize] = useState('4');
   const [actionsOpen, setActionsOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [imagesOpen, setImagesOpen] = useState(false);
@@ -128,6 +148,8 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   const [focused, setFocused] = useState(false);
   const [equipmentSlot, setEquipmentSlot] = useState<EquipmentSlot|null>(null);
   const connection = useSyncStatus();
+  const { items: partySheets } = useDocs<Sheet>('sheets');
+  const partySize = Math.max(1, Object.keys(partySheets).length);
   const connectionRef = useRef(connection);
   connectionRef.current = connection;
   useEffect(() => {
@@ -175,8 +197,15 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   const selectedExperience = sheet.experiences.find((entry) => entry.id === experienceId);
   const experienceModifier = selectedExperience?.modifier ?? 0;
   const armorSlotAvailable = currentArmorScore > sheet.armorSlotsMarked;
+  const reactionFeature = [equippedArmor?.feature, primary?.feature, secondary?.feature]
+    .find((feature) => feature?.name === 'Deflecting' || feature?.name === 'Timeslowing');
 
-  function openRecovery(kind: 'damage' | 'rest') { setRecoveryResult(''); setRecovery(kind); }
+  function openRecovery(kind: 'damage' | 'rest') {
+    setRecoveryResult('');
+    setRestSession(null);
+    if (kind === 'rest') { setProjectName(''); setProjectSize('4'); }
+    setRecovery(kind);
+  }
 
   function pushMessage(...lines: string[]) {
     if (recovery) setRecoveryResult(lines[0] ?? '');
@@ -250,19 +279,60 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   }
 
   function rollTrait(trait: TraitName) {
-    const modifier = sheetRef.current.traits[trait] + experienceModifier;
+    const modifier = traitValue(sheetRef.current, trait) + experienceModifier;
     rollDuality(modifier, `${TRAIT_LABELS[trait]} roll`, { spendExperience: selectedExperience !== undefined });
   }
 
   function attack(weapon: WeaponStats) {
     const modifier = weaponModifier(sheetRef.current, weapon) + experienceModifier;
-    const notation = damageNotation(weapon.damage, sheetRef.current.proficiency);
+    const notation = weaponDamageNotation(sheetRef.current, weapon);
     rollDuality(modifier, `Attack · ${weapon.name}`, { damage: notation, spendExperience: selectedExperience !== undefined });
   }
 
+  /**
+   * Reserves one of a rest's two downtime moves (Core Rulebook p. 106). The same move may be
+   * chosen twice; the first move begins the rest, which counts a short rest against the daily
+   * limit of three or clears that limit on a long rest.
+   */
+  function beginRestMove(kind: 'short' | 'long'): boolean {
+    const session = restSession;
+    if (session && session.kind !== kind) {
+      pushMessage(`Finish your ${session.kind} rest before taking a ${kind} rest.`);
+      return false;
+    }
+    if (session && session.moves >= REST_MOVES) {
+      pushMessage(`This ${kind} rest has already used its ${REST_MOVES} downtime moves.`);
+      return false;
+    }
+    if (kind === 'short' && !session && !canTakeShortRest(sheetRef.current)) {
+      pushMessage(`${MAX_SHORT_RESTS} short rests already taken — take a long rest before another short rest.`);
+      return false;
+    }
+    setRestSession({ kind, moves: (session?.moves ?? 0) + 1 });
+    if (!session) {
+      mutate((current) => beginRest(current, kind));
+      const long = kind === 'long';
+      void roll(
+        { kind: 'dice', notation: '1d4' },
+        {
+          author,
+          onComputed: (payload) => {
+            if (payload.kind !== 'dice') return;
+            const fear = long ? payload.result.total + partySize : payload.result.total;
+            addFear(fear);
+            pushMessage(long ? `GM gains ${fear} Fear (1d4 + ${partySize} PCs, long rest).` : `GM gains ${fear} Fear (short rest).`);
+          },
+        },
+      ).catch(failedRoll);
+    }
+    return true;
+  }
+
   function shortRest(kind: 'hp' | 'stress' | 'armor') {
+    const moveNumber = (restSession?.kind === 'short' ? restSession.moves : 0) + 1;
+    if (!beginRestMove('short')) return;
     const notation = `1d4+${tier}`;
-    const labels = { hp: 'HP', stress: 'Stress', armor: 'armor slots' } as const;
+    const labels = { hp: 'HP', stress: 'Stress', armor: 'Armor Slots' } as const;
     void roll(
       { kind: 'dice', notation },
       {
@@ -271,18 +341,100 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
           forward(payload);
           if (payload.kind !== 'dice') return;
           const amount = payload.result.total;
-          if (kind === 'hp') mutate((current) => clearHp(current, amount));
-          if (kind === 'stress') mutate((current) => clearStress(current, amount));
-          if (kind === 'armor') mutate((current) => clearArmor(current, amount));
-          pushMessage(`Short rest — clears ${amount} ${labels[kind]} (1d4 + tier). GM gains 1d4 Fear.`);
+          mutate((current) => shortRestRecovery(current, kind, amount));
+          pushMessage(`Short rest move ${moveNumber}/${REST_MOVES} — clears ${amount} ${labels[kind]} (${notation}).`);
         },
       },
     ).catch(failedRoll);
   }
 
+  function longRestClear(kind: 'hp' | 'stress' | 'armor') {
+    const moveNumber = (restSession?.kind === 'long' ? restSession.moves : 0) + 1;
+    if (!beginRestMove('long')) return;
+    const messages = {
+      hp: 'Tend to All Wounds — all Hit Points cleared.',
+      stress: 'Clear All Stress — all Stress cleared.',
+      armor: 'Repair All Armor — all Armor Slots repaired.',
+    } as const;
+    mutate((current) => (
+      kind === 'hp' ? { ...current, hpMarked: 0 }
+        : kind === 'stress' ? { ...current, stressMarked: 0 }
+          : { ...current, armorSlotsMarked: 0 }
+    ));
+    pushMessage(`Long rest move ${moveNumber}/${REST_MOVES} — ${messages[kind]}`);
+  }
+
   function prepareRest(multiplier: number, rest: 'short' | 'long') {
-    mutate((current) => ({ ...current, hope: Math.min(MAX_HOPE, current.hope + multiplier) }));
-    pushMessage(`${rest === 'short' ? 'Short rest' : 'Long rest'} — Prepare: +${multiplier} Hope.`);
+    const moveNumber = (restSession?.kind === rest ? restSession.moves : 0) + 1;
+    if (!beginRestMove(rest)) return;
+    mutate((current) => gainHope(current, multiplier));
+    pushMessage(`${rest === 'short' ? 'Short' : 'Long'} rest move ${moveNumber}/${REST_MOVES} — Prepare: +${multiplier} Hope.`);
+  }
+
+  function addProject() {
+    const name = projectName.trim();
+    const size = Number.parseInt(projectSize, 10);
+    if (!name) { pushMessage('Name the project before adding it.'); return; }
+    if (!Number.isFinite(size) || size < 1) { pushMessage('A project countdown needs at least 1 tick.'); return; }
+    mutate((current) => ({
+      ...current,
+      projects: [...(current.projects ?? []), { id: makeId('project'), name, start: size, value: size }],
+    }));
+    setProjectName('');
+    pushMessage(`Project “${name}” added with a progress countdown of ${size}.`);
+  }
+
+  function workProject(projectId: string) {
+    const moveNumber = (restSession?.kind === 'long' ? restSession.moves : 0) + 1;
+    if (!beginRestMove('long')) return;
+    const result = advanceProject(sheetRef.current, projectId, 1);
+    mutate(() => result.sheet);
+    const remaining = result.completed ? 0 : result.sheet.projects?.find((project) => project.id === projectId)?.value ?? 0;
+    pushMessage(result.completed
+      ? `Long rest move ${moveNumber}/${REST_MOVES} — Work on a Project: “${result.name}” completed!`
+      : `Long rest move ${moveNumber}/${REST_MOVES} — Work on a Project: “${result.name}” advances (${remaining} ticks left).`);
+  }
+
+  /** Pays the leading "Spend N Hope" / "Mark N Stress" cost printed on an activated card. */
+  function payCardCost(name: string, cost: { track: 'hope' | 'stress'; amount: number }) {
+    if (cost.track === 'hope') {
+      if (sheetRef.current.hope < cost.amount) {
+        pushMessage(`Not enough Hope to activate ${name} (needs ${cost.amount}).`);
+        return;
+      }
+      mutate((current) => ({ ...current, hope: Math.max(0, current.hope - cost.amount) }));
+      pushMessage(`${name} — spent ${cost.amount} Hope.`);
+      return;
+    }
+    const before = sheetRef.current;
+    const next = markStress(before, cost.amount);
+    mutate(() => next);
+    const overflow = next.hpMarked > before.hpMarked;
+    pushMessage(`${name} — marked ${cost.amount} Stress${overflow ? ' (full track: 1 HP marked)' : ''}.`);
+  }
+
+  /** Deflecting and Timeslowing armor/weapon reactions (spend an Armor Slot when attacked). */
+  function useReaction() {
+    if (!reactionFeature) return;
+    if (!armorSlotAvailable) { pushMessage('No Armor Slots left to mark for this reaction.'); return; }
+    const availableScore = Math.max(0, currentArmorScore - sheetRef.current.armorSlotsMarked);
+    mutate((current) => ({ ...current, armorSlotsMarked: Math.min(armorScore(current), current.armorSlotsMarked + 1) }));
+    if (reactionFeature.name === 'Timeslowing') {
+      void roll(
+        { kind: 'dice', notation: '1d4' },
+        {
+          author,
+          onComputed: (payload) => {
+            forward(payload);
+            if (payload.kind !== 'dice') return;
+            pushMessage(`Timeslowing — 1 Armor Slot marked: +${payload.result.total} Evasion against the attack (${currentEvasion} → ${currentEvasion + payload.result.total}).`);
+          },
+        },
+      ).catch(failedRoll);
+      return;
+    }
+    const bonus = /available armor score/i.test(reactionFeature.text) ? Math.max(0, availableScore - 1) : currentArmorScore;
+    pushMessage(`Deflecting — 1 Armor Slot marked: +${bonus} Evasion against the attack (${currentEvasion} → ${currentEvasion + bonus}).`);
   }
 
   function applyDamage() {
@@ -308,7 +460,8 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   function recallCard(cardId: string) {
     const card = getDomainCard(cardId);
     if (!card) return;
-    if (sheetRef.current.loadoutIds.length >= MAX_LOADOUT) { pushMessage(`Loadout full (${MAX_LOADOUT}). Stash a card before recalling another.`); return; }
+    const cap = maxLoadout(sheetRef.current);
+    if (sheetRef.current.loadoutIds.length >= cap) { pushMessage(`Loadout full (${cap}). Stash a card before recalling another.`); return; }
     mutate((current) => {
       const withStress = markStress(current, card.recallCost);
       return { ...withStress, loadoutIds: [...withStress.loadoutIds, cardId] };
@@ -384,8 +537,8 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
       </section>
       <div className="folio-resources">
         <ResourceCard label="Hit Points" icon="heart" count={sheet.hpMarked} max={currentHpMax} tone="health" onChange={value => mutate(current => ({ ...current, hpMarked: value }))} />
-        <ResourceCard label="Stress" icon="stress" count={sheet.stressMarked} max={currentStressMax} tone="stress" onChange={value => mutate(current => ({ ...current, stressMarked: value }))} />
-        <ResourceCard label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" positive onChange={value => mutate(current => ({ ...current, hope: value }))} />
+        <ResourceCard label="Stress" icon="stress" count={sheet.stressMarked} max={currentStressMax} tone="stress" positive onChange={value => mutate(current => ({ ...current, stressMarked: value }))} />
+        <ResourceCard label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" positive onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
         <ResourceCard label="Armor" icon="armor" count={sheet.armorSlotsMarked} max={currentArmorScore} tone="armor" onChange={value => mutate(current => ({ ...current, armorSlotsMarked: value }))} />
       </div>
       <section className="folio-traits" aria-label="Action rolls"><div className="folio-traits-heading"><h2><Icon name="dice" />Make your move</h2><span>Choose a trait to roll Duality</span>{rolling && <span role="status">Rolling…</span>}</div>
@@ -393,7 +546,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
           {TRAIT_ORDER.map((trait) => (
             <button key={trait} type="button" disabled={rolling} onClick={() => rollTrait(trait)} className="sheet-trait" title={`Roll ${TRAIT_LABELS[trait]}`}>
               <span className="sheet-trait-label"><Icon name={({agility:'agility',strength:'strength',finesse:'hand',instinct:'eye',presence:'presence',knowledge:'knowledge'} as Record<TraitName,IconName>)[trait]} />{TRAIT_LABELS[trait]}</span>
-              <span className="sheet-trait-value">{sheet.traits[trait] >= 0 ? '+' : ''}{sheet.traits[trait]}</span>
+              <span className="sheet-trait-value">{traitValue(sheet, trait) >= 0 ? '+' : ''}{traitValue(sheet, trait)}</span>
               <span className="sheet-trait-actions">{TRAIT_ACTIONS[trait].join(' · ')}</span>
             </button>
           ))}
@@ -444,6 +597,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
             </div>
             {sheet.hpMarked >= currentHpMax && <p className="sheet-alert is-rose">Last HP marked — resolve a Death Move (Blaze of Glory, Avoid Death, or Risk It All).</p>}
             {sheet.stressMarked >= currentStressMax && <p className="sheet-alert is-violet">Last Stress marked — you are Vulnerable until you clear 1 Stress.</p>}
+            {reactionFeature && <div className="sheet-inline mt-2"><button type="button" className="sheet-ghost" disabled={!armorSlotAvailable} onClick={useReaction}><Icon name="shield" />{reactionFeature.name} reaction · mark 1 Armor Slot</button></div>}
           </section>
 
           <div className="folio-recovery-actions"><button type="button" onClick={() => openRecovery('damage')}><Icon name="shield" />Take damage<Icon name="arrow" /></button><button type="button" onClick={() => openRecovery('rest')}><Icon name="moon" />Take a rest<Icon name="arrow" /></button></div>
@@ -457,15 +611,15 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
               {Array.from({ length: 6 }, (_, index) => <span key={index} className={`sheet-prof-pip ${index < sheet.proficiency ? 'is-on' : ''}`} />)}
             </div>
             <div className="sheet-weapons">
-              {primary ? <WeaponCard weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={damageNotation(primary.damage, sheet.proficiency)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} onUnequip={()=>mutate(current=>equipEquipment(current,'primary',null))} /> : <EmptyEquipment slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
-              {secondary ? <WeaponCard weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={damageNotation(secondary.damage, sheet.proficiency)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} onUnequip={()=>mutate(current=>equipEquipment(current,'secondary',null))} /> : <EmptyEquipment slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
+              {primary ? <WeaponCard weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} onUnequip={()=>mutate(current=>equipEquipment(current,'primary',null))} /> : <EmptyEquipment slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
+              {secondary ? <WeaponCard weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} onUnequip={()=>mutate(current=>equipEquipment(current,'secondary',null))} /> : <EmptyEquipment slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
             </div>
             {spellcastOptions.length > 0 && (
               <div className="sheet-inline">
                 <span className="sheet-mini-label">Spellcast</span>
                 {spellcastOptions.map((trait) => (
                   <button key={trait} type="button" onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>
-                    {TRAIT_LABELS[trait]} (+{sheet.traits[trait]})
+                    {TRAIT_LABELS[trait]} ({traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)})
                   </button>
                 ))}
               </div>
@@ -486,7 +640,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
             </ul>
           </section>
 
-          <section className="sheet-panel folio-loadout"><PanelHead icon="spark" title="Active abilities" note={`${loadout.length} / ${MAX_LOADOUT} CARDS`} /><input className="sheet-input folio-ability-search" aria-label="Find an active ability" placeholder="Find an ability…" value={abilitySearch} onChange={event => setAbilitySearch(event.target.value)} /><div className="folio-ability-list">{loadout.filter(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())).map(card => <AbilityCard compact key={card.id} name={card.name} text={card.text} domain={card.domain} category={`${DOMAIN_LABELS[card.domain] ?? card.domain} · Level ${card.level} · ${card.type}`} />)}{loadout.length === 0 && <p className="sheet-empty">Recall a domain card from your vault to use it here.</p>}{loadout.length > 0 && !loadout.some(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())) && <p className="sheet-empty">No active abilities match.</p>}</div><button className="folio-text-link" type="button" onClick={() => setTab('features')}>Manage cards & vault<Icon name="arrow" /></button></section>
+          <section className="sheet-panel folio-loadout"><PanelHead icon="spark" title="Active abilities" note={`${loadout.length} / ${maxLoadout(sheet)} CARDS`} /><input className="sheet-input folio-ability-search" aria-label="Find an active ability" placeholder="Find an ability…" value={abilitySearch} onChange={event => setAbilitySearch(event.target.value)} /><div className="folio-ability-list">{loadout.filter(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())).map(card => { const cost = leadingCardCost(card.text); return <AbilityCard compact key={card.id} name={card.name} text={card.text} domain={card.domain} category={`${DOMAIN_LABELS[card.domain] ?? card.domain} · Level ${card.level} · ${card.type}`} footer={cost ? <button type="button" className="sheet-ghost" onClick={() => payCardCost(card.name, cost)}>{cost.track === 'hope' ? `Spend ${cost.amount} Hope` : `Mark ${cost.amount} Stress`}</button> : undefined} />; })}{loadout.length === 0 && <p className="sheet-empty">Recall a domain card from your vault to use it here.</p>}{loadout.length > 0 && !loadout.some(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())) && <p className="sheet-empty">No active abilities match.</p>}</div><button className="folio-text-link" type="button" onClick={() => setTab('features')}>Manage cards & vault<Icon name="arrow" /></button></section>
           <section className="sheet-panel">
             <PanelHead icon="dice" title="Recent rolls" note={`${messages.length} logged`} />
             <ol className="sheet-results">
@@ -501,7 +655,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
       {tab === 'features' && (
         <div className="sheet-features">
           <section className="sheet-panel sheet-effects-panel">
-            <PanelHead icon="spark" title="Domain abilities" note={`${loadout.length}/${MAX_LOADOUT} active`} />
+            <PanelHead icon="spark" title="Domain abilities" note={`${loadout.length}/${maxLoadout(sheet)} active`} />
             <div className="sheet-card-grid">
               {loadout.map((card) => <DomainCardView key={card.id} id={card.id} name={card.name} domain={card.domain} level={card.level} type={card.type} recallCost={card.recallCost} text={card.text} action={{ label: 'Stash in vault', onClick: () => stashCard(card.id) }} />)}
               {loadout.length === 0 && <p className="sheet-empty">No active effects. Open the vault to recall a card.</p>}
@@ -559,7 +713,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
                 {spellcastOptions.length > 1 && (
                   <div className="sheet-inline mt-2">
                     <span className="sheet-mini-label">Spellcast</span>
-                    {spellcastOptions.map((trait) => <button key={trait} type="button" onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>{TRAIT_LABELS[trait]} (+{sheet.traits[trait]})</button>)}
+                    {spellcastOptions.map((trait) => <button key={trait} type="button" onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>{TRAIT_LABELS[trait]} ({traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)})</button>)}
                   </div>
                 )}
                 {multiclassSubclass && <div className="mt-3"><p className="sheet-mini-label">{multiclassSubclass.name} · Foundation</p><FeatureList features={multiclassSubclass.foundation} label="Foundation feature" /><details className="sheet-context"><summary>About the subclass</summary><p>{multiclassSubclass.description}</p></details></div>}
@@ -577,8 +731,8 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
             <div className="sheet-equip">
               <div className="sheet-equip-col">
                 <p className="sheet-mini-label">Weapons</p>
-                {primary ? <WeaponCard weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={damageNotation(primary.damage, sheet.proficiency)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} onUnequip={()=>mutate(current=>equipEquipment(current,'primary',null))} /> : <EmptyEquipment slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
-                {secondary ? <WeaponCard weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={damageNotation(secondary.damage, sheet.proficiency)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} onUnequip={()=>mutate(current=>equipEquipment(current,'secondary',null))} /> : <EmptyEquipment slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
+                {primary ? <WeaponCard weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} onUnequip={()=>mutate(current=>equipEquipment(current,'primary',null))} /> : <EmptyEquipment slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
+                {secondary ? <WeaponCard weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} onUnequip={()=>mutate(current=>equipEquipment(current,'secondary',null))} /> : <EmptyEquipment slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
                 <p className="sheet-mini-label mt-3">Armor</p>
                 <ArmorCard armor={equippedArmor} score={currentArmorScore} thresholds={thresholds} onChange={()=>setEquipmentSlot('armor')} onUnequip={()=>mutate(current=>equipEquipment(current,'armor',null))} />
               </div>
@@ -644,8 +798,18 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
             </div>) : (
 <div className="sheet-stack">
               <label className="sheet-check"><input type="checkbox" checked={withAllies} onChange={(event) => setWithAllies(event.target.checked)} /> Prepared with allies (+2 Hope instead of +1)</label>
-              <div><p className="sheet-mini-label">Short</p><div className="sheet-rest-grid"><RestButton onClick={() => shortRest('hp')}>Tend Wounds</RestButton><RestButton onClick={() => shortRest('stress')}>Clear Stress</RestButton><RestButton onClick={() => shortRest('armor')}>Repair Armor</RestButton><RestButton onClick={() => prepareRest(withAllies ? 2 : 1, 'short')}>Prepare</RestButton></div><p className="sheet-note mt-1">GM gains 1d4 Fear.</p></div>
-              <div><p className="sheet-mini-label">Long</p><div className="sheet-rest-grid"><RestButton onClick={() => { mutate((current) => ({ ...current, hpMarked: 0 })); pushMessage('Long rest — all Hit Points cleared.'); }}>Heal all HP</RestButton><RestButton onClick={() => { mutate((current) => ({ ...current, stressMarked: 0 })); pushMessage('Long rest — all Stress cleared.'); }}>Clear all Stress</RestButton><RestButton onClick={() => { mutate((current) => ({ ...current, armorSlotsMarked: 0 })); pushMessage('Long rest — all armor slots repaired.'); }}>Repair Armor</RestButton><RestButton onClick={() => prepareRest(withAllies ? 2 : 1, 'long')}>Prepare</RestButton></div><p className="sheet-note mt-1">GM gains 1d4 + number of PCs Fear.</p></div>
+              <p className="sheet-note">{shortRestsTaken(sheet)} of {MAX_SHORT_RESTS} short rests used since the last long rest. Swap loadout and vault cards freely, and refresh any feature that recharges on a rest.</p>
+              {restSession
+                ? <p className="sheet-alert">{restSession.kind === 'short' ? 'Short' : 'Long'} rest · {restSession.moves}/{REST_MOVES} downtime moves used. <button type="button" className="folio-text-link" onClick={() => setRestSession(null)}>Start another rest</button></p>
+                : <p className="sheet-note">Each rest grants two downtime moves; the same move may be chosen twice.</p>}
+              <div><p className="sheet-mini-label">Short rest</p><div className="sheet-rest-grid"><RestButton onClick={() => shortRest('hp')}>Tend Wounds</RestButton><RestButton onClick={() => shortRest('stress')}>Clear Stress</RestButton><RestButton onClick={() => shortRest('armor')}>Repair Armor</RestButton><RestButton onClick={() => prepareRest(withAllies ? 2 : 1, 'short')}>Prepare</RestButton></div><p className="sheet-note mt-1">1d4 + tier HP, Stress, or Armor Slots. Maximum {MAX_SHORT_RESTS} short rests before a long rest. GM gains 1d4 Fear.</p></div>
+              <div><p className="sheet-mini-label">Long rest</p><div className="sheet-rest-grid"><RestButton onClick={() => longRestClear('hp')}>Tend to All Wounds</RestButton><RestButton onClick={() => longRestClear('stress')}>Clear All Stress</RestButton><RestButton onClick={() => longRestClear('armor')}>Repair All Armor</RestButton><RestButton onClick={() => prepareRest(withAllies ? 2 : 1, 'long')}>Prepare</RestButton></div><p className="sheet-note mt-1">Resets the short-rest limit. GM gains 1d4 + {partySize} Fear.</p>
+                <div className="mt-3"><p className="sheet-mini-label">Work on a Project</p>
+                  {(sheet.projects ?? []).length === 0 && <p className="sheet-note">No projects yet. A simple project ticks down once per Work on a Project move.</p>}
+                  {(sheet.projects ?? []).map((project) => <div key={project.id} className="sheet-inline"><span>“{project.name}” · {project.value}/{project.start} ticks</span><button type="button" className="sheet-ghost" onClick={() => workProject(project.id)}>Work on it</button></div>)}
+                  <div className="sheet-inline mt-2"><input className="sheet-input" aria-label="Project name" placeholder="New project…" value={projectName} onChange={(event) => setProjectName(event.target.value)} /><input className="sheet-input" aria-label="Project countdown" type="number" min={1} value={projectSize} onChange={(event) => setProjectSize(event.target.value)} /><button type="button" className="sheet-ghost" onClick={addProject}>Add project</button></div>
+                </div>
+              </div>
             </div>)}{recoveryResult && <p className="folio-recovery-result" role="status">{recoveryResult}</p>}</div></Dialog>
       <ExportPdfDialog sheet={sheet} open={exportOpen} onClose={() => setExportOpen(false)} />
       <CharacterImagesDialog sheet={sheet} open={imagesOpen} onClose={() => setImagesOpen(false)} connected={connection === 'open'} onChange={patch => {

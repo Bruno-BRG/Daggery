@@ -295,6 +295,12 @@ export function heritageBonuses(sheet: Sheet): HeritageBonuses {
       bonuses.thresholdsBonus += 1;
       bonuses.notes.push('Earthkin — Stoneskin: +1 Armor Score and +1 thresholds');
     }
+    if (feature.ancestryId === 'galapa' && name === 'shell') {
+      // "Shell: Gain a bonus to your damage thresholds equal to your Proficiency."
+      const proficiency = Math.max(0, sheet.proficiency || 0);
+      bonuses.thresholdsBonus += proficiency;
+      bonuses.notes.push(`Galapa — Shell: +${proficiency} to damage thresholds`);
+    }
   }
   return bonuses;
 }
@@ -345,7 +351,7 @@ export function spellcastTraitName(sheet: Sheet): TraitName | null {
 
 export function spellcastTraitValue(sheet: Sheet): number {
   const trait = spellcastTraitName(sheet);
-  return trait ? sheet.traits[trait] : 0;
+  return trait ? traitValue(sheet, trait) : 0;
 }
 
 /** Advancements that consume both level-up slots (Core Rulebook black box). */
@@ -354,6 +360,26 @@ export type DoubleSlotAdvancement = (typeof DOUBLE_SLOT_ADVANCEMENTS)[number];
 export function isDoubleSlotAdvancement(id: string): boolean {
   return (DOUBLE_SLOT_ADVANCEMENTS as readonly string[]).includes(id);
 }
+/**
+ * Uses each advancement option has per tier (Core Rulebook p. 111: "Some options
+ * have multiple slots, meaning they can be chosen more than once"), as printed on
+ * the character guides: two Hit Point boxes and two Stress boxes, three trait boxes.
+ */
+export const ADVANCEMENT_SLOTS_PER_TIER: Record<string, number> = {
+  traits: 3,
+  hp: 2,
+  stress: 2,
+  experiences: 1,
+  'domain-card': 1,
+  evasion: 1,
+  subclass: 1,
+  proficiency: 1,
+  multiclass: 1,
+};
+export function advancementSlots(id: string): number {
+  return ADVANCEMENT_SLOTS_PER_TIER[id] ?? 1;
+}
+
 /** A double-slot advancement must be the only pick that level. */
 export function isValidPickCount(chosen: readonly string[]): boolean {
   if (chosen.length === 0) return false;
@@ -375,27 +401,104 @@ export function canGainMastery(sheet: Sheet, chosen: readonly string[] = []): bo
   return true;
 }
 
-/** Attack modifier for a weapon: its trait, or the subclass Spellcast trait for Spellcast weapons. */
+/**
+ * Attack modifier for a weapon: its trait, or the subclass Spellcast trait for Spellcast
+ * weapons (+1 with the armor feature "Channeling").
+ */
 export function weaponModifier(sheet: Sheet, weapon: WeaponStats): number {
-  if (weapon.trait === 'Spellcast') return spellcastTraitValue(sheet);
+  if (weapon.trait === 'Spellcast') {
+    const channeling = getArmor(sheet.armorId, sheet)?.feature?.name === 'Channeling' ? 1 : 0;
+    return spellcastTraitValue(sheet) + channeling;
+  }
   const trait = traitNameFromWeapon(weapon.trait);
-  return trait ? sheet.traits[trait] : 0;
+  return trait ? traitValue(sheet, trait) : 0;
 }
 
-/** Sums explicit "+1 to Evasion" / "−1 to Evasion" modifiers from armor and weapon features. */
+/**
+ * Sums explicit Evasion modifiers from armor and weapon features: "+1 Evasion"
+ * (Wall-Crawling), "−1 to Evasion" (Heavy), and "−1 to all character traits and
+ * Evasion" (Difficult). Conditional bonuses that require marking a slot are not static.
+ */
 function featureModifierToEvasion(text: string | undefined): number {
   if (!text) return 0;
-  const match = /([+−–-])\s*(\d+)\s+to\s+evasion/i.exec(text);
+  let total = 0;
+  for (const match of text.matchAll(/([+−–-])\s*(\d+)\s+(?:to\s+)?evasion\b/gi)) {
+    total += (match[1] === '+' ? 1 : -1) * Number(match[2]);
+  }
+  for (const match of text.matchAll(/([+−–-])\s*(\d+)\s+to\s+all\s+character\s+traits\s+and\s+evasion\b/gi)) {
+    total += (match[1] === '+' ? 1 : -1) * Number(match[2]);
+  }
+  return total;
+}
+
+/** Armor Score granted by a weapon feature, e.g. Protective "+1 to Armor Score". */
+function featureModifierToArmorScore(text: string | undefined): number {
+  if (!text) return 0;
+  const match = /([+−–-])\s*(\d+)\s+to\s+(?:your\s+)?armor\s+score/i.exec(text);
   if (!match) return 0;
   const sign = match[1] === '+' ? 1 : -1;
   return sign * Number(match[2]);
+}
+
+const TRAIT_PATTERN = /([+−–-])\s*(\d+)\s+to\s+(all\s+character\s+traits|agility|strength|finesse|instinct|presence|knowledge)\b/gi;
+
+/** Trait modifiers from worn armor and equipped weapons (Cumbersome, Difficult, Gilded, ...). */
+export function traitModifier(sheet: Sheet, trait: TraitName): number {
+  const texts = [
+    getArmor(sheet.armorId, sheet)?.feature?.text,
+    ...getEquippedWeapons(sheet).map((weapon) => weapon.feature?.text),
+  ];
+  let total = 0;
+  for (const text of texts) {
+    if (!text) continue;
+    for (const match of text.matchAll(TRAIT_PATTERN)) {
+      const target = match[3]!.toLowerCase();
+      if (target !== 'all character traits' && target !== trait) continue;
+      total += (match[1] === '+' ? 1 : -1) * Number(match[2]);
+    }
+  }
+  return total;
+}
+
+/** A trait's value as it applies while the current gear is worn. */
+export function traitValue(sheet: Sheet, trait: TraitName): number {
+  return sheet.traits[trait] + traitModifier(sheet, trait);
+}
+
+/** Equipment-aware loadout limit: Attuned lowers it by one. */
+export function maxLoadout(sheet: Sheet): number {
+  return getArmor(sheet.armorId, sheet)?.feature?.name === 'Attuned' ? MAX_LOADOUT - 1 : MAX_LOADOUT;
+}
+
+/**
+ * Explicit threshold modifiers in a weapon feature: "+2 to damage thresholds" (Padded),
+ * "+3 to Severe damage threshold" (Brave). Target-side effects like Piercing don't match.
+ */
+function featureModifierToThresholds(text: string | undefined): Thresholds {
+  const result: Thresholds = { major: 0, severe: 0 };
+  if (!text) return result;
+  const pattern = /([+−–-])\s*(\d+)\s+to\s+(?:your\s+)?(?:(major|severe)\s+)?damage\s+thresholds?/gi;
+  for (const match of text.matchAll(pattern)) {
+    const value = (match[1] === '+' ? 1 : -1) * Number(match[2]);
+    const which = match[3]?.toLowerCase();
+    if (which !== 'severe') result.major += value;
+    if (which !== 'major') result.severe += value;
+  }
+  return result;
 }
 
 export function armorScore(sheet: Sheet): number {
   const equipped = getArmor(sheet.armorId, sheet);
   if (!equipped) return 0;
   const heritage = heritageBonuses(sheet).armorScoreBonus;
-  return Math.min(MAX_ARMOR_SCORE, equipped.baseScore + heritage);
+  // "Magnificent: Gain a bonus to your Armor Score equal to your Presence."
+  const magnificent = equipped.feature?.name === 'Magnificent' ? sheet.traits.presence : 0;
+  const weaponBonus = getEquippedWeapons(sheet).reduce(
+    (sum, weapon) => sum + featureModifierToArmorScore(weapon.feature?.text),
+    0,
+  );
+  // Core Rulebook p. 115: Armor Score, with all bonuses included, can never exceed 12.
+  return Math.min(12, Math.max(0, equipped.baseScore + heritage + magnificent + weaponBonus));
 }
 
 export function evasion(sheet: Sheet): number {
@@ -415,32 +518,46 @@ export interface Thresholds {
   severe: number;
 }
 
-/** Armor base thresholds + level (+ Spellcast trait for the "Enchanted" feature + Earthkin Stoneskin). */
+/**
+ * Armor base thresholds + level, plus: Spellcast trait for "Enchanted", tier for
+ * "Attuned", heritage bonuses (Earthkin Stoneskin, Galapa Shell), and weapon features
+ * ("Padded", "Brave", Sharp).
+ */
 export function damageThresholds(sheet: Sheet): Thresholds {
   const equipped = getArmor(sheet.armorId, sheet);
   const enchantBonus = equipped?.feature?.name === 'Enchanted' ? spellcastTraitValue(sheet) : 0;
+  // "Attuned: ... a bonus to your damage thresholds equal to your tier."
+  const attunedBonus = equipped?.feature?.name === 'Attuned' ? tierForLevel(sheet.level) : 0;
   const heritage = heritageBonuses(sheet).thresholdsBonus;
+  const featureBonus = enchantBonus + attunedBonus;
+  const weaponBonus = getEquippedWeapons(sheet).reduce(
+    (sum, weapon) => {
+      const bonus = featureModifierToThresholds(weapon.feature?.text);
+      return { major: sum.major + bonus.major, severe: sum.severe + bonus.severe };
+    },
+    { major: 0, severe: 0 },
+  );
   if (!equipped) {
     return {
-      major: sheet.level + heritage + enchantBonus,
-      severe: sheet.level * 2 + heritage + enchantBonus,
+      major: sheet.level + heritage + featureBonus + weaponBonus.major,
+      severe: sheet.level * 2 + heritage + featureBonus + weaponBonus.severe,
     };
   }
   return {
-    major: equipped.baseThresholds.major + sheet.level + enchantBonus + heritage,
-    severe: equipped.baseThresholds.severe + sheet.level + enchantBonus + heritage,
+    major: equipped.baseThresholds.major + sheet.level + featureBonus + heritage + weaponBonus.major,
+    severe: equipped.baseThresholds.severe + sheet.level + featureBonus + heritage + weaponBonus.severe,
   };
 }
 
 export function hpMax(sheet: Sheet): number {
   const cls = getClass(sheet.classId);
   const heritage = heritageBonuses(sheet).hpSlots;
-  return Math.min(MAX_HP, (cls?.startingHP ?? 6) + sheet.bonusHpSlots + heritage);
+  return Math.max(1, (cls?.startingHP ?? 6) + sheet.bonusHpSlots + heritage);
 }
 
 export function stressMax(sheet: Sheet): number {
   const heritage = heritageBonuses(sheet).stressSlots;
-  return Math.min(MAX_STRESS, 6 + sheet.bonusStressSlots + heritage);
+  return Math.max(1, 6 + sheet.bonusStressSlots + heritage);
 }
 
 export function getEquippedWeapons(sheet: Sheet): WeaponStats[] {
@@ -460,6 +577,31 @@ export function damageNotation(weaponDamage: string, proficiency: number): strin
   const baseCount = Math.max(1, Number(match[1] || 1));
   const count = Math.max(1, proficiency) * baseCount;
   return `${count}d${match[2]}${match[3] ?? ''}`;
+}
+
+/** Adds a flat bonus to a damage notation, e.g. 2d8+3 with +1 -> 2d8+4. */
+export function addDamageBonus(notation: string, bonus: number): string {
+  if (bonus === 0) return notation;
+  const match = /^(\d*d\d+)([+-]\d+)?(.*)$/i.exec(notation.trim());
+  if (!match) return notation;
+  const flat = Number(match[2] ?? 0) + bonus;
+  return `${match[1]}${flat >= 0 ? '+' : ''}${flat}${match[3] ?? ''}`;
+}
+
+/**
+ * Double Duty (Spiked Shield): "+1 to primary weapon damage within Melee range". Applies while
+ * another equipped weapon carries the feature and the attacker's weapon is the primary one.
+ */
+export function doubleDutyBonus(sheet: Sheet, weapon: WeaponStats): number {
+  if (weapon.range !== 'Melee') return 0;
+  const primary = weaponForSlot(sheet, 'primary');
+  if (!primary || primary.id !== weapon.id) return 0;
+  return getEquippedWeapons(sheet).some((entry) => entry.feature?.name === 'Double Duty') ? 1 : 0;
+}
+
+/** Weapon damage with Proficiency, Double Duty, and any other static weapon bonuses applied. */
+export function weaponDamageNotation(sheet: Sheet, weapon: WeaponStats): string {
+  return addDamageBonus(damageNotation(weapon.damage, sheet.proficiency), doubleDutyBonus(sheet, weapon));
 }
 
 export type { DamageSeverity };
@@ -511,9 +653,8 @@ export function applyDualityEffects(
   let stressMarked = sheet.stressMarked;
 
   if (result.critical) {
-    const before = hope;
     hope = Math.min(MAX_HOPE, hope + 1);
-    notes.push(before < MAX_HOPE ? '+1 Hope (critical)' : 'Critical (Hope already at maximum)');
+    notes.push('+1 Hope (critical)');
     if (stressMarked > 0) {
       stressMarked -= 1;
       notes.push('Clears 1 Stress (critical)');
@@ -521,9 +662,8 @@ export function applyDualityEffects(
       notes.push('No Stress to clear (critical)');
     }
   } else if (result.withHope) {
-    const before = hope;
     hope = Math.min(MAX_HOPE, hope + 1);
-    notes.push(before < MAX_HOPE ? '+1 Hope' : 'With Hope (already at maximum)');
+    notes.push('+1 Hope');
   }
 
   if (result.withFear) {
@@ -533,19 +673,18 @@ export function applyDualityEffects(
   return { sheet: { ...sheet, hope, stressMarked }, notes };
 }
 
-/** Marks n Stress; overflow past the track marks HP instead (SRD). */
+/**
+ * Marks n Stress. Per the Core Rulebook (p. 92), if any Stress cannot be marked
+ * because the track is full, mark 1 Hit Point — no matter how much overflowed.
+ */
 export function markStress(sheet: Sheet, amount: number): Sheet {
   const max = stressMax(sheet);
-  let stressMarked = sheet.stressMarked + amount;
-  let overflowHp = 0;
-  if (stressMarked > max) {
-    overflowHp = stressMarked - max;
-    stressMarked = max;
-  }
+  const wanted = sheet.stressMarked + amount;
+  const overflow = wanted > max ? 1 : 0;
   return {
     ...sheet,
-    stressMarked,
-    hpMarked: Math.min(hpMax(sheet), sheet.hpMarked + overflowHp),
+    stressMarked: Math.min(max, wanted),
+    hpMarked: Math.min(hpMax(sheet), sheet.hpMarked + overflow),
   };
 }
 
@@ -559,6 +698,77 @@ export function clearHp(sheet: Sheet, amount: number): Sheet {
 
 export function clearArmor(sheet: Sheet, amount: number): Sheet {
   return { ...sheet, armorSlotsMarked: Math.max(0, sheet.armorSlotsMarked - amount) };
+}
+
+/** Core Rulebook p. 106: a party can take at most three short rests before a long rest. */
+export const MAX_SHORT_RESTS = 3;
+
+/** Downtime moves available in one short or long rest (the same move may be chosen twice). */
+export const REST_MOVES = 2;
+
+/** Hope can never exceed its maximum of 6 (Core Rulebook p. 91). */
+export function gainHope(sheet: Sheet, amount: number): Sheet {
+  return { ...sheet, hope: Math.min(MAX_HOPE, Math.max(0, sheet.hope + amount)) };
+}
+
+export function shortRestsTaken(sheet: Sheet): number {
+  return Math.max(0, sheet.shortRestsSinceLong ?? 0);
+}
+
+export function canTakeShortRest(sheet: Sheet): boolean {
+  return shortRestsTaken(sheet) < MAX_SHORT_RESTS;
+}
+
+/**
+ * Records that a rest began. A short rest adds to the day's count (never past the printed
+ * maximum); a long rest clears that count. Recovery happens through each rest's downtime
+ * moves, not automatically (Core Rulebook p. 106).
+ */
+export function beginRest(sheet: Sheet, kind: 'short' | 'long'): Sheet {
+  if (kind === 'long') return { ...sheet, shortRestsSinceLong: 0 };
+  return { ...sheet, shortRestsSinceLong: Math.min(MAX_SHORT_RESTS, shortRestsTaken(sheet) + 1) };
+}
+
+/** Applies one short-rest recovery move to a track. */
+export function shortRestRecovery(sheet: Sheet, kind: 'hp' | 'stress' | 'armor', amount: number): Sheet {
+  if (kind === 'hp') return clearHp(sheet, amount);
+  if (kind === 'stress') return clearStress(sheet, amount);
+  return clearArmor(sheet, amount);
+}
+
+export interface ProjectAdvance {
+  sheet: Sheet;
+  /** The project's name, when the id matched a tracked project. */
+  name?: string;
+  /** True when this tick completed the countdown; the project is then removed. */
+  completed: boolean;
+}
+
+/**
+ * Ticks a long-rest project's progress countdown down (Core Rulebook p. 181). A simple project
+ * advances one tick per Work on a Project move; skilled projects call for an action roll instead
+ * and can tick 1-4 (critical 4, Hope 3, Fear 2, failure 1).
+ */
+export function advanceProject(sheet: Sheet, projectId: string, ticks = 1): ProjectAdvance {
+  const projects = sheet.projects ?? [];
+  const project = projects.find((entry) => entry.id === projectId);
+  if (!project) return { sheet, completed: false };
+  const value = Math.max(0, project.value - Math.max(1, ticks));
+  if (value === 0) {
+    return {
+      sheet: { ...sheet, projects: projects.filter((entry) => entry.id !== projectId) },
+      name: project.name,
+      completed: true,
+    };
+  }
+  return {
+    sheet: {
+      ...sheet,
+      projects: projects.map((entry) => (entry.id === projectId ? { ...entry, value } : entry)),
+    },
+    name: project.name,
+    completed: false,
+  };
 }
 
 /** Card art lookup; returns undefined when the card has no extracted image. */

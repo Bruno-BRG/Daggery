@@ -1840,7 +1840,7 @@
     "experiences": [],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (5)",
         "kind": "Passive",
         "text": "The Treant is defeated when they take any damage. For every 5 damage a PC deals to the Treant, defeat an additional Minion within range the attack would succeed against."
       },
@@ -3741,7 +3741,7 @@
     "experiences": [],
     "features": [
       {
-        "name": "Horde (1d+3)",
+        "name": "Horde (1d6+3)",
         "kind": "Passive",
         "text": "When the Squadron has marked half or more of their HP, their standard attack deals 1d6+3 physical damage instead."
       },
@@ -3783,7 +3783,7 @@
     ],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (6)",
         "kind": "Passive",
         "text": "The Assassin is defeated when they take any damage. For every 6 damage a PC deals to the Assassin, defeat an additional Minion within range the attack would succeed against."
       },
@@ -4286,7 +4286,7 @@
     "experiences": [],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (6)",
         "kind": "Passive",
         "text": "The Conscript is defeated when they take any damage. For every 6 damage a PC deals to the Conscript, defeat an additional Minion within range the attack would succeed against."
       },
@@ -4446,7 +4446,7 @@
     "experiences": [],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (6)",
         "kind": "Passive",
         "text": "The Initiate is defeated when they take any damage. For every 6 damage a PC deals to the Initiate, defeat an additional Minion within range the attack would succeed against."
       },
@@ -5034,7 +5034,7 @@
     ],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (5)",
         "kind": "Passive",
         "text": "The Stonemason is defeated when they take any damage. For every 5 damage a PC deals to the Stonemason, the PC defeats an additional Minion within range their attack would succeed against."
       },
@@ -5128,7 +5128,7 @@
     ],
     "features": [
       {
-        "name": "Horde (1d+1)",
+        "name": "Horde (1d6+1)",
         "kind": "Passive",
         "text": "When the Flock has marked half or more of its HP, its standard attack deals 1d6+1 magic damage instead."
       },
@@ -5214,7 +5214,7 @@
     ],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (6)",
         "kind": "Passive",
         "text": "The Sporeling is defeated when it takes any damage. For every 6 damage a PC deals to the Sporeling, the PC defeats an additional Minion within range the attack would succeed against."
       },
@@ -5539,7 +5539,7 @@
     "experiences": [],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (7)",
         "kind": "Passive",
         "text": "The Recruit is defeated when they take any damage. For every 7 damage a PC deals to the Recruit, defeat an additional Minion within range the attack would succeed against."
       },
@@ -5833,7 +5833,7 @@
     "experiences": [],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (5)",
         "kind": "Passive",
         "text": "The Spirit Beast is defeated when it takes any damage. For every 5 damage a PC deals to the Spirit Beast, the PC defeats an additional Minion within range the attack would succeed against."
       },
@@ -6910,7 +6910,7 @@
     ],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (5)",
         "kind": "Passive",
         "text": "The Sprite is defeated when they take any damage. For every 5 damage a PC deals to the Sprite, the PC defeats an additional Minion within range the attack would succeed against."
       },
@@ -8252,7 +8252,7 @@
     "experiences": [],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (9)",
         "kind": "Passive",
         "text": "The Elemental is defeated when they take any damage. For every 9 damage a PC deals to the Elemental, defeat an additional Minion within range the attack would succeed against."
       },
@@ -8867,7 +8867,7 @@
     ],
     "features": [
       {
-        "name": "Horde (2d+2)",
+        "name": "Horde (2d6+2)",
         "kind": "Passive",
         "text": "When the Night Children have marked half or more of their HP, their standard attack deals 2d6+2 physical damage instead."
       },
@@ -9401,7 +9401,7 @@
     "experiences": [],
     "features": [
       {
-        "name": "Minion ()",
+        "name": "Minion (6)",
         "kind": "Passive",
         "text": "The Sapling is defeated when they take any damage. For every 6 damage a PC deals to the Sapling, defeat an additional Minion within range the attack would succeed against."
       },
@@ -9590,7 +9590,7 @@
     ],
     "features": [
       {
-        "name": "Horde (2d)",
+        "name": "Horde (2d6)",
         "kind": "Passive",
         "text": "When the Swarm has marked half or more of its HP, its standard attack deals 2d6 physical damage instead."
       },
@@ -10982,7 +10982,7 @@
     ],
     "features": [
       {
-        "name": "Horde (2d+)",
+        "name": "Horde (2d6+5)",
         "kind": "Passive",
         "text": "When the Legion has marked half or more of its HP, its standard attack deals 2d6+5 magic damage instead."
       },
@@ -11106,7 +11106,7 @@
     ],
     "features": [
       {
-        "name": "Horde (2d1)",
+        "name": "Horde (2d10)",
         "kind": "Passive",
         "text": "When the Choir has marked half or more of its HP, its standard attack deals 2d10 magic damage instead."
       },
@@ -12241,7 +12241,7 @@
     ],
     "features": [
       {
-        "name": "Horde (2d+)",
+        "name": "Horde (2d6+5)",
         "kind": "Passive",
         "text": "When the Wyrmlings have marked half or more of their HP, their standard attack deals 2d6+5 physical damage instead."
       },
@@ -12386,7 +12386,7 @@
     "experiences": [],
     "features": [
       {
-        "name": "Horde (2d+)",
+        "name": "Horde (2d6+5)",
         "kind": "Passive",
         "text": "When the Legion has marked half or more of their HP, their standard attack deals 2d6+5 physical damage instead."
       },

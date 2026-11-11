@@ -4,7 +4,7 @@ import { Icon } from '../../components/Icon';
 import { AbilityCard } from './AbilityCard';
 import { ItemGlyph } from './ItemGlyph';
 import { CUSTOM_ITEM_ICONS } from './inventoryIcons';
-import { MAX_ARMOR_SCORE, armorScore, damageNotation, damageThresholds, evasion, getArmor, getWeapon, weaponModifier, weaponForSlot } from './rules';
+import { armorScore, damageNotation, damageThresholds, evasion, getArmor, getWeapon, weaponModifier, weaponForSlot } from './rules';
 import { EQUIPMENT_LABELS, inventoryEquipmentId, inventoryEquipmentSlot, secondaryBlocked, type EquipmentSlot } from './equipment';
 import {
   CUSTOM_DAMAGE_DICE, CUSTOM_TIERS, CUSTOM_WEAPON_BURDENS, CUSTOM_WEAPON_CATEGORIES, CUSTOM_WEAPON_RANGES, CUSTOM_WEAPON_TRAITS,
@@ -73,7 +73,7 @@ export function EquipmentPicker({slot,sheet,initialKind='all',initialQuery='',on
   const damageValue=(()=>{try{return customWeaponDamage(Number(damageCount),damageDie,Number(damageBonus));}catch{return '';}})();
   const armorValid=(()=>{
     const major=Number(majorThreshold),severe=Number(severeThreshold),score=Number(baseScore);
-    return Number.isInteger(major)&&Number.isInteger(severe)&&Number.isInteger(score)&&major>=0&&severe>=major&&severe<=99&&score>=0&&score<=MAX_ARMOR_SCORE;
+    return Number.isInteger(major)&&Number.isInteger(severe)&&Number.isInteger(score)&&major>=0&&severe>=major&&severe<=99&&score>=0&&score<=99;
   })();
   const customValid=!!customName.trim()&&(customType==='item'||(customType==='weapon'&&!!damageValue)||(customType==='armor'&&armorValid));
   const customFeature=featureName.trim()?{name:featureName.trim(),text:featureText.trim()}:undefined;
@@ -129,7 +129,7 @@ export function EquipmentPicker({slot,sheet,initialKind='all',initialQuery='',on
               <label className="inventory-custom-field">Die<select aria-label="Damage die" value={damageDie} onChange={event=>setDamageDie(event.target.value)}>{CUSTOM_DAMAGE_DICE.map(value=><option key={value} value={value}>{value}</option>)}</select></label>
               <label className="inventory-custom-field">Bonus<input type="number" min={0} max={99} step={1} inputMode="numeric" aria-label="Damage bonus" value={damageBonus} onChange={event=>setDamageBonus(event.target.value)} /></label>
               <p className="inventory-custom-hint">Damage: <strong>{damageValue||'—'}</strong>. Use 0 dice for a flat modifier.</p></>}
-            {customType==='armor'&&<><label className="inventory-custom-field">Armor Score<input type="number" min={0} max={MAX_ARMOR_SCORE} step={1} inputMode="numeric" aria-label="Armor score" value={baseScore} onChange={event=>setBaseScore(event.target.value)} /></label>
+            {customType==='armor'&&<><label className="inventory-custom-field">Armor Score<input type="number" min={0} max={99} step={1} inputMode="numeric" aria-label="Armor score" value={baseScore} onChange={event=>setBaseScore(event.target.value)} /></label>
               <label className="inventory-custom-field">Major threshold<input type="number" min={0} max={99} step={1} inputMode="numeric" aria-label="Major damage threshold" value={majorThreshold} onChange={event=>setMajorThreshold(event.target.value)} /></label>
               <label className="inventory-custom-field">Severe threshold<input type="number" min={0} max={99} step={1} inputMode="numeric" aria-label="Severe damage threshold" value={severeThreshold} onChange={event=>setSevereThreshold(event.target.value)} /></label></>}
           </div>

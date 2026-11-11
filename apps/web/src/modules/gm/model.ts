@@ -2,21 +2,36 @@ import { consumables, items } from '@daggery/content';
 import { rollDie, type Rng } from '@daggery/shared';
 
 export type LootTable = 'items' | 'consumables';
+export type LootSet = 'core' | 'additional';
 export const RARITIES = { Common: [1, 2], Uncommon: [2, 3], Rare: [3, 4], Legendary: [4, 5] } as const;
-// The core catalog preserves the SRD table order. Consumables also carry explicit roll numbers.
-// Supplements add entries to the compendium/inventory, but the d12 loot tables stay core-only.
-export function lootEntries(table: LootTable) {
-  return table === 'items'
-    ? items.filter(item => item.source === 'core').map((item, index) => ({ ...item, roll: index + 1 }))
-    : consumables.filter(item => item.source === 'core').map(item => ({ ...item, roll: item.rollTable!.roll }));
+
+/**
+ * The printed d12 tables from both books. Core Set tables cover the Core Rulebook; the
+ * Additional tables carry the Hope & Fear material. Entries carry their printed roll.
+ */
+export function lootTableName(table: LootTable, set: LootSet = 'core'): string {
+  if (table === 'items') return set === 'core' ? 'Core Set Items' : 'Additional Items';
+  return set === 'core' ? 'Core Set Consumables' : 'Additional Consumables';
 }
-export function rollLoot(table: LootTable, count: number, rng?: Rng) {
+
+export function lootEntries(table: LootTable, set: LootSet = 'core') {
+  const name = lootTableName(table, set);
+  const catalog = (table === 'items' ? items : consumables) as readonly {
+    id: string; name: string; description: string; rollTable?: { name: string; roll: number } | null;
+  }[];
+  return catalog
+    .filter(item => item.rollTable?.name === name)
+    .map(item => ({ ...item, roll: item.rollTable!.roll }))
+    .sort((a, b) => a.roll - b.roll);
+}
+
+export function rollLoot(table: LootTable, count: number, rng?: Rng, set: LootSet = 'core') {
   if (!Number.isInteger(count) || count < 1 || count > 5) throw new Error('Choose 1 to 5 d12s.');
   const dice = Array.from({ length: count }, () => rollDie(12, rng));
   const total = dice.reduce((sum, die) => sum + die, 0);
-  const entry = lootEntries(table).find(item => item.roll === total);
+  const entry = lootEntries(table, set).find(item => item.roll === total);
   if (!entry) throw new Error('No loot entry for this result.');
-  return { table, dice, total, name: entry.name, description: entry.description, itemId: entry.id };
+  return { table, set, dice, total, name: entry.name, description: entry.description, itemId: entry.id };
 }
 export interface PrepDoc {
   kind: 'setting' | 'scenario';

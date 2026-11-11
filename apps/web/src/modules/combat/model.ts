@@ -31,7 +31,8 @@ export interface AdversarySource {
   thresholds: Thresholds | null;
   hp: number;
   stress: number | null;
-  attack: { modifier: number; name: string; range: string; damage: string; damageType: string };
+  /** Usually a number; the Outer Realms Abomination rolls 2d4 for its modifier. */
+  attack: { modifier: number | string; name: string; range: string; damage: string; damageType: string };
   experiences: { name: string; bonus: number }[];
   features: AdversaryFeature[];
 }
@@ -115,6 +116,20 @@ export function hpForDamage(damage: number, t: Thresholds): { marks: number; sev
   if (damage >= t.severe) return { marks: 3, severity: 'Severe' };
   if (damage >= t.major) return { marks: 2, severity: 'Major' };
   return { marks: 1, severity: 'Minor' };
+}
+
+/**
+ * Horde (X): once the Horde has marked half or more of its HP, its standard attack deals X
+ * damage instead (Core Rulebook p. 199). X may be dice ("1d4") or a flat number.
+ */
+export function hordeDamage(features: AdversaryFeature[], hpMarked: number, hp: number, base: string): string {
+  if (hp <= 0 || hpMarked * 2 < hp) return base;
+  for (const feature of features) {
+    const match = /^Horde \(([^)]+)\)/i.exec(feature.name);
+    const value = match?.[1]?.trim();
+    if (value) return value;
+  }
+  return base;
 }
 
 /** Minion (X): defeated on any damage, plus one extra per X damage. X comes from the feature name. */
@@ -381,7 +396,8 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export function signed(value: number): string {
+export function signed(value: number | string): string {
+  if (typeof value === 'string') return value.startsWith('-') ? value : `+${value}`;
   return value >= 0 ? `+${value}` : `${value}`;
 }
 

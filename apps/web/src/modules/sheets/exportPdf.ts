@@ -2,7 +2,7 @@ import { PDFDocument, PDFHexString, PDFName, TextAlignment, drawCheckMark, rgb, 
 import fontkit from '@pdf-lib/fontkit';
 import type { Sheet } from './types';
 import guideLayout from './pdfGuideLayout.json';
-import { TRAIT_ORDER, getClass, getSubclass, getCommunity, getArmor, getWeapon, heritageDisplayName, hpMax, stressMax, armorScore, evasion, damageThresholds, weaponForSlot, damageNotation } from './rules';
+import { TRAIT_ORDER, getClass, getSubclass, getCommunity, getArmor, getWeapon, heritageDisplayName, hpMax, stressMax, armorScore, evasion, damageThresholds, weaponForSlot, weaponDamageNotation } from './rules';
 
 export interface PdfOptions { blank: boolean; guide: boolean; references: boolean }
 export const DEFAULT_PDF_OPTIONS: PdfOptions = { blank: false, guide: true, references: true };
@@ -99,7 +99,7 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
   const weaponFields = (prefix: string, weapon: ReturnType<typeof weaponForSlot>, row: number) => {
     field(`${prefix}_name`, weapon?.name, 295, row, 115, 17);
     field(`${prefix}_trait`, weapon ? `${weapon.trait} / ${weapon.range}` : '', 416, row, 90, 17);
-    field(`${prefix}_damage`, weapon ? `${damageNotation(weapon.damage, sheet.proficiency)} ${weapon.damageType}` : '', 513, row, 78, 17);
+    field(`${prefix}_damage`, weapon ? `${weaponDamageNotation(sheet, weapon)} ${weapon.damageType}` : '', 513, row, 78, 17);
     field(`${prefix}_feature`, weapon?.feature ? `${weapon.feature.name}: ${weapon.feature.text}` : '', 298, row + 30, 292, 14);
   };
   weaponFields('weapon_primary', weaponForSlot(sheet, 'primary'), 193);

@@ -349,7 +349,7 @@ test('each consequential tool, each resolved roll and each resolved damage card 
       [/^Fear · GM spent 1 Fear \(1 left\)$/, 'shared'],
       [/^Countdown · Storm front started at 4$/, 'shared'],
       [/^Countdown · Storm front is at 3$/, 'gm'],
-      [/^Reward · .+ \(Common items roll\)$/, 'shared'],
+      [/^Reward · .+ \(Core Set Items · \d+ from 1d12\)$/, 'shared'],
       [/^Reward · Ash received 1x Minor Health Potion$/, 'shared'],
       [/^Condition · vulnerable applied to Harrier$/, 'gm'],
       [/^Roll · Ash · (critical success|success|failure)$/, 'shared'],
@@ -365,6 +365,31 @@ test('each consequential tool, each resolved roll and each resolved damage card 
     for (const [pattern, visibility] of expectations) {
       assert.equal(memberTitles.some(title => pattern.test(title)), visibility === 'shared', 'member view of ' + String(pattern));
     }
+  } finally {
+    await f.close();
+  }
+});
+
+test('feature and hazard damage and forced Stress are recorded without an adversary attack', async () => {
+  const f = await fixture(request => request.tools ? completion('Noted. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    await addPlayer(f, 'hazardplayer');
+    await runTurn(f, 'Set the scene.');
+    const turn = currentTurn(f);
+    const dealt = act(f, turn, 'deal_damage', { heroId: f.setup.heroId, damage: '2d6+1', reason: 'The floor gives way.' }) as { damage: number; requestId: string; playerConfirmsDamage: boolean };
+    assert.equal(dealt.playerConfirmsDamage, true);
+    assert.ok(dealt.damage >= 3 && dealt.damage <= 13, 'dice damage stays within the rolled range');
+    const card = ai.session(user.id, campaign).messages.find(message => message.id === dealt.requestId)!;
+    assert.equal(card.interaction?.kind, 'damage');
+    assert.equal(card.interaction?.direct, false);
+    const forced = act(f, turn, 'mark_stress', { heroId: f.setup.heroId, amount: 2, reason: 'The whisper gnaws.' }) as { stress: number; overflowHp: boolean };
+    assert.equal(forced.stress, 2);
+    assert.equal(forced.overflowHp, false);
+    assert.equal(heroOf(f).stressMarked, 2);
+    const titles = ai.journalPage(user.id, campaign, { kind: 'event' }).entries.map(entry => entry.title);
+    assert.ok(titles.some(title => /^Damage · .+ takes \d+ damage$/.test(title)));
+    assert.ok(titles.some(title => /^Stress · .+ marks 2 Stress$/.test(title)));
   } finally {
     await f.close();
   }

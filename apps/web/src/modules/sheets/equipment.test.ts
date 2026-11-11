@@ -167,7 +167,7 @@ test('player-made gear validates traits, tiers, thresholds, damage, and dupe rul
   assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad blade',description:'',qty:1,weapon:{trait:'Agility',range:'Melee',category:'Primary',damage:'d8',damageType:'phy',burden:'One-Handed',tier:5}}),/tier/);
   assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad blade',description:'',qty:1,weapon:{trait:'Agility',range:'Melee',category:'Primary',damage:'d7',damageType:'phy',burden:'One-Handed',tier:1}}),/damage/);
   assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad armor',description:'',qty:1,armor:{baseThresholds:{major:12,severe:6},baseScore:2,tier:1}}),/severe/);
-  assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad armor',description:'',qty:1,armor:{baseThresholds:{major:4,severe:8},baseScore:13,tier:1}}),/Armor Score/);
+  assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad armor',description:'',qty:1,armor:{baseThresholds:{major:4,severe:8},baseScore:100,tier:1}}),/Armor Score/);
   assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad weapon',description:'',qty:1,weapon:{trait:'Agility',range:'Nowhere',category:'Primary',damage:'d8',damageType:'phy',burden:'One-Handed',tier:1}}),/range/);
   assert.throws(()=>addInventoryItem(base,{kind:'custom',name:'Bad weapon',description:'',qty:1,weapon:{trait:'Agility',range:'Melee',category:'Primary',damage:'d8',damageType:'fire',burden:'One-Handed',tier:1}}),/physical or magic/);
 });
@@ -181,4 +181,13 @@ test('identical player-made gear stacks while different stats stay separate',()=
   assert.equal(second.inventory[0]?.weapon?.damage,'d10');
   const different=addInventoryItem(second,{kind:'custom',name:'Maul',description:'',qty:1,weapon:{...weapon,damage:'2d10'}});
   assert.equal(different.inventory.length,2);
+});
+
+test('weapon features that add to damage thresholds (Padded, Brave) are included',()=>{
+  const cloak=weapons.find(w=>w.id==='fighting-cloak')!;
+  const brave=weapons.find(w=>w.id==='bravesword')!;
+  const base:Sheet={...makeSheet(),weapons:[]};
+  const plain=damageThresholds(base);
+  assert.deepEqual(damageThresholds({...base,weapons:[{slot:'secondary',weaponId:cloak.id}]}),{major:plain.major+2,severe:plain.severe+2});
+  assert.deepEqual(damageThresholds({...base,weapons:[{slot:'primary',weaponId:brave.id}]}),{major:plain.major,severe:plain.severe+3});
 });

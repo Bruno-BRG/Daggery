@@ -116,6 +116,7 @@ export interface ItemData extends Sourced {
   name: string;
   description: string;
   feature: Feature | null;
+  rollTable?: { name: string; roll: number } | null;
 }
 
 export interface ConsumableData extends Sourced {
@@ -499,9 +500,9 @@ export function entrySubtitle(entry: Entry): string {
     case 'armor':
       return `Tier ${entry.data.tier} · Armor Score ${entry.data.baseScore}`;
     case 'item':
-      return 'Item';
+      return entry.data.rollTable ? `${entry.data.rollTable.name} · Roll ${entry.data.rollTable.roll}` : 'Item';
     case 'consumable':
-      return entry.data.rollTable ? 'Consumable · Roll table' : 'Consumable';
+      return entry.data.rollTable ? `${entry.data.rollTable.name} · Roll ${entry.data.rollTable.roll}` : 'Consumable';
     case 'adversary':
       return `Tier ${entry.data.tier} · ${entry.data.type} · Difficulty ${entry.data.difficulty}`;
     case 'environment':
@@ -572,6 +573,27 @@ const byDomainCard = (a: Entry, b: Entry) => {
 
 const CONDITION_KIND_ORDER: Record<string, number> = { condition: 0, range: 1 };
 
+const TABLE_ORDER = [
+  'Core Set Items',
+  'Additional Items',
+  'Core Set Consumables',
+  'Additional Consumables',
+];
+
+/** Items and consumables list by their printed roll table, then by roll, then by name. */
+const byRollTable = (a: Entry, b: Entry) => {
+  const tableOf = (entry: Entry) => (
+    entry.kind === 'item' || entry.kind === 'consumable' ? entry.data.rollTable ?? null : null
+  );
+  const at = tableOf(a);
+  const bt = tableOf(b);
+  const aTable = at ? (TABLE_ORDER.indexOf(at.name) + 1 || 99) : 100;
+  const bTable = bt ? (TABLE_ORDER.indexOf(bt.name) + 1 || 99) : 100;
+  if (aTable !== bTable) return aTable - bTable;
+  if (at && bt && at.roll !== bt.roll) return at.roll - bt.roll;
+  return byName(a, b);
+};
+
 const byKindThenName = (a: Entry, b: Entry) => {
   const kindDelta = (CONDITION_KIND_ORDER[a.kind] ?? 0) - (CONDITION_KIND_ORDER[b.kind] ?? 0);
   if (kindDelta !== 0) return kindDelta;
@@ -603,8 +625,8 @@ export const ENTRIES_BY_CATEGORY: Record<CategoryId, Entry[]> = {
   transformations: [...byKind.transformation].sort(byName),
   weapons: [...byKind.weapon].sort(byName),
   armor: [...byKind.armor].sort(byName),
-  items: [...byKind.item].sort(byName),
-  consumables: [...byKind.consumable].sort(byName),
+  items: [...byKind.item].sort(byRollTable),
+  consumables: [...byKind.consumable].sort(byRollTable),
   adversaries: [...byKind.adversary].sort(byName),
   environments: [...byKind.environment].sort(byName),
   conditions: [...byKind.condition, ...byKind.range].sort(byKindThenName),

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { adversaries, ancestries, armor, classes, communities, consumables, domainCards, environments, items, transformations, weapons } from '@daggery/content';
 import { hasFeature, maxDiceTotal, rollDice, rollDie, type AiBudget, type AiInteraction, type AiState } from '@daggery/shared';
-import { armorScore, evasion, getArmor, getClass, getCommunity, getDomainCard, getSubclass, heritageDisplayName, hpMax, MAX_HOPE, sheetAncestries, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
+import { armorScore, evasion, getArmor, getClass, getCommunity, getDomainCard, getSubclass, heritageDisplayName, hpMax, markStress, MAX_HOPE, sheetAncestries, spellcastTraitName, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { SoloService } from '../solo';
@@ -20,6 +20,16 @@ import { integer, number, record, text } from './validation';
 const s = { type: 'string' }, n = { type: 'number' };
 const schema = (properties: Record<string, unknown>, required: string[] = Object.keys(properties)) => ({ type: 'object', properties, required, additionalProperties: false });
 const tool = (name: string, description: string, properties: Record<string, unknown>, required?: string[]): ToolDefinition => ({ name, description, parameters: schema(properties, required) });
+
+/** Horde (X): at half or more HP marked, the standard attack deals X instead (Core Rulebook p. 199). */
+function hordeDamage(features: { name: string }[], hpMarked: number, hp: number, base: string): string {
+  if (hp <= 0 || hpMarked * 2 < hp) return base;
+  for (const feature of features) {
+    const value = /^Horde \(([^)]+)\)/i.exec(feature.name)?.[1]?.trim();
+    if (value) return value;
+  }
+  return base;
+}
 export const GM_TOOLS: ToolDefinition[] = [
   tool('get_context', 'Read the table snapshot: heroes, the active scene, countdowns, present adversaries, pending cards, the campaign state, the GM preparations, and the image assets that can serve as scene maps, with their IDs. Use it only when a needed fact is missing.', {}),
   tool('search_rules', 'Find actual catalog rules, adversaries, environments, items, abilities, ancestries or communities, including the Hope & Fear and Sablewood material. Without id, a ranked search returns at most six results trimmed to 280 characters per field; findings can also match by meaning. With id (an exact catalog ID from a search result, get_character or get_adversary), returns that one entry in full.', { query: s, id: s, category: { type: 'string', enum: ['adversaries', 'ancestries', 'communities', 'environments', 'items', 'consumables', 'weapons', 'armor', 'cards', 'classes', 'transformations'] } }, ['category']),
@@ -60,10 +70,12 @@ export const GM_TOOLS: ToolDefinition[] = [
   tool('add_adversary', 'Add an adversary from the actual catalog to the encounter and active map. Difficulty/damage/HP come from the source.', { catalogId: s, name: s, x: n, y: n }, ['catalogId']),
   tool('request_roll', 'Ask the player to roll a trait against a declared Difficulty. For a basic weapon attack provide enemyId; the engine chooses the equipped weapon trait, Difficulty and damage. Never roll the player’s choice for them.', { heroId: s, trait: { type: 'string', enum: ['agility', 'strength', 'finesse', 'instinct', 'presence', 'knowledge'] }, difficulty: n, reason: s, enemyId: s }, ['heroId', 'trait', 'difficulty', 'reason']),
   tool('adversary_attack', 'Resolve a present adversary’s standard d20 attack against a hero. Damage becomes a player-confirmed card with an Armor option. Requires a fictional opening; no extra spotlight is granted.', { adversaryId: s, heroId: s, reason: s }),
+  tool('deal_damage', 'Deal damage from any source other than an adversary’s standard attack: an environment, trap, fall, hazard, feature, spell, or direct damage. Accepts dice notation like "2d6+3" or a flat number. Damage becomes a player-confirmed card with an Armor option unless direct. Can also apply a core condition when the source sensibly imposes one.', { heroId: s, damage: s, direct: { type: 'boolean' }, condition: { type: 'string', enum: ['vulnerable', 'restrained', 'hidden'] }, reason: s }, ['heroId', 'damage', 'reason']),
+  tool('mark_stress', 'Make a hero mark Stress from a feature, environment, or consequence (not an attack). If the Stress track is full, the overflow marks 1 HP as the rules require.', { heroId: s, amount: n, reason: s }, ['heroId', 'amount', 'reason']),
   tool('spend_fear', 'Pay a legal GM feature/extra-move cost from existing Fear, with an explanation. Does not grant any additional free actions.', { amount: n, reason: s }),
   tool('create_countdown', 'Create a named countdown with an explicit completion event. Countdown does not advance automatically.', { name: s, start: n }),
   tool('advance_countdown', 'Advance a relevant countdown by 1–3 once for its cause. Do not charge the same consequence twice.', { countdownId: s, amount: n, reason: s }),
-  tool('roll_loot', 'Roll the Core Set item/consumable table with a rarity-appropriate d12 pool and record the reward.', { table: { type: 'string', enum: ['items', 'consumables'] }, rarity: { type: 'string', enum: ['Common', 'Uncommon', 'Rare', 'Legendary'] }, note: s }, ['table', 'rarity']),
+  tool('roll_loot', 'Roll a printed loot table from the Core Set or Additional (Hope & Fear) tables. Rarity sets the allowed d12 pool: Common 1–2d12, Uncommon 2–3d12, Rare 3–4d12, Legendary 4–5d12. Omit dice to use the smaller pool.', { table: { type: 'string', enum: ['items', 'consumables'] }, set: { type: 'string', enum: ['core', 'additional'] }, rarity: { type: 'string', enum: ['Common', 'Uncommon', 'Rare', 'Legendary'] }, dice: n, note: s }, ['table', 'rarity']),
   tool('give_item', 'Give a known catalog item or consumable to a hero. Use this after agreeing the reward; it changes inventory.', { heroId: s, catalogId: s, quantity: n }),
   tool('solo_oracle', 'Consult the solo oracle or thematic scene engine without changing Hope/Fear. Available only in Solo rulesets.', { kind: { type: 'string', enum: ['oracle', 'scene', 'prompt', 'response'] }, question: s, likelihood: { type: 'string', enum: ['very-likely', 'likely', 'even', 'unlikely', 'very-unlikely'] } }, ['kind', 'question']),
   tool('offer_choices', 'Offer 2–4 possible next actions without choosing for the player. The player can always type something else.', { prompt: s, choices: { type: 'array', items: s, minItems: 2, maxItems: 4 } }),
@@ -71,7 +83,7 @@ export const GM_TOOLS: ToolDefinition[] = [
 ];
 
 const ACTION_LABELS: Record<string, string> = {
-  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
+  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', deal_damage: 'Dealt damage', mark_stress: 'Marked Stress', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
 };
 
 export interface ActionContext {
@@ -214,6 +226,14 @@ export class GmActions {
       const outcome = data.hit === true ? 'hits ' + target + ' for ' + String(data.damage) : 'misses ' + target;
       note('Attack · ' + String(enemy ? enemy.name : 'Adversary') + ' ' + outcome, 'Attack roll ' + String(data.attack) + '.', this.hiddenToken(campaign, enemyId) ? 'gm' : 'shared');
     }
+    else if (name === 'deal_damage') {
+      const sheet = this.read<Record<string, any>>(campaign, 'sheets', text(args.heroId, 120));
+      note('Damage · ' + String(sheet?.name ?? 'A hero') + ' takes ' + String(data.damage) + ' damage' + (data.direct === true ? ' (direct)' : '') + (data.condition ? ' and is ' + String(data.condition) : ''), text(args.reason, 800, ''));
+    }
+    else if (name === 'mark_stress') {
+      const sheet = this.read<Record<string, any>>(campaign, 'sheets', text(args.heroId, 120));
+      note('Stress · ' + String(sheet?.name ?? 'A hero') + ' marks ' + String(data.stress) + ' Stress' + (data.overflowHp === true ? ' (1 HP overflow)' : ''), text(args.reason, 800, ''));
+    }
     else if (name === 'spend_fear') note('Fear · GM spent ' + String(data.spent) + ' Fear (' + String(data.remaining) + ' left)', text(args.reason, 800, ''), 'shared');
     else if (name === 'create_countdown') note('Countdown · ' + text(args.name, 200) + ' started at ' + String(data.remaining), '', 'shared');
     else if (name === 'advance_countdown') {
@@ -221,7 +241,7 @@ export class GmActions {
       const label = countdown ? String(countdown.name) : 'Countdown';
       note('Countdown · ' + label + ' is at ' + String(data.remaining) + (data.complete === true ? ' (complete)' : ''), text(args.reason, 800, ''), countdown && countdown.visible === false ? 'gm' : 'shared');
     }
-    else if (name === 'roll_loot') note('Reward · ' + String(data.name) + ' (' + text(args.rarity, 20) + ' ' + text(args.table, 20) + ' roll)', String(data.description ?? ''), 'shared');
+    else if (name === 'roll_loot') note('Reward · ' + String(data.name) + ' (' + String(data.tableName ?? text(args.table, 20)) + ' · ' + String(data.total) + ' from ' + String((data.dice as unknown[] | undefined)?.length ?? 1) + 'd12)', String(data.description ?? ''), 'shared');
     else if (name === 'give_item') note('Reward · ' + String(data.hero) + ' received ' + String(data.quantity) + 'x ' + String(data.given), '', 'shared');
     else if (name === 'set_condition') {
       const target = text(args.targetId, 120);
@@ -503,6 +523,7 @@ export class GmActions {
           difficulty = source.difficulty;
           const weapon = weaponForSlot(sheet, 'primary'); if (!weapon) throw new Error('Invalid attack: equip a primary weapon');
           trait = weapon.trait.toLowerCase();
+          if (trait === 'spellcast') trait = spellcastTraitName(sheet) ?? trait;
         }
         const id = this.message(ctx.campaign, chat, ctx.turn, 'gm', text(args.reason, 1500), { kind: 'roll', resolved: false, heroId: sheet.id, trait, difficulty, ...(enemyId ? { enemyId } : {}) });
         result = { requestId: id, hero: sheet.name, difficulty, waitingForPlayer: true };
@@ -510,13 +531,51 @@ export class GmActions {
       else if (name === 'adversary_attack') {
         const enemy = this.read(ctx.campaign, 'combat', text(args.adversaryId, 120)), source = adversaries.find(item => item.id === enemy?.catalogId), sheet = hero(args.heroId);
         if (!enemy || !source || enemy.hpMarked >= source.hp || source.type === 'Minion' && enemy.defeated >= (enemy.groupSize ?? 1)) throw new Error('Invalid or defeated adversary');
-        const modifier = integer(Number(source.attack.modifier), -30, 30);
-        const attack = rollDice('1d20' + (modifier < 0 ? '' : '+') + String(modifier)); rolls.push({ kind: 'dice', result: attack });
+        // Most adversaries have a flat attack modifier; some, like the Outer Realms Abomination, roll dice for it.
+        const rawModifier = source.attack.modifier;
+        const modifierNotation = typeof rawModifier === 'string' ? rawModifier : String(integer(Number(rawModifier), -30, 30));
+        const attack = rollDice('1d20' + (modifierNotation.startsWith('-') ? '' : '+') + modifierNotation); rolls.push({ kind: 'dice', result: attack });
         const hit = attack.rolls[0] === 20 || attack.total >= evasion(sheet);
         let damage = 0;
-        if (hit) { const rolled = rollDice(source.attack.damage); damage = rolled.total; if (attack.rolls[0] === 20) damage += maxDiceTotal(source.attack.damage); rolls.push({ kind: 'dice', result: rolled }); }
+        if (hit) {
+          const notation = hordeDamage(source.features, enemy.hpMarked, source.hp, source.attack.damage);
+          const rolled = rollDice(notation); damage = rolled.total;
+          if (attack.rolls[0] === 20) damage += maxDiceTotal(notation);
+          rolls.push({ kind: 'dice', result: rolled });
+        }
         this.message(ctx.campaign, chat, ctx.turn, 'roll', enemy.name + ': attack ' + attack.total + ' vs ' + sheet.name + '’s Evasion ' + evasion(sheet) + ' — ' + (hit ? damage + ' damage' : 'miss') + '. ' + text(args.reason, 800), hit ? { kind: 'damage', resolved: false, heroId: sheet.id, damage, direct: false } : undefined);
         result = { hit, attack: attack.total, damage, playerConfirmsDamage: hit };
+      }
+      else if (name === 'deal_damage') {
+        const sheet = hero(args.heroId), raw = text(args.damage, 40).trim(), direct = args.direct === true;
+        let damage = 0;
+        if (/^\d+$/.test(raw)) damage = integer(Number(raw), 1, 200);
+        else if (/^\d*d\d+([+-]\d+)?$/i.test(raw)) {
+          const rolled = rollDice(raw); damage = rolled.total; rolls.push({ kind: 'dice', result: rolled });
+        } else throw new Error('Invalid damage');
+        const condition = text(args.condition, 20, '');
+        if (condition && !['vulnerable', 'restrained', 'hidden'].includes(condition)) throw new Error('Invalid condition');
+        let conditionApplied = false;
+        if (condition) {
+          const label = condition.charAt(0).toUpperCase() + condition.slice(1);
+          for (const token of this.docs(ctx.campaign, 'map')) {
+            if (token.id.indexOf('token:') !== 0 || token.value.refId !== sheet.id) continue;
+            const conditions = ((token.value.conditions as string[] | undefined) ?? []).filter(item => item.toLowerCase() !== condition);
+            conditions.push(label);
+            put('map', token.id, { ...token.value, conditions });
+            conditionApplied = true;
+          }
+        }
+        const detail = `${sheet.name}: ${damage} damage${raw === String(damage) ? '' : ` (${raw})`}${direct ? ' — direct, Armor ignored' : ''}${condition ? ` — ${condition}` : ''}. ${text(args.reason, 800)}`;
+        const id = this.message(ctx.campaign, chat, ctx.turn, 'roll', detail, { kind: 'damage', resolved: false, heroId: sheet.id, damage, direct });
+        result = { damage, direct, condition: condition || null, conditionApplied, requestId: id, playerConfirmsDamage: true };
+      }
+      else if (name === 'mark_stress') {
+        const sheet = hero(args.heroId), amount = integer(args.amount, 1, 12), next = markStress(sheet, amount);
+        const overflow = next.hpMarked > sheet.hpMarked;
+        put('sheets', sheet.id, { ...next, updatedAt: new Date().toISOString() });
+        this.message(ctx.campaign, chat, ctx.turn, 'roll', `${sheet.name}: marks ${amount} Stress${overflow ? ' — the track is full, so 1 HP is marked' : ''}. ${text(args.reason, 800)}`);
+        result = { hero: sheet.name, stress: amount, overflowHp: overflow };
       }
       else if (name === 'spend_fear') {
         const amount = integer(args.amount, 1, 12), fear = this.read(ctx.campaign, 'combat', 'fear') ?? { kind: 'fear', value: 0 };
@@ -532,11 +591,19 @@ export class GmActions {
         const remaining = Math.max(0, countdown.value - integer(args.amount, 1, 3)); put('combat', id, { ...countdown, value: remaining }); result = { countdownId: id, remaining, complete: remaining === 0, reason: text(args.reason, 800) };
       }
       else if (name === 'roll_loot') {
-        const rarity = text(args.rarity, 20), count = ({ Common: 1, Uncommon: 2, Rare: 3, Legendary: 4 } as Record<string, number>)[rarity];
-        if (!count || !['items', 'consumables'].includes(String(args.table))) throw new Error('Invalid loot table or rarity');
+        const rarity = text(args.rarity, 20);
+        const pools: Record<string, [number, number]> = { Common: [1, 2], Uncommon: [2, 3], Rare: [3, 4], Legendary: [4, 5] };
+        const range = pools[rarity];
+        if (!range || !['items', 'consumables'].includes(String(args.table))) throw new Error('Invalid loot table or rarity');
+        const count = args.dice === undefined ? range[0] : integer(args.dice, range[0], range[1]);
+        const additional = text(args.set, 20, 'core') === 'additional';
+        const tableName = (args.table === 'items' ? (additional ? 'Additional Items' : 'Core Set Items') : (additional ? 'Additional Consumables' : 'Core Set Consumables'));
+        const pool = (args.table === 'items' ? items : consumables) as readonly { id: string; name: string; description: string; rollTable?: { name: string; roll: number } | null }[];
+        const entries = pool.filter(entry => entry.rollTable?.name === tableName);
+        if (!entries.length) throw new Error('Invalid loot table');
         const dice = Array.from({ length: count }, () => rollDie(12)), total = dice.reduce((a, b) => a + b, 0);
-        const item = args.table === 'items' ? items[total - 1] : consumables.find(entry => entry.rollTable?.roll === total); if (!item) throw new Error('Invalid loot result');
-        const value = { kind: 'loot', table: args.table, dice, total, itemId: item.id, name: item.name, description: item.description, note: text(args.note, 500, ''), updated: new Date().toISOString() };
+        const item = entries.find(entry => entry.rollTable?.roll === total); if (!item) throw new Error('Invalid loot result');
+        const value = { kind: 'loot', table: args.table, set: additional ? 'additional' : 'core', tableName, dice, total, itemId: item.id, name: item.name, description: item.description, note: text(args.note, 500, ''), updated: new Date().toISOString() };
         put('gm', 'loot:' + randomUUID(), value); result = value;
       }
       else if (name === 'give_item') {

@@ -74,6 +74,7 @@ export default function Wizard({ author, onCreate, onCancel }: WizardProps) {
   );
   const [exp1, setExp1] = useState('');
   const [exp2, setExp2] = useState('');
+  const [purposeExperience, setPurposeExperience] = useState<'first' | 'second' | null>(null);
   const [domainPicks, setDomainPicks] = useState<string[]>([]);
   const [bgAnswers, setBgAnswers] = useState<Record<string, string>>({});
   const [connAnswers, setConnAnswers] = useState<Record<string, string>>({});
@@ -100,6 +101,9 @@ export default function Wizard({ author, onCreate, onCancel }: WizardProps) {
     });
   })();
   const community = getCommunity(communityId);
+  // Clank's Purposeful Design: at creation, one chosen Experience gains a permanent +1.
+  const hasPurposefulDesign = (mixedAncestry ? mixedFeatures : ancestry?.features ?? [])
+    .some((feature) => feature.name === 'Purposeful Design');
   const primary = getWeapon(primaryId);
   const secondary = getWeapon(secondaryId);
   const equippedArmor = getArmor(armorId);
@@ -163,7 +167,7 @@ export default function Wizard({ author, onCreate, onCancel }: WizardProps) {
       case 4:
         return primaryId !== null && armorId !== null && (!twoHanded || secondaryId === null);
       case 5:
-        return exp1.trim().length > 0 && exp2.trim().length > 0;
+        return exp1.trim().length > 0 && exp2.trim().length > 0 && (!hasPurposefulDesign || purposeExperience !== null);
       case 6:
         return domainPicks.length === 2;
       default:
@@ -224,8 +228,8 @@ export default function Wizard({ author, onCreate, onCancel }: WizardProps) {
       bonusHpSlots: 0,
       bonusStressSlots: 0,
       experiences: [
-        { id: makeId('exp'), name: exp1.trim(), modifier: 2 },
-        { id: makeId('exp'), name: exp2.trim(), modifier: 2 },
+        { id: makeId('exp'), name: exp1.trim(), modifier: hasPurposefulDesign && purposeExperience === 'first' ? 3 : 2 },
+        { id: makeId('exp'), name: exp2.trim(), modifier: hasPurposefulDesign && purposeExperience === 'second' ? 3 : 2 },
       ],
       weapons: [
         { weaponId: primary.id, slot: 'primary' },
@@ -627,6 +631,20 @@ export default function Wizard({ author, onCreate, onCancel }: WizardProps) {
                 className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2"
               />
             </Field>
+            {hasPurposefulDesign && (
+              <div className="rounded-lg border border-slate-800 bg-slate-950/70 p-3 text-xs text-slate-300">
+                <p className="mb-2 font-semibold text-slate-200">Clank — Purposeful Design</p>
+                <p className="mb-2">Choose the Experience that best aligns with your purpose. It starts at +3 instead of +2.</p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setPurposeExperience('first')} className={`rounded-md border px-3 py-1.5 text-xs ${purposeExperience === 'first' ? 'border-accent-400 bg-accent-500/10 text-accent-200' : 'border-slate-700 bg-slate-950 text-slate-300'}`}>
+                    Experience 1{exp1.trim() ? ` — ${exp1.trim()}` : ''}
+                  </button>
+                  <button type="button" onClick={() => setPurposeExperience('second')} className={`rounded-md border px-3 py-1.5 text-xs ${purposeExperience === 'second' ? 'border-accent-400 bg-accent-500/10 text-accent-200' : 'border-slate-700 bg-slate-950 text-slate-300'}`}>
+                    Experience 2{exp2.trim() ? ` — ${exp2.trim()}` : ''}
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         )}
 

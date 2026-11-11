@@ -57,7 +57,11 @@ function send(message: unknown) {
   }
   socket.send(JSON.stringify(message));
 }
-export function setDoc<T>(ns: string, id: string, value: T) { send({ type: 'doc:set', ns, id, value }); }
+export function setDoc<T>(ns: string, id: string, value: T) {
+  send({ type: 'doc:set', ns, id, value });
+  // Optimistic local apply: don't make the UI wait for the server echo (it made every click feel laggy).
+  if (status === 'open' && socket?.readyState === WebSocket.OPEN) { apply(ns, id, value); emit(ns); }
+}
 export function removeDoc(ns: string, id: string) { send({ type: 'doc:delete', ns, id }); }
 export function addFear(delta: number) { send({ type: 'fear:add', delta }); }
 export function useDocs<T>(ns: string) {

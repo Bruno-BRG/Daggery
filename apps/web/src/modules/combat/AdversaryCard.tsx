@@ -10,6 +10,7 @@ import {
   groupStatus,
   hpForDamage,
   hpStatus,
+  hordeDamage,
   minionDefeats,
   newId,
   signed,
@@ -68,7 +69,7 @@ export function AdversaryCard({ ctx, id, doc, src }: CardProps) {
   function rollAttack() {
     if (!src) return;
     const { modifier, name } = src.attack;
-    const notation = `1d20${modifier === 0 ? '' : signed(modifier)}`;
+    const notation = `1d20${modifier === 0 ? '' : typeof modifier === 'string' ? `+${modifier}` : signed(modifier)}`;
     void ctx.dice
       .roll({ kind: 'dice', notation }, {
         author: ctx.author,
@@ -84,7 +85,8 @@ export function AdversaryCard({ ctx, id, doc, src }: CardProps) {
 
   function rollDamage() {
     if (!src) return;
-    const { damage, name } = src.attack;
+    const { name } = src.attack;
+    const damage = hordeDamage(features, doc.hpMarked, hpMax, src.attack.damage);
     void ctx.dice
       .roll({ kind: 'dice', notation: damage }, {
         author: ctx.author,

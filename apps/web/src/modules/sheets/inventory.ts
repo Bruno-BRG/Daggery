@@ -1,6 +1,6 @@
 import { armor, weapons, items, consumables } from '@daggery/content';
 import { inventoryEquipmentId } from './equipment';
-import { MAX_ARMOR_SCORE, makeId, type ArmorStats, type WeaponStats } from './rules';
+import { makeId, type ArmorStats, type WeaponStats } from './rules';
 import type { InlineArmor, InlineWeapon, InventoryEntry, InventoryKind, Sheet } from './types';
 import { isInventoryIcon } from './inventoryIcons';
 
@@ -110,7 +110,7 @@ function customArmor(name:string,description:string,input:CustomArmorInput):Inve
   const severe=input.baseThresholds?.severe;
   if (!Number.isInteger(major)||!Number.isInteger(severe)||major<0||severe<0||major>99||severe>99) throw new Error('Enter major and severe thresholds between 0 and 99.');
   if (severe<major) throw new Error('The severe threshold cannot be lower than the major threshold.');
-  if (!Number.isInteger(input.baseScore)||input.baseScore<0||input.baseScore>MAX_ARMOR_SCORE) throw new Error(`Choose an Armor Score from 0 to ${MAX_ARMOR_SCORE}.`);
+  if (!Number.isInteger(input.baseScore)||input.baseScore<0||input.baseScore>99) throw new Error('Choose an Armor Score from 0 to 99.');
   const id=makeId('custom-armor');
   const armorStats:InlineArmor={id,name,tier:tierValue(input.tier),baseThresholds:{major,severe},baseScore:input.baseScore,feature:normalizeFeature(input.feature)};
   return {id:makeId('inv'),kind:'armor',name,description,qty:0,equipmentId:id,armorSlotsMarked:0,armor:armorStats};

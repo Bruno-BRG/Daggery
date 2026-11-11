@@ -47,6 +47,27 @@ function EntryGlyph({entry}:{entry:Entry}) {
 }
 
 
+function lootTables(entries: Entry[]): { name: string; rows: Entry[] }[] {
+  const groups = new Map<string, Entry[]>();
+  for (const entry of entries) {
+    if (entry.kind !== 'item' && entry.kind !== 'consumable') continue;
+    const table = entry.data.rollTable;
+    if (!table) continue;
+    groups.set(table.name, [...(groups.get(table.name) ?? []), entry]);
+  }
+  return [...groups]
+    .map(([name, rows]) => ({ name, rows }))
+    .sort((a, b) => TABLE_NAMES.indexOf(a.name) - TABLE_NAMES.indexOf(b.name));
+}
+
+const TABLE_NAMES = [
+  'Core Set Items',
+  'Additional Items',
+  'Core Set Consumables',
+  'Additional Consumables',
+];
+
+
 export default function CompendiumModule({ author }: { author: string }) {
   const [category, setCategory] = useState<CategoryId>('classes');
   const [query, setQuery] = useState('');
@@ -74,6 +95,10 @@ export default function CompendiumModule({ author }: { author: string }) {
     if (searching) for (const entry of matchedBeforeFilters) result[categoryForKind(entry.kind)]++;
     return result;
   }, [matchedBeforeFilters, searching]);
+  const tables = useMemo(
+    () => (!searching && (category === 'items' || category === 'consumables') ? lootTables(entries) : []),
+    [searching, category, entries],
+  );
   useEffect(() => {
     if (!root.current) return;
     const observer = new ResizeObserver(([entry]) => {
@@ -192,6 +217,26 @@ export default function CompendiumModule({ author }: { author: string }) {
                   Clear filters
                 </button>
               )}
+            </div>
+          )}
+          {tables.length > 0 && (
+            <div className="compendium-loot-tables">
+              {tables.map((table) => (
+                <details key={table.name} open>
+                  <summary><h3>{table.name}</h3><span>{table.rows.length} results (1d12)</span></summary>
+                  <table>
+                    <thead><tr><th scope="col">Roll</th><th scope="col">Result</th></tr></thead>
+                    <tbody>
+                      {table.rows.map((entry) => (
+                        <tr key={entry.key}>
+                          <td>{(entry.kind === 'item' || entry.kind === 'consumable' ? entry.data.rollTable?.roll : null) ?? ''}</td>
+                          <td><button type="button" onClick={() => setSelectedKey(entry.key)}>{entry.name}</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
+              ))}
             </div>
           )}
           <div className="compendium-list-scroll">

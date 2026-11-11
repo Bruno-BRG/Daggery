@@ -75,6 +75,16 @@ export interface BackgroundAnswer {
  * Class-feature resources that live on the sheet. Optional so sheets saved before these
  * features existed stay valid. They persist with the whole sheet document.
  */
+/** A downtime project tracked as a progress countdown (Core Rulebook p. 181). */
+export interface SheetProject {
+  id: string;
+  name: string;
+  /** The countdown's starting value. */
+  start: number;
+  /** Remaining progress; the project completes at 0. */
+  value: number;
+}
+
 export interface SheetResources {
   /** The adversary this hero's Ranger's Focus feature currently marks. */
   focusTargetId?: string | null;
@@ -156,6 +166,10 @@ export interface Sheet {
   advancements: string[];
   /** Current class-feature resources and targets. Absent on older sheets. */
   resources?: SheetResources;
+  /** Short rests taken since the last long rest (Core Rulebook p. 106: at most three). */
+  shortRestsSinceLong?: number;
+  /** Long-rest projects tracked as progress countdowns (Core Rulebook p. 181). */
+  projects?: SheetProject[];
   /**
    * History of advancements taken, used to enforce once-per-tier options (Core Rulebook
    * level-up sheet). Optional for backward compatibility with older sheets.

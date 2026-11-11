@@ -330,6 +330,14 @@ function ItemDetail({ data }: { data: ItemData }) {
     <article className="flex flex-col gap-4">
       <DetailHeading name={data.name} description={data.description} chips={<Chip>Item</Chip>} />
       {data.feature ? <FeatureList features={[data.feature]} title="Feature" /> : null}
+      {data.rollTable ? (
+        <section>
+          <SectionTitle>Roll Table</SectionTitle>
+          <p className="text-sm text-slate-400">
+            {data.rollTable.name} · roll {data.rollTable.roll}
+          </p>
+        </section>
+      ) : null}
     </article>
   );
 }
@@ -342,7 +350,7 @@ function ConsumableDetail({ data }: { data: ConsumableData }) {
         <section>
           <SectionTitle>Roll Table</SectionTitle>
           <p className="text-sm text-slate-400">
-            {data.rollTable.name} · result {data.rollTable.roll}
+            {data.rollTable.name} · roll {data.rollTable.roll}
           </p>
         </section>
       ) : null}

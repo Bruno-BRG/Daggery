@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { adversaries } from '@daggery/content';
 import { canReuseAiKey, DiceNotationError, getGameSystem, getRuleset, maxDiceTotal, resolveDiceFaces, resolveDuality, roll, rollDice, type AiAdventure, type AiBudget, type AiConnection, type AiInteraction, type AiJournalEntry, type AiJournalPage, type AiMessage, type AiProvider, type AiRun, type AiSetup, type AiTurnKind, type DiceRoll, type DualityResult, type SoloState, type TraitName } from '@daggery/shared';
-import { applyDualityEffects, armorScore, damageHp, damageNotation, damageSeverity, damageThresholds, getClass, hpMax, weaponForSlot, weaponModifier } from '@daggery/shared/daggerheart';
+import { applyDualityEffects, armorScore, damageHp, damageSeverity, damageThresholds, getClass, hpMax, traitValue, weaponDamageNotation, weaponForSlot, weaponModifier } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { clearFocusTarget, focusTargetId, hasRangersFocus, rollPrayerDice, setFocusTarget, spendPrayerDie } from './abilities';
@@ -1052,7 +1052,7 @@ export class AiService {
           const focus = input.focus === true;
           if (focus && !interaction.enemyId) throw new Error('Invalid action: Ranger’s Focus requires an attack against an adversary');
           if (focus && !hasRangersFocus(sheet)) throw new Error('Invalid action: only a Ranger can use Ranger’s Focus');
-          let modifier = sheet.traits[interaction.trait as TraitName];
+          let modifier = traitValue(sheet, interaction.trait as TraitName);
           const weapon = interaction.enemyId ? weaponForSlot(sheet, 'primary') : undefined;
           if (interaction.enemyId && !weapon) throw new Error('Invalid attack: equip a primary weapon in Characters');
           if (weapon) modifier = weaponModifier(sheet, weapon);
@@ -1114,7 +1114,7 @@ export class AiService {
             const enemy = this.actions.read<Record<string, any>>(campaign, 'combat', interaction.enemyId);
             const source = adversaries.find(entry => entry.id === enemy?.catalogId);
             if (!enemy || !source) throw new Error('Invalid attack target');
-            const notation = damageNotation(weapon.damage, sheet.proficiency);
+            const notation = weaponDamageNotation(sheet, weapon);
             let damage: DiceRoll;
             if (damageFaces) {
               try {
