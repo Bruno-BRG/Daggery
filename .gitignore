@@ -2,6 +2,9 @@
 # Source PDFs are tracked through Git LFS on purpose (the repo is private).
 *.tmp.ts
 node_modules/
-data/
+data/*
+# Extracted card art is static content, not user data: it ships with the repo.
+!data/cards/
+!data/cards/**/*.webp
 dist/
 .claude/

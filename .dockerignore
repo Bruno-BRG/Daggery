@@ -1,6 +1,9 @@
 **/node_modules
 **/dist
-data
+data/*
+# Card art is static content served from DAGGERY_DATA_DIR/cards.
+!data/cards
+!data/cards/**
 sources/*.pdf
 sources/**/*.pdf
 sources/**/*.vec
