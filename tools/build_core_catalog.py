@@ -14,7 +14,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 CONTENT = ROOT / 'packages' / 'content'
 PDF = ROOT / 'sources' / 'Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf'
-CARDS = ROOT / 'data' / 'cards'
+CARDS = CONTENT / 'cards'
 
 CLASS_PAGES = {'bard': 30, 'druid': 32, 'guardian': 38, 'ranger': 40, 'rogue': 44,
                'seraph': 46, 'sorcerer': 48, 'warrior': 50, 'wizard': 52}

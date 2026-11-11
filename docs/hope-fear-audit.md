@@ -114,7 +114,7 @@ pipeline as the core set by `tools/extract_hf_cards.py`:
   6 community and 6 transformation cards.
 - 4 class portraits cropped from the class spreads (Assassin, Brawler, Warlock,
   Witch).
-- Files live under `data/cards/` (gitignored, exactly like core art), and the new
+- Files live under `packages/content/cards/` (shipped with the code, like core art), and the new
   entries were appended to `packages/content/cards-index.json` (now 333 entries).
 - `packages/content/index.ts` now sets `art: true` for the Hope & Fear classes;
   the compendium also maps transformation cards. Run

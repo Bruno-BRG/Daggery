@@ -17,9 +17,9 @@ Like the core sheets, each page is a 3 x 3 grid of 2.5" x 3.5" cards:
 The four class portraits are cropped from the lower-right illustration panel of
 the second page of each class spread.
 
-Outputs (data/ is gitignored, exactly like the core card art):
-    data/cards/<kind>/<slug>.webp
-    data/cards/thumbs/<kind>/<slug>.webp
+Outputs (shipped with the code, next to the core card art):
+    packages/content/cards/<kind>/<slug>.webp
+    packages/content/cards/thumbs/<kind>/<slug>.webp
     packages/content/cards-index.json (appended entries, sourcePdf set)
 
 Run:  python tools/extract_hf_cards.py [--pdf path]
@@ -38,7 +38,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 CONTENT = ROOT / "packages" / "content"
-CARDS = ROOT / "data" / "cards"
+CARDS = CONTENT / "cards"
 INDEX = CONTENT / "cards-index.json"
 DEFAULT_PDF = ROOT / "sources" / "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf"
 PDF_NAME = "Daggerheart_HF_Full_Art_and_Printer_Friendly_Cards_-_8-14-26.pdf"

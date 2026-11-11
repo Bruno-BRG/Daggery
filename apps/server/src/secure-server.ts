@@ -30,9 +30,10 @@ export async function startServer(): Promise<void> {
   const dataDir = process.env.DAGGERY_DATA_DIR ?? fileURLToPath(new URL('../../../data/', import.meta.url));
   const dbPath = process.env.DAGGERY_DB ?? join(dataDir, 'daggery.db');
   const assetsDir = join(dataDir, 'campaign-assets');
-  const cardsDir = join(dataDir, 'cards');
+  // Card art ships with the code. It is not read from DAGGERY_DATA_DIR: in production that folder is
+  // a persistent volume, and a volume mounted there hides any card files the image itself contains.
+  const cardsDir = fileURLToPath(new URL('../../../packages/content/cards/', import.meta.url));
   mkdirSync(dirname(dbPath), { recursive: true });
-  mkdirSync(cardsDir, { recursive: true });
 
   // Back up the live SQLite/WAL state and legacy files before the first schema migration.
   if (existsSync(dbPath)) {

@@ -13,10 +13,9 @@ Everything the server writes lives in `DAGGERY_DATA_DIR`, which the container se
 - `daggery.db`, the SQLite database with accounts, campaigns and sessions;
 - `ai-keyring.key`, which encrypts saved AI provider keys. Losing it invalidates every saved key;
 - `backups/`, written before each schema migration;
-- `campaign-assets/`, uploaded campaign files;
-- `cards/`, the card images served at `/cards/`.
+- `campaign-assets/`, uploaded campaign files.
 
-The card images are not in Git, because the source PDFs they come from are not redistributed in this repository. Copy the `data/cards` folder from a local checkout into the volume once, under `cards/`.
+The card images are committed under `packages/content/cards` and served at `/cards/` from the code. They do not live in the volume, because a volume mounted over `/app/data` would hide files the image puts there. A `cards/` folder left in the volume by an older deploy is ignored.
 
 ## Environment
 

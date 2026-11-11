@@ -20,8 +20,8 @@ looked up in the SRD appendix (sources/DH_SRD_2_2026_08_25.pdf), whose domain
 card reference lists "<NAME>" followed by "Level N <Domain> <Type>".
 
 Outputs:
-    data/cards/<kind>/[<domain>/]<slug>.webp      full art, quality 85
-    data/cards/thumbs/<kind>/[<domain>/]<slug>.webp   width 300 thumbnail
+    packages/content/cards/<kind>/[<domain>/]<slug>.webp      full art, quality 85
+    packages/content/cards/thumbs/<kind>/[<domain>/]<slug>.webp   width 300 thumbnail
     packages/content/cards-index.json
 """
 
@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCES = ROOT / "sources"
 CORE_PDF = SOURCES / "Daggerheart_Core_Full_Art_and_Printer_Friendly_Cards_-_9-09-25.pdf"
 SRD_PDF = SOURCES / "DH_SRD_2_2026_08_25.pdf"
-CARDS_DIR = ROOT / "data" / "cards"
+CARDS_DIR = ROOT / "packages" / "content" / "cards"
 INDEX_PATH = ROOT / "packages" / "content" / "cards-index.json"
 
 PAGE_SIZE = (612.0, 792.0)

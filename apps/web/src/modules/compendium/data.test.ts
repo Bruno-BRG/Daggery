@@ -8,7 +8,7 @@ import { ALL_ENTRIES, CATEGORIES, EMPTY_FILTERS, cardFileForEntry, filterEntries
 import { cardImage, hasStartingTraits, STARTING_TRAIT_VALUES, swapTraits, TRAIT_ORDER } from '../sheets/rules';
 import type { Traits } from '@daggery/shared';
 
-const cardsDir = fileURLToPath(new URL('../../../../../data/cards/', import.meta.url));
+const cardsDir = fileURLToPath(new URL('../../../../../packages/content/cards/', import.meta.url));
 
 test('trait swaps preserve the starting distribution, including duplicate values', () => {
   let traits = Object.fromEntries(TRAIT_ORDER.map((trait, index) => [trait, STARTING_TRAIT_VALUES[index]])) as Traits;

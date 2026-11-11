@@ -41,7 +41,7 @@ O código tem oito dígitos, expira em 10 minutos e só funciona uma vez; há li
 
 ## Dados e campanha anterior
 
-Os dados ficam em `data/daggery.db` e os novos arquivos em `data/campaign-assets`, salvo configuração diferente. A migração faz backup SQLite consistente e copia arquivos legados em `data/backups` antes de alterar um banco anterior. Preserve também `data/assets`, `data/cards` e os backups. Para um backup manual completo, pare o servidor antes de copiar a pasta `data` inteira; não copie apenas o arquivo `.db` enquanto o servidor estiver ativo, pois pode haver dados no WAL.
+Os dados ficam em `data/daggery.db` e os novos arquivos em `data/campaign-assets`, salvo configuração diferente. A migração faz backup SQLite consistente e copia arquivos legados em `data/backups` antes de alterar um banco anterior. Preserve também `data/assets` e os backups. Para um backup manual completo, pare o servidor antes de copiar a pasta `data` inteira; não copie apenas o arquivo `.db` enquanto o servidor estiver ativo, pois pode haver dados no WAL.
 
 Para associar manualmente a campanha anterior a uma conta já criada, execute **no computador que controla o banco**, após iniciar ao menos uma vez o servidor para migrar o banco e verificar o backup:
 
