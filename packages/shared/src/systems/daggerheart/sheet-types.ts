@@ -138,10 +138,14 @@ export interface Sheet {
   stressMarked: number;
   /** Current Hope, 0..6. */
   hope: number;
-  /** Permanent extra HP slots from advancements (max HP is capped at 12). */
+  /** Permanent extra HP slots from advancements. */
   bonusHpSlots: number;
-  /** Permanent extra Stress slots from advancements (max Stress is capped at 12). */
+  /** Permanent extra Stress slots from advancements. */
   bonusStressSlots: number;
+  /** Manually recorded HP slots from items, transformations, or other effects. */
+  extraHpSlots?: number;
+  /** Manually recorded Stress slots from items, transformations, or other effects. */
+  extraStressSlots?: number;
   experiences: Experience[];
   weapons: SheetWeapon[];
   inventory: InventoryEntry[];

@@ -64,6 +64,42 @@ describe('marking Stress', () => {
   test('extra HP slots raised by advancements are not clamped to 12', () => {
     expect(hpMax(makeSheet({ bonusHpSlots: 8 }))).toBeGreaterThan(12);
   });
+
+  test('level-one item bonuses raise both maxima independently of advancements', () => {
+    const base = makeSheet();
+    const boosted = makeSheet({ extraHpSlots: 2, extraStressSlots: 3 });
+    expect(hpMax(boosted)).toBe(hpMax(base) + 2);
+    expect(stressMax(boosted)).toBe(stressMax(base) + 3);
+    expect(boosted.bonusHpSlots).toBe(0);
+    expect(boosted.bonusStressSlots).toBe(0);
+  });
+
+  test('extra slots stack with heritage and advancements without a 12, 24, or 99 cap', () => {
+    for (const ancestryId of ['human', 'giant']) {
+      const base = makeSheet({ ancestryId, bonusHpSlots: 2, bonusStressSlots: 2 });
+      const boosted = { ...base, extraHpSlots: 150, extraStressSlots: 200 };
+      expect(hpMax(boosted)).toBe(hpMax(base) + 150);
+      expect(stressMax(boosted)).toBe(stressMax(base) + 200);
+    }
+  });
+
+  test('legacy sheets without bonus fields still have finite resource maxima', () => {
+    const legacy = makeSheet();
+    delete (legacy as Partial<Sheet>).bonusHpSlots;
+    delete (legacy as Partial<Sheet>).bonusStressSlots;
+    delete (legacy as Partial<Sheet>).evasionBonus;
+    expect(hpMax(legacy)).toBe(hpMax(makeSheet()));
+    expect(stressMax(legacy)).toBe(stressMax(makeSheet()));
+    expect(evasion(legacy)).toBe(evasion(makeSheet()));
+  });
+
+  test('Stress overflow uses the extra slots before marking HP', () => {
+    const sheet = makeSheet({ extraStressSlots: 3, stressMarked: 6 });
+    expect(markStress(sheet, 3).hpMarked).toBe(0);
+    const overflow = markStress(sheet, 4);
+    expect(overflow.stressMarked).toBe(9);
+    expect(overflow.hpMarked).toBe(1);
+  });
 });
 
 describe('advancement slots', () => {

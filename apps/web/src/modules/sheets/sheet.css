@@ -401,6 +401,13 @@
 .folio-resource-pips { display: flex; gap: 4px; }
 .folio-resource-pips button { flex: 1; min-width: 0; height: 10px; border: 1px solid var(--folio-line); border-radius: var(--radius-xs); background: var(--ds-surface); }
 .folio-resource-pips button.is-filled { background: var(--resource-fill); border-color: var(--resource-fill); }
+.folio-bonus-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; border: 1px solid var(--folio-line); border-radius: var(--radius-lg); background: var(--sheet-sunken); }
+.folio-bonus-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ds-muted); }
+.folio-bonus-title .daggery-icon { width: 15px; height: 15px; }
+.folio-bonus-field { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ds-muted); }
+.folio-bonus-field input { width: 88px; min-height: 44px; padding: 4px 6px; border: 1px solid var(--sheet-line); border-radius: var(--radius-sm); background: var(--ds-raised); color: var(--ds-ink); font-size: 16px; text-align: center; }
+.folio-bonus-note { margin-left: auto; font-size: 12px; color: var(--ds-muted); }
+.folio-bonus-help { flex-basis: 100%; font-size: 12px; line-height: 1.5; color: var(--ds-muted); }
 .folio-traits-heading { display: flex; align-items: center; gap: 12px; }
 .folio-traits-heading h2 { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; }
 .folio-traits-heading h2 .daggery-icon { width: 16px; color: var(--ds-brand); }

@@ -254,10 +254,10 @@ export default function LevelUpDialog({ sheet, onChange, onClose }: LevelUpDialo
           break;
         }
         case 'hp':
-          next = { ...next, bonusHpSlots: next.bonusHpSlots + 1 };
+          next = { ...next, bonusHpSlots: (next.bonusHpSlots ?? 0) + 1 };
           break;
         case 'stress':
-          next = { ...next, bonusStressSlots: next.bonusStressSlots + 1 };
+          next = { ...next, bonusStressSlots: (next.bonusStressSlots ?? 0) + 1 };
           break;
         case 'experiences':
           next = {

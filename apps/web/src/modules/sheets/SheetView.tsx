@@ -59,6 +59,7 @@ import './sheet.css';
 import { Icon, type IconName } from '../../components/Icon';
 import { Dialog } from '../../components/Dialog';
 import { ResourceCard } from './ResourceCard';
+import { ResourceBonuses } from './ResourceBonuses';
 import { AbilityCard } from './AbilityCard';
 import { ItemGlyph } from './ItemGlyph';
 import { EquipmentPicker } from './EquipmentPicker';
@@ -541,6 +542,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
         <ResourceCard label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" positive onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
         <ResourceCard label="Armor" icon="armor" count={sheet.armorSlotsMarked} max={currentArmorScore} tone="armor" onChange={value => mutate(current => ({ ...current, armorSlotsMarked: value }))} />
       </div>
+      <ResourceBonuses sheet={sheet} mutate={mutate} />
       <section className="folio-traits" aria-label="Action rolls"><div className="folio-traits-heading"><h2><Icon name="dice" />Make your move</h2><span>Choose a trait to roll Duality</span>{rolling && <span role="status">Rolling…</span>}</div>
         <div className="sheet-trait-row">
           {TRAIT_ORDER.map((trait) => (

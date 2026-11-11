@@ -504,7 +504,7 @@ export function armorScore(sheet: Sheet): number {
 export function evasion(sheet: Sheet): number {
   const cls = getClass(sheet.classId);
   const base = cls?.startingEvasion ?? 10;
-  let bonus = sheet.evasionBonus + heritageBonuses(sheet).evasionBonus;
+  let bonus = (sheet.evasionBonus ?? 0) + heritageBonuses(sheet).evasionBonus;
   const equipped = getArmor(sheet.armorId, sheet);
   bonus += featureModifierToEvasion(equipped?.feature?.text);
   for (const weapon of getEquippedWeapons(sheet)) {
@@ -552,12 +552,12 @@ export function damageThresholds(sheet: Sheet): Thresholds {
 export function hpMax(sheet: Sheet): number {
   const cls = getClass(sheet.classId);
   const heritage = heritageBonuses(sheet).hpSlots;
-  return Math.max(1, (cls?.startingHP ?? 6) + sheet.bonusHpSlots + heritage);
+  return Math.max(1, (cls?.startingHP ?? 6) + (sheet.bonusHpSlots ?? 0) + (sheet.extraHpSlots ?? 0) + heritage);
 }
 
 export function stressMax(sheet: Sheet): number {
   const heritage = heritageBonuses(sheet).stressSlots;
-  return Math.max(1, 6 + sheet.bonusStressSlots + heritage);
+  return Math.max(1, 6 + (sheet.bonusStressSlots ?? 0) + (sheet.extraStressSlots ?? 0) + heritage);
 }
 
 export function getEquippedWeapons(sheet: Sheet): WeaponStats[] {
