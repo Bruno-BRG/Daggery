@@ -11,7 +11,7 @@ Source: `sources/Daggerheart_Core_Full_Art_...pdf` (PDF page = book page + 1). E
 - Total damage per move is summed before comparing with thresholds.
 
 ## Damage and HP
-- Final thresholds = armor + level. Damage >= Severe: 3 HP; >= Major: 2 HP; below: 1 HP; reduced to 0: none. Optional Massive (>= 2x Severe): 4 HP.
+- Final thresholds = armor + level. Damage >= Severe: 3 HP; >= Major: 2 HP; below: 1 HP; reduced to 0: none.
 - HP max 12, Stress max 12 (starting Stress 6). Last Stress marked -> Vulnerable until 1 Stress is cleared. Extra Stress with full slots -> 1 HP.
 - Last HP -> Death Move: Blaze of Glory / Avoid Death / Risk It All (Hope die > Fear die = survive and clear HP/Stress = Hope die value; critical clears everything).
 - Direct damage ignores Armor Slots. Types: phy / mag.

@@ -607,19 +607,16 @@ export function weaponDamageNotation(sheet: Sheet, weapon: WeaponStats): string 
 
 export type { DamageSeverity };
 
-const SEVERITY_ORDER: DamageSeverity[] = ['none', 'minor', 'major', 'severe', 'massive'];
+const SEVERITY_ORDER: DamageSeverity[] = ['none', 'minor', 'major', 'severe'];
 const SEVERITY_HP: Record<DamageSeverity, number> = {
   none: 0,
   minor: 1,
   major: 2,
   severe: 3,
-  massive: 4,
 };
 
 export function damageSeverity(damage: number, thresholds: Thresholds): DamageSeverity {
   if (damage <= 0) return 'none';
-  // Massive (optional SRD rule) applies when damage reaches 2x Severe.
-  if (damage >= thresholds.severe * 2) return 'massive';
   if (damage >= thresholds.severe) return 'severe';
   if (damage >= thresholds.major) return 'major';
   return 'minor';
@@ -637,7 +634,6 @@ export const SEVERITY_LABELS: Record<DamageSeverity, string> = {
   minor: 'Minor',
   major: 'Major',
   severe: 'Severe',
-  massive: 'Massive',
 };
 
 /**

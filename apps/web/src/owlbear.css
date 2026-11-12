@@ -213,7 +213,7 @@ body { background-color: var(--ds-surface); }
   .daggery-logo { padding: 0; }
   .daggery-sidebar .daggery-logo-text { display: none; }
   .daggery-campaign-switch { margin-top: 23px; }
-  .daggery-nav-button { justify-content: center; padding-inline: 0; }
+  .daggery-sidebar .daggery-nav-button { justify-content: center; padding-inline: 0; }
   .daggery-sidebar-footer { flex-direction: column; }
   .daggery-home { padding: 24px; }
 }
@@ -233,6 +233,11 @@ body { background-color: var(--ds-surface); }
   .daggery-table-preview > img { opacity: .22; }
   .daggery-table-preview::before { background: linear-gradient(90deg, var(--ds-raised), transparent), linear-gradient(0deg, var(--ds-raised), transparent); }
   .daggery-section-title > span { display: none; }
+  /* Mobile cards: icon sits in its own 40px column, so drop the full-bleed header bar. */
+  .daggery-essential .daggery-shortcut-top { width: auto; margin: 0; padding: 0; background: none; border-bottom: 0; border-radius: 0; }
+  .daggery-essential .daggery-shortcut-top::after { display: none; }
+  .daggery-essential .daggery-shortcut-icon { width: 40px; height: 40px; border: 1px solid var(--ds-border); }
+  .daggery-menu-dialog .daggery-nav-button { justify-content: flex-start; width: 100%; padding-inline: 12px; }
   .daggery-character-library { padding: 22px 16px; }
   .daggery-character-heading p { font-size: 13px; }
   .daggery-compendium .compendium-header { padding: 14px; }
