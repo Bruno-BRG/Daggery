@@ -595,7 +595,6 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
             <div className="sheet-threshold-strip">
               <Threshold label="Major" value={thresholds.major} note="2 HP" />
               <Threshold label="Severe" value={thresholds.severe} note="3 HP" />
-              <Threshold label="Massive" value={thresholds.severe * 2} note="4 HP" />
             </div>
             {sheet.hpMarked >= currentHpMax && <p className="sheet-alert is-rose">Last HP marked — resolve a Death Move (Blaze of Glory, Avoid Death, or Risk It All).</p>}
             {sheet.stressMarked >= currentStressMax && <p className="sheet-alert is-violet">Last Stress marked — you are Vulnerable until you clear 1 Stress.</p>}
@@ -797,7 +796,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
               <div className="sheet-inline-nowrap"><input type="number" aria-label="Incoming damage" min={0} value={incoming} onChange={(event) => setIncoming(event.target.value)} placeholder="Damage" className="sheet-input" /><button type="button" onClick={applyDamage} className="sheet-apply">Apply</button></div>
               <label className="sheet-check"><input type="checkbox" checked={useArmorSlot} disabled={directDamage || !armorSlotAvailable} onChange={(event) => setUseArmorSlot(event.target.checked)} /> Mark 1 Armor Slot ({armorSlotAvailable ? 'reduces one step' : 'no slots'})</label>
               <label className="sheet-check"><input type="checkbox" checked={directDamage} onChange={(event) => setDirectDamage(event.target.checked)} /> Direct damage (ignores armor)</label>
-              <p className="sheet-note">Below Major = 1 HP, Major = 2 HP, Severe = 3 HP (Massive = 4 HP).</p>
+              <p className="sheet-note">Below Major = 1 HP, Major = 2 HP, Severe = 3 HP.</p>
             </div>) : (
 <div className="sheet-stack">
               <label className="sheet-check"><input type="checkbox" checked={withAllies} onChange={(event) => setWithAllies(event.target.checked)} /> Prepared with allies (+2 Hope instead of +1)</label>

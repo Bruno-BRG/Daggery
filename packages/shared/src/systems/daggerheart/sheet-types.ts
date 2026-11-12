@@ -105,7 +105,7 @@ export interface SheetResources {
   classResources?: Record<string, ClassResourceValue>;
 }
 
-export type DamageSeverity = 'none' | 'minor' | 'major' | 'severe' | 'massive';
+export type DamageSeverity = 'none' | 'minor' | 'major' | 'severe';
 
 /**
  * Everything the Sheets module persists for one character. Kept inside this folder (not in
