@@ -12,6 +12,7 @@ import {
 } from '@daggery/content';
 import type { DualityResult } from '../../dice';
 import type { TraitName, Traits } from '../../types';
+import { resetClassResources } from './class-resources';
 import type { DamageSeverity, InlineArmor, InlineWeapon, Sheet } from './sheet-types';
 
 export const TRAIT_ORDER: TraitName[] = [
@@ -725,8 +726,11 @@ export function canTakeShortRest(sheet: Sheet): boolean {
  * moves, not automatically (Core Rulebook p. 106).
  */
 export function beginRest(sheet: Sheet, kind: 'short' | 'long'): Sheet {
-  if (kind === 'long') return { ...sheet, shortRestsSinceLong: 0 };
-  return { ...sheet, shortRestsSinceLong: Math.min(MAX_SHORT_RESTS, shortRestsTaken(sheet) + 1) };
+  const rested =
+    kind === 'long'
+      ? { ...sheet, shortRestsSinceLong: 0 }
+      : { ...sheet, shortRestsSinceLong: Math.min(MAX_SHORT_RESTS, shortRestsTaken(sheet) + 1) };
+  return resetClassResources(rested, kind === 'long' ? 'longRest' : 'rest');
 }
 
 /** Applies one short-rest recovery move to a track. */
@@ -799,3 +803,15 @@ export function makeId(prefix: string): string {
   const random = (globalThis as typeof globalThis & { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID?.();
   return random ? `${prefix}-${random}` : `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
+
+export {
+  COMPANION_TRAINING,
+  MARTIAL_STANCES,
+  classResourceDefinitions,
+  classResourceFacts,
+  classResourceValue,
+  resetClassResources,
+  setClassResource,
+} from './class-resources';
+export type { ClassResourceDefinition, MartialStance } from './class-resources';
+export type { ClassResourceValue } from './sheet-types';

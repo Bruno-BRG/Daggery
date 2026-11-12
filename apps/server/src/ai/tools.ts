@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { adversaries, ancestries, armor, classes, communities, consumables, domainCards, environments, items, transformations, weapons } from '@daggery/content';
 import { hasFeature, maxDiceTotal, rollDice, rollDie, type AiBudget, type AiInteraction, type AiState } from '@daggery/shared';
-import { armorScore, evasion, getArmor, getClass, getCommunity, getDomainCard, getSubclass, heritageDisplayName, hpMax, markStress, MAX_HOPE, sheetAncestries, spellcastTraitName, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
+import { armorScore, classResourceDefinitions, classResourceValue, evasion, getArmor, getClass, getCommunity, getDomainCard, getSubclass, heritageDisplayName, hpMax, markStress, MAX_HOPE, sheetAncestries, spellcastTraitName, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { SoloService } from '../solo';
@@ -138,6 +138,12 @@ function characterView(sheet: Sheet): Record<string, unknown> {
     resources: {
       focusTargetId: sheet.resources?.focusTargetId ?? null,
       prayerDice: [...(sheet.resources?.prayerDice ?? [])],
+      /**
+       * The current value of every class-resource tracker visible on this sheet (Bard Rally,
+       * Witch phase, and so on) so the GM never silently overwrites a value the player tracks
+       * manually. Read-only: adjusting a tracker is a player decision.
+       */
+      classResources: Object.fromEntries(classResourceDefinitions(sheet).map(definition => [definition.id, classResourceValue(sheet, definition.id)])),
     },
   };
 }

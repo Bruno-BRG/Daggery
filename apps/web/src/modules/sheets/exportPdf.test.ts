@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { PDFDocument, PDFTextField, PDFCheckBox, PDFArray, PDFRawStream, PDFName } from 'pdf-lib';
-import { createCharacterPdf, characterPdfFilename, DEFAULT_PDF_OPTIONS, ORIGINAL_SHEETS } from './exportPdf';
+import { createCharacterPdf, characterPdfFilename, DEFAULT_PDF_OPTIONS, ORIGINAL_SHEETS, classResourceAppendixRows, hasClassResourceState } from './exportPdf';
 import type { Sheet } from './types';
+import { MARTIAL_STANCES } from './rules';
 import { classes } from '@daggery/content';
 
 const font = new Uint8Array(readFileSync(new URL('../../assets/fonts/NotoSans-Regular.ttf', import.meta.url)));
@@ -177,8 +178,8 @@ test('computed spellcast, attack modifiers and resource totals stay visible as e
   assert.match(form.getTextField('resource_totals').getText() ?? '', /^HP 2\/\d+ marked \| Stress 1\/\d+ marked \| Armor 1\/4 used$/);
 });
 
-test('Hope & Fear class-specific resource spaces remain editable without inventing absent state', async () => {
-  const brawler = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId: 'brawler', advancementHistory: [{ level: 3, advancement: 'combo-die' }] }, DEFAULT_PDF_OPTIONS, font, template));
+test('Hope & Fear resource spaces stay editable and legacy Warlock Favor starts at three', async () => {
+  const brawler = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId: 'brawler', subclassId: 'juggernaut', advancementHistory: [{ level: 3, advancement: 'combo-die' }] }, DEFAULT_PDF_OPTIONS, font, template));
   const form = brawler.getForm();
   assert.ok(form.getCheckBox('combo_die_d6').isChecked());
   assert.equal(form.getCheckBox('combo_die_d4').isChecked(), false);
@@ -190,7 +191,11 @@ test('Hope & Fear class-specific resource spaces remain editable without inventi
   assert.ok(reopened.getCheckBox('martial_focus_5').isChecked());
   const warlock = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId: 'warlock' }, DEFAULT_PDF_OPTIONS, font, template));
   assert.equal(warlock.getForm().getTextField('patron_name').getText(), undefined);
-  assert.equal(warlock.getForm().getCheckBox('favor_0').isChecked(), false);
+  // Favor begins at 3 by rule even for sheets that predate resource storage.
+  assert.ok(warlock.getForm().getCheckBox('favor_0').isChecked());
+  assert.ok(warlock.getForm().getCheckBox('favor_1').isChecked());
+  assert.ok(warlock.getForm().getCheckBox('favor_2').isChecked());
+  assert.equal(warlock.getForm().getCheckBox('favor_3').isChecked(), false);
   warlock.getForm().getTextField('patron_name').setText('The Lantern');
   warlock.getForm().getCheckBox('favor_2').check();
   const saved = (await PDFDocument.load(await warlock.save())).getForm();
@@ -267,4 +272,200 @@ test('long single-line values shrink with a readable minimum and preserve the fu
   assert.equal(field.getText(), longName);
   const size = Number(/(\d+(?:\.\d+)?) Tf/.exec(field.acroField.getDefaultAppearance() ?? '')?.[1]);
   assert.ok(size >= 7 && size < 10, `expected 7 <= ${size} < 10`);
+});
+
+test('Warlock stored patron, sphere and Favor prefill the original spaces and the appendix', async () => {
+  const warlock: Sheet = {
+    ...sheet, classId: 'warlock', subclassId: 'pact-of-the-endless',
+    resources: { classResources: { 'warlock-patron': 'The Lantern', 'warlock-sphere': 'Embers', 'warlock-favor': 2 } },
+  };
+  assert.ok(hasClassResourceState(warlock));
+  const rows = classResourceAppendixRows(warlock);
+  assert.equal(rows.find(row => row.id === 'warlock-patron')?.value, 'The Lantern');
+  assert.equal(rows.find(row => row.id === 'warlock-sphere')?.value, 'Embers');
+  assert.match(rows.find(row => row.id === 'warlock-favor')?.value ?? '', /^2 \/ 6$/);
+  assert.ok(rows.every(row => row.label !== row.id));
+  const doc = await PDFDocument.load(await createCharacterPdf(warlock, DEFAULT_PDF_OPTIONS, font, template));
+  const form = doc.getForm();
+  assert.equal(form.getTextField('patron_name').getText(), 'The Lantern');
+  assert.equal(form.getTextField('patron_sphere').getText(), 'Embers');
+  assert.ok(form.getCheckBox('favor_0').isChecked());
+  assert.ok(form.getCheckBox('favor_1').isChecked());
+  assert.equal(form.getCheckBox('favor_2').isChecked(), false);
+  assert.equal(doc.getPageCount(), 3); // original sheet + guide + supplemental page
+  // The appendix stays editable in the downloaded PDF.
+  assert.equal(form.getTextField('appendix_warlock-patron_0').getText(), 'The Lantern');
+  assert.equal(form.getTextField('appendix_warlock-sphere_0').getText(), 'Embers');
+  assert.match(form.getTextField('appendix_warlock-favor_0').getText() ?? '', /^2 \/ 6$/);
+  assert.equal(form.getTextField('appendix_warlock-patron_0').isReadOnly(), false);
+});
+
+test('legacy Warlock Favor starts at three without an appendix', async () => {
+  const warlock: Sheet = { ...sheet, classId: 'warlock', subclassId: 'pact-of-the-wrathful' };
+  assert.equal(hasClassResourceState(warlock), false);
+  assert.deepEqual(classResourceAppendixRows(warlock), []);
+  const doc = await PDFDocument.load(await createCharacterPdf(warlock, DEFAULT_PDF_OPTIONS, font, template));
+  assert.equal(doc.getPageCount(), 2);
+  const form = doc.getForm();
+  for (let i = 0; i < 3; i++) assert.ok(form.getCheckBox(`favor_${i}`).isChecked(), `favor_${i}`);
+  assert.equal(form.getCheckBox('favor_3').isChecked(), false);
+});
+
+test('Brawler Focus and known stances prefill only for Martial Artist, using printed stance order', async () => {
+  assert.ok(MARTIAL_STANCES.length >= 16);
+  const first = MARTIAL_STANCES[0]!;
+  const second = MARTIAL_STANCES[1]!;
+  const third = MARTIAL_STANCES[2]!;
+  const state = {
+    classResources: {
+      'brawler-focus': 2,
+      'brawler-stances': [first.id, second.id],
+      'brawler-active-stance': second.id,
+      'brawler-focus-used': true,
+    },
+  };
+  const martial: Sheet = { ...sheet, classId: 'brawler', subclassId: 'martial-artist', resources: state };
+  const doc = await PDFDocument.load(await createCharacterPdf(martial, DEFAULT_PDF_OPTIONS, font, template));
+  const form = doc.getForm();
+  assert.ok(form.getCheckBox('martial_focus_0').isChecked());
+  assert.ok(form.getCheckBox('martial_focus_1').isChecked());
+  assert.equal(form.getCheckBox('martial_focus_2').isChecked(), false);
+  assert.ok(form.getCheckBox('martial_stance_0').isChecked());
+  assert.ok(form.getCheckBox('martial_stance_1').isChecked());
+  assert.equal(form.getCheckBox('martial_stance_2').isChecked(), false);
+  assert.equal(doc.getPageCount(), 4); // brawler sheet + reference + guide + appendix
+  const rows = classResourceAppendixRows(martial);
+  const stances = rows.find(row => row.id === 'brawler-stances');
+  assert.ok(stances?.value.includes(first.label), stances?.value);
+  assert.ok(stances?.value.includes(second.label));
+  assert.ok(!stances?.value.includes(third.id));
+  assert.equal(rows.find(row => row.id === 'brawler-active-stance')?.value, second.label);
+  assert.ok(rows.some(row => row.id === 'brawler-focus-used'));
+
+  const juggernaut: Sheet = { ...martial, subclassId: 'juggernaut' };
+  const juggernautDoc = await PDFDocument.load(await createCharacterPdf(juggernaut, DEFAULT_PDF_OPTIONS, font, template));
+  const juggernautForm = juggernautDoc.getForm();
+  assert.equal(juggernautForm.getCheckBox('martial_focus_0').isChecked(), false);
+  assert.equal(juggernautForm.getCheckBox('martial_stance_0').isChecked(), false);
+  // Martial Artist definitions are unavailable to another subclass, so the persisted trackers do not resurface.
+  assert.ok(!classResourceAppendixRows(juggernaut).some(row => row.id === 'brawler-focus'));
+});
+
+test('Prayer Dice and Ranger Focus aliases append the page, filtered to current and multiclass classes', async () => {
+  const seraph: Sheet = { ...sheet, classId: 'seraph', subclassId: null, resources: { prayerDice: [4, 2] } };
+  assert.ok(hasClassResourceState(seraph));
+  const prayer = classResourceAppendixRows(seraph).find(row => row.id === 'seraph-prayer-dice');
+  assert.equal(prayer?.value, '4, 2');
+  const seraphDoc = await PDFDocument.load(await createCharacterPdf(seraph, DEFAULT_PDF_OPTIONS, font, template));
+  assert.equal(seraphDoc.getPageCount(), 3); // sheet + guide + appendix
+
+  const ranger: Sheet = { ...sheet, classId: 'ranger', subclassId: null, resources: { focusTargetId: 'adversary-archer' } };
+  const rangerDoc = await PDFDocument.load(await createCharacterPdf(ranger, DEFAULT_PDF_OPTIONS, font, template));
+  assert.equal(rangerDoc.getPageCount(), 4); // sheet + companion + guide + appendix
+  assert.ok(classResourceAppendixRows(ranger).some(row => row.id === 'ranger-focus'));
+
+  const guardian: Sheet = {
+    ...sheet, classId: 'guardian', multiclassId: 'seraph',
+    resources: { prayerDice: [3], classResources: { 'witch-phase': 2 } },
+  };
+  const rows = classResourceAppendixRows(guardian);
+  assert.ok(rows.some(row => row.id === 'seraph-prayer-dice'));
+  assert.ok(!rows.some(row => row.id.startsWith('witch-')));
+  const guardianDoc = await PDFDocument.load(await createCharacterPdf(guardian, DEFAULT_PDF_OPTIONS, font, template));
+  assert.equal(guardianDoc.getPageCount(), 3); // guardian sheet + guide + appendix
+});
+
+test('Beastbound companion resources fill the original companion page while invalid subclasses stay blank', async () => {
+  const beastbound: Sheet = {
+    ...sheet, classId: 'ranger', subclassId: 'beastbound',
+    resources: { classResources: {
+      'ranger-companion-name': 'Moss', 'ranger-companion-evasion': 12,
+      'ranger-companion-stress': 2, 'ranger-companion-attack': 'Bite', 'ranger-companion-range': 'Melee',
+      'ranger-companion-experiences': ['Tracker', 'Guard dog'],
+      'ranger-companion-training': ['intelligent', 'aware', 'aware-3'],
+    } },
+  };
+  const doc = await PDFDocument.load(await createCharacterPdf(beastbound, DEFAULT_PDF_OPTIONS, font, template));
+  const form = doc.getForm();
+  assert.equal(form.getTextField('companion_name').getText(), 'Moss');
+  assert.equal(form.getTextField('companion_evasion').getText(), '12');
+  assert.equal(form.getTextField('companion_attack').getText(), 'Bite');
+  assert.equal(form.getTextField('companion_range').getText(), 'Melee');
+  assert.equal(form.getTextField('companion_experience_0').getText(), 'Tracker');
+  assert.equal(form.getTextField('companion_experience_1').getText(), 'Guard dog');
+  assert.ok(!form.getTextField('companion_experience_0_modifier').getText());
+  assert.ok(form.getCheckBox('companion_stress_0').isChecked());
+  assert.ok(form.getCheckBox('companion_stress_1').isChecked());
+  assert.equal(form.getCheckBox('companion_stress_2').isChecked(), false);
+  // Each stored training option maps directly to its printed box.
+  assert.ok(form.getCheckBox('companion_training_0').isChecked());
+  assert.equal(form.getCheckBox('companion_training_3').isChecked(), false);
+  assert.ok(form.getCheckBox('companion_training_13').isChecked());
+  assert.equal(form.getCheckBox('companion_training_14').isChecked(), false);
+  assert.ok(form.getCheckBox('companion_training_15').isChecked());
+
+  // The fixture uses the Guardian subclass with a Ranger class id; it must not receive companion data.
+  const invalid = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId: 'ranger', subclassId: 'stalwart' }, DEFAULT_PDF_OPTIONS, font, template));
+  assert.ok(!invalid.getForm().getTextField('companion_name').getText());
+  assert.equal(invalid.getForm().getCheckBox('companion_stress_0').isChecked(), false);
+});
+
+test('blank exports never include class resources, their appendix or their values', async () => {
+  const warlock: Sheet = {
+    ...sheet, classId: 'warlock', subclassId: 'pact-of-the-endless',
+    resources: { classResources: { 'warlock-patron': 'Secret Patron', 'warlock-favor': 5 } },
+  };
+  const doc = await PDFDocument.load(await createCharacterPdf(warlock, { blank: true, guide: false, references: false }, font, template));
+  assert.equal(doc.getPageCount(), 1);
+  const form = doc.getForm();
+  assert.ok(!form.getTextField('patron_name').getText());
+  assert.equal(form.getCheckBox('favor_0').isChecked(), false);
+  for (const field of form.getFields()) {
+    if (field instanceof PDFTextField) assert.ok(!(field.getText() ?? '').includes('Secret Patron'));
+    if (field instanceof PDFCheckBox) assert.equal(field.isChecked(), false);
+  }
+});
+
+test('stale resource keys from another class never append an appendix of unrelated defaults', async () => {
+  const guardian: Sheet = {
+    ...sheet, classId: 'guardian', subclassId: 'stalwart',
+    resources: { classResources: { 'witch-phase': 2, 'brawler-focus': 1 } },
+  };
+  assert.equal(hasClassResourceState(guardian), false);
+  assert.deepEqual(classResourceAppendixRows(guardian), []);
+  const doc = await PDFDocument.load(await createCharacterPdf(guardian, DEFAULT_PDF_OPTIONS, font, template));
+  assert.equal(doc.getPageCount(), 2);
+  assert.ok(!doc.getForm().getFields().some(field => field.getName().startsWith('appendix_')));
+});
+
+test('page counts stay unchanged for every class when no resource state exists', async () => {
+  for (const [classId, count] of [['guardian', 2], ['ranger', 3], ['druid', 4], ['brawler', 3], ['warlock', 2], ['seraph', 2]] as const) {
+    const doc = await PDFDocument.load(await createCharacterPdf({ ...sheet, classId, subclassId: null }, DEFAULT_PDF_OPTIONS, font, template));
+    assert.equal(doc.getPageCount(), count, classId);
+  }
+});
+
+test('long appendix values wrap across pages without truncation and survive save/reopen', async () => {
+  const longPatron = 'Patron of the endless lanterns and forgotten names. '.repeat(40).trim();
+  const warlock: Sheet = {
+    ...sheet, classId: 'warlock', subclassId: 'pact-of-the-endless',
+    resources: { classResources: { 'warlock-patron': longPatron, 'warlock-favor': 4 } },
+  };
+  assert.equal(classResourceAppendixRows(warlock).find(row => row.id === 'warlock-patron')?.value, longPatron);
+  const doc = await PDFDocument.load(await createCharacterPdf(warlock, DEFAULT_PDF_OPTIONS, font, template));
+  assert.ok(doc.getPageCount() > 3, `expected multiple appendix pages, got ${doc.getPageCount()}`);
+  assert.deepEqual(doc.getPage(doc.getPageCount() - 1).getSize(), { width: 612, height: 792 });
+  const chunks = doc.getForm().getFields()
+    .filter(field => field.getName().startsWith('appendix_warlock-patron_'))
+    .sort((a, b) => Number(a.getName().split('_').pop()) - Number(b.getName().split('_').pop()))
+    .map(field => (field as PDFTextField).getText() ?? '');
+  assert.ok(chunks.length > 1, `expected wrapped value lines, got ${chunks.length}`);
+  assert.equal(chunks.join(' '), longPatron);
+  doc.getForm().getTextField('patron_name').setText('The Lantern');
+  doc.getForm().getTextField('appendix_warlock-patron_0').setText('The Lantern');
+  const reopened = await PDFDocument.load(await doc.save());
+  assert.equal(reopened.getPageCount(), doc.getPageCount());
+  assert.equal(reopened.getForm().getTextField('patron_name').getText(), 'The Lantern');
+  assert.equal(reopened.getForm().getTextField('appendix_warlock-patron_0').getText(), 'The Lantern');
+  assert.ok(reopened.getForm().getCheckBox('favor_3').isChecked());
 });

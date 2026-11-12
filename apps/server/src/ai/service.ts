@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { adversaries } from '@daggery/content';
 import { canReuseAiKey, DiceNotationError, getGameSystem, getRuleset, maxDiceTotal, resolveDiceFaces, resolveDuality, roll, rollDice, type AiAdventure, type AiBudget, type AiConnection, type AiInteraction, type AiJournalEntry, type AiJournalPage, type AiMessage, type AiProvider, type AiRun, type AiSetup, type AiTurnKind, type DiceRoll, type DualityResult, type SoloState, type TraitName } from '@daggery/shared';
-import { applyDualityEffects, armorScore, damageHp, damageSeverity, damageThresholds, getClass, hpMax, traitValue, weaponDamageNotation, weaponForSlot, weaponModifier } from '@daggery/shared/daggerheart';
+import { applyDualityEffects, armorScore, damageHp, damageSeverity, damageThresholds, getClass, hpMax, resetClassResources, traitValue, weaponDamageNotation, weaponForSlot, weaponModifier } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { clearFocusTarget, focusTargetId, hasRangersFocus, rollPrayerDice, setFocusTarget, spendPrayerDie } from './abilities';
@@ -428,22 +428,27 @@ export class AiService {
   }
 
   /**
-   * Session-start class features. Seraph Prayer Dice are rolled once for the chat that opens
-   * play. The chat marker on the sheet makes this idempotent across retries and restarts, and
-   * neither pausing, resuming nor refreshing a transcript calls it. It never rests the party or
-   * changes anything besides the dice and their marker.
+   * Session-start class features. Every sheet with session-reset trackers is reset once for the
+   * chat that opens play, and the Seraph's Prayer Dice are rolled. The chat marker on the sheet
+   * makes this idempotent across retries and restarts, and neither pausing, resuming nor
+   * refreshing a transcript calls it. It never rests the party, rolls any feature besides the
+   * Prayer Dice, or changes anything besides the class resources it applies.
    */
   private startSessionFeatures(campaign: string, chat: string): void {
     if (this.db.prepare('SELECT 1 FROM ai_messages WHERE chat_id = ? LIMIT 1').get(chat)) return;
+    const at = new Date().toISOString();
     for (const doc of this.actions.docs(campaign, 'sheets')) {
       const sheet = doc.value as unknown as Sheet;
-      if (sheet.classId !== 'seraph' || sheet.resources?.featuresStartedFor === chat) continue;
-      const dice = rollPrayerDice(sheet);
-      const next: Sheet = {
-        ...sheet,
-        resources: { ...sheet.resources, prayerDice: dice, featuresStartedFor: chat },
-        updatedAt: new Date().toISOString(),
-      };
+      if (sheet.resources?.featuresStartedFor === chat) continue;
+      // The shared helper resets only the session-reset trackers (for example the Bard's Rally),
+      // leaving persistent choices, Favor, patrons and known stances alone.
+      let next = resetClassResources(sheet, 'session');
+      // Prayer Dice: "At the beginning of each session, roll a number of d4s ..." The helper does
+      // not claim the roll: this service rolls them exactly once, as before.
+      if (next.classId === 'seraph') {
+        next = { ...next, resources: { ...next.resources, prayerDice: rollPrayerDice(next) } };
+      }
+      next = { ...next, resources: { ...next.resources, featuresStartedFor: chat }, updatedAt: at };
       this.actions.write(campaign, 'sheets', sheet.id, next);
       this.publish(campaign, 'sheets', sheet.id, next);
     }
@@ -638,11 +643,21 @@ export class AiService {
         this.db.prepare("UPDATE ai_messages SET interaction = json_set(interaction, '$.resolved', json('true')) WHERE chat_id = ? AND interaction IS NOT NULL AND json_extract(interaction, '$.kind') IN ('roll', 'choices') AND json_extract(interaction, '$.resolved') = 0").run(rt.chat);
         this.chats.end(rt.campaign, rt.chat, at);
         this.actions.message(rt.campaign, rt.chat, rt.turn, 'notice', ENDED_NOTICE);
-        // Prayer Dice: "At the end of each session, clear all unspent Prayer Dice."
+        // Session trackers reset at the end of the session that opened them: unspent Prayer Dice
+        // are cleared ("At the end of each session, clear all unspent Prayer Dice"), and the
+        // other session-reset class resources follow the same event. Persistent values such as
+        // Warlock Favor, patrons and Brawler stances are preserved. The chat marker stays so a
+        // retried end never re-rolls anything; the next Begin resets the next session.
         for (const doc of this.actions.docs(rt.campaign, 'sheets')) {
           const sheet = doc.value as unknown as Sheet;
-          if (!sheet.resources?.prayerDice?.length || sheet.resources.featuresStartedFor !== rt.chat) continue;
-          const next: Sheet = { ...sheet, resources: { ...sheet.resources, prayerDice: [] }, updatedAt: at };
+          if (sheet.resources?.featuresStartedFor !== rt.chat) continue;
+          const reset = resetClassResources(sheet, 'session');
+          const next: Sheet = {
+            ...reset,
+            resources: { ...reset.resources, ...(sheet.classId === 'seraph' ? { prayerDice: [] } : {}) },
+            updatedAt: at,
+          };
+          if (JSON.stringify(next.resources) === JSON.stringify(sheet.resources)) continue;
           this.actions.write(rt.campaign, 'sheets', sheet.id, next);
           cleared.push({ ns: 'sheets', id: sheet.id, value: next });
         }

@@ -1,9 +1,11 @@
-import { PDFDocument, PDFHexString, PDFName, TextAlignment, drawCheckMark, rgb, type PDFPage } from 'pdf-lib';
+import { PDFDocument, PDFHexString, PDFName, TextAlignment, drawCheckMark, rgb, type PDFFont, type PDFForm, type PDFPage } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { Sheet } from './types';
 import guideLayout from './pdfGuideLayout.json';
 import hopeGuideLayout from './pdfHopeGuideLayout.json';
-import { TRAIT_ORDER, getClass, getSubclass, getCommunity, getArmor, getWeapon, heritageDisplayName, hpMax, stressMax, armorScore, evasion, damageThresholds, weaponForSlot, weaponDamageNotation, traitValue, spellcastTraitName, spellcastTraitValue, weaponModifier } from './rules';
+import { TRAIT_ORDER, getClass, getSubclass, getCommunity, getArmor, getWeapon, heritageDisplayName, hpMax, stressMax, armorScore, evasion, damageThresholds, weaponForSlot, weaponDamageNotation, traitValue, spellcastTraitName, spellcastTraitValue, weaponModifier, classResourceDefinitions, classResourceValue, classResourceFacts, MARTIAL_STANCES } from './rules';
+
+type ResourceDefinition = ReturnType<typeof classResourceDefinitions>[number];
 
 export interface PdfOptions { blank: boolean; guide: boolean; references: boolean }
 export const DEFAULT_PDF_OPTIONS: PdfOptions = { blank: false, guide: true, references: true };
@@ -17,6 +19,208 @@ export const ORIGINAL_SHEETS: Record<string, { sheet: number; guide: number; ref
   sorcerer: { sheet: 15, guide: 16 }, warrior: { sheet: 17, guide: 18 }, wizard: { sheet: 19, guide: 20 },
 };
 
+export interface ClassResourceAppendixRow {
+  id: string;
+  label: string;
+  value: string;
+  detail?: string;
+}
+
+const resourceIsPersisted = (sheet: Sheet, id: string): boolean => {
+  const resources = sheet.resources;
+  if (!resources) return false;
+  if (resources.classResources && Object.prototype.hasOwnProperty.call(resources.classResources, id)) return true;
+  if (id === 'ranger-focus') return resources.focusTargetId != null;
+  if (id === 'seraph-prayer-dice') return (resources.prayerDice?.length ?? 0) > 0;
+  return false;
+};
+
+/**
+ * True when a resource available to this character is actually recorded. A leftover key from a
+ * previously chosen class is not enough to append a page of defaults for the new class.
+ */
+export function hasClassResourceState(sheet: Sheet): boolean {
+  return classResourceDefinitions(sheet).some(definition => resourceIsPersisted(sheet, definition.id));
+}
+
+const optionLabel = (definition: ResourceDefinition, id: string): string =>
+  definition.options?.find(option => option.id === id)?.label
+  ?? (definition.classId === 'brawler' ? MARTIAL_STANCES.find(stance => stance.id === id)?.label : undefined)
+  ?? id;
+
+/** Human-readable value: labels (never raw option ids), dice faces and counter maximums. */
+const resourceDisplayValue = (definition: ResourceDefinition, value: unknown): string => {
+  if (definition.kind === 'counter') {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? (definition.max != null ? `${numeric} / ${definition.max}` : String(numeric)) : String(value ?? '');
+  }
+  if (definition.kind === 'toggle') return value === true ? 'Marked' : 'Not marked';
+  if (definition.kind === 'dice') {
+    const faces = Array.isArray(value) ? value.map(String) : value == null ? [] : [String(value)];
+    return faces.length > 0 ? faces.join(', ') : 'None';
+  }
+  if (definition.kind === 'list') {
+    // Free-text targets (for example a marked adversary) are already labels, not option ids.
+    const entries = Array.isArray(value) ? value : value == null || value === '' ? [] : [value];
+    return entries.length > 0 ? entries.map(String).join(', ') : 'None';
+  }
+  if (definition.kind === 'selection') {
+    const entries = Array.isArray(value) ? value : value == null || value === '' ? [] : [value];
+    return entries.length > 0 ? entries.map(entry => optionLabel(definition, String(entry))).join(', ') : 'None';
+  }
+  if (definition.kind === 'choice') return value == null || value === '' ? 'None' : optionLabel(definition, String(value));
+  return value == null ? '' : String(value);
+};
+
+const resourceValueIsEmpty = (definition: ResourceDefinition, value: unknown): boolean => {
+  if (definition.kind === 'toggle') return false;
+  if (value == null) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'string') return value.trim() === '';
+  return false;
+};
+
+/** Keep rule text out of the page; only a concise reminder and the reset rule are printed. */
+const resourceDetail = (definition: ResourceDefinition, persisted: boolean): string | undefined => {
+  if (!persisted) return undefined;
+  const parts: string[] = [];
+  if (typeof definition.help === 'string') {
+    const help = definition.help.trim().replace(/\s+/g, ' ');
+    if (help && help.length <= 90) parts.push(help);
+  }
+  if (definition.reset === 'scene') parts.push('Resets when the scene ends');
+  else if (definition.reset === 'session') parts.push('Resets each session');
+  else if (definition.reset === 'rest') parts.push('Resets after a rest');
+  else if (definition.reset === 'longRest') parts.push('Resets after a long rest');
+  return parts.length > 0 ? parts.join(' · ') : undefined;
+};
+
+/**
+ * Rows for the supplemental "Class resources" page. Definitions are limited to the current class
+ * and its multiclass so stale resources from a previously chosen class can never leak.
+ */
+export function classResourceAppendixRows(sheet: Sheet): ClassResourceAppendixRow[] {
+  if (!hasClassResourceState(sheet)) return [];
+  const definitions = classResourceDefinitions(sheet).filter(definition =>
+    definition.classId === sheet.classId || (sheet.multiclassId != null && definition.classId === sheet.multiclassId));
+  const rows: ClassResourceAppendixRow[] = [];
+  const seenLabels = new Set<string>();
+  for (const definition of definitions) {
+    const persisted = resourceIsPersisted(sheet, definition.id);
+    let value: unknown = classResourceValue(sheet, definition.id);
+    if (value == null) value = definition.defaultValue;
+    if (!persisted && resourceValueIsEmpty(definition, value)) continue;
+    rows.push({ id: definition.id, label: definition.label, value: resourceDisplayValue(definition, value) || '—', detail: resourceDetail(definition, persisted) });
+    seenLabels.add(definition.label);
+  }
+  for (const fact of classResourceFacts(sheet)) {
+    if (!fact?.label || !fact.value || seenLabels.has(fact.label)) continue;
+    rows.push({ id: `fact:${fact.label}`, label: fact.label, value: fact.value });
+  }
+  return rows;
+}
+
+const wrapLines = (font: PDFFont, text: string, size: number, maxWidth: number): string[] => {
+  const lines: string[] = [];
+  for (const paragraph of text.split(/\r?\n/)) {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+    if (words.length === 0) { lines.push(''); continue; }
+    let line = '';
+    for (let word of words) {
+      // Break a word that is wider than the column rather than clipping it.
+      while (font.widthOfTextAtSize(word, size) > maxWidth && word.length > 1) {
+        let split = 1;
+        while (split < word.length && font.widthOfTextAtSize(word.slice(0, split + 1), size) <= maxWidth) split++;
+        if (line) { lines.push(line); line = ''; }
+        lines.push(word.slice(0, split));
+        word = word.slice(split);
+      }
+      const candidate = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(candidate, size) <= maxWidth) line = candidate;
+      else { if (line) lines.push(line); line = word; }
+    }
+    if (line) lines.push(line);
+  }
+  return lines.length > 0 ? lines : [''];
+};
+
+/** Draws the readable folio page after the original pages. Values are transparent, still-editable 10pt fields. */
+function drawClassResourceAppendix(pdf: PDFDocument, form: PDFForm, font: PDFFont, sheet: Sheet, rows: ClassResourceAppendixRow[]): void {
+  const width = 612;
+  const height = 792;
+  const margin = 54;
+  const bottom = 68;
+  const ink = rgb(.08, .09, .1);
+  const faded = rgb(.38, .39, .4);
+  const rule = rgb(.58, .58, .6);
+  const labelWidth = 158;
+  const valueX = margin + labelWidth + 18;
+  const valueWidth = width - margin - valueX;
+  const usedNames = new Set<string>();
+  let page!: PDFPage;
+  let y = 0;
+  const drawValueLine = (id: string, text: string, lineIndex: number, baseline: number) => {
+    if (!text) return;
+    let name = `appendix_${id.replace(/[^A-Za-z0-9_-]/g, '_')}_${lineIndex}`;
+    while (usedNames.has(name)) name += '_';
+    usedNames.add(name);
+    const input = form.createTextField(name);
+    input.setText(text);
+    input.addToPage(page, { x: valueX, y: baseline - 3.2, width: valueWidth, height: 13.6, font,
+      textColor: ink, borderWidth: 0, backgroundColor: undefined, borderColor: undefined });
+    input.setFontSize(10);
+    input.updateAppearances(font);
+  };
+  const newPage = (continued: boolean) => {
+    page = pdf.addPage([width, height]);
+    page.drawRectangle({ x: 34, y: 34, width: width - 68, height: height - 68, borderColor: rule, borderWidth: .6 });
+    page.drawText('DAGGERY', { x: margin, y: height - 76, size: 8, font, color: faded });
+    page.drawText(continued ? 'Class resources (continued)' : 'Class resources', { x: margin, y: height - 104, size: 18, font, color: ink });
+    page.drawLine({ start: { x: margin, y: height - 116 }, end: { x: width - margin, y: height - 116 }, thickness: .7, color: rule });
+    y = height - 144;
+    const nameLines = wrapLines(font, sheet.name || (continued ? '' : 'Unnamed character'), continued ? 9.5 : 11.5, width - margin * 2);
+    for (const line of nameLines) {
+      page.drawText(line, { x: margin, y, size: continued ? 9.5 : 11.5, font, color: continued ? faded : ink });
+      y -= continued ? 13 : 15;
+    }
+    if (!continued) {
+      const classLine = [getClass(sheet.classId)?.name ?? sheet.classId, getSubclass(sheet.classId, sheet.subclassId)?.name].filter(Boolean).join(' · ');
+      const multiclass = sheet.multiclassId ? getClass(sheet.multiclassId)?.name ?? sheet.multiclassId : null;
+      for (const line of wrapLines(font, multiclass ? `${classLine}   ·   Multiclass: ${multiclass}` : classLine, 9.5, width - margin * 2)) {
+        page.drawText(line, { x: margin, y, size: 9.5, font, color: faded });
+        y -= 13;
+      }
+      y -= 12;
+    } else {
+      y -= 8;
+    }
+  };
+  newPage(false);
+  for (const row of rows) {
+    const labelLines = wrapLines(font, row.label, 10.5, labelWidth);
+    const valueLines = wrapLines(font, row.value, 10, valueWidth);
+    const detailLines = row.detail ? wrapLines(font, row.detail, 9, valueWidth) : [];
+    const needed = Math.max(labelLines.length, valueLines.length) * 13.5 + detailLines.length * 11.5 + 24;
+    if (y - Math.min(needed, 60) < bottom + 8) newPage(true);
+    page.drawLine({ start: { x: margin, y: y + 7 }, end: { x: width - margin, y: y + 7 }, thickness: .35, color: rule });
+    y -= 3;
+    let labelIndex = 0;
+    let valueIndex = 0;
+    while (labelIndex < labelLines.length || valueIndex < valueLines.length) {
+      if (y < bottom) newPage(true);
+      if (labelIndex < labelLines.length) { page.drawText(labelLines[labelIndex]!, { x: margin, y, size: 10.5, font, color: ink }); labelIndex++; }
+      if (valueIndex < valueLines.length) { drawValueLine(row.id, valueLines[valueIndex]!, valueIndex, y); valueIndex++; }
+      y -= 13.5;
+    }
+    for (const detail of detailLines) {
+      if (y < bottom) newPage(true);
+      page.drawText(detail, { x: valueX, y, size: 9, font, color: faded });
+      y -= 11.5;
+    }
+    y -= 7;
+  }
+}
+
 /** Copies original vector pages, then adds transparent AcroForm widgets. Never redraw or flatten the source. */
 export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, fontBytes: Uint8Array, templateBytes: Uint8Array): Promise<Uint8Array> {
   const source = await PDFDocument.load(templateBytes);
@@ -26,6 +230,13 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
   const form = pdf.getForm();
   const mapping = ORIGINAL_SHEETS[sheet.classId];
   if (!mapping) throw new Error(`No original character sheet is available for class "${sheet.classId}". Choose a supported class before exporting.`);
+  // Persisted class resources, with each definition's starting value as the legacy fallback.
+  const resourceDefinitions = classResourceDefinitions(sheet);
+  const definitionById = new Map(resourceDefinitions.map(definition => [definition.id, definition]));
+  const resourceValue = (id: string): unknown => {
+    const value = classResourceValue(sheet, id);
+    return value == null ? definitionById.get(id)?.defaultValue : value;
+  };
   const indices = [mapping.sheet];
   const inventoryPageCount = options.blank ? 1 : Math.max(1, Math.ceil(sheet.inventory.filter(item => item.qty > 0).length / 5));
   for (let i = 1; i < inventoryPageCount; i++) indices.push(mapping.sheet);
@@ -177,15 +388,23 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
   }
   if (options.references && mapping?.references?.includes(9)) {
     page = pages[inventoryPageCount + (options.guide ? 1 : 0) + mapping.references.indexOf(9)]!;
-    // Companion state is managed separately from Sheet; these original spaces remain editable blanks.
-    field('companion_name', '', 185, 64, 285, 17);
-    field('companion_evasion', '', 504, 34, 30, 23, false, true, 16);
+    // Companion trackers belong to the Beastbound subclass; other Rangers keep the original spaces blank.
+    const beastbound = sheet.classId === 'ranger' && sheet.subclassId === 'beastbound';
+    // Only recorded companion state fills the native spaces; printed defaults stay editable blanks.
+    const companionValue = (id: string): unknown => beastbound && resourceIsPersisted(sheet, id) ? resourceValue(id) : undefined;
+    const companionText = (id: string) => { const value = companionValue(id); return typeof value === 'string' ? value : ''; };
+    const companionNumber = (id: string) => { const value = Number(companionValue(id)); return Number.isFinite(value) ? Math.trunc(value) : 0; };
+    field('companion_name', companionText('ranger-companion-name'), 185, 64, 285, 17);
+    field('companion_evasion', companionNumber('ranger-companion-evasion') || '', 504, 34, 30, 23, false, true, 16);
+    const experiences = companionValue('ranger-companion-experiences');
+    const experienceNames = Array.isArray(experiences) ? experiences.map(String) : [];
     for (let i = 0; i < 5; i++) {
-      field(`companion_experience_${i}`, '', 173, 346 + i * 19.665, 194, 16);
+      field(`companion_experience_${i}`, experienceNames[i], 173, 346 + i * 19.665, 194, 16);
+      // The companion sheet lets the player write each modifier by hand.
       field(`companion_experience_${i}_modifier`, '', 378, 346 + i * 19.665, 32, 16, false, true);
     }
-    field('companion_attack', '', 169, 518, 69, 17);
-    field('companion_range', '', 242, 518, 90, 17);
+    field('companion_attack', companionText('ranger-companion-attack'), 169, 518, 69, 17);
+    field('companion_range', companionText('ranger-companion-range'), 242, 518, 90, 17);
     for (let i = 0; i < 4; i++) check(`companion_damage_${[6, 8, 10, 12][i]}`, false, 172.904 + i * 30.496, 555.88, 5.976, 5.976);
     const training = [
       [353.28,550.49],[365.59,550.49],[377.90,550.49],[377.90,581.16],
@@ -193,9 +412,17 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
       [353.28,686.50],[365.59,686.50],[377.90,686.50],[377.90,700.67],
       [353.28,748.84],[365.59,748.84],[377.90,748.84],
     ];
-    training.forEach(([x,y], i) => check(`companion_training_${i}`, false, x!, y!, 9.13, 9.13));
+    // Each printed training box has its own option id, in native companion-sheet order.
+    const trainingOptions = definitionById.get('ranger-companion-training')?.options ?? [];
+    const trainingValue = companionValue('ranger-companion-training');
+    const trained = new Set(Array.isArray(trainingValue) ? trainingValue.map(String) : []);
+    training.forEach(([x,y], i) => {
+      const option = trainingOptions.length === training.length ? trainingOptions[i] : undefined;
+      check(`companion_training_${i}`, option ? trained.has(option.id) : false, x!, y!, 9.13, 9.13);
+    });
     check('companion_hope', false, 458.33, 580.97, 10.85, 10.85);
-    for (let i = 0; i < 6; i++) check(`companion_stress_${i}`, false, 207.97 + i * 20.146, 656.17 - i * .75, 18.35, 7.03 + i * .75);
+    const stress = Math.max(0, Math.min(6, companionNumber('ranger-companion-stress')));
+    for (let i = 0; i < 6; i++) check(`companion_stress_${i}`, i < stress, 207.97 + i * 20.146, 656.17 - i * .75, 18.35, 7.03 + i * .75);
   }
   page = pages[0]!;
   if (sheet.classId === 'brawler') {
@@ -205,16 +432,31 @@ export async function createCharacterPdf(sheet: Sheet, options: PdfOptions, font
     [115.30, 146.30, 177.30, 209.30].forEach((x, i) => check(`combo_die_d${[4, 6, 8, 10][i]}`, i === upgrades, x, 649.24, 10.57, 10.58));
   }
   if (sheet.classId === 'warlock') {
-    // Do not invent Patron/Favor values that the app does not store; provide editable original spaces.
-    field('patron_name', '', 20, 672, 116, 17);
-    field('patron_sphere', '', 143, 672, 116, 17);
-    for (let i = 0; i < 6; i++) check(`favor_${i}`, false, 54.45 + i * 13, 701.18, 9.22, 9.22);
+    const patron = resourceValue('warlock-patron');
+    const sphere = resourceValue('warlock-sphere');
+    // Favor begins at 3 by rule, including legacy sheets with no stored resources.
+    const rawFavor = Number(resourceValue('warlock-favor'));
+    const favor = Number.isFinite(rawFavor) ? Math.max(0, Math.min(6, Math.trunc(rawFavor))) : 3;
+    field('patron_name', typeof patron === 'string' ? patron : '', 20, 672, 116, 17);
+    field('patron_sphere', typeof sphere === 'string' ? sphere : '', 143, 672, 116, 17);
+    for (let i = 0; i < 6; i++) check(`favor_${i}`, i < favor, 54.45 + i * 13, 701.18, 9.22, 9.22);
   }
   if (options.references && mapping.references?.includes(25)) {
     page = pages[inventoryPageCount + (options.guide ? 1 : 0) + mapping.references.indexOf(25)]!;
-    [400.89, 431.26, 461.64, 492.02, 522.39, 552.76].forEach((x, i) => check(`martial_focus_${i}`, false, x, 172.44, 12.11, 12.12));
+    // Focus and known stances belong to the Martial Artist subclass; other Brawlers keep the spaces blank.
+    const martialArtist = sheet.classId === 'brawler' && sheet.subclassId === 'martial-artist';
+    const rawFocus = Number(resourceValue('brawler-focus'));
+    const focus = martialArtist && Number.isFinite(rawFocus) ? Math.max(0, Math.min(6, Math.trunc(rawFocus))) : 0;
+    [400.89, 431.26, 461.64, 492.02, 522.39, 552.76].forEach((x, i) => check(`martial_focus_${i}`, i < focus, x, 172.44, 12.11, 12.12));
     const stanceTops = [221.09, 245.12, 273.40, 299.34, 365.96, 395.25, 423.53, 451.82, 519.78, 545.72, 567.41, 591.44, 655.66, 679.70, 703.73, 728.26];
-    stanceTops.forEach((top, i) => check(`martial_stance_${i}`, false, 325.84, top, 11.34, 11.34));
+    const knownStances = resourceValue('brawler-stances');
+    const known = new Set(Array.isArray(knownStances) ? knownStances.map(String) : []);
+    // The printed sheet lists every stance; definitions.options is tier-filtered, so use the printed order.
+    stanceTops.forEach((top, i) => check(`martial_stance_${i}`, martialArtist && known.has(MARTIAL_STANCES[i]?.id ?? ''), 325.84, top, 11.34, 11.34));
+  }
+  if (!options.blank && hasClassResourceState(sheet)) {
+    const rows = classResourceAppendixRows(sheet);
+    if (rows.length > 0) drawClassResourceAppendix(pdf, form, font, sheet, rows);
   }
   pdf.setTitle(options.blank ? 'Original Daggerheart character sheet' : `${sheet.name} - original character sheet`);
   pdf.setCreator('Daggery');

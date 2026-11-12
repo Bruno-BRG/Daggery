@@ -59,6 +59,8 @@ import './sheet.css';
 import { Icon, type IconName } from '../../components/Icon';
 import { Dialog } from '../../components/Dialog';
 import { ResourceCard } from './ResourceCard';
+import { ClassResources } from './ClassResources';
+import './classResources.css';
 import { setExtraResourceSlots } from './resource-slots';
 import { AbilityCard } from './AbilityCard';
 import { ItemGlyph } from './ItemGlyph';
@@ -605,6 +607,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
           </div>
 
           <div className="sheet-col">
+          <ClassResources sheet={sheet} onUpdate={mutate} />
           <section className="sheet-panel">
             <PanelHead icon="combat" title="Active weapons" note={`Proficiency ${sheet.proficiency}`} />
             <div className="sheet-prof">

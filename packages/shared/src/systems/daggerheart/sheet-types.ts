@@ -85,6 +85,12 @@ export interface SheetProject {
   value: number;
 }
 
+/**
+ * A manual class-resource tracker value. Numeric trackers are counters, text trackers hold a
+ * target or form name, toggles record state, and the array forms hold selected ids or dice faces.
+ */
+export type ClassResourceValue = string | number | boolean | string[] | number[];
+
 export interface SheetResources {
   /** The adversary this hero's Ranger's Focus feature currently marks. */
   focusTargetId?: string | null;
@@ -92,6 +98,11 @@ export interface SheetResources {
   prayerDice?: number[];
   /** The session chat whose opening rolled the session-start features. Guards against a second roll. */
   featuresStartedFor?: string | null;
+  /**
+   * Manual class-feature trackers keyed by resource id (see class-resources.ts). Older sheets
+   * leave this undefined; the shared helpers supply each resource's printed default.
+   */
+  classResources?: Record<string, ClassResourceValue>;
 }
 
 export type DamageSeverity = 'none' | 'minor' | 'major' | 'severe' | 'massive';
