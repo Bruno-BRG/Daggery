@@ -228,12 +228,12 @@ Read the words as a whole phrase and bend it to fit the context; if it makes no
 sense, roll again or take one word. Do not treat a Meaning roll as a command to
 undo established facts.
 
-The app ships word data for the core Actions and Descriptions tables, the
-Characters, Locations and Objects Elements tables, and the One-Page Discover
-Meaning table. The other **42 of the 47 Meaning Table choices have no data
-installed yet** and are shown greyed out. Until they are added, Actions and
-Descriptions fall back to the One-Page table's two columns when their own
-tables are missing, and the One-Page single-word mode is always available.
+Every Meaning Table choice is installed: the core Actions and Descriptions
+pairs, all 45 Elements tables, and the One-Page Discover Meaning table. The
+word lists are written for Daggery rather than copied from the Mythic books:
+the mechanics and subjects match Mythic, while the words themselves are
+original and each table offers 100 entries. The One-Page single-word mode stays
+available on top of the pairs.
 
 ## Scenes
 

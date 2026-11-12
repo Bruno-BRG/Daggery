@@ -42,5 +42,5 @@ function Markdown({ source }: { source: string }) {
   return <>{blocks.map((block, index) => <Fragment key={index}>{block}</Fragment>)}</>;
 }
 export function Rulebook() {
-  return <section className="solo-rulebook"><p className="solo-muted">Mythic GME solo rules · v0.3. Daggerheart resolves the characters; Mythic answers the world. 42 of the 47 Meaning Tables have no word data installed yet.</p><details open><summary>Core solo rules</summary><Markdown source={rules.split('## Daggery integration notes')[0]!} /></details><details><summary>Thematic scene pools (legacy homebrew)</summary><Markdown source={themes.split('## Daggery interface notes')[0]!} /></details></section>;
+  return <section className="solo-rulebook"><p className="solo-muted">Mythic GME solo rules · v0.3. Daggerheart resolves the characters; Mythic answers the world.</p><details open><summary>Core solo rules</summary><Markdown source={rules.split('## Daggery integration notes')[0]!} /></details><details><summary>Thematic scene pools (legacy homebrew)</summary><Markdown source={themes.split('## Daggery interface notes')[0]!} /></details></section>;
 }

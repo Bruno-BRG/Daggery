@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import type { MythicTable, MythicTablesFile } from '@daggery/shared';
+import { MYTHIC_MEANING_CHOICES, type MythicTable, type MythicTablesFile } from '@daggery/shared';
 import { loadMythic, mythicDataDir } from './mythic';
 
 const FILES = ['oracle.json', 'adventure-crafter.json', 'location-crafting.json', 'collected-tables.json'];
@@ -94,6 +94,14 @@ test('Discover Meaning covers the full d100 range', { skip }, async () => {
   assertContiguous(meaning);
   assert.deepEqual(meaning.entries[0]?.cells, ['Attain', 'Artificial']);
   assert.deepEqual(meaning.entries[49]?.cells, ['Uncertain', 'Warm']);
+});
+
+test('every Meaning Table choice has word data installed', { skip }, async () => {
+  const data = await loadMythic();
+  const installed = new Set(allFiles(data).flatMap((file) => file.tables.map((table) => table.id)));
+  for (const choice of MYTHIC_MEANING_CHOICES) {
+    for (const id of choice.tables) assert.ok(installed.has(id), `${choice.label}: missing ${id}`);
+  }
 });
 
 test('every Mythic table entry has non-empty content', { skip }, async () => {
