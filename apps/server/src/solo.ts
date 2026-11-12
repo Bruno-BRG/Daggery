@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { hasFeature, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_TRACKER_LIMIT, SOLO_WORLD_MOVES, type SoloTrackerItem, type MythicData, type MythicTable, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone } from '@daggery/shared';
+import { adjustChaos, advanceThreadTrack, hasFeature, initialSoloState, isChaosFlavor, newThreadTrack, SOLO_KEYED_SCENE_LIMIT, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_TRACKER_LIMIT, SOLO_WORLD_MOVES, type SoloTrackerItem, type MythicData, type MythicTable, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone } from '@daggery/shared';
+import { openLines, rollMythic } from './solo-mythic';
 import type { CampaignService } from './campaign-service';
 import { readSessionToken } from './campaign-routes';
 import { loadMythic } from './mythic';
@@ -32,8 +33,6 @@ const dieSides = (die: string) => {
   return Number(match[1]);
 };
 const inRange = (range: readonly [number, number] | undefined, value: number) => !!range && value >= range[0] && value <= range[1];
-/** Mythic random events happen on doubles 11-99. A d100 of 100 is not a double. */
-const isDouble = (value: number) => value >= 11 && value <= 99 && value % 11 === 0;
 export class SoloConflict extends Error { constructor() { super('Preparation changed in another window. Reload the latest version before saving.'); } }
 export class SoloService {
   constructor(
@@ -145,6 +144,34 @@ export class SoloService {
       }
       if (input.threads !== undefined) state.threads = list(input.threads);
       if (input.characters !== undefined) state.characters = list(input.characters);
+      if (input.features !== undefined) state.features = list(input.features);
+      if (input.chaosFlavor !== undefined) { if (!isChaosFlavor(input.chaosFlavor)) throw new Error('Invalid chaos flavor'); state.chaosFlavor = input.chaosFlavor; }
+      if (input.preparedAdventure !== undefined) { if (typeof input.preparedAdventure !== 'boolean') throw new Error('Invalid prepared adventure flag'); state.preparedAdventure = input.preparedAdventure; }
+      if (input.adventureTheme !== undefined) {
+        const theme = string(input.adventureTheme, 40);
+        if (theme && !['Action', 'Tension', 'Mystery', 'Social', 'Personal'].includes(theme)) throw new Error('Invalid adventure theme');
+        state.adventureTheme = theme;
+      }
+      if (input.keyedScenes !== undefined) {
+        if (!Array.isArray(input.keyedScenes) || input.keyedScenes.length > SOLO_KEYED_SCENE_LIMIT) throw new Error('Invalid keyed scenes');
+        state.keyedScenes = input.keyedScenes.map(entry => {
+          const item = object(entry), id = string(item.id, 80), trigger = string(item.trigger, 500).trim(), event = string(item.event, 500).trim();
+          if (!/^[a-zA-Z0-9-]{1,80}$/.test(id) || !trigger || !event || typeof item.triggered !== 'boolean' || typeof item.done !== 'boolean') throw new Error('Invalid keyed scene');
+          return { id, trigger, event, triggered: item.triggered, done: item.done };
+        });
+      }
+      if (input.peril !== undefined) {
+        const peril = object(input.peril), max = integer(peril.max, 0, 20);
+        if (typeof peril.replenish !== 'boolean') throw new Error('Invalid peril points');
+        state.peril = { max, current: integer(peril.current, 0, max), replenish: peril.replenish };
+      }
+      // An element important in several scenes may fill up to three lines of its List.
+      for (const field of ['threads', 'characters', 'features'] as const) {
+        const names = openLines(state, field).map(item => item.name.toLowerCase());
+        if (names.some(name => names.filter(other => other === name).length > 3)) throw new Error('Invalid list: an element can appear at most three times');
+      }
+      // A track follows its thread: closing or removing every line of the thread ends the track.
+      if (state.threadTrack && !openLines(state, 'threads').some(item => item.name === state.threadTrack!.name)) state.threadTrack = null;
     });
   }
   roll(userId: string, campaign: string, value: unknown): SoloEntry {
@@ -156,6 +183,7 @@ export class SoloService {
     let question = string(input.question ?? '', 2000);
     const state = this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
     let result: SoloResult;
+    let stateChanged = false;
     if (kind === 'oracle') {
       if (!question.trim()) throw new Error('Invalid question');
       result = resolveSoloOracle(rollDie(12), rollDie(12), string(input.likelihood, 30));
@@ -173,67 +201,6 @@ export class SoloService {
       if (!table) throw new Error('Invalid prompt table');
       const die = rollDie(12);
       result = { title: table.entries[die - 1]!, detail: `${table.name} · interpret in context. This prompt grants no new abilities, damage, or extra actions.`, total: die, tone: 'neutral' };
-    } else if (kind === 'mythic-oracle') {
-      const data = this.mythicTables();
-      if (!question.trim()) throw new Error('Invalid question');
-      const table = data.oracle?.tables.find(item => item.id === 'ask-the-game-master');
-      if (!table) throw new Error('Invalid Mythic oracle table');
-      const odds = string(input.odds, 80);
-      const row = table.entries.find(item => item.id === odds);
-      if (!row || !row.ranges) throw new Error('Invalid Mythic odds');
-      // Chaos 5 reads the chart as printed. Each point above reads the row that many steps
-      // toward the most likely odds, each point below toward the least likely, clamped at the ends.
-      const chaos = input.chaos === undefined || input.chaos === null ? 5 : integer(input.chaos, 1, 9);
-      const ordered = [...table.entries].sort((a, b) => (b.ranges?.exceptionalYes?.[1] ?? 0) - (a.ranges?.exceptionalYes?.[1] ?? 0));
-      const shifted = ordered[Math.min(ordered.length - 1, Math.max(0, ordered.indexOf(row) - (chaos - 5)))]!;
-      const ranges = shifted.ranges ?? row.ranges;
-      const roll = rollDie(100, this.rng);
-      const answer = (['exceptionalYes', 'yes', 'no', 'exceptionalNo'] as const).find(key => inRange(ranges[key], roll));
-      if (!answer) throw new Error('Invalid Mythic odds');
-      const labels = { exceptionalYes: 'Exceptional Yes', yes: 'Yes', no: 'No', exceptionalNo: 'Exceptional No' } as const;
-      const tones: Record<typeof answer, SoloTone> = { exceptionalYes: 'revelation', yes: 'hope', no: 'fear', exceptionalNo: 'fear' };
-      const lines = [`d100: ${roll} · Odds: ${row.label ?? odds}${chaos === 5 ? '' : ` · Chaos ${chaos}`}`];
-      if (isDouble(roll)) {
-        const meaning = data.oracle?.tables.find(item => item.id === 'discover-meaning');
-        const pair = meaning ? this.rollMythicEntry(meaning).entry.cells?.slice(0, 2).join(' / ') : undefined;
-        if (pair && pair.trim()) lines.push(`Random event: ${pair}`);
-      }
-      result = { title: labels[answer], detail: lines.join('\n'), tone: tones[answer], total: roll };
-    } else if (kind === 'mythic-scene') {
-      // A d10 above the chaos factor starts the scene as expected. At or below it,
-      // an odd roll alters the scene and an even roll interrupts it with a random event.
-      const data = this.mythicTables();
-      const chaos = state.chaos ?? 5;
-      const roll = rollDie(10, this.rng);
-      const lines = [`d10: ${roll} · Chaos ${chaos}`];
-      let title = 'Expected scene', tone: SoloTone = 'neutral';
-      if (roll > chaos) lines.push('The scene begins as you expected.');
-      else if (roll % 2 === 1) {
-        title = 'Altered scene'; tone = 'fear';
-        lines.push('The scene begins, but one thing about it is not what you expected.');
-      } else {
-        title = 'Interrupt scene'; tone = 'revelation';
-        const meaning = data.oracle?.tables.find(item => item.id === 'discover-meaning');
-        const pair = meaning ? this.rollMythicEntry(meaning).entry.cells?.slice(0, 2).join(' / ') : undefined;
-        if (pair && pair.trim()) lines.push(`Event: ${pair}`);
-        lines.push('Something else happens instead of the scene you expected.');
-      }
-      question = question.trim() || state.scene.title || 'Scene test';
-      result = { title, detail: lines.join('\n'), tone, total: roll };
-    } else if (kind === 'mythic-meaning') {
-      const data = this.mythicTables();
-      const count = integer(input.count, 1, 4);
-      const table = data.oracle?.tables.find(item => item.id === 'discover-meaning');
-      if (!table) throw new Error('Invalid Mythic meaning table');
-      const lines: string[] = [];
-      let firstPair = '';
-      for (let index = 0; index < count; index++) {
-        const { roll, entry } = this.rollMythicEntry(table);
-        const pair = entry.cells?.slice(0, 2).join(' / ') || entry.text || '';
-        if (index === 0) firstPair = pair;
-        lines.push(`d100 ${roll}: ${pair}`);
-      }
-      result = { title: count === 1 && firstPair ? firstPair : 'Discover Meaning', detail: lines.join('\n'), tone: 'neutral' };
     } else if (kind === 'mythic-table') {
       const data = this.mythicTables();
       const source = mythicSource(data, string(input.source, 30));
@@ -245,13 +212,28 @@ export class SoloService {
       const label = column === undefined ? table.title : `${table.title} · ${table.columns![column]}`;
       question = question.trim() ? question : table.title;
       result = { title: value, detail: `${label} · d${sides}: ${roll}`, tone: 'neutral', total: roll };
+    } else if (kind.startsWith('mythic-')) {
+      const outcome = rollMythic(kind, { state, data: this.mythicTables(), rng: this.rng, input, question });
+      result = outcome.result;
+      question = outcome.question ?? question;
+      stateChanged = !!outcome.changed;
     } else if (kind === 'journal') {
       if (!question.trim()) throw new Error('Invalid journal entry');
       result = { title: 'Journal note', detail: '', tone: 'neutral' };
     } else throw new Error('Invalid solo roll type');
     const entry: SoloEntry = { id, at: new Date().toISOString(), kind, question, result, interpretation: kind === 'journal' ? question : '', accepted: kind === 'journal', rulesVersion: SOLO_RULES_VERSION };
-    this.write(campaign, 'solo', `entry:${id}`, entry);
+    // A roll that moves the state (a discovery, a flashpoint) saves both together.
+    this.db.transaction(() => {
+      if (stateChanged) { state.revision++; this.write(campaign, 'solo', 'state', state); }
+      this.write(campaign, 'solo', `entry:${id}`, entry);
+    })();
+    if (stateChanged) this.publish(campaign, 'solo', 'state', state);
     return entry;
+  }
+  /** The current state, for a client to resync after a roll that may have moved it. */
+  current(userId: string, campaign: string): SoloState {
+    this.authorize(userId, campaign);
+    return this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
   }
   accept(userId: string, campaign: string, id: string, interpretation: unknown) {
     this.authorize(userId, campaign);
@@ -272,6 +254,41 @@ export class SoloService {
       if (input.command === 'next-beat') {
         state.beat = { id: randomUUID(), contributions: [], fearSpent: false, outcomeApplied: false };
         detail = 'New action beat. Oracle and prompt rolls never reset this tracker.';
+      } else if (input.command === 'end-scene') {
+        // End of Scene bookkeeping: the chaos factor follows who controlled the scene.
+        const before = state.chaos ?? 5;
+        if (input.control !== 'in' && input.control !== 'out' && input.control !== 'same') throw new Error('Invalid scene control');
+        if (input.control !== 'same') state.chaos = adjustChaos(before, input.control === 'in');
+        state.sceneNumber = (state.sceneNumber ?? 0) + 1;
+        if (state.threadTrack) state.threadTrack.discoveryBlocked = false;
+        state.scene = { ...state.scene, title: '', expected: '' };
+        detail = `Scene ${state.sceneNumber} ended. ${input.control === 'same' ? `Chaos stays at ${before}.` : `${input.control === 'in' ? 'You were mostly in control' : 'You were mostly not in control'}: Chaos ${before} → ${state.chaos}.`} Update the Lists: add what mattered, repeat what mattered again (up to three lines), remove what no longer does.`;
+      } else if (input.command === 'thread-track-start') {
+        const thread = openLines(state, 'threads').find(item => item.id === input.threadId);
+        if (!thread) throw new Error('Invalid thread');
+        state.threadTrack = newThreadTrack(thread.id, thread.name, integer(input.length, 10, 20));
+        detail = `Thread Progress Track started for “${thread.name}”: ${state.threadTrack.length} points. Plot Armor: the thread cannot be resolved before the Conclusion.`;
+      } else if (input.command === 'thread-track-progress') {
+        if (!state.threadTrack || state.threadTrack.concluded) throw new Error('Invalid progress: no Thread Progress Track is running');
+        const flashpoint = input.flashpoint === true;
+        const advanced = advanceThreadTrack(state.threadTrack, 2, flashpoint);
+        state.threadTrack = advanced.track;
+        detail = `${flashpoint ? 'Flashpoint' : 'Progress'} on “${advanced.track.name}”: +2, now ${advanced.track.points} of ${advanced.track.length}.${advanced.triggered ? ' The phase ended with no Flashpoint, so the Track triggers one (+2): generate it now, or at the start of the next scene.' : ''}${advanced.track.concluded ? ' The Track is complete: generate the Conclusion.' : ''}`;
+      } else if (input.command === 'thread-track-clear') {
+        if (!state.threadTrack) throw new Error('Invalid progress: no Thread Progress Track is running');
+        detail = `Thread Progress Track for “${state.threadTrack.name}” closed at ${state.threadTrack.points} of ${state.threadTrack.length}.`;
+        state.threadTrack = null;
+      } else if (input.command === 'peril') {
+        const peril = state.peril ?? { max: 2, current: 2, replenish: true };
+        if (input.action === 'spend') {
+          if (peril.current < 1) throw new Error('Invalid action: no Peril Points left');
+          peril.current--;
+          detail = `Spent 1 Peril Point (${peril.current} left). Something averts the outcome that would have ended the adventure.`;
+        } else if (input.action === 'reset') {
+          peril.current = peril.max;
+          detail = `Peril Points reset to ${peril.max} for a new session.`;
+        } else throw new Error('Invalid peril action');
+        state.peril = peril;
       } else if (input.command === 'countdown') {
         if (state.beat.outcomeApplied) throw new Error('Invalid action: this beat already advanced the countdowns');
         const outcome = string(input.outcome, 30) as SoloActionOutcome;
@@ -352,7 +369,7 @@ export function registerSoloRoutes(app: FastifyInstance, options: { db: Database
     try { return { state: solo.track(id.user, id.campaign, request.body) }; }
     catch (error) { if (error instanceof SoloConflict) return reply.code(409).send({ error: error.message }); throw error; }
   });
-  app.post(`${base}/roll`, request => { const id = ids(request); return { entry: solo.roll(id.user, id.campaign, request.body) }; });
+  app.post(`${base}/roll`, request => { const id = ids(request); const entry = solo.roll(id.user, id.campaign, request.body); return { entry, state: solo.current(id.user, id.campaign) }; });
   app.put(`${base}/entries/:entryId`, request => { const id = ids(request); return { entry: solo.accept(id.user, id.campaign, (request.params as { entryId: string }).entryId, object(request.body).interpretation) }; });
   app.post(`${base}/command`, (request, reply) => {
     const id = ids(request);

@@ -100,20 +100,27 @@ presentation rather than masquerading as a Daggerheart action.
 
 ## Solo workspace
 
-- **Oracles:** yes/no likelihoods, scene checks, independently drawn thematic
-  content, world responses, NPC motives, adversary intents, twists, and scene
-  purposes. Results are generated on the server and saved with their raw dice,
-  context, and rules version. Question request IDs make retries idempotent.
-- **Scene:** goal, expected opening, a predeclared signature Fear trigger/cost,
-  and optional dynamic progress/consequence countdowns.
-- **Themes & pool:** six original theme packs, optional blending, and twelve
-  equally likely anchor slots. Repeating an anchor up to twice weights recurrence.
+- **Oracle:** Mythic GME Fate Questions on the Fate Chart (d100) or the Fate
+  Check (2d10), with nine odds, the Chaos Factor and its flavors, four question
+  purposes, and Random Events triggered by doubles. Results are generated on the
+  server and saved with their raw dice, context, and rules version. Question
+  request IDs make retries idempotent.
+- **Events & meaning:** Event Focus d100 tables (regular and prepared
+  adventure), List invocation, Actions/Descriptions pairs, Elements tables, the
+  One-Page single-word Discover Meaning table, and the four Ws.
+- **Scene:** expectation and scene test with Altered and Interrupt scenes, the
+  Scene Adjustment Table, end-of-scene chaos bookkeeping, and Keyed Scenes.
+- **Lists & threads:** 25-line Threads, Characters and Adventure Features Lists
+  with section-and-line rolls, the Thread Progress Track (10/15/20 points) with
+  Discovery Checks, Flashpoints and Conclusions, and Plot Armor.
+- **Adventure:** Peril Points, prepared-adventure mode, the adventure theme, and
+  Adventure Crafter Turning Points with five Plot Points.
 - **Companion:** available in companion mode; profile, derived defenses, marked
   HP/Stress, one contribution per action beat, and recovery controls.
 - **Journal:** accepted interpretations, notes, and procedural records, with
   cursor-based access to older history. Raw, uninterpreted rolls remain available.
-- **Rules:** the complete solo and thematic-pool references, including guidance
-  for lone-hero and small-party play.
+- **Rules:** the embedded Mythic and thematic-pool references, including
+  guidance for lone-hero and small-party play.
 
 Oracle, scene, meaning, and prompt rolls are independent of ordinary character
 action handlers: they never award Hope/Fear, clear Stress, or advance clocks.

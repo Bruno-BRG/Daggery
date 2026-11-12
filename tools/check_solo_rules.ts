@@ -1,4 +1,4 @@
-/** Exhaustive math check for docs/solo-rules.md. Does not read or write campaign data. */
+/** Exhaustive math check for the legacy Hope & Fear oracle kept for older campaigns. Does not read or write campaign data. */
 import assert from 'node:assert/strict';
 import { resolveDuality } from '../packages/shared/src/dice';
 
