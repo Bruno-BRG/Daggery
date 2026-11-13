@@ -18,9 +18,55 @@
 .sheet-portrait.character-portrait-button { padding: 0; cursor: pointer; }
 .sheet-portrait.character-portrait-button:hover { border-color: var(--ds-brand); }
 .sheet-portrait.character-portrait-button img { object-position: center; }
-.character-folio .sheet-hero.has-character-banner { --character-hero-padding: 28px; }
-.sheet-hero.has-character-banner::after { display: none; }
-.character-banner { display: block; width: calc(100% + 2 * var(--character-hero-padding)); max-width: none; margin: calc(-1 * var(--character-hero-padding)) calc(-1 * var(--character-hero-padding)) 24px; aspect-ratio: 3; object-fit: cover; }
-@container (max-width: 520px) { .character-folio .sheet-hero.has-character-banner { --character-hero-padding: 20px; } }
+/* The banner is the hero's background: clear at the top, frosting into glass
+   behind the identity block so the sheet keeps its space for play. */
+.character-folio .sheet-hero.has-character-banner {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 196px;
+  padding: 72px 0 0;
+  background: var(--ds-inset);
+}
+.character-folio .sheet-hero.has-character-banner::after { display: none; }
+.character-folio .character-banner {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+  object-position: 50% 40%;
+}
+.character-folio .sheet-hero.has-character-banner .sheet-hero-top {
+  position: relative;
+  isolation: isolate;
+  padding: 14px 18px;
+}
+.character-folio .sheet-hero.has-character-banner .sheet-hero-top::before {
+  content: '';
+  position: absolute;
+  inset: -34px 0 0;
+  z-index: -1;
+  background: linear-gradient(180deg,
+    transparent,
+    color-mix(in srgb, var(--sheet-panel) 35%, transparent) 18px,
+    color-mix(in srgb, var(--sheet-panel) 68%, transparent) 34px,
+    color-mix(in srgb, var(--sheet-panel) 86%, transparent) 58px,
+    color-mix(in srgb, var(--sheet-panel) 97%, transparent) 100%);
+  -webkit-backdrop-filter: blur(9px) saturate(1.08);
+  backdrop-filter: blur(9px) saturate(1.08);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 34px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 34px);
+}
+@container (max-width: 900px) {
+  .character-folio .sheet-hero.has-character-banner { min-height: 184px; padding-top: 64px; }
+}
+@container (max-width: 520px) {
+  .character-folio .sheet-hero.has-character-banner { min-height: 0; padding-top: 60px; }
+  .character-folio .sheet-hero.has-character-banner .sheet-hero-top { padding: 12px 14px; }
+}
 .daggery-character-art.is-custom { object-position: center; }
 @media (max-width: 420px) { .character-image-slots { gap: 16px; } .character-image-actions { gap: 6px; } .character-image-actions :is(button, .character-upload) { padding-inline: 10px; font-size: 12px; } }
