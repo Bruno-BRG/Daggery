@@ -168,3 +168,117 @@
 @media (pointer: coarse) {
   .character-folio :is(.sheet-qty button, .sheet-remove) { min-width: 44px; }
 }
+
+/* Play dashboard: everything needed mid-scene sits above the tabs; the tabs hold the extras. */
+.character-folio { gap: 12px; padding: 14px clamp(12px, 1.6vw, 24px) 48px; }
+.character-folio .sheet-hero { padding: 14px 18px; }
+.character-folio .sheet-hero-top { min-height: 0; gap: 16px; }
+.character-folio .sheet-portrait { width: 64px; height: 72px; }
+.character-folio .sheet-name { margin: 2px 0; font-size: clamp(24px, 2.6vw, 32px); }
+.character-folio .sheet-identity { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; }
+.character-folio .sheet-identity > :is(.sheet-eyebrow, .sheet-name) { grid-column: 1 / -1; }
+.character-folio .sheet-badges { margin-top: 0; }
+.character-folio .sheet-hero-stat { width: 60px; gap: 3px; }
+.character-folio .sheet-hero-stat dd { width: 60px; height: 60px; font-size: 24px; }
+.character-folio .folio-traits-heading { padding-bottom: 12px; }
+.character-folio .sheet-trait-row { margin-top: 8px; gap: 8px; }
+.character-folio .sheet-trait { padding: 7px 6px; gap: 1px; }
+.character-folio .sheet-trait-label { display: inline-flex; align-items: center; gap: 5px; }
+.character-folio .sheet-trait-label > .daggery-icon { width: 16px; height: 16px; }
+.folio-dash { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.character-folio .folio-dash > .sheet-panel { padding: 12px 14px; }
+.character-folio .folio-dash .sheet-panel-head { flex-wrap: nowrap; min-height: 46px; margin: -12px -14px 12px; padding: 5px 14px; }
+.folio-vitals-actions { display: flex; gap: 6px; }
+.character-folio .folio-vitals-actions > .sheet-ghost { min-height: 34px; padding: 0 10px; font-size: 13px; white-space: nowrap; background: var(--ds-raised); }
+.character-folio .folio-vitals-actions > .sheet-ghost:hover { border-color: var(--ds-brand); }
+.character-folio .folio-vitals .sheet-threshold-strip { gap: 5px; margin-bottom: 8px; }
+.character-folio .folio-vitals .sheet-tier { flex-direction: row; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 0 6px; padding: 7px 5px; }
+.character-folio .folio-vitals .sheet-tier-gate { flex-direction: row; gap: 3px; }
+.character-folio .folio-vitals .sheet-alert { margin: 0 0 8px; font-size: 13px; }
+.folio-vitals-tracks { display: grid; }
+.folio-vitals-tracks > .folio-resource + .folio-resource { border-top: 1px solid var(--folio-line); }
+.character-folio .folio-resource.is-compact { display: grid; grid-template-columns: 84px minmax(0, 1fr) 30px; align-items: center; column-gap: 8px; padding: 4px 0; border-width: 0; border-radius: 0; background: transparent; }
+.is-compact > .folio-resource-header { display: grid; gap: 1px; padding: 0; border: 0; background: none; }
+.is-compact .folio-resource-label { gap: 6px; }
+.is-compact .folio-resource-label h2 { font-size: 13px; white-space: nowrap; }
+.is-compact .folio-resource-counter > strong { font-size: 13px; }
+.is-compact .folio-resource-counter > small { display: none; }
+.is-compact > .folio-resource-track { gap: 4px; padding: 0; }
+.is-compact .folio-resource-control { flex-basis: 36px; width: 36px; height: 36px; }
+.is-compact .folio-resource-pips > button { flex-basis: 20px; min-width: 20px; height: 40px; padding: 0 2px; }
+.is-compact > .folio-resource-overflow { grid-column: 1 / -1; padding: 0 0 4px; }
+.is-compact > .folio-resource-adjustment { margin: 0; border: 0; }
+.is-compact > .folio-resource-adjustment:not([open]) > summary { justify-content: center; min-height: 36px; border-radius: var(--radius-xs); }
+.is-compact > .folio-resource-adjustment:not([open]) > summary > :is(span, .daggery-icon:last-child) { display: none; }
+.is-compact > .folio-resource-adjustment:not([open]) > summary:hover { color: var(--ds-brand); }
+.is-compact > .folio-resource-adjustment[open] { grid-column: 1 / -1; padding-top: 2px; }
+.character-folio .folio-reaction { width: 100%; margin-top: 8px; }
+.folio-weapon-list { display: grid; gap: 8px; }
+.folio-weapon { display: grid; gap: 8px; min-width: 0; padding: 10px; border: 1px solid var(--folio-line); border-radius: var(--radius-xs); background: var(--sheet-sunken); }
+.folio-weapon > header { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.folio-weapon > header > div, .folio-weapon.is-empty > div { flex: 1; min-width: 0; }
+.folio-weapon h4 { margin: 0; font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+.folio-weapon small { display: block; margin-top: 1px; color: var(--ds-muted); font-size: 13px; line-height: 1.45; text-transform: capitalize; }
+.folio-weapon .item-glyph { flex: none; }
+.character-folio .folio-weapon-swap { flex: none; width: 38px; min-height: 38px; padding: 0; }
+.character-folio .folio-weapon .sheet-attack { width: 100%; min-height: 40px; font-size: 14px; }
+.folio-weapon.is-empty { display: flex; align-items: center; gap: 10px; border-style: dashed; }
+.character-folio .folio-weapon.is-empty .sheet-ghost { min-height: 38px; }
+.folio-weapon-feature > summary { min-height: 26px; cursor: pointer; color: var(--ds-brand); font-size: 13px; font-weight: 600; }
+.folio-weapon-feature > p { margin: 4px 0 0; color: var(--ds-muted); font-size: 13px; line-height: 1.55; }
+.character-folio .folio-arsenal .sheet-spellcast { margin-top: 10px; padding-top: 10px; }
+.character-folio .folio-modifiers .sheet-seg { grid-template-columns: .8fr 1fr 1.2fr; margin: 0; }
+.character-folio .folio-modifiers .sheet-seg button { min-height: 38px; font-size: 13px; }
+.folio-difficulty { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 12px; color: var(--ds-muted); font-size: 14px; font-weight: 600; }
+.folio-difficulty > input { width: 110px; min-height: 38px; padding: 5px 8px; border: 1px solid var(--sheet-line); border-radius: var(--radius-sm); background: var(--sheet-sunken); color: var(--ds-ink); font-size: 16px; }
+.character-folio .folio-modifiers .sheet-mini-label { margin-bottom: 6px; }
+.character-folio .folio-modifiers .sheet-mini-label > span { font-weight: 400; letter-spacing: 0; text-transform: none; }
+.folio-experiences { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.folio-experiences button { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px; padding: 6px 10px; border: 1px solid var(--folio-line); border-radius: var(--radius-xs); background: var(--sheet-sunken); color: var(--ds-ink); font-size: 14px; line-height: 1.4; text-align: left; cursor: pointer; }
+.folio-experiences button:hover { border-color: var(--ds-brand); }
+.folio-experiences button > .daggery-icon { flex: none; width: 18px; height: 18px; color: var(--ds-brand); }
+.folio-experiences button > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.folio-experiences button > strong { flex: none; color: var(--color-emerald-300); font-variant-numeric: tabular-nums; }
+.folio-experiences button[aria-pressed='true'] { border-color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 12%, var(--sheet-sunken)); box-shadow: inset 3px 0 var(--ds-brand); }
+.folio-extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; align-items: start; }
+@container (max-width: 1100px) {
+  .character-folio .folio-resource.is-compact { grid-template-columns: minmax(0, 1fr) 40px; padding: 4px 0 2px; }
+  .is-compact > .folio-resource-header { grid-area: 1 / 1; display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-height: 26px; }
+  .is-compact > .folio-resource-adjustment:not([open]) { grid-area: 1 / 2; }
+  .is-compact > .folio-resource-adjustment:not([open]) > summary { min-height: 26px; }
+  .is-compact > .folio-resource-track { grid-column: 1 / -1; grid-row: 2; }
+}
+@container (max-width: 900px) {
+  .folio-dash { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .folio-dash > .folio-arsenal { grid-area: 1 / 2 / 3 / 3; }
+  .folio-dash { grid-template-rows: auto 1fr; }
+}
+@container (max-width: 750px) {
+  .folio-dash { grid-template-columns: minmax(0, 1fr); }
+  .folio-dash { grid-template-rows: none; }
+  .folio-dash > .folio-arsenal { grid-area: auto; }
+}
+@container (max-width: 520px) {
+  .character-folio { gap: 10px; }
+  .character-folio .sheet-hero { padding: 12px 14px; }
+  .character-folio .sheet-hero-top { align-items: flex-start; gap: 8px 12px; }
+  .character-folio .sheet-portrait { width: 52px; height: 60px; }
+  .character-folio .sheet-identity { display: block; flex: 1 1 0; }
+  .character-folio .sheet-shields { flex-basis: 100%; }
+  .character-folio .sheet-subtitle { font-size: 14px; }
+  .character-folio .sheet-badges { margin-top: 6px; }
+  .character-folio .sheet-hero-stat { display: flex; align-items: center; gap: 6px; width: auto; }
+  .character-folio .sheet-hero-stat dd { width: 40px; height: 40px; font-size: 18px; }
+  .character-folio .sheet-trait-actions { display: none; }
+  .character-folio .sheet-trait { flex-direction: row; justify-content: space-between; min-height: 48px; padding: 6px 10px; }
+  .character-folio .sheet-trait-value { font-size: 20px; }
+  .character-folio .folio-traits-heading { padding-bottom: 10px; }
+  .character-folio .sheet-trait-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .is-compact .folio-resource-control { flex-basis: 40px; width: 40px; height: 40px; }
+}
+@media (pointer: coarse) {
+  .character-folio .folio-vitals-actions > .sheet-ghost, .character-folio .folio-weapon-swap, .character-folio .folio-weapon.is-empty .sheet-ghost { min-height: 44px; }
+  .character-folio .folio-weapon-swap { width: 44px; }
+  .character-folio .folio-weapon .sheet-attack, .folio-experiences button, .character-folio .folio-modifiers .sheet-seg button, .folio-difficulty > input { min-height: 44px; }
+  .folio-weapon-feature > summary { display: flex; align-items: center; min-height: 36px; }
+}

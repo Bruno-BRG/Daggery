@@ -240,6 +240,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
     catch (error) { failedRoll(error); return; }
     if (options.spendExperience) {
       mutate((current) => ({ ...current, hope: Math.max(0, current.hope - 1) }));
+      setExperienceId('');
     }
     setRolling(true);
     const target = Number.parseInt(difficulty, 10);
@@ -537,12 +538,6 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
         </div>
 
       </section>
-      <div className="folio-resources">
-        <ResourceCard label="Hit Points" icon="heart" count={sheet.hpMarked} max={currentHpMax} tone="health" extraSlots={{ value: sheet.extraHpSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraHpSlots', raw)) }} onChange={value => mutate(current => ({ ...current, hpMarked: value }))} />
-        <ResourceCard label="Stress" icon="stress" count={sheet.stressMarked} max={currentStressMax} tone="stress" extraSlots={{ value: sheet.extraStressSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraStressSlots', raw)) }} onChange={value => mutate(current => ({ ...current, stressMarked: value }))} />
-        <ResourceCard label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" kind="held" onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
-        <ResourceCard label="Armor" icon="armor" count={sheet.armorSlotsMarked} max={currentArmorScore} tone="armor" onChange={value => mutate(current => ({ ...current, armorSlotsMarked: value }))} />
-      </div>
       <section className="folio-traits" aria-label="Action rolls"><div className="folio-traits-heading"><h2><Icon name="dice" />Make your move</h2><span>Choose a trait to roll Duality</span>{rolling && <span role="status">Rolling…</span>}</div>
         <div className="sheet-trait-row">
           {TRAIT_ORDER.map((trait) => (
@@ -555,21 +550,62 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
         </div>
       </section>
 
-      <details className="folio-roll-settings"><summary><Icon name="settings" /><strong>Roll settings</strong><span>{advantage === 'normal' ? 'Normal roll' : advantage === 'advantage' ? 'With advantage' : 'With disadvantage'}{selectedExperience ? ` · ${selectedExperience.name} (+${experienceModifier})` : ''}{difficulty ? ` · Difficulty ${difficulty}` : ''}</span><Icon name="chevron" /></summary><div className="folio-roll-controls">
-              <div>
-                <p className="sheet-mini-label">Advantage</p>
-                <div className="sheet-seg">
-                  {([['normal', 'Normal'], ['advantage', 'Advantage'], ['disadvantage', 'Disadvantage']] as const).map(([value, label]) => (
-                    <button key={value} type="button" onClick={() => setAdvantage(value)} className={advantage === value ? 'is-active' : ''}>{label}</button>
-                  ))}
-                </div>
-              </div>
-              <div className="sheet-field-row">
-                <label className="sheet-field">Difficulty<input type="number" value={difficulty} onChange={(event) => setDifficulty(event.target.value)} placeholder="e.g. 14" /></label>
-                <label className="sheet-field">Experience<select value={experienceId} onChange={(event) => setExperienceId(event.target.value)}><option value="">— none —</option>{sheet.experiences.map((experience) => <option key={experience.id} value={experience.id}>{experience.name} (+{experience.modifier})</option>)}</select></label>
-              </div>
-              <p className="sheet-note">Select a trait above to roll.</p>
-            </div></details>
+      <div className="folio-dash">
+        <section className="sheet-panel folio-vitals" aria-label="Vitals">
+          <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="heart" />Vitals</h3><div className="folio-vitals-actions"><button type="button" className="sheet-ghost" onClick={() => openRecovery('damage')}><Icon name="shield" />Take damage</button><button type="button" className="sheet-ghost" onClick={() => openRecovery('rest')}><Icon name="moon" />Rest</button></div></div>
+          <div className="sheet-threshold-strip">
+            <Tier label="Minor" note="1 HP" />
+            <TierGate value={thresholds.major} />
+            <Tier label="Major" note="2 HP" />
+            <TierGate value={thresholds.severe} />
+            <Tier label="Severe" note="3 HP" />
+          </div>
+          {sheet.hpMarked >= currentHpMax && <p className="sheet-alert is-rose">Last HP marked — resolve a Death Move (Blaze of Glory, Avoid Death, or Risk It All).</p>}
+          {sheet.stressMarked >= currentStressMax && <p className="sheet-alert is-violet">Last Stress marked — you are Vulnerable until you clear 1 Stress.</p>}
+          <div className="folio-vitals-tracks">
+            <ResourceCard compact label="Hit Points" icon="heart" count={sheet.hpMarked} max={currentHpMax} tone="health" extraSlots={{ value: sheet.extraHpSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraHpSlots', raw)) }} onChange={value => mutate(current => ({ ...current, hpMarked: value }))} />
+            <ResourceCard compact label="Stress" icon="stress" count={sheet.stressMarked} max={currentStressMax} tone="stress" extraSlots={{ value: sheet.extraStressSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraStressSlots', raw)) }} onChange={value => mutate(current => ({ ...current, stressMarked: value }))} />
+            <ResourceCard compact label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" kind="held" onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
+            <ResourceCard compact label="Armor" icon="armor" count={sheet.armorSlotsMarked} max={currentArmorScore} tone="armor" onChange={value => mutate(current => ({ ...current, armorSlotsMarked: value }))} />
+          </div>
+          {reactionFeature && <button type="button" className="sheet-ghost folio-reaction" disabled={!armorSlotAvailable} onClick={useReaction}><Icon name="shield" />{reactionFeature.name} reaction · mark 1 Armor Slot</button>}
+        </section>
+
+        <section className="sheet-panel folio-arsenal">
+          <PanelHead icon="combat" title="Active weapons" note={`Proficiency ${sheet.proficiency}`} />
+          <div className="folio-weapon-list">
+            {primary ? <WeaponRow weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} /> : <EmptyWeaponRow slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
+            {secondary ? <WeaponRow weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} /> : <EmptyWeaponRow slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
+          </div>
+          {spellcastOptions.length > 0 && (
+            <div className="sheet-inline sheet-spellcast">
+              <span className="sheet-mini-label">Spellcast</span>
+              {spellcastOptions.map((trait) => (
+                <button key={trait} type="button" onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>
+                  {TRAIT_LABELS[trait]} ({traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)})
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="sheet-panel folio-modifiers">
+          <PanelHead icon="settings" title="Next roll" note={advantage === 'normal' && !selectedExperience && !difficulty ? 'No modifiers' : undefined} />
+          <div className="sheet-seg" role="group" aria-label="Advantage">
+            {([['normal', 'Normal'], ['advantage', 'Advantage'], ['disadvantage', 'Disadvantage']] as const).map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={advantage === value} onClick={() => setAdvantage(value)} className={advantage === value ? 'is-active' : ''}>{label}</button>
+            ))}
+          </div>
+          <label className="folio-difficulty"><span>Difficulty</span><input type="number" inputMode="numeric" value={difficulty} onChange={(event) => setDifficulty(event.target.value)} placeholder="e.g. 14" /></label>
+          <p className="sheet-mini-label">Experiences <span>· 1 Hope each</span></p>
+          <ul className="folio-experiences">
+            {sheet.experiences.map((experience) => (
+              <li key={experience.id}><button type="button" aria-pressed={experienceId === experience.id} title="Add this Experience to your next roll (costs 1 Hope)" onClick={() => setExperienceId(current => current === experience.id ? '' : experience.id)}><Icon name={experienceId === experience.id ? 'check' : 'spark'} /><span>{experience.name}</span><strong>+{experience.modifier}</strong></button></li>
+            ))}
+            {sheet.experiences.length === 0 && <li className="sheet-empty">No Experiences yet.</li>}
+          </ul>
+        </section>
+      </div>
       {messages.length > 0 && <div className="folio-result-banner" role="status"><Icon name="dice" /><span>{messages[0]}</span></div>}
       <nav className="sheet-tabs" role="tablist" aria-label="Character sheet sections" onKeyDown={event => {
         if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -588,63 +624,8 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
 
       <div id="folio-tab-panel" role="tabpanel" aria-labelledby={`folio-tab-${tab}`}>
       {tab === 'play' && (
-        <div className="sheet-play">
-          <div className="sheet-col">
-          <section className="sheet-panel">
-            <PanelHead title="Defense & recovery" icon="shield" />
-            <div className="sheet-threshold-strip">
-              <Tier label="Minor" note="1 HP" />
-              <TierGate value={thresholds.major} />
-              <Tier label="Major" note="2 HP" />
-              <TierGate value={thresholds.severe} />
-              <Tier label="Severe" note="3 HP" />
-            </div>
-            {sheet.hpMarked >= currentHpMax && <p className="sheet-alert is-rose">Last HP marked — resolve a Death Move (Blaze of Glory, Avoid Death, or Risk It All).</p>}
-            {sheet.stressMarked >= currentStressMax && <p className="sheet-alert is-violet">Last Stress marked — you are Vulnerable until you clear 1 Stress.</p>}
-            {reactionFeature && <div className="sheet-inline mt-2"><button type="button" className="sheet-ghost" disabled={!armorSlotAvailable} onClick={useReaction}><Icon name="shield" />{reactionFeature.name} reaction · mark 1 Armor Slot</button></div>}
-          </section>
-
-          <div className="folio-recovery-actions"><button type="button" onClick={() => openRecovery('damage')}><Icon name="shield" />Take damage<Icon name="arrow" /></button><button type="button" onClick={() => openRecovery('rest')}><Icon name="moon" />Take a rest<Icon name="arrow" /></button></div>
-          <section className="sheet-panel folio-play-guide"><PanelHead title="Your next move" icon="dice" /><ul className="sheet-session-hints"><li><Icon name="dice" /><span>Roll a trait to act.</span></li><li><Icon name="spark" /><span>Spend Hope to add an Experience.</span></li><li><Icon name="shield" /><span>Use Armor to reduce damage.</span></li></ul><button type="button" className="sheet-ghost" onClick={() => setTab('features')}><Icon name="book" />Class & heritage features</button></section>
-          </div>
-
-          <div className="sheet-col">
+        <div className="folio-extras">
           <ClassResources sheet={sheet} onUpdate={mutate} />
-          <section className="sheet-panel">
-            <PanelHead icon="combat" title="Active weapons" note={`Proficiency ${sheet.proficiency}`} />
-            <div className="sheet-prof">
-              {Array.from({ length: 6 }, (_, index) => <span key={index} className={`sheet-prof-pip ${index < sheet.proficiency ? 'is-on' : ''}`} />)}
-            </div>
-            <div className="sheet-weapons">
-              {primary ? <WeaponCard weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} onUnequip={()=>mutate(current=>equipEquipment(current,'primary',null))} /> : <EmptyEquipment slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
-              {secondary ? <WeaponCard weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} onUnequip={()=>mutate(current=>equipEquipment(current,'secondary',null))} /> : <EmptyEquipment slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
-            </div>
-            {spellcastOptions.length > 0 && (
-              <div className="sheet-inline sheet-spellcast">
-                <span className="sheet-mini-label">Spellcast</span>
-                {spellcastOptions.map((trait) => (
-                  <button key={trait} type="button" onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>
-                    {TRAIT_LABELS[trait]} ({traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)})
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
-
-
-          </div>
-
-          <div className="sheet-col">
-          <section className="sheet-panel">
-            <PanelHead icon="spark" title="Experiences" />
-            <ul className="sheet-experiences">
-              {sheet.experiences.map((experience) => (
-                <li key={experience.id}><Icon name="spark" /><span>{experience.name}</span><span className="sheet-mod">+{experience.modifier}</span></li>
-              ))}
-              {sheet.experiences.length === 0 && <li className="sheet-empty">No Experiences yet.</li>}
-            </ul>
-          </section>
-
           <section className="sheet-panel folio-loadout"><PanelHead icon="spark" title="Active abilities" note={`${loadout.length} / ${maxLoadout(sheet)} CARDS`} /><input className="sheet-input folio-ability-search" aria-label="Find an active ability" placeholder="Find an ability…" value={abilitySearch} onChange={event => setAbilitySearch(event.target.value)} /><div className="folio-ability-list">{loadout.filter(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())).map(card => { const cost = leadingCardCost(card.text); return <AbilityCard compact key={card.id} name={card.name} text={card.text} domain={card.domain} category={`${DOMAIN_LABELS[card.domain] ?? card.domain} · Level ${card.level} · ${card.type}`} footer={cost ? <button type="button" className="sheet-ghost" onClick={() => payCardCost(card.name, cost)}>{cost.track === 'hope' ? `Spend ${cost.amount} Hope` : `Mark ${cost.amount} Stress`}</button> : undefined} />; })}{loadout.length === 0 && <p className="sheet-empty">Recall a domain card from your vault to use it here.</p>}{loadout.length > 0 && !loadout.some(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())) && <p className="sheet-empty">No active abilities match.</p>}</div><button className="folio-text-link" type="button" onClick={() => setTab('features')}>Manage cards & vault<Icon name="arrow" /></button></section>
           <section className="sheet-panel">
             <PanelHead icon="dice" title="Recent rolls" note={`${messages.length} logged`} />
@@ -653,7 +634,6 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
               {messages.map((message, index) => <li key={`${index}-${message}`}>{message}</li>)}
             </ol>
           </section>
-          </div>
         </div>
       )}
 
@@ -901,6 +881,19 @@ function WeaponCard({ weapon, slot, modifier, damage, disabled, onAttack, onChan
     {weapon.feature && <AbilityCard compact name={weapon.feature.name} text={weapon.feature.text} category="Weapon feature" />}
     <button type="button" disabled={disabled} onClick={onAttack} className="sheet-attack"><Icon name="dice" />Attack · {damage}</button>
   </article>;
+}
+
+/** Dashboard weapon: the attack is one tap away; unequipping lives on the Equipment tab. */
+function WeaponRow({ weapon, slot, modifier, damage, disabled, onAttack, onChange }: { weapon: WeaponStats; slot: string; modifier: number; damage: string; disabled: boolean; onAttack: () => void; onChange: () => void }) {
+  return <article className="folio-weapon">
+    <header><ItemGlyph item={{kind:'weapon',name:weapon.name}} /><div><h4>{weapon.name}</h4><small>{slot} · {weapon.trait} {modifier >= 0 ? '+' : ''}{modifier} · {weapon.range} · {weapon.burden}</small></div><button type="button" className="sheet-ghost folio-weapon-swap" aria-label={`Change ${slot.toLowerCase()} weapon`} title={`Change ${slot.toLowerCase()} weapon`} onClick={onChange}><Icon name="swap" /></button></header>
+    <button type="button" disabled={disabled} onClick={onAttack} className="sheet-attack"><Icon name="dice" />Attack {modifier >= 0 ? '+' : ''}{modifier} · {damage} {weapon.damageType === 'phy' ? 'phy' : 'mag'}</button>
+    {weapon.feature && <details className="folio-weapon-feature"><summary>{weapon.feature.name}</summary><p>{weapon.feature.text}</p></details>}
+  </article>;
+}
+
+function EmptyWeaponRow({ slot, disabled = false, onEquip }: { slot: 'primary' | 'secondary'; disabled?: boolean; onEquip: () => void }) {
+  return <article className="folio-weapon is-empty"><div><h4>{slot === 'primary' ? 'Primary' : 'Secondary'} weapon</h4><small>{disabled ? 'Requires a one-handed primary weapon' : 'Nothing equipped'}</small></div><button type="button" className="sheet-ghost" disabled={disabled} onClick={onEquip}><Icon name="plus" />Equip</button></article>;
 }
 
 function ArmorCard({ armor, score, thresholds, onChange, onUnequip }: { armor: ArmorStats | undefined; score: number; thresholds: { major: number; severe: number }; onChange:()=>void; onUnequip:()=>void }) {

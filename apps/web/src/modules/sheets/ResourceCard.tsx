@@ -12,13 +12,15 @@ type ResourceCardProps = {
   kind?: 'marked' | 'held';
   onChange: (count: number) => void;
   extraSlots?: { value: number; onChange: (raw: string) => void };
+  /** One-line row for the play dashboard. */
+  compact?: boolean;
 };
 
-function ResourceCardBase({ label, icon, count, max, tone, kind = 'marked', onChange, extraSlots }: ResourceCardProps) {
+function ResourceCardBase({ label, icon, count, max, tone, kind = 'marked', onChange, extraSlots, compact = false }: ResourceCardProps) {
   const helpId = useId();
   const { value, slots, canIncrease } = resourceTrack(count, max);
   const setValue = (next: number) => onChange(changeResourceCount(count, next, max));
-  return <section className={`folio-resource resource-${tone}`} aria-label={label}>
+  return <section className={`folio-resource resource-${tone}${compact ? ' is-compact' : ''}`} aria-label={label}>
     <header className="folio-resource-header">
       <div className="folio-resource-label"><Icon name={icon} /><h2>{label}</h2></div>
       <span className="folio-resource-counter" aria-live="polite" aria-atomic="true"><strong>{value}<span> / {max}</span></strong>{' '}<small>{kind === 'held' ? 'available' : 'marked'}</small></span>
@@ -33,7 +35,7 @@ function ResourceCardBase({ label, icon, count, max, tone, kind = 'marked', onCh
     </div>
     {max > slots && <p className="folio-resource-overflow">Showing {slots} of {max} slots. Use − / + for the full track.</p>}
     {extraSlots && <details className="folio-resource-adjustment">
-      <summary><Icon name="settings" /><span>Adjust maximum</span>{extraSlots.value > 0 && <small>+{extraSlots.value}</small>}<Icon name="chevron" /></summary>
+      <summary aria-label={compact ? `Adjust maximum ${label}` : undefined} title={compact ? `Adjust maximum ${label}` : undefined}><Icon name="settings" /><span>Adjust maximum</span>{extraSlots.value > 0 && <small>+{extraSlots.value}</small>}<Icon name="chevron" /></summary>
       <div>
         <label>Extra slots<input type="number" min={0} step={1} inputMode="numeric" aria-label={`Extra ${label} slots`} aria-describedby={helpId} value={extraSlots.value} onChange={event => extraSlots.onChange(event.target.value)} /></label>
         <p id={helpId}>From items or effects. Adds to ancestry and level-up slots without changing your marks.</p>

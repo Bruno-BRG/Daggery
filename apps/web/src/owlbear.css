@@ -234,6 +234,8 @@ body { background-color: var(--ds-surface); }
   .daggery-table-preview::before { background: linear-gradient(90deg, var(--ds-raised), transparent), linear-gradient(0deg, var(--ds-raised), transparent); }
   .daggery-section-title > span { display: none; }
   /* Mobile cards: icon sits in its own 40px column, so drop the full-bleed header bar. */
+  .daggery-essential { padding: 14px 16px 8px; row-gap: 2px; min-height: 0; }
+  .daggery-essential .daggery-shortcut-link { margin-top: 4px; }
   .daggery-essential .daggery-shortcut-top { width: auto; margin: 0; padding: 0; background: none; border-bottom: 0; border-radius: 0; }
   .daggery-essential .daggery-shortcut-top::after { display: none; }
   .daggery-essential .daggery-shortcut-icon { width: 40px; height: 40px; border: 1px solid var(--ds-border); }
