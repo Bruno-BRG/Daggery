@@ -183,10 +183,10 @@ body { background-color: var(--ds-surface); }
 .gm-workspace .gm-section-heading { margin: -18px -18px 18px; padding: 11px 18px; background: var(--folio-header); border-bottom: 1px solid var(--ds-border); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
 .gm-workspace .gm-section-heading h2 { font-size: 15px; }
 .solo-workspace .solo-panel > h2 { margin: -18px -18px 16px; padding: 12px 18px; font-size: 15px; border-bottom: 1px solid var(--ds-border); background: var(--folio-header); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
-.solo-workspace .solo-chaos-panel { padding: 16px 18px; }
-.solo-workspace .solo-chaos-panel > h2 { margin: 0; padding: 0; background: transparent; border: 0; }
-.solo-workspace .solo-chaos-value strong { font-size: 15px; }
-.solo-workspace .solo-chaos-stepper button { width: 44px; height: 44px; }
+.solo-workspace .solo-fear-panel { padding: 16px 18px; }
+.solo-workspace .solo-fear-panel > h2 { margin: 0; padding: 0; background: transparent; border: 0; }
+.solo-workspace .solo-fear-value strong { font-size: 15px; }
+.solo-workspace .solo-fear-stepper button { width: 44px; height: 44px; }
 .gm-workspace .gm-table th, .solo-workspace th { background: var(--folio-header); }
 .journal-workspace .journal-card, .journal-workspace .journal-form { border-color: var(--folio-frame); border-radius: var(--folio-corner); }
 .journal-workspace .journal-card-head { margin: -16px -18px 12px; padding: 10px 18px; border-bottom: 1px solid var(--ds-border); background: var(--folio-header); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }

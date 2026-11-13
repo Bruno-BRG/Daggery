@@ -100,27 +100,24 @@ presentation rather than masquerading as a Daggerheart action.
 
 ## Solo workspace
 
-- **Oracle:** Mythic GME Fate Questions on the Fate Chart (d100) or the Fate
-  Check (2d10), with nine odds, the Chaos Factor and its flavors, four question
-  purposes, and Random Events triggered by doubles. Results are generated on the
-  server and saved with their raw dice, context, and rules version. Question
-  request IDs make retries idempotent.
-- **Events & meaning:** Event Focus d100 tables (regular and prepared
-  adventure), List invocation, Actions/Descriptions pairs, Elements tables, the
-  One-Page single-word Discover Meaning table, and the four Ws.
-- **Scene:** expectation and scene test with Altered and Interrupt scenes, the
-  Scene Adjustment Table, end-of-scene chaos bookkeeping, and Keyed Scenes.
-- **Lists & threads:** 25-line Threads, Characters and Adventure Features Lists
-  with section-and-line rolls, the Thread Progress Track (10/15/20 points) with
-  Discovery Checks, Flashpoints and Conclusions, and Plot Armor.
-- **Adventure:** Peril Points, prepared-adventure mode, the adventure theme, and
-  Adventure Crafter Turning Points with five Plot Points.
+- **Engine:** the Duality Solo Engine (`docs/solo-rules.md`), a d12 emulator
+  in which the campaign Fear pool plays the GM. A Fear Check (d12 at or under
+  current Fear) decides when the engine spends Fear and acts.
+- **Oracle:** yes/no questions on Hope + Fear against five likelihoods, with
+  twists when the dice are 4 or more apart and Random Events on doubles.
+  Results are generated on the server and saved with their raw dice and rules
+  version. Request IDs make retries idempotent.
+- **Scene & moves:** scene setup with Altered and Interrupted scenes, Soft and
+  Hard GM Moves after action rolls, and Random Events with an Event Focus.
+- **Lists & countdowns:** Threads and NPCs lists of up to 12 open lines, picked
+  by a d12, and countdowns for looming threats.
+- **Generators:** adversary spotlight with Tactics and Fear Spend, NPCs, plot
+  hooks, a site crawler, journeys, and Action/Subject/Descriptor meaning words.
 - **Companion:** available in companion mode; profile, derived defenses, marked
   HP/Stress, one contribution per action beat, and recovery controls.
 - **Journal:** accepted interpretations, notes, and procedural records, with
   cursor-based access to older history. Raw, uninterpreted rolls remain available.
-- **Rules:** the embedded Mythic and thematic-pool references, including
-  guidance for lone-hero and small-party play.
+- **Tables:** every engine table, each rollable on its own.
 
 Oracle, scene, meaning, and prompt rolls are independent of ordinary character
 action handlers: they never award Hope/Fear, clear Stress, or advance clocks.

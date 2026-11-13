@@ -3,5 +3,4 @@ export * from './types';
 export * from './systems/registry';
 export * from './systems/daggerheart/solo';
 export * from './ai';
-export * from './mythic';
-export * from './mythic-rules';
+export * from './duality-engine';

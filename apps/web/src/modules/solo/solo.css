@@ -29,14 +29,14 @@
 .solo-alert { border-color: var(--color-rose-500); }
 .solo-chip { display: inline-flex; align-items: center; flex: none; padding: 4px 9px; border: 1px solid var(--ds-border); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
 
-/* Chaos factor */
-.solo-chaos-panel { display: grid; gap: 8px; justify-items: start; padding: 16px 20px; }
-.solo-chaos-stepper { display: inline-flex; align-items: center; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); overflow: hidden; }
-.solo-chaos-stepper button { display: grid; place-items: center; width: 38px; height: 36px; padding: 0; border: 0; background: transparent; color: var(--ds-ink); font-size: 18px; line-height: 1; cursor: pointer; }
-.solo-chaos-stepper button:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-brand); }
-.solo-chaos-value { display: inline-flex; align-items: baseline; gap: 6px; padding: 0 12px; min-width: 82px; justify-content: center; font-size: 12px; font-weight: 550; color: var(--ds-muted); font-variant-numeric: tabular-nums; }
-.solo-chaos-value strong { color: var(--ds-ink); font-size: 17px; font-weight: 650; }
-.solo-chaos-caption { margin: 0; color: var(--ds-muted); font-size: 12px; line-height: 1.6; }
+/* Fear pool */
+.solo-fear-panel { display: grid; gap: 8px; justify-items: start; padding: 16px 20px; }
+.solo-fear-stepper { display: inline-flex; align-items: center; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); overflow: hidden; }
+.solo-fear-stepper button { display: grid; place-items: center; width: 38px; height: 36px; padding: 0; border: 0; background: transparent; color: var(--ds-ink); font-size: 18px; line-height: 1; cursor: pointer; }
+.solo-fear-stepper button:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-brand); }
+.solo-fear-value { display: inline-flex; align-items: baseline; gap: 6px; padding: 0 12px; min-width: 82px; justify-content: center; font-size: 12px; font-weight: 550; color: var(--ds-muted); font-variant-numeric: tabular-nums; }
+.solo-fear-value strong { color: var(--ds-ink); font-size: 17px; font-weight: 650; }
+.solo-fear-caption { margin: 0; color: var(--ds-muted); font-size: 12px; line-height: 1.6; }
 
 /* Shared table defaults (also used by the rulebook) */
 .solo-workspace table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; line-height: 1.7; }
@@ -207,7 +207,7 @@
   .solo-dice-notation .solo-field { flex-basis: 100%; }
 }
 
-/* Mythic bookkeeping: settings rows, thread track, keyed scenes */
+/* Rows of controls, notices and list details */
 .solo-row { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; }
 .solo-actions { align-items: flex-end; }
 .solo-actions > button { min-height: 44px; }
@@ -220,18 +220,12 @@
 .solo-notice { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; margin-bottom: 20px; border: 1px solid var(--ds-brand-line); background: var(--ds-brand-soft); border-radius: var(--radius-xs); font-size: 13px; line-height: 1.7; }
 .solo-notice .daggery-icon { width: 16px; height: 16px; flex: none; margin-top: 3px; color: var(--ds-brand); }
 .solo-line-number { display: inline-block; min-width: 22px; margin-right: 6px; color: var(--ds-faint); font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; }
-.solo-track-boxes { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; list-style: none; margin: 0 0 16px; padding: 0; }
-.solo-track-boxes > li { display: grid; place-items: center; align-content: center; gap: 2px; min-height: 52px; padding: 4px 2px; border: 1px solid var(--ds-border); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-muted); font-variant-numeric: tabular-nums; }
-.solo-track-boxes > li > b { font-size: 14px; font-weight: 650; }
-.solo-track-boxes > li > small { font-size: 9px; letter-spacing: .04em; text-transform: uppercase; overflow-wrap: anywhere; text-align: center; }
-.solo-track-boxes > li.is-flash, .solo-track-boxes > li.is-end { border-color: var(--ds-brand-line); }
-.solo-track-boxes > li.is-marked { background: var(--ds-brand-soft); border-color: var(--ds-brand); color: var(--ds-ink); }
-.solo-keyed-list { list-style: none; margin: 0 0 16px; padding: 0; }
-.solo-keyed-list > li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px 16px; padding: 12px 0; border-bottom: 1px solid var(--ds-border); font-size: 14px; line-height: 1.6; }
-.solo-keyed-list > li > div:first-child { flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; }
-.solo-keyed-list > li.is-done > div:first-child { color: var(--ds-muted); text-decoration: line-through; }
 .solo-icon-button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--ds-muted); cursor: pointer; }
 .solo-icon-button .daggery-icon { width: 16px; height: 16px; }
-.solo-guide-list { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 13px; line-height: 1.65; color: var(--ds-muted); }
-.solo-guide-list strong { color: var(--ds-ink); }
 @media (max-width: 700px) { .solo-track-boxes { grid-template-columns: repeat(5, minmax(0, 1fr)); } .solo-inline-field { flex-basis: 100%; } }
+.solo-fear-value i { font-style: normal; font-size: 12px; }
+.solo-clock-list { display: grid; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
+.solo-clock-list li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.solo-clock-list li > span:first-child { flex: 1 1 180px; min-width: 0; }
+.solo-clock-list li.is-done > span:first-child { color: var(--ds-muted); }
+.solo-lookup-table td.is-answer { color: var(--ds-brand-strong); font-weight: 700; }

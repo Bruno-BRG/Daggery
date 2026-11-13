@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Duality Solo Engine</title>
+<style>
+  @page { size: A4 landscape; margin: 8mm; }
+  :root { --hope: #a8780a; --fear: #5b2a86; --ink: #1c1a22; --rule: #cfc8da; --tint: #f3eff8; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 7.1pt; line-height: 1.26; color: var(--ink); }
+  .page { height: 193mm; column-count: 4; column-gap: 4mm; column-fill: auto; break-after: page; overflow: hidden; }
+  .page:last-child { break-after: auto; }
+  .block { break-inside: avoid; margin: 0 0 2.2mm; }
+  h1 { font-family: Georgia, serif; font-size: 19pt; margin: 0; letter-spacing: .3px; line-height: 1; }
+  h1 .h { color: var(--hope); } h1 .f { color: var(--fear); }
+  .sub { font-size: 7.4pt; margin: 1mm 0 0; color: #555; }
+  h2 { font-family: Georgia, serif; font-size: 9.4pt; margin: 0 0 .8mm; padding: .6mm 1.6mm; color: #fff; background: var(--fear); border-radius: 1mm; }
+  h2.hope { background: var(--hope); }
+  p { margin: 0 0 .9mm; }
+  ol, ul { margin: 0 0 .9mm; padding-left: 4mm; }
+  li { margin: 0; }
+  b.f { color: var(--fear); } b.h { color: var(--hope); }
+  table { width: 100%; border-collapse: collapse; margin-top: .6mm; }
+  th, td { padding: .25mm 1.2mm; text-align: left; vertical-align: top; border-bottom: .2mm solid var(--rule); }
+  th { font-size: 6.8pt; text-transform: uppercase; letter-spacing: .4px; color: var(--fear); border-bottom: .4mm solid var(--fear); }
+  td.n, th.n { width: 7mm; text-align: center; font-weight: 700; color: var(--fear); white-space: nowrap; }
+  tr:nth-child(even) td { background: var(--tint); }
+  .foot { font-size: 6pt; color: #666; line-height: 1.25; }
+  .col { break-before: column; }
+  .p2 { position: relative; padding-bottom: 6mm; }
+  .pagefoot { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; border-top: .2mm solid var(--rule); padding-top: 1mm; }
+  .key { border: .3mm solid var(--fear); border-radius: 1mm; padding: 1mm 1.6mm; background: var(--tint); }
+</style>
+</head>
+<body>
+
+<!-- ============================ PAGE 1 ============================ -->
+<section class="page">
+
+<div class="block">
+  <h1><span class="h">Duality</span> <span class="f">Solo Engine</span></h1>
+  <p class="sub">A d12 game master emulator for solo &amp; GM-less Daggerheart. The Fear pool plays the GM.</p>
+</div>
+
+<div class="block">
+  <h2 class="hope">How to Play</h2>
+  <ol>
+    <li><b>Frame the scene</b> you expect, then <b>test it</b> (Scene Setup).</li>
+    <li><b>Play your character</b> with the normal rules. Whenever you would ask a GM something, ask the <b>Oracle</b>.</li>
+    <li>When you fail or roll with Fear, the engine makes a <b>GM Move</b>.</li>
+    <li>When the answer needs inspiration, roll on the <b>Meaning</b> tables and interpret the words in context.</li>
+    <li><b>End the scene:</b> update your lists of Threads (open goals) and NPCs. Keep each list to 12 or fewer so a d12 can pick from it.</li>
+  </ol>
+  <p>Always take the first interpretation that makes sense. If nothing fits, the obvious thing happens.</p>
+</div>
+
+<div class="block">
+  <h2>Fear &amp; the Fear Check</h2>
+  <p>Track Fear exactly as the rules say: it grows when you roll with Fear and when you rest, to a maximum of 12. <b>The engine never invents Fear. It only decides when to spend what you generate.</b></p>
+  <div class="key"><b class="f">Fear Check:</b> roll a d12. If it is <b>equal to or under current Fear</b>, the check <b>passes</b>: the GM spends Fear and acts. Otherwise it <b>fails</b> and the world holds its breath. At 0 Fear it always fails.</div>
+</div>
+
+<div class="block">
+  <h2 class="hope">The Oracle (Yes / No)</h2>
+  <p>Ask a yes/no question, pick a likelihood, roll your <b class="h">Hope</b> and <b class="f">Fear</b> dice and add them. Oracle rolls never generate Hope or Fear.</p>
+  <div data-t="oracle"></div>
+  <p style="margin-top:.9mm"><b>Twist:</b> if the dice are <b>4 or more apart</b>, add a twist. <b class="h">Hope higher:</b> it bends your way (<i>Yes, and…</i> / <i>No, but…</i>). <b class="f">Fear higher:</b> it bends against you (<i>Yes, but…</i> / <i>No, and…</i>).<br>
+  <b>Doubles:</b> answer as normal, then a <b>Random Event</b> occurs.</p>
+</div>
+
+<div class="block">
+  <h2 class="hope">How Much? How Well?</h2>
+  <div data-t="howmuch"></div>
+</div>
+
+<div class="block">
+  <h2>Scene Setup</h2>
+  <p>Describe the scene you expect, then make a <b class="f">Fear Check</b>.</p>
+  <ul>
+    <li><b>Fails:</b> the scene starts as expected.</li>
+    <li><b>Passes on an odd roll:</b> spend 1 Fear. The scene is <b>Altered</b>: roll below.</li>
+    <li><b>Passes on an even roll:</b> spend 1 Fear. The scene is <b>Interrupted</b>: a Random Event replaces it.</li>
+  </ul>
+  <div data-t="scene"></div>
+</div>
+
+<div class="block">
+  <h2>GM Moves</h2>
+  <ul>
+    <li><b>Success with Fear</b> or <b>failure with Hope:</b> Soft Move.</li>
+    <li><b>Failure with Fear:</b> <b class="f">Fear Check</b>. Pass: spend 1 Fear, Hard Move. Fail: Soft Move.</li>
+    <li><b>Story stalls</b> or you hand the world a golden opportunity: Fear Check. Pass: spend 1 Fear, Hard Move.</li>
+  </ul>
+  <div data-t="soft"></div>
+</div>
+
+<div class="block">
+  <div data-t="hard"></div>
+</div>
+
+<div class="block">
+  <h2>Random Event</h2>
+  <p>Triggered by Oracle doubles or an Interrupted scene. Roll the <b>Event Focus</b>, then <b>Action + Subject</b> for what happens. For a Thread or NPC, roll a d12 on your list (reroll blanks) or choose.</p>
+  <div data-t="focus"></div>
+</div>
+
+<div class="block">
+  <h2 class="hope">Meaning Tables</h2>
+  <p>Roll both Duality Dice. The <b class="h">Hope die picks the row</b>; the <b class="f">Fear die picks the column</b> (odd = A, even = B). Combine <b>Action + Subject</b> for events, <b>Descriptor + Subject</b> for things and places.</p>
+  <div data-t="action"></div>
+</div>
+
+<div class="block"><div data-t="subject"></div></div>
+<div class="block"><div data-t="descriptor"></div></div>
+
+</section>
+
+<!-- ============================ PAGE 2 ============================ -->
+<section class="page p2">
+
+<div class="block">
+  <h2>Adversaries in Combat</h2>
+  <p>When the spotlight passes to the GM, pick the adversary that makes the most sense (or the one that has acted least) and make a <b class="f">Fear Check</b>.</p>
+  <ul>
+    <li><b>Fails:</b> it acts for free. Roll <b>Tactics</b>.</li>
+    <li><b>Passes:</b> roll <b>Fear Spend</b>, pay the cost, resolve it.</li>
+    <li><b>Chain:</b> after each GM action, make another Fear Check. On a pass, spend 1 Fear and spotlight another adversary (Tactics). The GM turn ends on the first failed check.</li>
+  </ul>
+  <div data-t="tactics"></div>
+</div>
+
+<div class="block">
+  <div data-t="spend"></div>
+  <p style="margin-top:.8mm">Build encounters with Battle Points as normal. If the engine cannot afford a cost, it rolls Tactics instead.</p>
+</div>
+
+<div class="block">
+  <h2 class="hope">Generic Generator</h2>
+  <p>For anything else (a room, a relic, a rumor, a town): roll <b>Descriptor + Subject</b> for what it is, <b>Action</b> for what it does, and <b>How Much</b> for its size or strength.</p>
+</div>
+
+<div class="block">
+  <h2 class="hope">Countdowns</h2>
+  <p>Give every looming threat a countdown die. Soft and Hard Moves tick it; at zero it happens, with no Fear needed. A d12 on your Thread list picks which countdown ticks when it is unclear.</p>
+</div>
+
+<div class="block col">
+  <h2 class="hope">NPC Generator</h2>
+  <p>Roll once per column. Choose ancestry and community to fit the place.</p>
+  <div data-t="npc1"></div>
+</div>
+
+<div class="block">
+  <p><b>Attitude</b> is the first reaction. An NPC acting on their own follows their Motive; when unsure, ask the Oracle. <b>Topic</b> is what they bring up, ask about, or let slip.</p>
+  <div data-t="npc2"></div>
+</div>
+
+<div class="block col">
+  <h2 class="hope">Plot Hook Generator</h2>
+  <p>Roll once per column. Keep the Twist hidden: reveal it when a Random Event or Hard Move gives it an opening.</p>
+  <div data-t="plot1"></div>
+</div>
+
+<div class="block"><div data-t="plot2"></div></div>
+
+<div class="block col">
+  <h2>Site Crawler</h2>
+  <p>For dungeons, ruins, and lairs. For each new area roll <b>Area</b>, <b>Exits</b>, and <b>Contents</b>. The first time you roll Area 12, you have found the heart of the site.</p>
+  <div data-t="site"></div>
+</div>
+
+<div class="block">
+  <h2>Journeys</h2>
+  <p>For each leg of travel make a <b class="f">Fear Check</b>. <b>Pass:</b> spend 1 Fear and roll <b>Danger</b>. <b>Fail:</b> roll <b>Discovery</b>.</p>
+  <div data-t="travel"></div>
+</div>
+
+<div class="foot pagefoot">
+  Duality Solo Engine v0.1. Unofficial fan-made play aid for use with Daggerheart; not affiliated with or endorsed by Darrington Press or Critical Role. Design inspired by One Page Solo Engine (Karl Hendricks) and the Mythic Game Master Emulator (Tana Pigeon).
+</div>
+
+</section>
+
+<script>
+const T = {
+  oracle: { h: ["Likelihood", "Yes on", "Chance"], n: ["", "", "", "", ""], c: [
+    ["Near certain", "Likely", "50 / 50", "Unlikely", "Long shot"],
+    ["7+", "10+", "13+", "16+", "19+"],
+    ["90%", "75%", "54%", "31%", "15%"]], nonum: true },
+  howmuch: { h: ["Result"], n: ["1-2", "3-5", "6-7", "8-10", "11-12"], c: [[
+    "Far less than expected: scarce, weak, tiny",
+    "Somewhat less than expected",
+    "About what you would expect",
+    "Somewhat more than expected",
+    "Far more than expected: abundant, mighty, vast"]] },
+  scene: { h: ["Altered Scene", "Scene Complication"], c: [[
+    "The place is not as described", "An expected NPC is absent", "An unexpected NPC is present",
+    "Someone got here first", "The danger is greater than expected", "The danger is elsewhere, for now",
+    "Weather, light, or terrain turns", "Something valuable is missing", "A countdown is already running",
+    "An old Thread intrudes", "Remove one element of the scene", "Add a Scene Complication"], [
+    "Hostile forces oppose you", "An obstacle blocks your way", "Wouldn't it be bad if…",
+    "An NPC acts suddenly", "All is not as it seems", "Things actually go as planned",
+    "Time is shorter than you thought", "Innocents are caught in it", "A rival wants the same thing",
+    "Your gear or magic misbehaves", "The environment turns dangerous", "A debt or the past comes due"]] },
+  soft: { h: ["Soft Move"], c: [[
+    "Show how the world reacts", "Reveal an unwelcome truth", "Signal a threat approaching off-screen",
+    "Offer what you want, at a cost", "Mark a Stress", "Shift the environment against you",
+    "An NPC acts on their Motive", "Tick a countdown", "Put an item or resource at risk",
+    "Close off the easy path", "Your background or a past choice catches up", "Add a Scene Complication"]] },
+  hard: { h: ["Hard Move (costs 1 Fear)"], c: [[
+    "An adversary strikes: take damage", "A new danger arrives", "Separate you from an ally or your gear",
+    "You are captured, pinned, or cornered", "An opportunity is lost for good", "Enemy reinforcements arrive",
+    "Force a choice between two losses", "A countdown ticks twice", "Someone or something you care about is harmed",
+    "Your success is turned against you", "The environment erupts: collapse, fire, flood",
+    "Spend 1 more Fear if able: roll twice, both happen"]] },
+  focus: { h: ["Event Focus"], c: [[
+    "Something far away changes", "A strange omen or mystery", "A new NPC enters", "A known NPC acts",
+    "Bad for an NPC", "Good for an NPC", "A Thread advances", "A Thread is set back",
+    "A Thread closes or transforms", "Bad for you", "Good for you", "The environment acts"]] },
+  action: { h: ["Action A", "Action B"], c: [
+    ["Seek", "Oppose", "Communicate", "Move", "Harm", "Create", "Reveal", "Command", "Take", "Protect", "Assist", "Transform"],
+    ["Deceive", "Abandon", "Betray", "Pursue", "Trap", "Destroy", "Hide", "Bargain", "Release", "Delay", "Summon", "Sacrifice"]] },
+  subject: { h: ["Subject A", "Subject B"], c: [
+    ["Enemy", "Ally", "Community", "Home", "Wealth", "Knowledge", "Magic", "Path", "Secret", "Oath", "Authority", "Nature"],
+    ["Monster", "Stranger", "Family", "Ruin", "Weapon", "Relic", "The gods", "Border", "Rumor", "Debt", "Rebellion", "Death"]] },
+  descriptor: { h: ["Descriptor A", "Descriptor B"], c: [
+    ["Ancient", "Broken", "Hidden", "Sacred", "Cursed", "Wild", "Gilded", "Humble", "Strange", "Dangerous", "Beautiful", "Forgotten"],
+    ["Fresh", "Massive", "Tiny", "Stolen", "False", "Burning", "Frozen", "Haunted", "Guarded", "Fragile", "Powerful", "Familiar"]] },
+  tactics: { h: ["Tactics (free)"], n: ["1-3", "4-5", "6", "7", "8", "9", "10", "11", "12"], c: [[
+    "Attack the nearest PC", "Attack the most wounded PC", "Attack whoever hurt it last",
+    "Move to a better position; attack if able", "Use a feature that costs no Fear (else attack)",
+    "Protect or aid an ally: the leader or the wounded", "Pursue its own objective and ignore you",
+    "Hinder: grab, disarm, or impose a condition",
+    "Act by nature. Below half HP: ask the Oracle if it flees or parleys"]] },
+  spend: { h: ["Fear Spend"], n: ["1-5", "6-8", "9-10", "11-12"], c: [[
+    "Use a Fear feature, paying its cost (none? attack, then spotlight a second adversary for 1 Fear)",
+    "Attack, then spotlight a second adversary (1 Fear)",
+    "The environment acts: use its Fear feature or a hazard (1 Fear)",
+    "Hard Move: roll on the Hard Move table (1 Fear)"]] },
+  npc1: { h: ["Role", "Motive"], c: [
+    ["Farmer or laborer", "Merchant", "Soldier or guard", "Outlaw", "Priest or devotee", "Scholar or sage",
+     "Noble or official", "Artisan", "Wanderer or scout", "Spellcaster", "Entertainer or trickster", "Leader or elder"],
+    ["Survival", "Wealth", "Protecting loved ones", "Revenge", "Knowledge", "Power",
+     "Duty", "Freedom", "Redemption", "Faith", "Love", "Glory"]] },
+  npc2: { h: ["Attitude", "Quirk", "Topic"], c: [
+    ["Hostile", "Suspicious", "Suspicious", "Wary", "Wary", "Indifferent",
+     "Indifferent", "Curious", "Curious", "Friendly", "Friendly", "Eager to help"],
+    ["Scarred", "Soft-spoken", "Boastful", "Superstitious", "Always eating", "Nervous laugh",
+     "Well dressed", "Hums or sings", "Blunt", "Forgetful", "Collects oddities", "Hides a secret"],
+    ["A rumor", "Their trouble", "Local rulers", "Recent event", "The past", "A warning", "A job offer", "NPC gossip", "The road ahead", "Magic or gods", "You", "A Thread"]] },
+  plot1: { h: ["Objective", "Opposition"], c: [
+    ["Rescue someone", "Recover an item", "Escort or deliver", "Defend a place", "Hunt a creature", "Explore the unknown",
+     "Uncover a truth", "Stop a ritual or plan", "Broker a peace", "Steal or infiltrate", "Escape or survive", "Destroy a threat at its source"],
+    ["Bandits or raiders", "A cult", "A corrupt authority", "A beast or monster", "Undead or restless spirits", "A rival party",
+     "A mage or witch", "The wilds themselves", "A fallen hero", "A faction at war", "Something from another realm", "Someone you trust"]] },
+  plot2: { h: ["Reward", "Twist"], c: [
+    ["Gold", "Rare gear", "A magic relic", "A secret or lore", "An ally or favor", "A safe haven",
+     "Title or standing", "A debt cleared", "A lead on a personal Thread", "Healing or a cure", "Passage or access", "Only doing what is right"],
+    ["The patron is lying", "The victim is willing or guilty", "A third party interferes", "The clock is shorter", "The target has moved", "The enemy is sympathetic",
+     "It is a trap", "The reward is false or cursed", "An old ally stands on the other side", "The real threat is far bigger", "Success has a moral cost", "It ties to your past"]] },
+  site: { h: ["Area", "Exits", "Contents"], c: [
+    ["Narrow passage", "Narrow passage", "Open chamber", "Open chamber", "Crossing or junction", "Stairs, drop, or climb",
+     "Collapsed or flooded section", "Living or work quarters", "Vault or storage", "Shrine or sanctum", "Cavern or overgrowth", "Heart of the site"],
+    ["None", "None", "None", "One", "One", "One", "One", "Two", "Two", "Two", "Three", "Three"],
+    ["Empty; traces only", "Empty; traces only", "Empty; traces only", "Hazard or trap", "Hazard or trap", "Adversaries",
+     "Adversaries", "Adversaries guarding treasure", "Treasure", "An NPC", "A clue to a Thread", "Something strange (Meaning)"]] },
+  travel: { h: ["Danger (1 Fear)", "Discovery"], c: [
+    ["Ambush", "A predator stalks you", "Storm or harsh weather", "The path is lost", "Hazardous crossing", "Supplies spoiled or lost",
+     "Hostile patrol", "Sickness or exhaustion: mark a Stress", "Pursuers catch up", "Cursed or haunted ground", "Natural disaster", "The lair of something big"],
+    ["A quiet road; nothing", "Fellow travelers", "Shelter or a good campsite", "A ruin", "A settlement or homestead", "A shrine or landmark",
+     "A useful resource", "Tracks or signs", "A trader", "Someone in need", "A hidden cache", "A wondrous sight: gain a Hope"]] },
+};
+for (const el of document.querySelectorAll("[data-t]")) {
+  const t = T[el.dataset.t];
+  const rows = t.c[0].length;
+  const nums = t.n || Array.from({ length: rows }, (_, i) => String(i + 1));
+  let h = "<table><tr>" + (t.nonum ? "" : '<th class="n">d12</th>') + t.h.map(x => `<th>${x}</th>`).join("") + "</tr>";
+  for (let r = 0; r < rows; r++) {
+    h += "<tr>" + (t.nonum ? "" : `<td class="n">${nums[r].replace("-", "–")}</td>`) + t.c.map(col => `<td>${col[r]}</td>`).join("") + "</tr>";
+  }
+  el.innerHTML = h + "</table>";
+}
+</script>
+</body>
+</html>

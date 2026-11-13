@@ -10,7 +10,6 @@ import multipart from '@fastify/multipart';
 import { backupDatabase, CURRENT_VERSION, openCampaignDatabase } from './campaign-db';
 import { CampaignService } from './campaign-service';
 import { registerCampaignRoutes } from './campaign-routes';
-import { registerMythicRoutes } from './mythic';
 import { registerSecureGame } from './secure-game';
 import { EmailAuth } from './email-auth';
 import { createMailer } from './mailer';
@@ -57,7 +56,6 @@ export async function startServer(): Promise<void> {
   const mailer = createMailer(process.env);
   const emailAuth = mailer ? new EmailAuth(db, mailer, allowRegistration) : undefined;
   await registerCampaignRoutes(app, { service, origin, secureCookies: production, allowRegistration, emailAuth });
-  registerMythicRoutes(app, { service, secureCookies: production });
   // Semantic retrieval is local and optional. The provider is lazy: no model is loaded (or
   // downloaded) until a turn or a background backfill asks for it. DAGGERY_RAG=off disables it.
   const aiEmbedder = RAG_ENABLED() ? localEmbedderProvider({ modelsDir: storage.models }) : undefined;

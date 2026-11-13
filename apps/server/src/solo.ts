@@ -1,11 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { adjustChaos, advanceThreadTrack, hasFeature, initialSoloState, isChaosFlavor, newThreadTrack, SOLO_KEYED_SCENE_LIMIT, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_TRACKER_LIMIT, SOLO_WORLD_MOVES, type SoloTrackerItem, type MythicData, type MythicTable, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone } from '@daggery/shared';
-import { openLines, rollMythic } from './solo-mythic';
+import { DUALITY_MAX_FEAR, hasFeature, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_CLOCK_LIMIT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_TRACKER_LIMIT, SOLO_WORLD_MOVES, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone, type SoloTrackerItem } from '@daggery/shared';
+import { openLines, rollDuality } from './solo-duality';
 import type { CampaignService } from './campaign-service';
 import { readSessionToken } from './campaign-routes';
-import { loadMythic } from './mythic';
 
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid solo data');
@@ -19,50 +18,14 @@ const integer = (value: unknown, min: number, max: number) => {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) throw new Error('Invalid solo number');
   return value;
 };
-const MYTHIC_SOURCES = ['oracle', 'adventureCrafter', 'locationCrafting', 'collectedTables'] as const;
-type MythicSource = (typeof MYTHIC_SOURCES)[number];
-const mythicSource = (data: MythicData, value: string) => {
-  if (!(MYTHIC_SOURCES as readonly string[]).includes(value)) throw new Error('Invalid Mythic source');
-  const file = data[value as MythicSource];
-  if (!file) throw new Error('Invalid Mythic source');
-  return file;
-};
-const dieSides = (die: string) => {
-  const match = /^d(\d+)$/i.exec(die);
-  if (!match) throw new Error('Invalid Mythic table die');
-  return Number(match[1]);
-};
-const inRange = (range: readonly [number, number] | undefined, value: number) => !!range && value >= range[0] && value <= range[1];
 export class SoloConflict extends Error { constructor() { super('Preparation changed in another window. Reload the latest version before saving.'); } }
 export class SoloService {
   constructor(
     private db: Database.Database,
     private campaigns: CampaignService,
     private publish: (campaignId: string, ns: string, id: string, value: unknown) => void = () => {},
-    private mythicData: () => MythicData = loadMythic,
     private rng: Rng = Math.random,
   ) {}
-  private cachedMythic: MythicData | null = null;
-  private mythicTables(): MythicData {
-    const data = this.cachedMythic ?? (this.cachedMythic = this.mythicData());
-    if (!data.available) throw new Error('Invalid request: Mythic tables are not installed on this server');
-    return data;
-  }
-  private rollMythicEntry(table: MythicTable, column?: number) {
-    const sides = dieSides(table.die);
-    const roll = rollDie(sides, this.rng);
-    const entry = table.entries.find(item => inRange(item.range, roll));
-    if (!entry) throw new Error('Invalid Mythic table roll');
-    let value: string;
-    if (column !== undefined) {
-      if (!table.columns || column < 0 || column >= table.columns.length) throw new Error('Invalid Mythic table column');
-      value = entry.cells?.[column] ?? entry.text ?? '';
-    } else {
-      value = entry.cells ? entry.cells.join(' · ') : entry.text ?? '';
-    }
-    if (!value.trim()) throw new Error('Invalid Mythic table entry');
-    return { sides, roll, entry, value };
-  }
   authorize(userId: string, campaignId: string) {
     this.campaigns.requireGm(userId, campaignId);
     if (!hasFeature(this.campaigns.configuration(campaignId), 'daggerheart.solo')) throw new Error('Forbidden');
@@ -129,7 +92,7 @@ export class SoloService {
   track(userId: string, campaign: string, value: unknown) {
     const input = object(value);
     const list = (raw: unknown): SoloTrackerItem[] => {
-      if (!Array.isArray(raw) || raw.length > SOLO_TRACKER_LIMIT) throw new Error('Invalid tracker list');
+      if (!Array.isArray(raw) || raw.length > 60) throw new Error('Invalid tracker list');
       return raw.map(entry => {
         const item = object(entry), id = string(item.id, 80), name = string(item.name, 120).trim();
         if (!/^[a-zA-Z0-9-]{1,80}$/.test(id) || !name || typeof item.done !== 'boolean') throw new Error('Invalid tracker item');
@@ -137,41 +100,24 @@ export class SoloService {
       });
     };
     return this.change(userId, campaign, input.revision, state => {
-      if (input.chaos !== undefined) state.chaos = integer(input.chaos, 1, 9);
       if (input.scene !== undefined) {
         const scene = object(input.scene);
         state.scene = { ...state.scene, title: string(scene.title, 200), goal: string(scene.goal ?? state.scene.goal), expected: string(scene.expected) };
       }
       if (input.threads !== undefined) state.threads = list(input.threads);
       if (input.characters !== undefined) state.characters = list(input.characters);
-      if (input.features !== undefined) state.features = list(input.features);
-      if (input.chaosFlavor !== undefined) { if (!isChaosFlavor(input.chaosFlavor)) throw new Error('Invalid chaos flavor'); state.chaosFlavor = input.chaosFlavor; }
-      if (input.preparedAdventure !== undefined) { if (typeof input.preparedAdventure !== 'boolean') throw new Error('Invalid prepared adventure flag'); state.preparedAdventure = input.preparedAdventure; }
-      if (input.adventureTheme !== undefined) {
-        const theme = string(input.adventureTheme, 40);
-        if (theme && !['Action', 'Tension', 'Mystery', 'Social', 'Personal'].includes(theme)) throw new Error('Invalid adventure theme');
-        state.adventureTheme = theme;
-      }
-      if (input.keyedScenes !== undefined) {
-        if (!Array.isArray(input.keyedScenes) || input.keyedScenes.length > SOLO_KEYED_SCENE_LIMIT) throw new Error('Invalid keyed scenes');
-        state.keyedScenes = input.keyedScenes.map(entry => {
-          const item = object(entry), id = string(item.id, 80), trigger = string(item.trigger, 500).trim(), event = string(item.event, 500).trim();
-          if (!/^[a-zA-Z0-9-]{1,80}$/.test(id) || !trigger || !event || typeof item.triggered !== 'boolean' || typeof item.done !== 'boolean') throw new Error('Invalid keyed scene');
-          return { id, trigger, event, triggered: item.triggered, done: item.done };
+      if (input.clocks !== undefined) {
+        if (!Array.isArray(input.clocks) || input.clocks.length > SOLO_CLOCK_LIMIT) throw new Error('Invalid countdowns');
+        state.clocks = input.clocks.map(entry => {
+          const item = object(entry), id = string(item.id, 80), name = string(item.name, 120).trim(), start = integer(item.start, 1, 12);
+          if (!/^[a-zA-Z0-9-]{1,80}$/.test(id) || !name) throw new Error('Invalid countdown');
+          return { id, name, start, current: integer(item.current, 0, start) };
         });
       }
-      if (input.peril !== undefined) {
-        const peril = object(input.peril), max = integer(peril.max, 0, 20);
-        if (typeof peril.replenish !== 'boolean') throw new Error('Invalid peril points');
-        state.peril = { max, current: integer(peril.current, 0, max), replenish: peril.replenish };
+      // A d12 picks from a List, so it holds at most twelve open lines.
+      for (const field of ['threads', 'characters'] as const) {
+        if (openLines(state, field).length > SOLO_TRACKER_LIMIT) throw new Error(`Invalid list: at most ${SOLO_TRACKER_LIMIT} open lines`);
       }
-      // An element important in several scenes may fill up to three lines of its List.
-      for (const field of ['threads', 'characters', 'features'] as const) {
-        const names = openLines(state, field).map(item => item.name.toLowerCase());
-        if (names.some(name => names.filter(other => other === name).length > 3)) throw new Error('Invalid list: an element can appear at most three times');
-      }
-      // A track follows its thread: closing or removing every line of the thread ends the track.
-      if (state.threadTrack && !openLines(state, 'threads').some(item => item.name === state.threadTrack!.name)) state.threadTrack = null;
     });
   }
   roll(userId: string, campaign: string, value: unknown): SoloEntry {
@@ -183,7 +129,7 @@ export class SoloService {
     let question = string(input.question ?? '', 2000);
     const state = this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
     let result: SoloResult;
-    let stateChanged = false;
+    let fearAfter: { kind: 'fear'; value: number } | undefined;
     if (kind === 'oracle') {
       if (!question.trim()) throw new Error('Invalid question');
       result = resolveSoloOracle(rollDie(12), rollDie(12), string(input.likelihood, 30));
@@ -201,36 +147,27 @@ export class SoloService {
       if (!table) throw new Error('Invalid prompt table');
       const die = rollDie(12);
       result = { title: table.entries[die - 1]!, detail: `${table.name} · interpret in context. This prompt grants no new abilities, damage, or extra actions.`, total: die, tone: 'neutral' };
-    } else if (kind === 'mythic-table') {
-      const data = this.mythicTables();
-      const source = mythicSource(data, string(input.source, 30));
-      const tableId = string(input.tableId, 120);
-      const table = source.tables.find(item => item.id === tableId);
-      if (!table) throw new Error('Invalid Mythic table');
-      const column = input.column === undefined || input.column === null ? undefined : integer(input.column, 0, 1000);
-      const { sides, roll, value } = this.rollMythicEntry(table, column);
-      const label = column === undefined ? table.title : `${table.title} · ${table.columns![column]}`;
-      question = question.trim() ? question : table.title;
-      result = { title: value, detail: `${label} · d${sides}: ${roll}`, tone: 'neutral', total: roll };
-    } else if (kind.startsWith('mythic-')) {
-      const outcome = rollMythic(kind, { state, data: this.mythicTables(), rng: this.rng, input, question });
+    } else if (kind.startsWith('duality-')) {
+      const pool = this.read<{ kind: string; value: number }>(campaign, 'combat', 'fear');
+      const fear = Math.min(DUALITY_MAX_FEAR, Math.max(0, Math.trunc(Number(pool?.value) || 0)));
+      const outcome = rollDuality(kind, { state, fear, rng: this.rng, input, question });
       result = outcome.result;
       question = outcome.question ?? question;
-      stateChanged = !!outcome.changed;
+      if (outcome.fearSpent > 0) fearAfter = { kind: 'fear', value: fear - outcome.fearSpent };
     } else if (kind === 'journal') {
       if (!question.trim()) throw new Error('Invalid journal entry');
       result = { title: 'Journal note', detail: '', tone: 'neutral' };
     } else throw new Error('Invalid solo roll type');
     const entry: SoloEntry = { id, at: new Date().toISOString(), kind, question, result, interpretation: kind === 'journal' ? question : '', accepted: kind === 'journal', rulesVersion: SOLO_RULES_VERSION };
-    // A roll that moves the state (a discovery, a flashpoint) saves both together.
+    // A roll that spends Fear saves the pool and the entry together.
     this.db.transaction(() => {
-      if (stateChanged) { state.revision++; this.write(campaign, 'solo', 'state', state); }
+      if (fearAfter) this.write(campaign, 'combat', 'fear', fearAfter);
       this.write(campaign, 'solo', `entry:${id}`, entry);
     })();
-    if (stateChanged) this.publish(campaign, 'solo', 'state', state);
+    if (fearAfter) this.publish(campaign, 'combat', 'fear', fearAfter);
     return entry;
   }
-  /** The current state, for a client to resync after a roll that may have moved it. */
+  /** The current state, for a client to resync after a roll. */
   current(userId: string, campaign: string): SoloState {
     this.authorize(userId, campaign);
     return this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
@@ -255,40 +192,9 @@ export class SoloService {
         state.beat = { id: randomUUID(), contributions: [], fearSpent: false, outcomeApplied: false };
         detail = 'New action beat. Oracle and prompt rolls never reset this tracker.';
       } else if (input.command === 'end-scene') {
-        // End of Scene bookkeeping: the chaos factor follows who controlled the scene.
-        const before = state.chaos ?? 5;
-        if (input.control !== 'in' && input.control !== 'out' && input.control !== 'same') throw new Error('Invalid scene control');
-        if (input.control !== 'same') state.chaos = adjustChaos(before, input.control === 'in');
         state.sceneNumber = (state.sceneNumber ?? 0) + 1;
-        if (state.threadTrack) state.threadTrack.discoveryBlocked = false;
         state.scene = { ...state.scene, title: '', expected: '' };
-        detail = `Scene ${state.sceneNumber} ended. ${input.control === 'same' ? `Chaos stays at ${before}.` : `${input.control === 'in' ? 'You were mostly in control' : 'You were mostly not in control'}: Chaos ${before} → ${state.chaos}.`} Update the Lists: add what mattered, repeat what mattered again (up to three lines), remove what no longer does.`;
-      } else if (input.command === 'thread-track-start') {
-        const thread = openLines(state, 'threads').find(item => item.id === input.threadId);
-        if (!thread) throw new Error('Invalid thread');
-        state.threadTrack = newThreadTrack(thread.id, thread.name, integer(input.length, 10, 20));
-        detail = `Thread Progress Track started for “${thread.name}”: ${state.threadTrack.length} points. Plot Armor: the thread cannot be resolved before the Conclusion.`;
-      } else if (input.command === 'thread-track-progress') {
-        if (!state.threadTrack || state.threadTrack.concluded) throw new Error('Invalid progress: no Thread Progress Track is running');
-        const flashpoint = input.flashpoint === true;
-        const advanced = advanceThreadTrack(state.threadTrack, 2, flashpoint);
-        state.threadTrack = advanced.track;
-        detail = `${flashpoint ? 'Flashpoint' : 'Progress'} on “${advanced.track.name}”: +2, now ${advanced.track.points} of ${advanced.track.length}.${advanced.triggered ? ' The phase ended with no Flashpoint, so the Track triggers one (+2): generate it now, or at the start of the next scene.' : ''}${advanced.track.concluded ? ' The Track is complete: generate the Conclusion.' : ''}`;
-      } else if (input.command === 'thread-track-clear') {
-        if (!state.threadTrack) throw new Error('Invalid progress: no Thread Progress Track is running');
-        detail = `Thread Progress Track for “${state.threadTrack.name}” closed at ${state.threadTrack.points} of ${state.threadTrack.length}.`;
-        state.threadTrack = null;
-      } else if (input.command === 'peril') {
-        const peril = state.peril ?? { max: 2, current: 2, replenish: true };
-        if (input.action === 'spend') {
-          if (peril.current < 1) throw new Error('Invalid action: no Peril Points left');
-          peril.current--;
-          detail = `Spent 1 Peril Point (${peril.current} left). Something averts the outcome that would have ended the adventure.`;
-        } else if (input.action === 'reset') {
-          peril.current = peril.max;
-          detail = `Peril Points reset to ${peril.max} for a new session.`;
-        } else throw new Error('Invalid peril action');
-        state.peril = peril;
+        detail = `Scene ${state.sceneNumber} ended. Update your lists: add the Threads and NPCs that mattered, cross off what is resolved.`;
       } else if (input.command === 'countdown') {
         if (state.beat.outcomeApplied) throw new Error('Invalid action: this beat already advanced the countdowns');
         const outcome = string(input.outcome, 30) as SoloActionOutcome;

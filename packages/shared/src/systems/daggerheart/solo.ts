@@ -1,8 +1,7 @@
 import { resolveDuality, rollDie, type Rng } from '../../dice';
 import { SOLO_THEMES } from './themes';
-import type { MythicChaosFlavor, ThreadTrack } from '../../mythic-rules';
 export { SOLO_THEMES } from './themes';
-export const SOLO_RULES_VERSION = '0.3';
+export const SOLO_RULES_VERSION = '1.0';
 export const SOLO_LIKELIHOODS = [
   { id: 'very-likely', label: 'Very likely', target: 8, chance: '87.5%' },
   { id: 'likely', label: 'Likely', target: 11, chance: '72.2%' },
@@ -92,31 +91,18 @@ export const SOLO_ADVANCEMENT: Record<SoloActionOutcome, [number, number]> = {
 };
 /** One line of a solo list: an open thread or a character met along the way. */
 export interface SoloTrackerItem { id: string; name: string; note: string; done: boolean }
-export const SOLO_TRACKER_LIMIT = 25;
-/** A situation the player set up in advance: when the trigger happens, the event opens the next scene. */
-export interface SoloKeyedScene { id: string; trigger: string; event: string; triggered: boolean; done: boolean }
-/** Points that avert an outcome which would end the adventure. */
-export interface SoloPeril { max: number; current: number; replenish: boolean }
-export const SOLO_KEYED_SCENE_LIMIT = 12;
+/** Lists hold at most twelve open lines, so a d12 can pick from them. */
+export const SOLO_TRACKER_LIMIT = 12;
+/** A looming threat or goal counting down. GM Moves tick it; at zero it happens. */
+export interface SoloClock { id: string; name: string; start: number; current: number }
+export const SOLO_CLOCK_LIMIT = 12;
 export interface SoloState {
   revision: number;
-  /** Chaos factor, 1 to 9. Absent on campaigns saved before it was tracked: read as 5. */
-  chaos?: number;
   threads?: SoloTrackerItem[];
   characters?: SoloTrackerItem[];
-  /** Adventure Features List, used while playing a prepared adventure. */
-  features?: SoloTrackerItem[];
-  /** How much the chaos factor bends answers. Absent: standard. */
-  chaosFlavor?: MythicChaosFlavor;
-  /** Playing a published adventure: scene tests and the event focus change. */
-  preparedAdventure?: boolean;
   /** Scenes ended so far in this adventure. */
   sceneNumber?: number;
-  threadTrack?: ThreadTrack | null;
-  keyedScenes?: SoloKeyedScene[];
-  peril?: SoloPeril;
-  /** Theme of the first Plot Point of every Turning Point. */
-  adventureTheme?: string;
+  clocks?: SoloClock[];
   scene: { title: string; goal: string; expected: string; signature: string; signatureCost: number };
   pool: string[];
   theme: string;
