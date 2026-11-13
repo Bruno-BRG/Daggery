@@ -221,15 +221,33 @@
 .folio-weapon small { display: block; margin-top: 1px; color: var(--ds-muted); font-size: 13px; line-height: 1.45; text-transform: capitalize; }
 .folio-weapon .item-glyph { flex: none; }
 .character-folio .folio-weapon-swap { flex: none; width: 38px; min-height: 38px; padding: 0; }
-.character-folio .folio-weapon .sheet-attack { width: 100%; min-height: 40px; font-size: 14px; }
+.folio-weapon-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.character-folio .folio-weapon .sheet-attack { flex: 1 1 180px; min-width: 0; min-height: 40px; font-size: 14px; }
+.folio-weapon-feature-toggle { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; max-width: 100%; min-height: 40px; padding: 0 10px; border: 1px solid var(--folio-line); border-radius: var(--radius-sm); background: transparent; color: var(--ds-brand); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.folio-weapon-feature-toggle:hover { border-color: var(--ds-brand); }
+.folio-weapon-feature-toggle > .daggery-icon { flex: none; width: 14px; height: 14px; transition: transform .15s; }
+.folio-weapon-feature-toggle[aria-expanded='true'] > .daggery-icon { transform: rotate(90deg); }
+.folio-weapon-feature-text { margin: 0; color: var(--ds-muted); font-size: 13px; line-height: 1.55; }
+.folio-spellcast { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; color: var(--ds-muted); font-size: 13px; }
+.character-folio .folio-spellcast .sheet-chip { min-height: 30px; white-space: nowrap; }
+.character-folio .folio-arsenal .sheet-section-title { white-space: nowrap; }
+@container (max-width: 1100px) { .folio-spellcast > span { display: none; } }
+/* Panels share a row; the shorter ones spread their content instead of leaving a gap at the bottom. */
+.character-folio .folio-dash > :is(.folio-vitals, .folio-modifiers) { display: flex; flex-direction: column; }
+.character-folio .folio-vitals .folio-vitals-tracks { flex: 1; grid-auto-rows: 1fr; align-content: stretch; }
+.character-folio .folio-modifiers .folio-experiences { flex: 1; align-content: start; }
+.character-folio .folio-dash > .folio-arsenal { display: flex; flex-direction: column; }
+.character-folio .folio-arsenal .folio-weapon-list { flex: 1; grid-auto-rows: 1fr; }
+.character-folio .folio-arsenal .folio-weapon { align-content: space-between; }
+.folio-next-summary { display: flex; align-items: center; gap: 10px; margin: 8px 0 0; padding: 6px 10px; border: 1px dashed var(--folio-line); border-radius: var(--radius-xs); color: var(--ds-muted); font-size: 14px; line-height: 1.35; }
+.folio-next-summary > .daggery-icon { flex: none; width: 18px; height: 18px; color: var(--ds-brand); }
+.folio-next-summary strong { color: var(--ds-ink); font-variant-numeric: tabular-nums; }
+.folio-next-summary small { display: block; font-size: 12px; }
 .folio-weapon.is-empty { display: flex; align-items: center; gap: 10px; border-style: dashed; }
 .character-folio .folio-weapon.is-empty .sheet-ghost { min-height: 38px; }
-.folio-weapon-feature > summary { min-height: 26px; cursor: pointer; color: var(--ds-brand); font-size: 13px; font-weight: 600; }
-.folio-weapon-feature > p { margin: 4px 0 0; color: var(--ds-muted); font-size: 13px; line-height: 1.55; }
-.character-folio .folio-arsenal .sheet-spellcast { margin-top: 10px; padding-top: 10px; }
 .character-folio .folio-modifiers .sheet-seg { grid-template-columns: .8fr 1fr 1.2fr; margin: 0; }
 .character-folio .folio-modifiers .sheet-seg button { min-height: 38px; font-size: 13px; }
-.folio-difficulty { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 12px; color: var(--ds-muted); font-size: 14px; font-weight: 600; }
+.folio-difficulty { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 10px; color: var(--ds-muted); font-size: 14px; font-weight: 600; }
 .folio-difficulty > input { width: 110px; min-height: 38px; padding: 5px 8px; border: 1px solid var(--sheet-line); border-radius: var(--radius-sm); background: var(--sheet-sunken); color: var(--ds-ink); font-size: 16px; }
 .character-folio .folio-modifiers .sheet-mini-label { margin-bottom: 6px; }
 .character-folio .folio-modifiers .sheet-mini-label > span { font-weight: 400; letter-spacing: 0; text-transform: none; }
@@ -255,6 +273,7 @@
 }
 @container (max-width: 750px) {
   .folio-dash { grid-template-columns: minmax(0, 1fr); }
+  .character-folio .folio-arsenal .folio-weapon-list { grid-auto-rows: auto; }
   .folio-dash { grid-template-rows: none; }
   .folio-dash > .folio-arsenal { grid-area: auto; }
 }
@@ -280,5 +299,5 @@
   .character-folio .folio-vitals-actions > .sheet-ghost, .character-folio .folio-weapon-swap, .character-folio .folio-weapon.is-empty .sheet-ghost { min-height: 44px; }
   .character-folio .folio-weapon-swap { width: 44px; }
   .character-folio .folio-weapon .sheet-attack, .folio-experiences button, .character-folio .folio-modifiers .sheet-seg button, .folio-difficulty > input { min-height: 44px; }
-  .folio-weapon-feature > summary { display: flex; align-items: center; min-height: 36px; }
+  .folio-weapon-feature-toggle { min-height: 44px; }
 }

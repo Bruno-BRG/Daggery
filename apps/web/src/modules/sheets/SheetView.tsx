@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { Advantage, RollPayload, TraitName } from '@daggery/shared';
 import { isSuccess, maxDiceTotal } from '@daggery/shared';
 import { useDiceTray } from '../../dice3d';
@@ -572,21 +572,23 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
         </section>
 
         <section className="sheet-panel folio-arsenal">
-          <PanelHead icon="combat" title="Active weapons" note={`Proficiency ${sheet.proficiency}`} />
+          <div className="sheet-panel-head">
+            <h3 className="sheet-section-title"><Icon name="combat" />Active weapons</h3>
+            {spellcastOptions.length > 0 ? (
+              <div className="folio-spellcast" role="group" aria-label="Spellcast trait">
+                <span>Spellcast</span>
+                {spellcastOptions.map((trait) => (
+                  <button key={trait} type="button" title={`Spellcast trait: ${TRAIT_LABELS[trait]}`} aria-pressed={spellcastTrait === trait} onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>
+                    {TRAIT_LABELS[trait]} {traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)}
+                  </button>
+                ))}
+              </div>
+            ) : <span className="sheet-panel-note">Proficiency {sheet.proficiency}</span>}
+          </div>
           <div className="folio-weapon-list">
             {primary ? <WeaponRow weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} /> : <EmptyWeaponRow slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
             {secondary ? <WeaponRow weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} /> : <EmptyWeaponRow slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
           </div>
-          {spellcastOptions.length > 0 && (
-            <div className="sheet-inline sheet-spellcast">
-              <span className="sheet-mini-label">Spellcast</span>
-              {spellcastOptions.map((trait) => (
-                <button key={trait} type="button" onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>
-                  {TRAIT_LABELS[trait]} ({traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)})
-                </button>
-              ))}
-            </div>
-          )}
         </section>
 
         <section className="sheet-panel folio-modifiers">
@@ -604,6 +606,14 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
             ))}
             {sheet.experiences.length === 0 && <li className="sheet-empty">No Experiences yet.</li>}
           </ul>
+          <p className="folio-next-summary" aria-live="polite">
+            <Icon name="dice" />
+            <span>
+              <strong>2d12{advantage === 'advantage' ? ' + d6' : advantage === 'disadvantage' ? ' − d6' : ''} + trait{selectedExperience ? ` + ${selectedExperience.modifier}` : ''}</strong>
+              {difficulty ? ` vs ${difficulty}` : ''}
+              <small>{selectedExperience ? `${selectedExperience.name} · spends 1 Hope` : 'Tap a trait or Attack to roll'}</small>
+            </span>
+          </p>
         </section>
       </div>
       {messages.length > 0 && <div className="folio-result-banner" role="status"><Icon name="dice" /><span>{messages[0]}</span></div>}
@@ -885,10 +895,15 @@ function WeaponCard({ weapon, slot, modifier, damage, disabled, onAttack, onChan
 
 /** Dashboard weapon: the attack is one tap away; unequipping lives on the Equipment tab. */
 function WeaponRow({ weapon, slot, modifier, damage, disabled, onAttack, onChange }: { weapon: WeaponStats; slot: string; modifier: number; damage: string; disabled: boolean; onAttack: () => void; onChange: () => void }) {
+  const [featureOpen, setFeatureOpen] = useState(false);
+  const featureId = useId();
   return <article className="folio-weapon">
     <header><ItemGlyph item={{kind:'weapon',name:weapon.name}} /><div><h4>{weapon.name}</h4><small>{slot} · {weapon.trait} {modifier >= 0 ? '+' : ''}{modifier} · {weapon.range} · {weapon.burden}</small></div><button type="button" className="sheet-ghost folio-weapon-swap" aria-label={`Change ${slot.toLowerCase()} weapon`} title={`Change ${slot.toLowerCase()} weapon`} onClick={onChange}><Icon name="swap" /></button></header>
-    <button type="button" disabled={disabled} onClick={onAttack} className="sheet-attack"><Icon name="dice" />Attack {modifier >= 0 ? '+' : ''}{modifier} · {damage} {weapon.damageType === 'phy' ? 'phy' : 'mag'}</button>
-    {weapon.feature && <details className="folio-weapon-feature"><summary>{weapon.feature.name}</summary><p>{weapon.feature.text}</p></details>}
+    <div className="folio-weapon-actions">
+      <button type="button" disabled={disabled} onClick={onAttack} className="sheet-attack"><Icon name="dice" />Attack {modifier >= 0 ? '+' : ''}{modifier} · {damage} {weapon.damageType === 'phy' ? 'phy' : 'mag'}</button>
+      {weapon.feature && <button type="button" className="folio-weapon-feature-toggle" aria-expanded={featureOpen} aria-controls={featureId} title={featureOpen ? 'Hide weapon feature' : 'Show weapon feature'} onClick={() => setFeatureOpen(open => !open)}><Icon name="chevron" />{weapon.feature.name}</button>}
+    </div>
+    {weapon.feature && featureOpen && <p id={featureId} className="folio-weapon-feature-text">{weapon.feature.text}</p>}
   </article>;
 }
 
