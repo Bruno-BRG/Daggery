@@ -593,8 +593,11 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
           <section className="sheet-panel">
             <PanelHead title="Defense & recovery" icon="shield" />
             <div className="sheet-threshold-strip">
-              <Threshold label="Major" value={thresholds.major} note="2 HP" />
-              <Threshold label="Severe" value={thresholds.severe} note="3 HP" />
+              <Tier label="Minor" note="1 HP" />
+              <TierGate value={thresholds.major} />
+              <Tier label="Major" note="2 HP" />
+              <TierGate value={thresholds.severe} />
+              <Tier label="Severe" note="3 HP" />
             </div>
             {sheet.hpMarked >= currentHpMax && <p className="sheet-alert is-rose">Last HP marked — resolve a Death Move (Blaze of Glory, Avoid Death, or Risk It All).</p>}
             {sheet.stressMarked >= currentStressMax && <p className="sheet-alert is-violet">Last Stress marked — you are Vulnerable until you clear 1 Stress.</p>}
@@ -848,6 +851,25 @@ function HeroStat({ label, value, hint }: { label: string; value: number; hint?:
       <dt>{label}</dt>
       <dd>{value}</dd>
     </dl>
+  );
+}
+
+function Tier({ label, note }: { label: string; note: string }) {
+  return (
+    <div className="sheet-threshold sheet-tier">
+      <span className="sheet-threshold-label">{label}</span>
+      <span className="sheet-threshold-note">{note}</span>
+    </div>
+  );
+}
+
+/** Damage at or above `value` moves up to the next tier (Minor → Major → Severe), as on the book sheet. */
+function TierGate({ value }: { value: number }) {
+  return (
+    <div className="sheet-tier-gate" aria-label={`Damage of ${value} or more`}>
+      <span className="sheet-tier-gate-value">{value}</span>
+      <span className="sheet-tier-gate-arrow" aria-hidden="true">→</span>
+    </div>
   );
 }
 
