@@ -65,6 +65,9 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   }, []);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    // Phones paint the status bar (and the installed app's title bar) in this colour; match the top bar.
+    const raised = getComputedStyle(document.documentElement).getPropertyValue('--ds-raised').trim();
+    if (raised) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', raised);
     savePreference('daggery:theme', theme);
     savePreference('daggery:style-version', 'owlbear');
   }, [theme]);

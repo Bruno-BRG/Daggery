@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import './index.css';
 import './owlbear.css';
 import { readPreference } from './storage';
+import { registerServiceWorker } from './pwa';
 
 document.documentElement.dataset.theme = readPreference('daggery:style-version') === 'owlbear' && readPreference('daggery:theme') === 'light' ? 'light' : 'dark';
 
@@ -16,3 +17,5 @@ createRoot(rootElement).render(
     <ErrorBoundary><CampaignGate /></ErrorBoundary>
   </StrictMode>,
 );
+
+registerServiceWorker();
