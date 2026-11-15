@@ -5,7 +5,7 @@ import { adversaries, ancestries, classes, communities } from '@daggery/content'
 import type { AiMessage } from '@daggery/shared';
 import { damageHp, damageSeverity, damageThresholds, hpMax, stressMax } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
-import { fitMemory, snapshotFor, type MemoryPart } from './ai/memory';
+import { fitMemory, outsideActivityFor, snapshotFor, type MemoryPart } from './ai/memory';
 import { CURRENT_VERSION, migrateCampaignDatabase } from './campaign-db';
 import { CampaignService } from './campaign-service';
 import { OPENING_INSTRUCTION } from './ai/prompts';
@@ -1788,7 +1788,7 @@ test('a hit with physical weapon damage marks adversary HP per its thresholds an
     assert.equal(f.ai.actions.read<Record<string, any>>(campaign, 'combat', enemy.adversaryId)?.hpMarked, 2, '7 damage is Major for this adversary (2 HP)');
     assert.match(ai.session(user.id, campaign).messages.filter(message => message.role === 'roll').at(-1)!.text, /deals 7 damage to Glass Snake; marked HP 2\/5\. \(player-reported dice\)$/);
     const damageRoll = f.rolls.filter(entry => entry.kind === 'dice').at(-1)!.result;
-    assert.deepEqual(damageRoll, { notation: '1d8', total: 7, rolls: [7], modifier: 0 });
+    assert.deepEqual(damageRoll, { notation: '1d8', total: 7, rolls: [7], modifier: 0, aiGm: true });
 
     const second = openRoll(f, { trait: 'agility', difficulty: source.difficulty, reason: 'Strike again.', enemyId: enemy.adversaryId });
     assert.throws(() => ai.resolve(user.id, campaign, second.id, { advantage: 'normal', dice: { hope: 8, fear: 5 } }), { message: 'Invalid dice: report the damage dice' });
@@ -2039,10 +2039,119 @@ test('the GM system prompt frames the players as a party and carries the current
     assert.ok(system.content!.includes('give each hero the spotlight in turn'));
     assert.ok(system.content!.includes('Call get_character before resolving or describing a hero’s class feature'));
     assert.ok(!system.content!.includes('The player controls one hero'), 'the single-hero framing is gone');
-    assert.ok(system.content!.includes('gm-prompt-5'), 'the prompt version is current');
+    assert.ok(system.content!.includes('gm-prompt-6'), 'the prompt version is current');
     assert.ok(system.content!.includes('Oracles and randomness'), 'the oracle guidance is present');
+    assert.ok(system.content!.includes('rolls and oracle answers the players made outside your cards'), 'the outside-activity guidance is present');
     const stored = f.db.prepare('SELECT prompt_version FROM ai_turns ORDER BY rowid DESC LIMIT 1').get() as { prompt_version: string };
-    assert.equal(stored.prompt_version, 'gm-prompt-5', 'the turn records the current prompt version');
+    assert.equal(stored.prompt_version, 'gm-prompt-6', 'the turn records the current prompt version');
+  } finally {
+    await f.close();
+  }
+});
+
+test('the snapshot lists player rolls and manual oracle answers made since the last GM reply, leaves AI-published results out and keeps the newest eight', async () => {
+  const f = await fixture(request => request.tools ? completion('The gate waits. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign, db } = f;
+    await runTurn(f, 'Begin the watch.');
+    const chat = ai.session(user.id, campaign).activeChatId!;
+    const at = (offset: number) => new Date(Date.now() + offset).toISOString();
+    const insertRoll = (when: string, kind: string, payload: unknown) => db.prepare('INSERT INTO campaign_rolls(campaign_id, at, author, kind, payload) VALUES (?,?,?,?,?)').run(campaign, when, 'Ash', kind, JSON.stringify(payload));
+    const insertSolo = (id: string, when: string, value: Record<string, unknown>) => db.prepare("INSERT INTO campaign_docs(campaign_id,ns,id,value,updated) VALUES (?,'solo',?,?,?)").run(campaign, 'entry:' + id, JSON.stringify({ id, at: when, accepted: false, interpretation: '', ...value }), when);
+
+    insertRoll(at(-120_000), 'dice', { notation: '2d6', total: 4 });
+    insertRoll(at(60_000), 'dice', { notation: '2d6+1', total: 9 });
+    insertRoll(at(120_000), 'duality', { hope: 7, fear: 3, total: 10, outcome: 'success' });
+    insertRoll(at(180_000), 'dice', { notation: '1d20', total: 17, aiGm: true });
+    insertSolo('manual', at(240_000), { kind: 'duality-oracle', question: 'Is the gate guarded?', result: { title: 'Yes, but…', detail: 'A guard sleeps nearby.' } });
+    insertSolo('ai', at(300_000), { kind: 'duality-oracle', question: 'Is the gate guarded?', result: { title: 'No', detail: 'Nobody here.' }, source: 'ai' });
+
+    const activity = outsideActivityFor(db, campaign, chat);
+    assert.deepEqual(activity.map(item => item.kind), ['dice', 'duality', 'duality-oracle'], 'only player results after the last GM reply are listed, oldest first');
+    assert.equal(activity[0]!.summary, '2d6+1 = 9');
+    assert.equal(activity[1]!.summary, 'success 10');
+    assert.deepEqual([activity[2]!.question, activity[2]!.title, activity[2]!.detail], ['Is the gate guarded?', 'Yes, but…', 'A guard sleeps nearby.']);
+
+    await runTurn(f, 'I approach the gate.');
+    const snapshot = snapshotOf(lastTurnRequest(f).body).data;
+    assert.deepEqual(snapshot.outsideActivity.map((item: { kind: string }) => item.kind), ['dice', 'duality', 'duality-oracle'], 'the GM request carries the outside activity');
+
+    for (let index = 1; index <= 12; index++) insertRoll(at(360_000 + index * 1000), 'dice', { notation: '1d12', total: index });
+    const capped = outsideActivityFor(db, campaign, chat);
+    assert.equal(capped.length, 8, 'at most eight items');
+    assert.equal(capped[0]!.summary, '1d12 = 5', 'the oldest of the newest eight comes first');
+    assert.equal(capped.at(-1)!.summary, '1d12 = 12', 'the newest comes last');
+  } finally {
+    await f.close();
+  }
+});
+
+test('a free roll resolves with the card rules, stores its transcript message and starts one GM turn, exactly once per request', async () => {
+  const f = await fixture(request => request.tools ? completion('The leap lands. What do you do?') : summaryReply());
+  try {
+    const { ai, user, campaign } = f;
+    await runTurn(f, 'Begin the watch.');
+    const chat = ai.session(user.id, campaign).activeChatId!;
+    heroSheet(f, { hope: 2, stressMarked: 1, traits: { ...heroOf(f).traits, agility: 2 } });
+    f.ai.actions.write(campaign, 'combat', 'fear', { kind: 'fear', value: 0 });
+    const before = f.requests.length;
+    const started = ai.freeRoll(user.id, campaign, chat, { requestId: 'free-1', heroId: f.setup.heroId, trait: 'agility', reason: 'Leap the gap', dice: { hope: 8, fear: 5 } });
+    assert.equal(started.status, 'running');
+    const state = await finished(ai, user.id, campaign);
+    assert.equal(state.run?.status, 'complete');
+    assert.equal(f.requests.length, before + 1, 'the free roll starts exactly one GM turn');
+    assert.equal(heroOf(f).hope, 3, 'a Hope result grants exactly one Hope');
+    assert.equal(fearValue(f), 0, 'a Hope result gains no Fear');
+    assert.equal(heroOf(f).stressMarked, 1, 'a non-critical roll clears no Stress');
+
+    const message = ai.session(user.id, campaign).messages.find(item => item.role === 'roll')!;
+    assert.equal(message.text, 'Ash rolled agility (free roll: Leap the gap): Hope 8 + Fear 5 + mod 2 = 15, with Hope (player-reported dice).');
+    const event = ai.journalPage(user.id, campaign, { kind: 'event' }).entries.find(entry => entry.title === 'Roll · Ash · free roll')!;
+    assert.ok(event, 'the free roll writes its usual journal event');
+    assert.equal(event.body, message.text);
+    assert.equal(f.rolls.length, 1);
+    assert.equal((f.rolls[0]!.result as { aiGm?: boolean }).aiGm, true, 'the roll is published as the GM’s own');
+    assert.equal((f.rolls[0]!.result as { source?: string }).source, 'player', 'the reported faces are kept');
+
+    const rolls = f.rolls.length, requests = f.requests.length;
+    assert.equal((ai.freeRoll(user.id, campaign, chat, { requestId: 'free-1', heroId: f.setup.heroId, trait: 'agility', reason: 'Leap the gap', dice: { hope: 8, fear: 5 } }) as { id: string }).id, started.id, 'a repeated request returns the first turn');
+    assert.equal(f.rolls.length, rolls, 'a repeated request publishes no second roll');
+    assert.equal(f.requests.length, requests, 'a repeated request starts no second GM turn');
+    assert.equal(heroOf(f).hope, 3, 'a repeated request changes no resource');
+    assert.equal(ai.session(user.id, campaign).messages.filter(item => item.role === 'roll').length, 1);
+  } finally {
+    await f.close();
+  }
+});
+
+test('a digital free roll gains GM Fear on a Fear result and is refused while the GM turn runs', async t => {
+  const hold = gate();
+  let gmCalls = 0;
+  const f = await fixture(async request => {
+    if (!request.tools) return summaryReply();
+    gmCalls++;
+    if (gmCalls > 1) await hold.wait;
+    return completion('The ice cracks. What do you do?');
+  });
+  try {
+    const { ai, user, campaign } = f;
+    await runTurn(f, 'Begin the watch.');
+    const chat = ai.session(user.id, campaign).activeChatId!;
+    heroSheet(f, { hope: 2, traits: { ...heroOf(f).traits, agility: 2 } });
+    f.ai.actions.write(campaign, 'combat', 'fear', { kind: 'fear', value: 0 });
+    const faces = [0.1, 0.8];
+    t.mock.method(Math, 'random', () => faces.length ? faces.shift()! : 0.5);
+    ai.freeRoll(user.id, campaign, chat, { requestId: 'free-digital', heroId: f.setup.heroId, trait: 'agility', reason: 'Test the ice' });
+    assert.throws(() => ai.freeRoll(user.id, campaign, chat, { requestId: 'free-second', heroId: f.setup.heroId, trait: 'agility', reason: 'Try again' }), { message: 'Wait for the GM to finish before resolving this card.' });
+    hold.open();
+    await finished(ai, user.id, campaign);
+
+    assert.equal(fearValue(f), 1, 'a Fear result gains exactly one GM Fear');
+    assert.equal(heroOf(f).hope, 2, 'a Fear result grants no Hope');
+    const message = ai.session(user.id, campaign).messages.find(item => item.role === 'roll')!;
+    assert.equal(message.text, 'Ash rolled agility (free roll: Test the ice): Hope 2 + Fear 10 + mod 2 = 14, with Fear.');
+    assert.equal(f.rolls.length, 1);
+    assert.equal((f.rolls[0]!.result as { source?: string }).source, undefined, 'digital dice are not player-reported');
   } finally {
     await f.close();
   }

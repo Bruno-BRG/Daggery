@@ -7,7 +7,7 @@ judge how narration reads. Use this checklist with a real key and a live model.
 
 Use a fresh campaign with two or three heroes, at least one personal bond or hook recorded
 in the campaign state or canon. Note the model, the memory size and the prompt version shown
-in the GM request (`gm-prompt-5` at the time of writing).
+in the GM request (`gm-prompt-6` at the time of writing).
 
 ## Scenes
 

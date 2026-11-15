@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { DEFAULT_CONFIGURATION, initialSoloState } from '@daggery/shared';
+import { DEFAULT_CONFIGURATION, initialSoloState, resolveSoloOracle } from '@daggery/shared';
 import { CURRENT_VERSION, migrateCampaignDatabase, openCampaignDatabase } from './campaign-db';
 import { CampaignService } from './campaign-service';
 import { SoloConflict, SoloService } from './solo';
@@ -106,5 +106,26 @@ test('solo preparation, oracle history, accepted facts and procedures persist wi
     assert.equal(changed.state.beat.assistedHeroId, undefined);
     assert.equal(changed.state.scene.title, 'The lighthouse');
     assert.equal(changed.state.companions[0]?.name, 'Mira');
+  } finally { db.close(); }
+});
+
+test('player-reported oracle faces produce the answer those faces roll and are marked as player-reported', async () => {
+  const db = openCampaignDatabase(':memory:');
+  try {
+    const campaigns = new CampaignService(db), user = await campaigns.register('diceplayer', 'a strong dice password');
+    const id = campaigns.createCampaign(user.id, 'Solo', '', { systemId: 'daggerheart', rulesetId: 'solo' });
+    const solo = new SoloService(db, campaigns, () => {}, () => 0);
+    const expected = resolveSoloOracle(9, 4, 'even');
+    const legacy = solo.roll(user.id, id, { requestId: 'legacy-oracle', kind: 'oracle', question: 'Is the gate guarded?', likelihood: 'even', dice: { hope: 9, fear: 4 } });
+    assert.deepEqual(legacy.result, { ...expected, detail: expected.detail + ' (player-reported dice)' });
+    assert.throws(() => solo.roll(user.id, id, { requestId: 'bad-oracle', kind: 'oracle', question: 'Is it?', likelihood: 'even', dice: { hope: 0, fear: 4 } }), { message: /^Invalid dice/ });
+
+    const duality = solo.roll(user.id, id, { requestId: 'duality-oracle', kind: 'duality-oracle', question: 'Is the gate guarded?', likelihood: 'even', dice: { hope: 8, fear: 5 } });
+    assert.deepEqual([duality.result.hope, duality.result.fear, duality.result.total], [8, 5, 13]);
+    assert.match(duality.result.detail!, /Hope 8 \+ Fear 5 = 13/);
+    assert.ok(duality.result.detail!.endsWith(' (player-reported dice)'));
+    const other = new SoloService(db, campaigns, () => {}, () => 0.999);
+    const again = other.roll(user.id, id, { requestId: 'duality-oracle-2', kind: 'duality-oracle', question: 'Is the gate guarded?', likelihood: 'even', dice: { hope: 8, fear: 5 } });
+    assert.deepEqual(again.result, duality.result, 'the reported faces decide the answer, not the rng');
   } finally { db.close(); }
 });

@@ -122,6 +122,23 @@ handles class/card abilities, special adversary features, reactions, recovery, a
 and death moves through the sheets and tools. The GM can consult source text; arbitrary
 printed abilities are not automatically run.
 
+Players can also roll without a card. **Roll** beside the composer opens a compact panel:
+hero, trait, an optional Experience, advantage and a short reason. The roll follows the card
+rules but has no Difficulty: it adds the trait and any Experience cost, applies advantage,
+and grants Hope or GM Fear (and clears Stress on a critical) exactly once. Resolving it writes
+a `roll` message, a shared journal event and starts a GM turn; a repeated `requestId` is a
+no-op.
+
+Players may use digital dice or their own dice. The choice is remembered per campaign in the
+browser (`daggery:dice-mode:<campaignId>`), so roll cards, the free-roll panel and the Solo
+oracle form start in the last mode used. With physical dice, the player types the Hope and Fear
+faces (and the advantage d6 when needed), and the server resolves them as player-reported dice.
+
+The GM also sees what happens outside its cards. The table snapshot carries up to eight of the
+newest player rolls and manual Solo oracle entries made since the GM's last reply, oldest
+first, with a short summary (and the question, title and interpretation for oracles). The GM's
+own rolls and oracle consults are marked as such and never appear there.
+
 AI + Solo uses ordinary GM responses and explicit Fear payments. The manual Solo workspace
 remains available. Fictional judgment and pacing remain the model's responsibility; not every
 narrative rule can be enforced mechanically.
@@ -143,7 +160,7 @@ its trigger), `random-event`, `meaning`, `adversary` (and `chain`), `npc`, `plot
   result, and in Solo campaigns it is also stored in the Solo log. With `hidden: true` (plot
   twists, NPC secrets) the result goes only to the model: no transcript message and no Solo
   log entry.
-- The prompt (section "Oracles and randomness", `gm-prompt-5`) tells the GM when to consult,
+- The prompt (section "Oracles and randomness", `gm-prompt-6`) tells the GM when to consult,
   limits consults to two per turn unless a random event chains, and asks it to record durable
   results in canon. When a player asks the oracle a question, the GM consults it on their behalf.
 
@@ -275,8 +292,9 @@ of the text, starting with the last facts. The text then says how many items wer
 
 Every GM request ends with the table snapshot. It is valid JSON of at most 4,000 characters,
 under a heading line that says it is the present state. It holds up to six heroes, the active
-scene, up to eight countdowns, up to twelve adversaries in the scene, up to five pending cards
-and, in Solo campaigns, the solo state. The campaign state is not in the snapshot. When the
+scene, up to eight countdowns, up to twelve adversaries in the scene, up to five pending cards,
+the player rolls and oracle answers made outside the GM's cards since its last reply, and, in
+Solo campaigns, the solo state. The campaign state is not in the snapshot. When the
 snapshot is too long, the longest list loses its last items and the object gets
 `"truncated": true`.
 

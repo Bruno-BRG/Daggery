@@ -15,7 +15,7 @@ import type { EmbeddingIndex } from './embeddings';
 import { CAMPAIGN_FRAMES, findCampaignFrame } from './frames';
 import { AiJournal } from './journal';
 import { listSourcebooks, readSourcebookPage, searchSourcebooks } from './sourcebook';
-import { applyStatePatch, emptyState, limitsFor, normalizeState, SECRETS_LIMIT, snapshotFor } from './memory';
+import { applyStatePatch, emptyState, limitsFor, normalizeState, outsideActivityFor, SECRETS_LIMIT, snapshotFor } from './memory';
 import { integer, number, record, text } from './validation';
 
 const s = { type: 'string' }, n = { type: 'number' };
@@ -212,9 +212,9 @@ export class GmActions {
   writeState(campaign: string, state: AiState): void {
     this.db.prepare('UPDATE campaign_ai SET state = ?, updated = ? WHERE campaign_id = ?').run(JSON.stringify(state), new Date().toISOString(), campaign);
   }
-  snapshot(campaign: string, owner: string): Record<string, unknown> {
+  snapshot(campaign: string, owner: string, chat?: string | null): Record<string, unknown> {
     const solo = hasFeature(this.campaigns.configuration(campaign), 'daggerheart.solo') ? new SoloService(this.db, this.campaigns).snapshot(owner, campaign) : null;
-    return Object.assign(snapshotFor(this.db, this, campaign), { state: this.readState(campaign), solo: solo ? solo.state : null });
+    return Object.assign(snapshotFor(this.db, this, campaign), { state: this.readState(campaign), solo: solo ? solo.state : null, ...(chat ? { outsideActivity: outsideActivityFor(this.db, campaign, chat) } : {}) });
   }
   isHiddenCombat(campaign: string, combatId: string): boolean { return this.hiddenToken(campaign, combatId); }
   /** GM secrets must be text of at most SECRETS_LIMIT characters. Longer text is refused, never cut. */
@@ -300,7 +300,7 @@ export class GmActions {
     let result: unknown;
     this.db.transaction(() => {
       ctx.assertActive();
-      if (name === 'get_context') result = { ...this.snapshot(ctx.campaign, ctx.owner), preparations: this.preparationDocs(ctx.campaign), assets: this.imageAssets(ctx.campaign) };
+      if (name === 'get_context') result = { ...this.snapshot(ctx.campaign, ctx.owner, chat), preparations: this.preparationDocs(ctx.campaign), assets: this.imageAssets(ctx.campaign) };
       else if (name === 'search_rules') {
         const catalog: Record<string, readonly { id: string }[]> = { adversaries, ancestries, communities, environments, items, consumables, weapons, armor, cards: domainCards, classes, transformations };
         const category = text(args.category, 30), query = text(args.query, 200, '').toLowerCase(), id = text(args.id, 120, '');
@@ -689,7 +689,7 @@ export class GmActions {
     })();
     for (const doc of changed) ctx.publish(ctx.campaign, doc.ns, doc.id, doc.value);
     for (const doc of extra) ctx.publish(ctx.campaign, doc.ns, doc.id, doc.value);
-    for (const roll of rolls) ctx.publishRoll(ctx.campaign, roll.kind, roll.result);
+    for (const roll of rolls) ctx.publishRoll(ctx.campaign, roll.kind, { ...(roll.result as Record<string, unknown>), aiGm: true });
     return result ?? { done: true };
   }
 }

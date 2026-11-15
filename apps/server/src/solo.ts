@@ -18,6 +18,17 @@ const integer = (value: unknown, min: number, max: number) => {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) throw new Error('Invalid solo number');
   return value;
 };
+/** Player-reported oracle faces: two d12 results, 1 to 12. */
+function reportedDice(value: unknown): { hope: number; fear: number } {
+  const input = object(value), hope = input.hope, fear = input.fear;
+  if (typeof hope !== 'number' || typeof fear !== 'number' || !Number.isInteger(hope) || !Number.isInteger(fear) || hope < 1 || hope > 12 || fear < 1 || fear > 12) throw new Error('Invalid dice: report the Hope and Fear faces');
+  return { hope, fear };
+}
+/** An rng that plays the reported faces first, then falls back to the real source for any further dice. */
+function scriptedRng(faces: number[], rng: Rng): Rng {
+  let index = 0;
+  return () => index < faces.length ? (faces[index++]! - 0.5) / 12 : rng();
+}
 export class SoloConflict extends Error { constructor() { super('Preparation changed in another window. Reload the latest version before saving.'); } }
 export class SoloService {
   constructor(
@@ -128,11 +139,13 @@ export class SoloService {
     if (previous) return previous;
     let question = string(input.question ?? '', 2000);
     const state = this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
+    const reported = (kind === 'oracle' || kind === 'duality-oracle') && input.dice !== undefined ? reportedDice(input.dice) : undefined;
     let result: SoloResult;
     let fearAfter: { kind: 'fear'; value: number } | undefined;
     if (kind === 'oracle') {
       if (!question.trim()) throw new Error('Invalid question');
-      result = resolveSoloOracle(rollDie(12), rollDie(12), string(input.likelihood, 30));
+      result = resolveSoloOracle(reported ? reported.hope : rollDie(12), reported ? reported.fear : rollDie(12), string(input.likelihood, 30));
+      if (reported) result = { ...result, detail: result.detail + ' (player-reported dice)' };
     } else if (kind === 'scene') {
       result = resolveSoloScene(rollDie(12), rollDie(12), rollDie(12));
     } else if (kind === 'prompt') {
@@ -150,8 +163,10 @@ export class SoloService {
     } else if (kind.startsWith('duality-')) {
       const pool = this.read<{ kind: string; value: number }>(campaign, 'combat', 'fear');
       const fear = Math.min(DUALITY_MAX_FEAR, Math.max(0, Math.trunc(Number(pool?.value) || 0)));
-      const outcome = rollDuality(kind, { state, fear, rng: this.rng, input, question });
+      const scripted = reported && kind === 'duality-oracle' ? scriptedRng([reported.hope, reported.fear], this.rng) : this.rng;
+      const outcome = rollDuality(kind, { state, fear, rng: scripted, input, question });
       result = outcome.result;
+      if (reported && kind === 'duality-oracle') result = { ...result, detail: result.detail + ' (player-reported dice)' };
       question = outcome.question ?? question;
       if (outcome.fearSpent > 0) fearAfter = { kind: 'fear', value: fear - outcome.fearSpent };
     } else if (kind === 'journal') {
@@ -172,7 +187,7 @@ export class SoloService {
    * already checked authority; the caller publishes the returned entry.
    */
   recordEntry(campaign: string, kind: string, question: string, result: SoloResult): SoloEntry {
-    const entry: SoloEntry = { id: randomUUID(), at: new Date().toISOString(), kind, question, result, interpretation: '', accepted: false, rulesVersion: SOLO_RULES_VERSION };
+    const entry: SoloEntry = { id: randomUUID(), at: new Date().toISOString(), kind, question, result, interpretation: '', accepted: false, rulesVersion: SOLO_RULES_VERSION, source: 'ai' };
     this.write(campaign, 'solo', `entry:${entry.id}`, entry);
     return entry;
   }

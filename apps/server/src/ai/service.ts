@@ -1013,7 +1013,7 @@ export class AiService {
 
 
   private snapshotMessage(rt: Runtime): ModelMessage {
-    const full = this.actions.snapshot(rt.campaign, rt.owner);
+    const full = this.actions.snapshot(rt.campaign, rt.owner, rt.chat);
     const snapshot = Object.fromEntries(Object.entries(full).filter(([key]) => key !== 'state'));
     return { role: 'system', content: snapshotText(snapshot) };
   }
@@ -1023,6 +1023,64 @@ export class AiService {
     for (const running of jobs) running.controller.abort();
     this.embeddings.close();
     await Promise.allSettled(jobs.map(running => running.job));
+  }
+
+  /**
+   * The Duality roll shared by card resolution and the free roll: trait or weapon modifier, Experience
+   * cost, advantage, companion assistance, Ranger's Focus, Prayer Die, physical dice or the engine's
+   * roll, then the Hope/Fear and critical effects. The caller owns the outcome text.
+   */
+  private resolveHeroRoll(campaign: string, sheet: Sheet, options: { trait: string; enemyId?: string; experienceId: string; advantage: string; focus: boolean; prayerIndex?: number; dice: unknown }, put: (ns: string, id: string, value: unknown) => void) {
+    let modifier = traitValue(sheet, options.trait as TraitName);
+    const weapon = options.enemyId ? weaponForSlot(sheet, 'primary') : undefined;
+    if (options.enemyId && !weapon) throw new Error('Invalid attack: equip a primary weapon in Characters');
+    if (weapon) modifier = weaponModifier(sheet, weapon);
+    if (options.experienceId) {
+      const experience = sheet.experiences.find(entry => entry.id === options.experienceId);
+      if (!experience || sheet.hope < 1) throw new Error('Invalid Experience or insufficient Hope');
+      modifier += experience.modifier;
+      sheet = { ...sheet, hope: sheet.hope - 1 };
+    }
+    const advantage = options.advantage;
+    if (!['normal', 'advantage', 'disadvantage'].includes(advantage)) throw new Error('Invalid advantage');
+    let applied = advantage === 'normal' ? undefined : advantage as 'advantage' | 'disadvantage';
+    const solo = this.actions.read<SoloState>(campaign, 'solo', 'state');
+    if (this.campaigns.configuration(campaign).options.partyMode === 'companion' && solo?.beat.assistedHeroId === sheet.id && !solo.beat.assistConsumed) {
+      solo.beat.assistConsumed = true;
+      solo.revision++;
+      put('solo', 'state', solo);
+      applied = applied === 'disadvantage' ? undefined : 'advantage';
+    }
+    if (options.focus) {
+      if (sheet.hope < 1) throw new Error('Invalid action: Ranger’s Focus costs 1 Hope');
+      sheet = { ...sheet, hope: sheet.hope - 1 };
+    }
+    const physical = options.dice === undefined ? undefined : physicalDiceOf(options.dice);
+    let rolled: DualityResult;
+    if (physical) {
+      if (applied && physical.advantageDie === undefined) throw new Error('Invalid dice: report the advantage d6');
+      try {
+        rolled = resolveDuality(physical.hope, physical.fear, { modifier, advantage: applied, advantageDie: physical.advantageDie });
+      } catch (error) {
+        if (error instanceof RangeError) throw new Error('Invalid dice: ' + error.message);
+        throw error;
+      }
+    } else {
+      rolled = roll({ modifier, advantage: applied });
+    }
+    let prayerNote = '';
+    if (options.prayerIndex !== undefined) {
+      const spent = spendPrayerDie(sheet, options.prayerIndex);
+      sheet = spent.sheet;
+      rolled = { ...rolled, total: rolled.total + spent.value };
+      prayerNote = ' Prayer Die +' + String(spent.value) + ' added to the result (total ' + String(rolled.total) + ').';
+    }
+    sheet = applyDualityEffects(sheet, rolled).sheet;
+    if (rolled.withFear) {
+      const fear = this.actions.read<{ value: number }>(campaign, 'combat', 'fear') ?? { value: 0 };
+      put('combat', 'fear', { kind: 'fear', value: Math.min(12, fear.value + 1) });
+    }
+    return { sheet, rolled, modifier, physical: !!physical, weapon, prayerNote };
   }
 
   resolve(user: string, campaign: string, messageId: string, raw: unknown) {
@@ -1067,59 +1125,12 @@ export class AiService {
           const focus = input.focus === true;
           if (focus && !interaction.enemyId) throw new Error('Invalid action: Ranger’s Focus requires an attack against an adversary');
           if (focus && !hasRangersFocus(sheet)) throw new Error('Invalid action: only a Ranger can use Ranger’s Focus');
-          let modifier = traitValue(sheet, interaction.trait as TraitName);
-          const weapon = interaction.enemyId ? weaponForSlot(sheet, 'primary') : undefined;
-          if (interaction.enemyId && !weapon) throw new Error('Invalid attack: equip a primary weapon in Characters');
-          if (weapon) modifier = weaponModifier(sheet, weapon);
-          const experienceId = text(input.experienceId, 120, '');
-          if (experienceId) {
-            const experience = sheet.experiences.find(entry => entry.id === experienceId);
-            if (!experience || sheet.hope < 1) throw new Error('Invalid Experience or insufficient Hope');
-            modifier += experience.modifier;
-            sheet = { ...sheet, hope: sheet.hope - 1 };
-          }
-          const advantage = text(input.advantage, 30, 'normal');
-          if (!['normal', 'advantage', 'disadvantage'].includes(advantage)) throw new Error('Invalid advantage');
-          let applied = advantage === 'normal' ? undefined : advantage as 'advantage' | 'disadvantage';
-          const solo = this.actions.read<SoloState>(campaign, 'solo', 'state');
-          if (this.campaigns.configuration(campaign).options.partyMode === 'companion' && solo?.beat.assistedHeroId === sheet.id && !solo.beat.assistConsumed) {
-            solo.beat.assistConsumed = true;
-            solo.revision++;
-            put('solo', 'state', solo);
-            applied = applied === 'disadvantage' ? undefined : 'advantage';
-          }
-          if (focus) {
-            if (sheet.hope < 1) throw new Error('Invalid action: Ranger’s Focus costs 1 Hope');
-            sheet = { ...sheet, hope: sheet.hope - 1 };
-          }
-          const physical = input.dice === undefined ? undefined : physicalDiceOf(input.dice);
           const damageFaces = input.damageDice === undefined ? undefined : physicalDamageOf(input.damageDice);
-          let rolled: DualityResult;
-          if (physical) {
-            if (applied && physical.advantageDie === undefined) throw new Error('Invalid dice: report the advantage d6');
-            try {
-              rolled = resolveDuality(physical.hope, physical.fear, { modifier, advantage: applied, advantageDie: physical.advantageDie });
-            } catch (error) {
-              if (error instanceof RangeError) throw new Error('Invalid dice: ' + error.message);
-              throw error;
-            }
-          } else {
-            rolled = roll({ modifier, advantage: applied });
-          }
-          let prayerNote = '';
-          if (prayerIndex !== undefined) {
-            const spent = spendPrayerDie(sheet, prayerIndex);
-            sheet = spent.sheet;
-            rolled = { ...rolled, total: rolled.total + spent.value };
-            prayerNote = ' Prayer Die +' + String(spent.value) + ' added to the result (total ' + String(rolled.total) + ').';
-          }
+          const resolved = this.resolveHeroRoll(campaign, sheet, { trait: interaction.trait!, enemyId: interaction.enemyId, experienceId: text(input.experienceId, 120, ''), advantage: text(input.advantage, 30, 'normal'), focus, prayerIndex, dice: input.dice }, put);
+          sheet = resolved.sheet;
+          const { rolled, modifier, physical, weapon, prayerNote } = resolved;
           const success = rolled.critical || rolled.total >= interaction.difficulty!;
-          sheet = applyDualityEffects(sheet, rolled).sheet;
           dice.push({ kind: 'duality', result: physical ? { ...rolled, source: 'player' } : rolled });
-          if (rolled.withFear) {
-            const fear = this.actions.read<{ value: number }>(campaign, 'combat', 'fear') ?? { value: 0 };
-            put('combat', 'fear', { kind: 'fear', value: Math.min(12, fear.value + 1) });
-          }
           const advantageNote = rolled.advantageDie ? ', ' + String(rolled.advantage) + ' d6 ' + String(rolled.advantageDie) : '';
           const outcome = rolled.critical ? 'Critical success' : (success ? 'Success' : 'Failure') + ' with ' + (rolled.withFear ? 'Fear' : 'Hope');
           resultText = sheet.name + ': Hope ' + String(rolled.hope) + ', Fear ' + String(rolled.fear) + advantageNote + ', modifier ' + String(modifier) + ': ' + String(rolled.total) + ' vs ' + String(interaction.difficulty) + ' — ' + outcome + '.' + (focus ? ' Spent 1 Hope for Ranger’s Focus.' : '') + prayerNote;
@@ -1202,9 +1213,61 @@ export class AiService {
     })();
     for (const doc of changes) this.publish(campaign, doc.ns, doc.id, doc.value);
     const actor = (this.db.prepare('SELECT username FROM users WHERE id = ?').get(user) as { username: string }).username;
-    for (const entry of dice) this.publishRoll(campaign, entry.kind, entry.result, actor);
+    for (const entry of dice) this.publishRoll(campaign, entry.kind, { ...(entry.result as Record<string, unknown>), aiGm: true }, actor);
     if (changed) return this.enqueue(user, campaign, chatId, 'turn', 'resolve:' + messageId, null);
     return { resolved: true };
+  }
+
+  /**
+   * A free roll from the AI chat: the same Duality rules as a roll card without a Difficulty.
+   * Any member may roll for a hero; the result is stored, published (marked as the GM's own roll so
+   * it is not echoed as outside activity) and narrated by a GM turn. A repeated requestId is a no-op.
+   */
+  freeRoll(user: string, campaign: string, chat: string, raw: unknown) {
+    this.authorize(user, campaign);
+    const settings = this.settings(campaign);
+    if (!settings || !settings.enabled || !this.credential(settings.owner_id)) throw new Error('Invalid action: connect and resume the GM first');
+    const chatRow = this.requireChat(campaign, chat);
+    if (chatRow.status === 'ended') throw new Error('Invalid action: this session has ended, so its cards are read only');
+    if (chatRow.status === 'paused') throw new Error('Invalid action: this session is paused. Resume it to keep playing.');
+    this.assertIdle(campaign, 'Wait for the GM to finish before resolving this card.');
+    const input = record(raw);
+    const requestId = text(input.requestId, 100);
+    if (!/^[\w:-]{1,100}$/.test(requestId) || /^(open|begin|compact|end|pause|resolve|free-roll):/.test(requestId)) throw new Error('Invalid request ID');
+    const turnId = 'free-roll:' + requestId;
+    const previous = this.db.prepare('SELECT id, status FROM ai_turns WHERE campaign_id = ? AND request_id = ?').get(campaign, turnId) as { id: string; status: string } | undefined;
+    if (previous) return previous;
+    const heroId = text(input.heroId, 120);
+    const trait = text(input.trait, 20);
+    if (!['agility', 'strength', 'finesse', 'instinct', 'presence', 'knowledge'].includes(trait)) throw new Error('Invalid trait');
+    const reason = text(input.reason, 300);
+    if (!reason) throw new Error('Invalid reason');
+    const changes: { ns: string; id: string; value: unknown }[] = [];
+    const dice: { kind: string; result: unknown }[] = [];
+    let resultText = '', eventTitle = '';
+    this.db.transaction(() => {
+      let sheet = this.actions.read<Sheet>(campaign, 'sheets', heroId);
+      if (!sheet) throw new Error('Invalid hero');
+      const put = (ns: string, id: string, value: unknown) => {
+        this.actions.write(campaign, ns, id, value);
+        changes.push({ ns, id, value });
+      };
+      const resolved = this.resolveHeroRoll(campaign, sheet, { trait, experienceId: text(input.experienceId, 120, ''), advantage: text(input.advantage, 30, 'normal'), focus: false, dice: input.dice }, put);
+      sheet = resolved.sheet;
+      const { rolled, modifier, physical } = resolved;
+      dice.push({ kind: 'duality', result: physical ? { ...rolled, source: 'player' } : rolled });
+      const advantageNote = rolled.advantageDie ? ' (advantage d6 ' + String(rolled.advantageDie) + ')' : '';
+      resultText = sheet.name + ' rolled ' + trait + ' (free roll: ' + reason + '): Hope ' + String(rolled.hope) + ' + Fear ' + String(rolled.fear) + ' + mod ' + String(modifier) + advantageNote + ' = ' + String(rolled.total) + (rolled.critical ? ', critical success' : ', with ' + (rolled.withFear ? 'Fear' : 'Hope')) + (physical ? ' (player-reported dice)' : '') + '.';
+      put('sheets', sheet.id, { ...sheet, updatedAt: new Date().toISOString() });
+      this.actions.message(campaign, chatRow.id, null, 'roll', resultText);
+      eventTitle = 'Roll · ' + sheet.name + ' · free roll';
+      this.journal.event(campaign, chatRow.id, null, eventTitle, resultText, 'shared');
+      return true;
+    })();
+    for (const doc of changes) this.publish(campaign, doc.ns, doc.id, doc.value);
+    const actor = (this.db.prepare('SELECT username FROM users WHERE id = ?').get(user) as { username: string }).username;
+    for (const entry of dice) this.publishRoll(campaign, entry.kind, { ...(entry.result as Record<string, unknown>), aiGm: true }, actor);
+    return this.enqueue(user, campaign, chatRow.id, 'turn', turnId, null);
   }
 
   /** Imports up to 50 Markdown documents as durable canon entries. Each document is stored whole, with import provenance. */

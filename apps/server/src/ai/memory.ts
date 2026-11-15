@@ -212,6 +212,46 @@ export function snapshotFor(db: Database.Database, source: DocSource, campaign: 
   };
 }
 
+/** One line of the outsideActivity list: a table roll or a manual Solo oracle answer. */
+export interface OutsideActivity { at: string; kind: string; author?: string; summary?: string; question?: string; title?: string; detail?: string; interpretation?: string }
+
+function rollSummary(kind: string, value: Record<string, any>): string {
+  const total = typeof value.total === 'number' ? String(value.total) : '';
+  if (kind === 'duality') return String(value.outcome ?? 'duality') + (total ? ' ' + total : '');
+  if (typeof value.notation === 'string') return value.notation + (total ? ' = ' + total : '');
+  return total || kind;
+}
+
+/**
+ * The player activity that happened outside the GM's own cards since its last reply: table dice rolls
+ * and manual Solo oracle answers. AI-published rolls (payload.aiGm) and AI oracle entries (source 'ai')
+ * are left out, and the newest `limit` items are returned oldest first.
+ */
+export function outsideActivityFor(db: Database.Database, campaign: string, chat: string, limit = 8): OutsideActivity[] {
+  const row = db.prepare('SELECT created FROM ai_chats WHERE campaign_id = ? AND id = ?').get(campaign, chat) as { created: string } | undefined;
+  if (!row) return [];
+  const lastGm = db.prepare("SELECT created FROM ai_messages WHERE chat_id = ? AND role = 'gm' ORDER BY rowid DESC LIMIT 1").get(chat) as { created: string } | undefined;
+  const cutoff = lastGm?.created ?? row.created;
+  const rolls = (db.prepare('SELECT at, author, kind, payload FROM campaign_rolls WHERE campaign_id = ? AND at > ? ORDER BY id DESC LIMIT 40').all(campaign, cutoff) as { at: string; author: string; kind: string; payload: string }[])
+    .flatMap(entry => {
+      let value: Record<string, any>;
+      try { value = JSON.parse(entry.payload) as Record<string, any>; } catch { return []; }
+      return value && value.aiGm !== true ? [{ at: entry.at, author: entry.author, kind: entry.kind, summary: rollSummary(entry.kind, value) }] : [];
+    })
+    .slice(0, limit);
+  const solo = (db.prepare("SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = 'solo' AND id LIKE 'entry:%'").all(campaign) as { value: string }[])
+    .flatMap(entry => {
+      let value: Record<string, any>;
+      try { value = JSON.parse(entry.value) as Record<string, any>; } catch { return []; }
+      if (!value || value.source === 'ai' || typeof value.at !== 'string' || value.at <= cutoff) return [];
+      const result = value.result ?? {};
+      return [{ at: value.at, kind: String(value.kind ?? 'oracle'), question: clip(value.question, 300), title: clip(result.title, 300), detail: clip(result.detail, 300), interpretation: clip(value.interpretation, 300) }];
+    })
+    .sort((a, b) => a.at < b.at ? 1 : a.at > b.at ? -1 : 0)
+    .slice(0, limit);
+  return [...rolls, ...solo].sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0).slice(-limit);
+}
+
 export interface MemoryPart { kind: 'setup' | 'preparation' | 'canon' | 'recall' | 'digest' | 'chapter' | 'secrets' | 'state' | 'summary' | 'resume'; text: string }
 
 /** Cuts text to at most room characters and ends it with a note. The first lines are kept. */

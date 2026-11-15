@@ -117,6 +117,6 @@ export function initialSoloState(): SoloState {
     countdowns: { progress: 4, progressStart: 4, progressName: '', consequence: 6, consequenceStart: 6, consequenceName: '' },
     companions: [], beat: { id: 'initial', contributions: [], fearSpent: false, outcomeApplied: false } };
 }
-export interface SoloEntry { id: string; at: string; kind: string; question: string; result: SoloResult; interpretation: string; accepted: boolean; rulesVersion: string }
+export interface SoloEntry { id: string; at: string; kind: string; question: string; result: SoloResult; interpretation: string; accepted: boolean; rulesVersion: string; /** 'ai' marks an oracle the AI GM consulted, so it is not reported back as player activity. */ source?: 'ai' }
 export interface SoloEntryPage { entries: SoloEntry[]; nextCursor: string | null }
 export interface SoloSnapshot extends SoloEntryPage { state: SoloState }

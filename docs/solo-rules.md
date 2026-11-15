@@ -34,7 +34,9 @@ fails.
 ## The Oracle
 
 Ask a yes or no question, pick a likelihood, roll the Hope and Fear dice and add
-them. Oracle rolls never generate Hope or Fear.
+them. Oracle rolls never generate Hope or Fear. If you roll your own dice, switch the
+form to **My physical dice** and type the two d12 faces; the app resolves them as
+player-reported dice and remembers the choice for this campaign.
 
 | Likelihood | Yes on | Chance |
 | --- | --- | --- |
