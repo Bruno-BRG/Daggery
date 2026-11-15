@@ -281,16 +281,24 @@ export default function Adventure({ author: _author }: { author: string }) {
   const hero = sheets[data.setup.heroId];
   const memory = data.memoryStatus;
   const ordinalLabel = selected && selected.title !== `Session ${selected.ordinal}` ? `Session ${selected.ordinal}` : '';
-  const memoryLine = [selected?.title, ordinalLabel, plural(memory.chapters, 'chapter'), `context ${tokens(memory.contextTokens)} of ${tokens(memory.budgetTokens)}`].filter(Boolean).join(' · ');
+  const memoryLine = [ordinalLabel, plural(memory.chapters, 'chapter'), `context ${tokens(memory.contextTokens)} of ${tokens(memory.budgetTokens)}`].filter(Boolean).join(' · ');
   const statusText = running && run ? RUN_TEXT[run.kind] : ended ? 'This session has ended and is read only.' : !data.ready ? 'Connect your provider, bring a hero, and step into the unknown.' : data.enabled ? 'The next move is yours.' : 'Your GM is paused.';
   const composerNote = chatId === null ? 'Start a session to play.' : ended ? ENDED_NOTE : running ? 'Waiting for the GM' : 'Your choices shape the story. Ctrl + Enter to send.';
   const showWelcome = chatId === null || (sameChat && messages.length === 0);
   const welcome = chatId === null ? <div className="ai-welcome">
-      <span className="ai-chapter">No session yet</span>
-      <Icon name="compass" />
-      <h2>Your story is waiting for a session.</h2>
-      <p>Start a session when you are ready. Your GM only starts once you press Begin the adventure.</p>
-      {data.isGm ? <button type="button" className="daggery-primary" disabled={locked} onClick={() => void createSession()}>Start a session <Icon name="arrow" /></button> : <p>The campaign owner starts the next session.</p>}
+      <span className="ai-welcome-mark"><Icon name="compass" /></span>
+      <h2>Your story is waiting.</h2>
+      <p>{!data.connection ? "Connect a model provider, open a session, then press Begin. Your GM takes it from there." : !data.ready ? "Finish the adventure setup, open a session, then press Begin." : "Open a session when you are ready. Your GM starts once you press Begin."}</p>
+      {data.isGm ? <div className="ai-welcome-actions">
+        {!data.connection && <button type="button" className="daggery-roll-toggle" onClick={() => setConnectionOpen(true)}><Icon name="settings" />Connect OpenCode</button>}
+        {data.connection && !data.ready && <button type="button" className="daggery-roll-toggle" onClick={() => setSetupOpen(true)}><Icon name="settings" />Adventure setup</button>}
+        <button type="button" className="daggery-primary" disabled={locked} onClick={() => void createSession()}>Start a session <Icon name="arrow" /></button>
+      </div> : <p>The campaign owner starts the next session.</p>}
+      <ol className="ai-welcome-steps" aria-label="How it works">
+        <li className={data.connection ? "is-done" : ""}><strong>Connect</strong><span>Your own model provider</span></li>
+        <li className={data.ready ? "is-done" : ""}><strong>Set up</strong><span>Hero, tone and premise</span></li>
+        <li><strong>Play</strong><span>Describe what you do</span></li>
+      </ol>
     </div> : ended ? <div className="ai-welcome">
       <span className="ai-chapter">Session ended</span>
       <Icon name="lock" />
@@ -314,20 +322,21 @@ export default function Adventure({ author: _author }: { author: string }) {
   </div>;
   const sessions = (heading: boolean, picked?: () => void) => <SessionPanel chats={chats} selectedId={chatId} isGm={data.isGm} locked={locked} heading={heading} onPick={id => { choose(id); picked?.(); }} onCreate={() => void createSession()} onRename={renameChat} onCompact={compactChat} onEnd={endChat} onDelete={chat => void deleteChat(chat)} />;
 
+  const hasSessions = chats.length > 0;
+  const fear = combat.fear?.value ?? 0;
   return <div className="ai-adventure">
     <header className="ai-heading">
       <div>
-        <p className="ai-eyebrow">Daggerheart · AI Game Master</p>
-        <h1>{messages.length === 0 ? 'A story waiting to happen.' : 'Your adventure'}</h1>
-        <p>{statusText}</p>
-        <p className="ai-memory-line">{memoryLine}</p>
+        <p className="ai-eyebrow"><span className={`ai-status-dot${running ? ' is-busy' : data.ready && data.enabled ? ' is-ready' : ''}`} aria-hidden="true" />AI Game Master</p>
+        <h1>{selected?.title ?? 'Adventure'}</h1>
+        {chatId !== null && <p>{statusText}<span className="ai-memory-line"> · {memoryLine}</span></p>}
       </div>
       {toolbar}
     </header>
     {error ? <p className="ai-error" role="alert">{error}</p> : loadError ? <p className="ai-error" role="alert">{loadError}</p> : null}
-    <div className="ai-layout">
-      {wide && <aside className="ai-rail" aria-label="Sessions">{sessions(true)}</aside>}
-      <section className="ai-story" aria-label="Adventure conversation">
+    <div className={`ai-layout${wide && hasSessions ? '' : ' ai-no-rail'}`}>
+      {wide && hasSessions && <aside className="ai-rail" aria-label="Sessions">{sessions(true)}</aside>}
+      <section className={`ai-story${chatId === null ? ' ai-story-empty' : ''}`} aria-label="Adventure conversation">
         {showWelcome ? welcome : !sameChat && <p className="ai-opening" role="status">Opening session…</p>}
         <div className="ai-transcript" role="log" aria-label="Adventure messages" ref={transcript} onScroll={event => { const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 60; }}>
           {sameChat && feed.cursor && <div className="ai-earlier"><button type="button" className="daggery-roll-toggle" disabled={olderBusy} onClick={() => void loadOlder()}>{olderBusy ? 'Loading earlier messages…' : 'Load earlier messages'}</button></div>}
@@ -347,27 +356,34 @@ export default function Adventure({ author: _author }: { author: string }) {
           <div ref={end} />
         </div>
         {rollOpen && chatId && canWrite && <FreeRoll base={base} chatId={chatId} heroes={heroes} disabled={locked} onClose={() => setRollOpen(false)} onDone={() => load(chatRef.current)} />}
-        <form className="ai-composer" onSubmit={send}>
+        {chatId !== null && <form className="ai-composer" onSubmit={send}>
           <label htmlFor="ai-message">What do you do?</label>
           <textarea id="ai-message" rows={3} maxLength={4000} value={message} disabled={!canWrite} placeholder={ended ? ENDED_NOTE : 'Describe your action, speak to someone, or ask your GM…'} onChange={event => setMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
           <div><small>{composerNote}</small><div className="ai-composer-buttons"><button type="button" className="daggery-roll-toggle" aria-expanded={rollOpen} disabled={!canWrite || locked} onClick={() => setRollOpen(value => !value)}><Icon name="dice" />Roll</button><button className="daggery-primary" disabled={!canWrite || locked || !message.trim()}><Icon name="arrow" />Send</button></div></div>
-        </form>
+        </form>}
       </section>
       <aside className="ai-ledger" aria-label="Adventure details">
         <section>
           <p className="ai-eyebrow">At your table</p>
           <h2>{hero?.name ?? 'Your party'}</h2>
           {heroes.length === 0 && <p>No heroes yet. Adventure setup can create one for you.</p>}
-          {heroes.map(sheet => <div className="ai-hero" key={sheet.id}><strong>{sheet.name}</strong><small>Level {sheet.level} · {sheet.classId}</small><dl><div><dt>HP marked</dt><dd>{sheet.hpMarked}/{hpMax(sheet)}</dd></div><div><dt>Stress</dt><dd>{sheet.stressMarked}/{stressMax(sheet)}</dd></div><div><dt>Hope</dt><dd>{sheet.hope}/6</dd></div><div><dt>Armor used</dt><dd>{sheet.armorSlotsMarked}/{armorScore(sheet)}</dd></div></dl></div>)}
+          {heroes.map(sheet => <div className="ai-hero" key={sheet.id}><strong>{sheet.name}</strong><small>Level {sheet.level} · {sheet.classId}</small><dl>
+            <Meter label="HP marked" value={sheet.hpMarked} max={hpMax(sheet)} tone="hp" />
+            <Meter label="Stress" value={sheet.stressMarked} max={stressMax(sheet)} tone="stress" />
+            <Meter label="Hope" value={sheet.hope} max={6} tone="hope" />
+            <Meter label="Armor used" value={sheet.armorSlotsMarked} max={armorScore(sheet)} tone="armor" />
+          </dl></div>)}
           <button type="button" className="ai-link" onClick={() => navigate('sheets')}>Open character sheets <Icon name="arrow" /></button>
-          <div className="ai-fear"><span>GM Fear</span><strong>{combat.fear?.value ?? 0} / 12</strong></div>
+          <div className="ai-fear"><div><span>GM Fear</span><strong>{fear} / 12</strong></div><span className="ai-pips" aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <i key={index} className={index < fear ? "is-on" : ""} />)}</span></div>
         </section>
         <section>
           <h2>Your campaign</h2>
+          <div className="ai-shortcuts">
           <button type="button" className="ai-link" onClick={() => navigate('map')}>Game table <Icon name="map" /></button>
           <button type="button" className="ai-link" onClick={() => navigate('notes')}>Session notes <Icon name="note" /></button>
           {campaign.configuration.rulesetId === 'solo' && data.isGm && <button type="button" className="ai-link" onClick={() => navigate('solo')}>Solo oracles & themes <Icon name="spark" /></button>}
           {data.isGm && <button type="button" className="ai-link" onClick={() => navigate('gm')}>GM preparations <Icon name="compass" /></button>}
+          </div>
         </section>
         <section>
           <h2>Latest journal entries</h2>
@@ -389,6 +405,11 @@ export default function Adventure({ author: _author }: { author: string }) {
     {setupOpen && <Setup base={base} session={data} heroes={heroes} onClose={() => setSetupOpen(false)} onSaved={async () => { await load(chatRef.current); setSetupOpen(false); }} />}
     {!wide && <Dialog open={sessionsOpen} onClose={() => setSessionsOpen(false)} title="Sessions">{sessions(false, () => setSessionsOpen(false))}</Dialog>}
   </div>;
+}
+
+function Meter({ label, value, max, tone }: { label: string; value: number; max: number; tone: string }) {
+  const ratio = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
+  return <div className={`ai-meter ai-meter-${tone}`}><dt>{label}</dt><dd>{value}/{max}</dd><span aria-hidden="true"><i style={{ width: `${ratio * 100}%` }} /></span></div>;
 }
 
 interface SessionPanelProps {
