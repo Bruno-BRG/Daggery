@@ -16,6 +16,7 @@ import type { EmbeddingIndex } from './embeddings';
 import { CAMPAIGN_FRAMES, findCampaignFrame } from './frames';
 import { AiJournal } from './journal';
 import { AiNpcs, catalogCombatStats, NPC_ATTACK_RANGES, NPC_FEATURE_KINDS, NPC_SEARCH_LIMIT, NPC_STATUSES, NPC_TYPES, npcDocCombatStats, type CombatStats } from './npc';
+import { AiFronts, FRONT_CLOCK_SIZES, FRONT_KINDS, FRONT_STATUSES } from './fronts';
 import { listSourcebooks, readSourcebookPage, searchSourcebooks } from './sourcebook';
 import { applyStatePatch, emptyState, limitsFor, normalizeState, outsideActivityFor, SECRETS_LIMIT, snapshotFor } from './memory';
 import { integer, number, record, text } from './validation';
@@ -134,10 +135,24 @@ export const GM_TOOLS: ToolDefinition[] = [
   tool('clue_plant', 'Record a clue or piece of foreshadowing right when you plant it in the narration. `shown` is exactly what the players saw or heard; `truth` is the hidden fact it points to and is never shown to them. kind is clue, foreshadowing or mystery. Optionally link a thread or an NPC id. GM only; the players never see this ledger.', { kind: { type: 'string', enum: [...CLUE_KINDS] }, shown: s, truth: s, threadId: s, npcId: s }, ['kind', 'shown', 'truth']),
   tool('clue_update', 'Update a planted clue by id: mark it found, paid-off or abandoned, correct what was shown or the hidden truth, change its links, or add the payoff note. Send only the fields that changed.', { id: s, kind: { type: 'string', enum: [...CLUE_KINDS] }, status: { type: 'string', enum: [...CLUE_STATUSES] }, shown: s, truth: s, threadId: s, npcId: s, payoff: s }, ['id']),
   tool('clue_list', 'List the clue and foreshadowing ledger, oldest planted first, optionally filtered by status (planted, found, paid-off, abandoned). Returns at most 30 entries. Entries carry what the players saw, the hidden truth, links, planted session and date, and the payoff note. GM only.', { status: { type: 'string', enum: [...CLUE_STATUSES] } }, []),
+  tool('front_create', 'Create a secret front — a threat, faction, villain or disaster with a goal that advances off-screen — that only you can see. Use it only for a real recurring threat, never a one-scene obstacle. Give it a goal, stakes, an ordered list of grim portents and an impending doom. The clock starts empty and the players never see it. Refuses a duplicate active name and caps a campaign at 40 active fronts.', {
+    name: s, kind: { type: 'string', enum: [...FRONT_KINDS] }, goal: s, stakes: s,
+    clockSize: { type: 'number', enum: [...FRONT_CLOCK_SIZES] },
+    portents: { type: 'array', maxItems: 12, items: { anyOf: [s, { type: 'object', additionalProperties: false, properties: { text: s, done: { type: 'boolean' } }, required: ['text'] }] } },
+    doom: s, notes: s,
+  }, ['name', 'kind']),
+  tool('front_update', 'Update a secret front by id. Send only the fields that changed; portents replace the whole list. Use markPortent with a portent index to mark it done, and resolve true to close the front (false reopens it).', {
+    id: s, name: s, kind: { type: 'string', enum: [...FRONT_KINDS] }, goal: s, stakes: s,
+    clockSize: { type: 'number', enum: [...FRONT_CLOCK_SIZES] },
+    portents: { type: 'array', maxItems: 12, items: { anyOf: [s, { type: 'object', additionalProperties: false, properties: { text: s, done: { type: 'boolean' } }, required: ['text'] }] } },
+    doom: s, notes: s, markPortent: n, resolve: { type: 'boolean' }, status: { type: 'string', enum: [...FRONT_STATUSES] },
+  }, ['id']),
+  tool('front_advance', 'Advance a secret front’s clock by 1–12 for a stated cause. Portents whose threshold the tick crosses are marked done, and a filled clock reports the impending doom. Returns what happened so you can narrate the consequences. The players never see the clock.', { id: s, amount: n, reason: s }, ['id', 'amount']),
+  tool('front_list', 'List your secret fronts with their clock, grim portents and impending doom. Active fronts come first. Use it before deciding what happens off-screen.', {}, []),
 ];
 
 const ACTION_LABELS: Record<string, string> = {
-  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', npc_create: 'Updated GM notes', npc_update: 'Updated GM notes', npc_read: 'Consulted GM notes', npc_search: 'Consulted GM notes', npc_to_encounter: 'Prepared an encounter', clue_plant: 'Updated GM notes', clue_update: 'Updated GM notes', clue_list: 'Consulted GM notes', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', deal_damage: 'Dealt damage', mark_stress: 'Marked Stress', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', consult_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
+  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', npc_create: 'Updated GM notes', npc_update: 'Updated GM notes', npc_read: 'Consulted GM notes', npc_search: 'Consulted GM notes', npc_to_encounter: 'Prepared an encounter', front_create: 'Updated GM notes', front_update: 'Updated GM notes', front_advance: 'Advanced GM plans', front_list: 'Consulted GM notes', clue_plant: 'Updated GM notes', clue_update: 'Updated GM notes', clue_list: 'Consulted GM notes', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', deal_damage: 'Dealt damage', mark_stress: 'Marked Stress', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', consult_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
 };
 
 /**
@@ -145,9 +160,9 @@ const ACTION_LABELS: Record<string, string> = {
  * neutral result for them, so the campaign owner cannot read an NPC sheet or a clue's hidden truth
  * through it.
  */
-const SECRET_TOOLS = new Set(['npc_create', 'npc_update', 'npc_read', 'npc_search', 'npc_to_encounter', 'clue_plant', 'clue_update', 'clue_list']);
+const SECRET_TOOLS = new Set(['npc_create', 'npc_update', 'npc_read', 'npc_search', 'npc_to_encounter', 'clue_plant', 'clue_update', 'clue_list', 'front_create', 'front_update', 'front_advance', 'front_list']);
 /** Redacted reads that change nothing run again on a retry instead of replaying the neutral ledger text. */
-const REREAD_SECRET_TOOLS = new Set(['npc_read', 'npc_search', 'clue_list']);
+const REREAD_SECRET_TOOLS = new Set(['npc_read', 'npc_search', 'clue_list', 'front_list']);
 
 export interface ActionContext {
   campaign: string; owner: string; turn: string; callId: string;
@@ -217,12 +232,14 @@ export class GmActions {
   readonly canon: AiCanon;
   readonly npcs: AiNpcs;
   readonly clues: AiClues;
+  readonly fronts: AiFronts;
   constructor(private db: Database.Database, private campaigns: CampaignService, readonly embeddings?: EmbeddingIndex) {
     this.journal = new AiJournal(db, embeddings);
     this.chats = new AiChats(db);
     this.canon = new AiCanon(db, embeddings);
     this.npcs = new AiNpcs(db);
     this.clues = new AiClues(db);
+    this.fronts = new AiFronts(db);
   }
 
   /** Catalog or NPC-backed combat stats for a present adversary document. Never reads NPC story. */
@@ -335,8 +352,8 @@ export class GmActions {
   execute(name: string, raw: unknown, ctx: ActionContext): unknown {
     ctx.assertActive(); this.campaigns.requireGm(ctx.owner, ctx.campaign);
     const previous = this.db.prepare('SELECT result FROM ai_actions WHERE turn_id = ? AND call_id = ?').get(ctx.turn, ctx.callId) as { result: string } | undefined;
-    // Secret NPC sheets and clue ledgers are redacted in the ledger, so a retried read runs again
-    // (it changes nothing) instead of replaying the neutral ledger text to the model.
+    // Secret NPC sheets, fronts and clue ledgers are redacted in the ledger, so a retried read runs
+    // again (it changes nothing) instead of replaying the neutral ledger text to the model.
     const rereadSecret = !!previous && REREAD_SECRET_TOOLS.has(name);
     if (previous && !rereadSecret) return JSON.parse(previous.result) as unknown;
     if (!GM_TOOLS.some(tool => tool.name === name)) throw new Error('Invalid GM tool');
@@ -459,6 +476,10 @@ export class GmActions {
       else if (name === 'clue_plant') result = this.clues.plant(ctx.campaign, args, chat);
       else if (name === 'clue_update') result = this.clues.update(ctx.campaign, args);
       else if (name === 'clue_list') result = this.clues.list(ctx.campaign, text(args.status, 20, '') || undefined);
+      else if (name === 'front_create') result = this.fronts.create(ctx.campaign, args);
+      else if (name === 'front_update') result = this.fronts.update(ctx.campaign, args);
+      else if (name === 'front_advance') result = this.fronts.advance(ctx.campaign, args);
+      else if (name === 'front_list') result = this.fronts.list(ctx.campaign);
       else if (name === 'set_memory') {
         this.db.prepare('UPDATE campaign_ai SET memory = ?, updated = ? WHERE campaign_id = ?').run(this.secretsText(args.memory), new Date().toISOString(), ctx.campaign); result = { saved: true };
       }
@@ -786,12 +807,12 @@ export class GmActions {
       // Secret tools store a neutral result for the human-visible ledger. The model still gets the
       // full result from this method's return value (and the private turn checkpoint). A replayed
       // write only needs the opaque id, so the model can read the record again.
-      const secretId = result && typeof result === 'object' && !Array.isArray(result) ? (result as Record<string, unknown>).id : undefined;
-      const encoded = name === 'clue_plant' || name === 'clue_update'
-        ? JSON.stringify({ done: true, clueId: typeof secretId === 'string' ? secretId : '' })
-        : (name === 'npc_create' || name === 'npc_update') && typeof secretId === 'string'
-          ? JSON.stringify({ done: true, npcId: secretId })
-          : SECRET_TOOLS.has(name) ? JSON.stringify({ done: true }) : JSON.stringify(result ?? { done: true });
+      const secretId = result && typeof result === 'object' && !Array.isArray(result) ? (result as Record<string, unknown>).id ?? (result as Record<string, unknown>).frontId : undefined;
+      const ref = typeof secretId === 'string' ? secretId : '';
+      const encoded = name === 'clue_plant' || name === 'clue_update' ? JSON.stringify({ done: true, clueId: ref })
+        : (name === 'npc_create' || name === 'npc_update') && ref ? JSON.stringify({ done: true, npcId: ref })
+          : (name === 'front_create' || name === 'front_update' || name === 'front_advance') && ref ? JSON.stringify({ done: true, frontId: ref })
+            : SECRET_TOOLS.has(name) ? JSON.stringify({ done: true }) : JSON.stringify(result ?? { done: true });
       if (!rereadSecret) this.db.prepare('INSERT INTO ai_actions(id,campaign_id,turn_id,call_id,tool,label,result,created) VALUES (?,?,?,?,?,?,?,?)').run(randomUUID(), ctx.campaign, ctx.turn, ctx.callId, name, ACTION_LABELS[name] ?? name, encoded, new Date().toISOString());
     })();
     for (const doc of changed) ctx.publish(ctx.campaign, doc.ns, doc.id, doc.value);

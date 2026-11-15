@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { AiChat } from '@daggery/shared';
 
-export interface ChatRow { id: string; campaign_id: string; ordinal: number; title: string; status: 'open' | 'paused' | 'ended'; summary: string; summarized_through: number; summary_updated: string | null; resume_note: string | null; created: string; updated: string; ended_at: string | null }
+export interface ChatRow { id: string; campaign_id: string; ordinal: number; title: string; status: 'open' | 'paused' | 'ended'; summary: string; summarized_through: number; summary_updated: string | null; resume_note: string | null; world_time: string; created: string; updated: string; ended_at: string | null }
 type ChatView = ChatRow & { messageCount: number };
 
 const COUNTED_SQL = "SELECT c.*, (SELECT COUNT(*) FROM ai_messages m WHERE m.chat_id = c.id AND m.role IN ('player','gm','roll')) AS messageCount FROM ai_chats c";
@@ -75,6 +75,11 @@ export class AiChats {
 
   setResumeNote(campaign: string, chat: string, note: string): void {
     this.db.prepare('UPDATE ai_chats SET resume_note = ?, updated = ? WHERE campaign_id = ? AND id = ?').run(note, new Date().toISOString(), campaign, chat);
+  }
+
+  /** The in-fiction time of day when the session's last turn finished. Server only; used to notice a time jump. */
+  setWorldTime(chat: string, time: string): void {
+    this.db.prepare('UPDATE ai_chats SET world_time = ? WHERE id = ?').run(time, chat);
   }
 
   touch(chat: string, at: string): void {

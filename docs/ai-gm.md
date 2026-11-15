@@ -160,7 +160,7 @@ its trigger), `random-event`, `meaning`, `adversary` (and `chain`), `npc`, `plot
   result, and in Solo campaigns it is also stored in the Solo log. With `hidden: true` (plot
   twists, NPC secrets) the result goes only to the model: no transcript message and no Solo
   log entry.
-- The prompt (section "Oracles and randomness", `gm-prompt-7`) tells the GM when to consult,
+- The prompt (section "Oracles and randomness", `gm-prompt-8`) tells the GM when to consult,
   limits consults to two per turn unless a random event chains, and asks it to record durable
   results in canon. When a player asks the oracle a question, the GM consults it on their behalf.
 
@@ -265,6 +265,38 @@ should point at the same truth before the party must reach it. The prompt also a
 every meaningful hint when it is narrated, to pay off or consciously abandon open clues, and never
 to state the truth outright. The open clue ledger is part of memory (see below), and it flags a clue
 planted more than 48 hours ago and never paid off as `STALE` so the GM brings it back.
+## Fronts
+
+The GM can track **fronts**: threats, factions, villains and disasters with a goal that advances
+off-screen, like Dungeon World fronts and clocks. A front is created with `front_create`, changed
+with `front_update`, advanced with `front_advance` and read with `front_list`. Each one carries a
+name, a kind (`threat`, `faction`, `villain` or `disaster`), a goal, stakes or a question, an
+ordered list of grim portents (each with a done flag), an impending doom and notes. Its progress
+clock has a size of 4, 6, 8, 10 or 12 and a current value.
+
+`front_advance` ticks the clock by 1 to 12 for a stated cause. The portent thresholds are spread
+evenly over the clock, so a tick that crosses one marks that portent done and reports it; a tick
+that fills the clock reports the impending doom. The result lists what happened so the GM can
+narrate the consequence. `front_update` marks a single portent done by index (`markPortent`),
+resolves a front (`resolve: true`), or reopens it.
+
+Fronts live only in the SQLite table `ai_fronts`, added by schema version 11. The table is server
+only: no HTTP route reads it, no campaign document is synced from it, and deleting a campaign
+removes its rows through the campaign foreign key. A campaign may hold 40 active fronts; resolved
+fronts stay readable but do not count toward that cap, and an active name must be unique, compared
+case- and accent-insensitively.
+
+Privacy follows the secret NPCs. Every `front_*` tool stores a neutral result (`{ "done": true }`,
+or `{ "done": true, "frontId": … }` for a write) and a neutral label in the owner-visible activity
+ledger; the model still receives the full result, which is checkpointed privately for retry and
+never returned by a route. No journal event is written for a `front_*` tool. `front_list` re-runs
+on a retried call instead of replaying the redacted ledger result, so the GM always sees the
+current fronts.
+
+When a new session opens or the in-fiction time of day jumps, the memory adds a short **world
+turn** instruction that lists the active fronts and asks the GM to consider advancing one with
+`front_advance`, optionally consulting the oracle for randomness. The GM shows each portent
+through the fiction and never reveals the clock.
 
 ## Memory and compaction
 
@@ -277,24 +309,29 @@ blocks below follow as system messages, in this order:
    with the model's context window (about 1,500 characters by default, more on a large model).
 4. Secret NPCs: one line per active sheet, `name — role — want (id …)`, newest updated first. The
    room scales like the canon title list. See [Secret NPCs](#secret-npcs).
-5. Open clues: one line per planted or found clue, `shown → truth (planted age) (id …)`, oldest
+5. Fronts: one line per active front, `name (kind) — clock current/size — next portent: … (id …)`,
+   newest updated first. The room scales like the secret NPC list. See [Fronts](#fronts).
+6. World turn: when the session has no GM reply yet or the in-fiction time of day changed since the
+   previous turn, a short instruction lists the active fronts and asks the GM to consider advancing
+   one. It is dropped with the front and recall lists when memory is tight.
+7. Open clues: one line per planted or found clue, `shown → truth (planted age) (id …)`, oldest
    planted first. Clues planted more than 48 hours ago are marked `STALE`. The room scales like the
    secret NPC list, and the block is dropped with it. See [Clues and foreshadowing](#clues-and-foreshadowing).
-6. Relevant memory: proactive recall of at most six canon entries and six journal entries that
+8. Relevant memory: proactive recall of at most six canon entries and six journal entries that
    match the latest player messages, the location, the objective, the open thread titles and the
    active scene. Each hit carries its ID, and journal hits also carry their session label and
    date. When the latest player messages or the active scene name a secret NPC, the block also
    carries that NPC's voice, want and motives (at most three NPCs, 500 characters each). The block
    is left out when nothing scores above the recall threshold.
-7. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
-8. The recent chapters (three by default; more when the context window allows).
-9. The GM secrets and plans, visible only to the owner.
-10. The campaign state, visible only to the owner.
-11. The session summary, a working summary of the current session of up to 300 words. When the
+9. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
+10. The recent chapters (three by default; more when the context window allows).
+11. The GM secrets and plans, visible only to the owner.
+12. The campaign state, visible only to the owner.
+13. The session summary, a working summary of the current session of up to 300 words. When the
     current session has no summary yet, the newest previous session summary appears instead, so
     the opening recap can use it.
-12. The recent messages of the session that fit in the budget.
-13. The table snapshot, which comes last on every request.
+14. The recent messages of the session that fit in the budget.
+15. The table snapshot, which comes last on every request.
 
 The blocks are rebuilt on every request, so changes apply at once.
 
