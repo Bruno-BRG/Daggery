@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
  * the old tables and never exposes these new ones.
  */
 export const LEGACY_CAMPAIGN_ID = 'legacy-unclaimed';
-export const CURRENT_VERSION = 10;
+export const CURRENT_VERSION = 11;
 
 /** Schema 6 adds AI sessions and the adventure journal. It only adds tables and columns, then backfills Session 1 for each AI campaign. Every step is idempotent. */
 function migrateAiSessions(db: Database.Database): void {
@@ -300,6 +300,33 @@ export function migrateCampaignDatabase(db: Database.Database): void {
         );
         CREATE INDEX IF NOT EXISTS ai_npcs_campaign ON ai_npcs(campaign_id);
       `);
+    }
+    // Version 11 adds the fronts: threats, factions and villains whose goals advance off-screen.
+    // This table is server only: no route reads it and no synced document mirrors it. The campaign
+    // foreign key cascades, so deleting a campaign removes the fronts with it. The chat also
+    // remembers the in-fiction time of day when its last turn finished, so the memory can tell
+    // when time jumped and offer a world turn; that column is server only too.
+    if (version < 11) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ai_fronts (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          kind TEXT NOT NULL CHECK(kind IN ('threat','faction','villain','disaster')),
+          goal TEXT NOT NULL DEFAULT '',
+          stakes TEXT NOT NULL DEFAULT '',
+          clock_current INTEGER NOT NULL DEFAULT 0,
+          clock_size INTEGER NOT NULL DEFAULT 6 CHECK(clock_size IN (4,6,8,10,12)),
+          portents TEXT NOT NULL DEFAULT '[]',
+          doom TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','resolved')),
+          notes TEXT NOT NULL DEFAULT '',
+          created TEXT NOT NULL,
+          updated TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ai_fronts_campaign ON ai_fronts(campaign_id, status);
+      `);
+      addColumn(db, 'ai_chats', "world_time TEXT NOT NULL DEFAULT ''");
     }
   })();
   // Changing a CHECK constraint needs a table rebuild, which only works with foreign_keys OFF

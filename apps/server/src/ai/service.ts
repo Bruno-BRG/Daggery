@@ -17,6 +17,7 @@ import { CAMPAIGN_FRAMES, findCampaignFrame, framePrompt } from './frames';
 import { COMPACT_TAIL, COMPACT_TRIGGER, MESSAGE_CHARS, SECRETS_LIMIT, TOOL_RESULT_CHARS, budgetTable, budgetTokens, emptyState, estimateTokens, fitJson, fitMemory, limitsFor, renderState, shorten, snapshotText, type MemoryPart } from './memory';
 import { COMPACTION_PROMPT, GM_PROMPT, GM_PROMPT_VERSION, OPENING_INSTRUCTION } from './prompts';
 import { renderNpcList } from './npc';
+import { renderFrontList, renderWorldTurn } from './fronts';
 import { hasQueryTerms } from './retrieval';
 import { QUICK_CLASSES, quickHero } from './daggerheart';
 import { SecretVault } from './vault';
@@ -673,22 +674,30 @@ export class AiService {
     for (const doc of cleared) this.publish(rt.campaign, doc.ns, doc.id, doc.value);
   }
 
-  private async prepare(rt: Runtime, settings: Settings, tokens: number, instruction: string | null): Promise<ModelMessage[]> {
-    const first = this.assemble(rt.campaign, settings, rt.chat, tokens);
+  private async prepare(rt: Runtime, settings: Settings, tokens: number, instruction: string | null, worldTurn = false): Promise<ModelMessage[]> {
+    const first = this.assemble(rt.campaign, settings, rt.chat, tokens, worldTurn);
     await this.compact(rt, 'auto', first.messageBudget);
     const current = this.settings(rt.campaign) ?? settings;
-    const conversation = this.assemble(rt.campaign, current, rt.chat, tokens).history;
+    const conversation = this.assemble(rt.campaign, current, rt.chat, tokens, worldTurn).history;
     if (instruction) conversation.push({ role: 'user', content: instruction });
     return conversation;
   }
 
   private async takeTurn(rt: Runtime, row: TurnRow, settings: Settings, credential: Credential) {
     const tokens = budgetTokens(budgetOf(settings), effectiveContextWindow(credential.model, credential.context_window));
+    // World turn: a new session or an in-fiction time jump invites the GM to advance a front.
+    // world_time remembers the time of day when the last turn finished, so a change made between
+    // turns is noticed on the next one. It is written only on success, so a failed turn retries it.
+    const state = this.actions.readState(rt.campaign);
+    const chatRow = this.chats.row(rt.campaign, rt.chat);
+    const firstTurn = !this.db.prepare("SELECT 1 FROM ai_messages WHERE chat_id = ? AND role = 'gm' LIMIT 1").get(rt.chat);
+    const timeJump = !!chatRow && chatRow.world_time !== '' && state.timeOfDay !== '' && state.timeOfDay !== chatRow.world_time;
+    const worldTurn = firstTurn || timeJump;
     let conversation = (JSON.parse(row.checkpoint || '[]') as ModelMessage[]).filter(message => message.role !== 'system');
     const save = () => this.db.prepare('UPDATE ai_turns SET checkpoint = ?, updated = ? WHERE id = ?').run(JSON.stringify(conversation), new Date().toISOString(), rt.turn);
     if (!conversation.length) {
       // The request ID marks an opening recap, so its instruction survives a restart before the first checkpoint.
-      conversation = await this.prepare(rt, settings, tokens, row.request_id.startsWith('open:') ? OPENING_INSTRUCTION : null);
+      conversation = await this.prepare(rt, settings, tokens, row.request_id.startsWith('open:') ? OPENING_INSTRUCTION : null, worldTurn);
       save();
     }
     const tools = GM_TOOLS;
@@ -716,7 +725,7 @@ export class AiService {
       }
       const steps = (this.db.prepare('SELECT steps FROM ai_turns WHERE id = ?').get(rt.turn) as { steps: number }).steps;
       if (steps >= TURN_STEPS) throw new ProviderError('The GM reached this turn’s request limit. Send a new message to continue; completed actions are saved.');
-      const request = [...this.systemMessages(rt.campaign, rt.chat, recallVector), ...conversation, this.snapshotMessage(rt)];
+      const request = [...this.systemMessages(rt.campaign, rt.chat, recallVector, worldTurn), ...conversation, this.snapshotMessage(rt)];
       const response = await this.provider.complete(rt.provider, rt.key, rt.model, request, tools, rt.signal, rt.chat, rt.temperature ? { temperature: 0.85 } : {});
       rt.assertActive();
       this.db.prepare('UPDATE ai_turns SET steps = steps + 1, cost = cost + ?, updated = ? WHERE id = ?').run(response.cost, new Date().toISOString(), rt.turn);
@@ -731,6 +740,7 @@ export class AiService {
       this.db.transaction(() => {
         rt.assertActive();
         this.actions.message(rt.campaign, rt.chat, rt.turn, 'gm', narration.slice(0, 18000));
+        this.chats.setWorldTime(rt.chat, this.actions.readState(rt.campaign).timeOfDay);
         this.db.prepare("UPDATE ai_turns SET status = 'complete', error = '', checkpoint = '[]', updated = ? WHERE id = ?").run(at, rt.turn);
       })();
       return;
@@ -825,7 +835,7 @@ export class AiService {
   }
 
   /** Memory parts in prompt order. They are rebuilt for every request, so edits take effect at once. */
-  private blocks(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null): MemoryPart[] {
+  private blocks(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null, worldTurn = false): MemoryPart[] {
     const limits = limitsFor(budgetOf(settings), this.contextWindowFor(campaign));
     const config = this.campaigns.configuration(campaign);
     const setup = setupOf(settings);
@@ -849,6 +859,12 @@ export class AiService {
     // memory is tight, before canon or the secrets are shortened.
     const npcs = renderNpcList(this.actions.npcs.active(campaign), limits.npcChars);
     if (npcs) parts.push({ kind: 'npcs', text: npcs });
+    // Fronts are listed like secret NPCs, and the world-turn instruction rides with them when a
+    // session opens or in-fiction time jumped. Both are dropped whole when memory is tight.
+    const fronts = this.actions.fronts.active(campaign);
+    const frontList = renderFrontList(fronts, limits.frontChars);
+    if (frontList) parts.push({ kind: 'fronts', text: frontList });
+    if (worldTurn && fronts.length) parts.push({ kind: 'worldturn', text: renderWorldTurn(fronts, limits.frontChars) });
     const chapters = this.journal.recentChapters(campaign, limits.chapters);
     // Recall must not repeat chapters that are already in the memory block.
     const recall = this.recallPart(campaign, chat, limits.recallChars, new Set(chapters.map(chapter => chapter.id)), queryVector);
@@ -1001,24 +1017,24 @@ export class AiService {
   }
 
   /** The memory parts after the cap is applied, ready to send as system messages. */
-  private memoryParts(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null): MemoryPart[] {
-    return fitMemory(this.blocks(campaign, settings, chat, queryVector), limitsFor(budgetOf(settings), this.contextWindowFor(campaign)).memoryChars);
+  private memoryParts(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null, worldTurn = false): MemoryPart[] {
+    return fitMemory(this.blocks(campaign, settings, chat, queryVector, worldTurn), limitsFor(budgetOf(settings), this.contextWindowFor(campaign)).memoryChars);
   }
 
-  private systemMessages(campaign: string, chat: string | null, queryVector?: Float32Array | null): ModelMessage[] {
+  private systemMessages(campaign: string, chat: string | null, queryVector?: Float32Array | null, worldTurn = false): ModelMessage[] {
     const settings = this.settings(campaign);
     if (!settings) throw new Error('AI turn stopped');
     const messages: ModelMessage[] = [{ role: 'system', content: GM_PROMPT }];
     const setup = setupOf(settings);
     const frame = setup.frame ? findCampaignFrame(setup.frame) : undefined;
     if (frame) messages.push({ role: 'system', content: framePrompt(frame) });
-    messages.push(...this.memoryParts(campaign, settings, chat, queryVector).map(part => ({ role: 'system' as const, content: part.text })));
+    messages.push(...this.memoryParts(campaign, settings, chat, queryVector, worldTurn).map(part => ({ role: 'system' as const, content: part.text })));
     return messages;
   }
 
   /** Memory plus the recent messages that fit. Messages get whatever budget the memory leaves. */
-  private assemble(campaign: string, settings: Settings, chat: string | null, tokens: number) {
-    const parts = this.memoryParts(campaign, settings, chat);
+  private assemble(campaign: string, settings: Settings, chat: string | null, tokens: number, worldTurn = false) {
+    const parts = this.memoryParts(campaign, settings, chat, undefined, worldTurn);
     const memoryTokens = parts.reduce((sum, part) => sum + estimateTokens(part.text), 0);
     const messageBudget = Math.max(1000, tokens - memoryTokens);
     const pending = chat ? this.pending(chat) : [];
