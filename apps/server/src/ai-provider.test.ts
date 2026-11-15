@@ -4,6 +4,15 @@ import { DEEPSEEK_CONTEXT_WINDOW, DEEPSEEK_MAX_TOKENS, DEEPSEEK_REASONING_EFFORT
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
 
+/** An SSE body assembled from raw text parts, so a data line can be split across chunks. */
+function sse(parts: string[]): Response {
+  const encoder = new TextEncoder();
+  return new Response(new ReadableStream({
+    start(controller) { for (const part of parts) controller.enqueue(encoder.encode(part)); controller.close(); },
+  }), { status: 200, headers: { 'content-type': 'text/event-stream' } });
+}
+const frame = (data: unknown) => 'data: ' + JSON.stringify(data) + '\n\n';
+
 function catalog(models: Record<string, unknown>[]) {
   return { data: models.map(model => ({ type: 'chat', capabilities: { tools: { supported: true } }, cost: { text: { input: { price: 1 } } }, ...model })) };
 }
@@ -52,4 +61,71 @@ test('non-DeepSeek models keep the existing request shape', async () => {
   await provider.complete('opencode-go', 'key', 'gpt-6.1-sol', [{ role: 'user', content: 'Go' }], [], new AbortController().signal, 'campaign');
   assert.equal(bodies[0].reasoning_effort, undefined);
   assert.equal(bodies[0].max_tokens, 2400);
+  assert.equal(bodies[0].stream, false);
+});
+
+test('streaming completions accumulate content, reasoning and cost from SSE, skipping malformed frames', async () => {
+  const bodies: any[] = [];
+  const provider = new ModelProvider((async (_url, init) => {
+    bodies.push(JSON.parse(String(init?.body)));
+    return sse([
+      'event: message\n',
+      frame({ choices: [{ delta: { role: 'assistant', reasoning_content: 'Weigh the harbor. ' } }] }),
+      frame({ choices: [{ delta: { content: 'The tide ' } }] }),
+      // One data line split across two network chunks.
+      'data: {"choices":[{"delta":{"content":"turns"',
+      '}}]}\n\n',
+      ': keep-alive\n',
+      'data: not json\n\n',
+      frame({ choices: [{ delta: { content: '.' } }], usage: { cost: 0.03 } }),
+      'data: [DONE]\n\n',
+    ]);
+  }) as typeof fetch);
+  const deltas: string[] = [];
+  const response = await provider.complete('opencode-go', 'key', 'gpt-6.1-sol', [{ role: 'user', content: 'Go' }], [], new AbortController().signal, 'campaign', { onDelta: delta => deltas.push(delta) });
+  assert.equal(bodies[0].stream, true);
+  assert.deepEqual(bodies[0].stream_options, { include_usage: true });
+  assert.equal(response.message.content, 'The tide turns.');
+  assert.deepEqual(deltas, ['The tide ', 'turns', '.']);
+  assert.equal(response.message.reasoning_content, 'Weigh the harbor. ');
+  assert.equal(response.cost, 0.03);
+});
+
+test('streaming completions merge split tool-call chunks by index and never stream their arguments', async () => {
+  const provider = new ModelProvider((async () => sse([
+    frame({ choices: [{ delta: { tool_calls: [{ index: 0, id: 'call_a', type: 'function', function: { name: 'create_scene', arguments: '' } }] } }] }),
+    frame({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '{"name":' } }] } }] }),
+    frame({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: '"The lighthouse"}' } }] } }] }),
+    frame({ choices: [{ delta: { tool_calls: [{ index: 1, id: 'call_b', type: 'function', function: { name: 'get_context', arguments: '{}' } }] } }] }),
+    'data: [DONE]\n\n',
+  ])) as typeof fetch);
+  const deltas: string[] = [];
+  const response = await provider.complete('opencode-go', 'key', 'gpt-6.1-sol', [{ role: 'user', content: 'Go' }], [], new AbortController().signal, 'campaign', { onDelta: delta => deltas.push(delta) });
+  assert.equal(response.message.content, null);
+  assert.deepEqual(response.message.tool_calls, [
+    { id: 'call_a', type: 'function', function: { name: 'create_scene', arguments: '{"name":"The lighthouse"}' } },
+    { id: 'call_b', type: 'function', function: { name: 'get_context', arguments: '{}' } },
+  ]);
+  assert.deepEqual(deltas, [], 'tool arguments are never handed to onDelta');
+});
+
+test('a provider that answers a streaming request with JSON is read as a normal completion', async () => {
+  const provider = new ModelProvider((async () => json({ choices: [{ message: { role: 'assistant', content: 'Plain reply.' } }], usage: { cost: 0.01 } })) as typeof fetch);
+  const deltas: string[] = [];
+  const response = await provider.complete('opencode-go', 'key', 'gpt-6.1-sol', [{ role: 'user', content: 'Go' }], [], new AbortController().signal, 'campaign', { onDelta: delta => deltas.push(delta) });
+  assert.equal(response.message.content, 'Plain reply.');
+  assert.equal(response.cost, 0.01);
+  assert.deepEqual(deltas, []);
+});
+
+test('a provider that rejects the streaming request retries once without it', async () => {
+  const bodies: any[] = [];
+  const provider = new ModelProvider((async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    bodies.push(body);
+    return body.stream ? json({ error: 'unsupported stream' }, 400) : json({ choices: [{ message: { role: 'assistant', content: 'Fell back.' } }] });
+  }) as typeof fetch);
+  const response = await provider.complete('opencode-go', 'key', 'gpt-6.1-sol', [{ role: 'user', content: 'Go' }], [], new AbortController().signal, 'campaign', { onDelta: () => {} });
+  assert.equal(response.message.content, 'Fell back.');
+  assert.deepEqual(bodies.map(body => body.stream), [true, false]);
 });

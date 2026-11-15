@@ -123,6 +123,7 @@ export async function registerSecureGame(app: FastifyInstance, options: Options)
       const row = db.prepare('INSERT INTO campaign_rolls(campaign_id,at,author,kind,payload) VALUES (?,?,?,?,?)').run(campaign, at, author, kind, JSON.stringify(result));
       broadcast(campaign, { type: 'roll', entry: { id: Number(row.lastInsertRowid), at, author, kind, result } });
     },
+    publishDelta: (campaign, turn, chat, round, text) => broadcast(campaign, { type: 'ai-stream', turnId: turn, chatId: chat, round, text }),
   });
   const upload = (characterImage: boolean) => async (request: FastifyRequest, reply: FastifyReply) => {
     const campaignId = params(request).campaignId!;

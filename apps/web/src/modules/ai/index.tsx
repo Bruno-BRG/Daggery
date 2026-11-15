@@ -7,6 +7,7 @@ import { getActiveCampaign } from '../../campaign-context';
 import { Dialog } from '../../components/Dialog';
 import { Icon } from '../../components/Icon';
 import { useDocs } from '../../sync/store';
+import { useAiStream } from '../../sync/aiStream';
 import { useMediaQuery } from '../../useMediaQuery';
 import { diceModeFor, setDiceMode, type DiceMode } from '../solo/diceMode';
 import './ai.css';
@@ -60,11 +61,14 @@ export default function Adventure({ author: _author }: { author: string }) {
   const transcript = useRef<HTMLDivElement>(null), end = useRef<HTMLDivElement>(null);
   const { items: sheets } = useDocs<Sheet>('sheets');
   const { items: combat } = useDocs<{ value?: number }>('combat');
+  const stream = useAiStream(chatId);
 
   const data = feed?.data ?? null;
   const run = data?.run ?? null;
   const running = run?.status === 'running';
   const runHere = run && run.chatId === chatId ? run : null;
+  /** The growing GM bubble, only while this chat's current turn is still running. */
+  const partial = stream && runHere?.status === 'running' && stream.turnId === runHere.id && stream.chatId === chatId && feed?.chatId === chatId ? stream : null;
   const sameChat = feed !== null && feed.chatId === chatId;
   const messages = feed !== null && sameChat ? feed.messages : [];
   const chats = data?.chats ?? [];
@@ -146,7 +150,7 @@ export default function Adventure({ author: _author }: { author: string }) {
       return;
     }
     if (follow.current) end.current?.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' });
-  }, [messages.length, running]);
+  }, [messages.length, running, partial?.text.length]);
 
   function choose(id: string) {
     chatRef.current = id;
@@ -333,6 +337,10 @@ export default function Adventure({ author: _author }: { author: string }) {
             {entry.interaction && !entry.interaction.resolved && <ActionCard message={entry} sheet={sheets[entry.interaction.heroId ?? '']} disabled={locked || !canWrite} resolve={value => perform(`/messages/${encodeURIComponent(entry.id)}/resolve`, value)} />}
             {entry.interaction?.resolved && <small className="ai-resolved">Resolved</small>}
           </article>)}
+          {partial && <article className="ai-message ai-message-gm ai-streaming" aria-live="polite">
+            <header><strong>Game Master</strong></header>
+            <Narration text={partial.text} />
+          </article>}
           {runHere?.status === 'running' && <div className="ai-thinking" role="status"><span />{THINKING_TEXT[runHere.kind]}<small>{runHere.steps} model {runHere.steps === 1 ? 'request' : 'requests'}</small><button type="button" disabled={busy} onClick={() => void perform('/stop')}>Stop</button></div>}
           {runHere?.status === 'failed' && <div className="ai-error" role="alert"><p>{runHere.error}</p><button type="button" className="daggery-roll-toggle" disabled={busy || !canWrite} onClick={() => void perform('/retry', { turnId: runHere.id })}>Retry saved turn</button><small>Completed game actions are retained.</small></div>}
           {runHere?.status === 'cancelled' && <p className="ai-muted">GM turn stopped. Completed actions are saved. Send a message to continue.</p>}
