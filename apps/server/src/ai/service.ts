@@ -37,6 +37,8 @@ const RECALL_MIN_SCORE = 0.8;
 /** A compaction may promote at most this many durable facts to canon. */
 const CANON_PER_COMPACTION = 6;
 const TURN_ACTIONS = 24;
+/** Narration deltas are coalesced into at most one realtime publish per window. */
+const STREAM_THROTTLE_MS = 80;
 /** Tools whose query is embedded for hybrid (BM25 + semantic) retrieval. */
 const SEMANTIC_TOOLS = new Set(['search_journal', 'canon_search', 'search_sourcebook', 'search_rules']);
 /** Canon reads return a whole source record, so they get room for a full body plus its metadata. */
@@ -71,6 +73,8 @@ interface Summary { chapter: string; working: string; digest: string; canon: Sum
 interface Runtime { campaign: string; owner: string; turn: string; chat: string; provider: AiProvider; model: string; key: string; temperature: boolean; signal: AbortSignal; assertActive: () => void }
 type Publish = (campaign: string, ns: string, id: string, value: unknown) => void;
 type PublishRoll = (campaign: string, kind: string, result: unknown, author?: string) => void;
+/** A narration delta for the in-progress GM turn. Tool arguments never travel here. */
+type PublishDelta = (campaign: string, turn: string, chat: string, text: string) => void;
 
 function clip(value: string, max: number): string {
   return value.length > max ? value.slice(0, max) : value;
@@ -221,7 +225,7 @@ export class AiService {
   readonly embeddings: EmbeddingIndex;
   private running = new Map<string, { turn: string; controller: AbortController; job?: Promise<void> }>();
 
-  constructor(private db: Database.Database, private campaigns: CampaignService, private vault = new SecretVault(randomBytes(32)), private provider = new ModelProvider(), private publish: Publish = () => {}, private publishRoll: PublishRoll = () => {}, embedderProvider?: () => Promise<Embedder | null>) {
+  constructor(private db: Database.Database, private campaigns: CampaignService, private vault = new SecretVault(randomBytes(32)), private provider = new ModelProvider(), private publish: Publish = () => {}, private publishRoll: PublishRoll = () => {}, embedderProvider?: () => Promise<Embedder | null>, private publishDelta: PublishDelta = () => {}) {
     this.embeddings = new EmbeddingIndex(db, embedderProvider);
     this.actions = new GmActions(db, campaigns, this.embeddings);
     db.prepare("UPDATE ai_turns SET status = 'failed', error = 'The server restarted. Retry to continue from the saved checkpoint.', updated = ? WHERE status = 'running'").run(new Date().toISOString());
@@ -682,6 +686,29 @@ export class AiService {
     return conversation;
   }
 
+  /**
+   * Coalesces model narration deltas into throttled realtime publishes. Only content passes through
+   * here; the provider never hands tool arguments to onDelta. The final persisted message stays the
+   * source of truth, so a dropped or late delta can never change the transcript.
+   */
+  private deltaStream(campaign: string, turn: string, chat: string) {
+    let pending = '', last = 0;
+    const flush = () => {
+      if (!pending) return;
+      const text = pending;
+      pending = '';
+      last = Date.now();
+      this.publishDelta(campaign, turn, chat, text);
+    };
+    return {
+      push: (delta: string) => {
+        pending += delta;
+        if (Date.now() - last >= STREAM_THROTTLE_MS) flush();
+      },
+      flush,
+    };
+  }
+
   private async takeTurn(rt: Runtime, row: TurnRow, settings: Settings, credential: Credential) {
     const tokens = budgetTokens(budgetOf(settings), effectiveContextWindow(credential.model, credential.context_window));
     let conversation = (JSON.parse(row.checkpoint || '[]') as ModelMessage[]).filter(message => message.role !== 'system');
@@ -692,6 +719,7 @@ export class AiService {
       save();
     }
     const tools = GM_TOOLS;
+    const stream = this.deltaStream(rt.campaign, rt.turn, rt.chat);
     const context = { campaign: rt.campaign, owner: rt.owner, turn: rt.turn, chat: rt.chat, assertActive: rt.assertActive, publish: this.publish, publishRoll: this.publishRoll };
     // Semantic recall is computed once per turn; a cold or unavailable model simply falls back to BM25.
     const recallVector = await this.embeddings.embedQuery(this.recallQuery(rt.campaign, rt.chat));
@@ -717,7 +745,8 @@ export class AiService {
       const steps = (this.db.prepare('SELECT steps FROM ai_turns WHERE id = ?').get(rt.turn) as { steps: number }).steps;
       if (steps >= TURN_STEPS) throw new ProviderError('The GM reached this turn’s request limit. Send a new message to continue; completed actions are saved.');
       const request = [...this.systemMessages(rt.campaign, rt.chat, recallVector), ...conversation, this.snapshotMessage(rt)];
-      const response = await this.provider.complete(rt.provider, rt.key, rt.model, request, tools, rt.signal, rt.chat, rt.temperature ? { temperature: 0.85 } : {});
+      const response = await this.provider.complete(rt.provider, rt.key, rt.model, request, tools, rt.signal, rt.chat, { ...(rt.temperature ? { temperature: 0.85 } : {}), onDelta: stream.push });
+      stream.flush();
       rt.assertActive();
       this.db.prepare('UPDATE ai_turns SET steps = steps + 1, cost = cost + ?, updated = ? WHERE id = ?').run(response.cost, new Date().toISOString(), rt.turn);
       if (response.message.tool_calls?.length) {

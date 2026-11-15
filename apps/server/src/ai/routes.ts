@@ -13,8 +13,9 @@ export function registerAiRoutes(app: FastifyInstance, options: {
   embedder?: () => Promise<Embedder | null>;
   publish: (campaign: string, ns: string, id: string, value: unknown) => void;
   publishRoll: (campaign: string, kind: string, result: unknown, author?: string) => void;
+  publishDelta?: (campaign: string, turn: string, chat: string, text: string) => void;
 }) {
-  const ai = new AiService(options.db, options.service, options.vault, options.provider, options.publish, options.publishRoll, options.embedder);
+  const ai = new AiService(options.db, options.service, options.vault, options.provider, options.publish, options.publishRoll, options.embedder, options.publishDelta);
   app.addHook('onClose', () => ai.close());
   const user = (request: FastifyRequest) => {
     const current = options.service.session(readSessionToken(request.headers.cookie, options.secureCookies));

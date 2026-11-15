@@ -143,6 +143,20 @@ AI + Solo uses ordinary GM responses and explicit Fear payments. The manual Solo
 remains available. Fictional judgment and pacing remain the model's responsibility; not every
 narrative rule can be enforced mechanically.
 
+## Streaming narration
+
+GM turns ask the provider to stream. The server parses the SSE response (`data:` frames,
+`[DONE]`), concatenates content and reasoning deltas and merges index-keyed tool-call chunks
+into the same completion shape the non-streaming path returns, so the tool loop is unchanged.
+Content deltas are published on the campaign socket as `ai-stream` events (turn id, chat id and
+a text delta), coalesced to at most one event per 80 ms. Only narration text is streamed: tool
+arguments can contain GM-only secrets such as secret NPC sheets and never leave the server.
+The web client grows an in-progress GM bubble from these deltas and replaces it with the final
+persisted message when the turn finishes; a failed, cancelled or reconnected turn drops the
+partial bubble, and the stored transcript remains the source of truth. Providers that answer a
+streaming request with plain JSON, or reject the streaming request shape, are read through the
+non-streaming path, so a turn still completes.
+
 ## Oracles
 
 In every AI campaign, Group or Solo, the GM can roll the Duality Solo Engine with
