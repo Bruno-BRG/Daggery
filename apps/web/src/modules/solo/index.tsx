@@ -13,6 +13,7 @@ import { changeResourceCount } from '../sheets/resource-track';
 import { getActiveCampaign } from '../../campaign-context';
 import { Icon } from '../../components/Icon';
 import { useDiceTray } from '../../dice3d';
+import { diceModeFor, setDiceMode, type DiceMode } from './diceMode';
 import './solo.css';
 
 type Tab = 'scene' | 'oracle' | 'generators' | 'tables' | 'dice' | 'notes';
@@ -28,6 +29,7 @@ interface Play {
   command: (values: Record<string, unknown>) => Promise<boolean>;
 }
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Could not complete the action.';
+const validDie = (value: string, sides: number) => /^\d+$/.test(value.trim()) && Number(value) >= 1 && Number(value) <= sides;
 const root = () => `/api/campaigns/${encodeURIComponent(getActiveCampaign().id)}/solo`;
 const KIND_LABELS: Record<string, string> = {
   'duality-scene': 'Scene setup', 'duality-oracle': 'Oracle', 'duality-meaning': 'Meaning', 'duality-table': 'Table', 'duality-event': 'Random Event',
@@ -385,18 +387,25 @@ function ResultCard({ entry, play }: { entry: SoloEntry; play: Play }) {
 }
 
 function OracleTab({ play }: { play: Play }) {
+  const campaign = getActiveCampaign();
   const [question, setQuestion] = useState('');
   const [likelihood, setLikelihood] = useState('even');
   const [asked, setAsked] = useState<{ id: string; likelihood: string } | null>(null);
+  const [mode, setMode] = useState<DiceMode>(() => diceModeFor(campaign.id));
+  const [hopeDie, setHopeDie] = useState('');
+  const [fearDie, setFearDie] = useState('');
   const [focus, setFocus] = useState('');
   const [choice, setChoice] = useState('action-subject');
   const [count, setCount] = useState(1);
   const [event, runEvent] = useRolled(play);
   const [meaning, runMeaning] = useRolled(play);
   const answer = asked ? play.entries.find(entry => entry.id === asked.id) : undefined;
+  const physical = mode === 'physical';
+  const diceReady = !physical || (validDie(hopeDie, 12) && validDie(fearDie, 12));
+  const chooseMode = (next: DiceMode) => { setMode(next); setDiceMode(campaign.id, next); };
 
   async function ask() {
-    const entry = await play.roll('duality-oracle', { question: question.trim(), likelihood });
+    const entry = await play.roll('duality-oracle', { question: question.trim(), likelihood, ...(physical ? { dice: { hope: Number(hopeDie), fear: Number(fearDie) } } : {}) });
     if (entry) { setAsked({ id: entry.id, likelihood }); setQuestion(''); }
   }
 
@@ -407,8 +416,17 @@ function OracleTab({ play }: { play: Play }) {
       <form className="solo-ask" onSubmit={submit => { submit.preventDefault(); void ask(); }}>
         <label className="solo-field">Question<input value={question} maxLength={2000} onChange={change => setQuestion(change.target.value)} placeholder="Is the gate guarded?" /></label>
         <label className="solo-field">Likelihood<select value={likelihood} onChange={change => setLikelihood(change.target.value)}>{DUALITY_LIKELIHOODS.map(row => <option key={row.id} value={row.id}>{row.label} ({row.target}+)</option>)}</select></label>
-        <button className="daggery-primary" disabled={play.busy || !question.trim()}><Icon name="dice" />Ask</button>
+        <div className="solo-field">Dice<div className="solo-dice-mode" role="group" aria-label="Dice">
+          <button type="button" aria-pressed={!physical} onClick={() => chooseMode('digital')}>Digital</button>
+          <button type="button" aria-pressed={physical} onClick={() => chooseMode('physical')}>My physical dice</button>
+        </div></div>
+        {physical && <div className="solo-dice-fields">
+          <label className="solo-field">Hope d12<input inputMode="numeric" value={hopeDie} maxLength={2} onChange={change => setHopeDie(change.target.value)} placeholder="1-12" /></label>
+          <label className="solo-field">Fear d12<input inputMode="numeric" value={fearDie} maxLength={2} onChange={change => setFearDie(change.target.value)} placeholder="1-12" /></label>
+        </div>}
+        <button className="daggery-primary" disabled={play.busy || !question.trim() || !diceReady}><Icon name="dice" />Ask</button>
       </form>
+      {physical && <p className="solo-shift-note">Roll your two d12s and type the Hope and Fear faces here. Your choice is remembered for this campaign.</p>}
       <div aria-live="polite">{answer && <ResultCard key={answer.id} entry={answer} play={play} />}</div>
       <div className="solo-reference-table solo-oracle-chart-wrap">
         <table className="solo-oracle-chart">

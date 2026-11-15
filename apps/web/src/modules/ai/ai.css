@@ -40,6 +40,18 @@
 .ai-composer textarea{display:block;width:100%;resize:vertical;background:transparent!important;border:0!important;outline-offset:2px;padding:10px 0!important;line-height:1.6;min-height:80px;color:inherit}
 .ai-composer>div{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px}
 .ai-composer small{color:var(--ai-muted);font-size:11px}
+.ai-composer-buttons{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ai-free-roll{display:flex;flex-direction:column;gap:12px;margin:12px 0;padding:16px;border:1px solid var(--ai-line);border-radius:var(--radius-md);background:var(--ai-panel);min-width:0}
+.ai-free-roll-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ai-free-roll-head strong{display:flex;align-items:center;gap:8px;font-size:13px}
+.ai-free-roll-head strong>svg{width:17px;height:17px;color:var(--ai-accent)}
+.ai-free-roll-head .ai-link{width:auto;padding:0;font-size:12px}
+.ai-free-roll-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px}
+.ai-free-roll label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:550;min-width:0}
+.ai-free-roll input,.ai-free-roll select{width:100%;min-width:0;background:var(--ai-panel);color:inherit;border:1px solid var(--ai-line);border-radius:var(--radius-sm);padding:9px 10px;font-size:14px}
+.ai-free-roll .ai-dice-fields label{font-size:11px}
+.ai-free-roll-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.ai-free-roll-actions small{color:var(--ai-muted);font-size:11px;flex:1 1 160px}
 .ai-rail{align-self:start}
 .ai-sessions{display:grid;gap:18px;min-width:0}
 .ai-sessions-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}

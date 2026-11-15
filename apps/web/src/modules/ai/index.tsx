@@ -8,6 +8,7 @@ import { Dialog } from '../../components/Dialog';
 import { Icon } from '../../components/Icon';
 import { useDocs } from '../../sync/store';
 import { useMediaQuery } from '../../useMediaQuery';
+import { diceModeFor, setDiceMode, type DiceMode } from '../solo/diceMode';
 import './ai.css';
 
 const errorText = (error: unknown) => error instanceof Error ? error.message : 'Could not complete the request.';
@@ -23,6 +24,7 @@ const THINKING_TEXT: Record<AiTurnKind, string> = { turn: 'The GM is preparing t
 const BUDGETS: AiBudget[] = ['lean', 'balanced', 'rich', 'maximum'];
 const BUDGET_LABEL: Record<AiBudget, string> = { lean: 'Lean', balanced: 'Balanced', rich: 'Rich', maximum: 'Maximum' };
 const ENDED_NOTE = 'This session has ended. Start a new session to keep playing.';
+const TRAITS = ['agility', 'strength', 'finesse', 'instinct', 'presence', 'knowledge'] as const;
 
 /** Union of messages by id. Later groups replace earlier copies, and the result runs oldest first. */
 function mergeMessages(...groups: AiMessage[][]): AiMessage[] {
@@ -48,7 +50,7 @@ export default function Adventure({ author: _author }: { author: string }) {
   const [feed, setFeed] = useState<Feed | null>(null), [chatId, setChatId] = useState<string | null>(null);
   const [error, setError] = useState(''), [loadError, setLoadError] = useState('');
   const [connectionOpen, setConnectionOpen] = useState(false), [setupOpen, setSetupOpen] = useState(false), [sessionsOpen, setSessionsOpen] = useState(false);
-  const [message, setMessage] = useState(''), [busy, setBusy] = useState(false), [olderBusy, setOlderBusy] = useState(false);
+  const [message, setMessage] = useState(''), [busy, setBusy] = useState(false), [olderBusy, setOlderBusy] = useState(false), [rollOpen, setRollOpen] = useState(false);
   const [recent, setRecent] = useState<AiJournalEntry[] | null>(null), [recentError, setRecentError] = useState('');
   const chatRef = useRef<string | null>(null), latest = useRef(0), follow = useRef(true), prepend = useRef<number | null>(null);
   const transcript = useRef<HTMLDivElement>(null), end = useRef<HTMLDivElement>(null);
@@ -321,7 +323,7 @@ export default function Adventure({ author: _author }: { author: string }) {
         <div className="ai-transcript" role="log" aria-label="Adventure messages" ref={transcript} onScroll={event => { const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 60; }}>
           {sameChat && feed.cursor && <div className="ai-earlier"><button type="button" className="daggery-roll-toggle" disabled={olderBusy} onClick={() => void loadOlder()}>{olderBusy ? 'Loading earlier messages…' : 'Load earlier messages'}</button></div>}
           {messages.map(entry => entry.role === 'notice' ? <p key={entry.id} className="ai-notice"><span>{entry.text}</span></p> : <article key={entry.id} className={`ai-message ai-message-${entry.role}`}>
-            <header><strong>{entry.role === 'gm' ? 'Game Master' : entry.role === 'player' ? 'Player' : 'At the dice'}</strong><time dateTime={entry.at}>{timeOf(entry.at)}</time></header>
+            <header><strong>{entry.role === 'gm' ? 'Game Master' : entry.role === 'player' ? 'Player' : entry.role === 'roll' && entry.text.startsWith('Oracle ·') ? 'Oracle' : 'At the dice'}</strong><time dateTime={entry.at}>{timeOf(entry.at)}</time></header>
             <Narration text={entry.text} />
             {entry.interaction && !entry.interaction.resolved && <ActionCard message={entry} sheet={sheets[entry.interaction.heroId ?? '']} disabled={locked || !canWrite} resolve={value => perform(`/messages/${encodeURIComponent(entry.id)}/resolve`, value)} />}
             {entry.interaction?.resolved && <small className="ai-resolved">Resolved</small>}
@@ -331,10 +333,11 @@ export default function Adventure({ author: _author }: { author: string }) {
           {runHere?.status === 'cancelled' && <p className="ai-muted">GM turn stopped. Completed actions are saved. Send a message to continue.</p>}
           <div ref={end} />
         </div>
+        {rollOpen && chatId && canWrite && <FreeRoll base={base} chatId={chatId} heroes={heroes} disabled={locked} onClose={() => setRollOpen(false)} onDone={() => load(chatRef.current)} />}
         <form className="ai-composer" onSubmit={send}>
           <label htmlFor="ai-message">What do you do?</label>
           <textarea id="ai-message" rows={3} maxLength={4000} value={message} disabled={!canWrite} placeholder={ended ? ENDED_NOTE : 'Describe your action, speak to someone, or ask your GM…'} onChange={event => setMessage(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} />
-          <div><small>{composerNote}</small><button className="daggery-primary" disabled={!canWrite || locked || !message.trim()}><Icon name="arrow" />Send</button></div>
+          <div><small>{composerNote}</small><div className="ai-composer-buttons"><button type="button" className="daggery-roll-toggle" aria-expanded={rollOpen} disabled={!canWrite || locked} onClick={() => setRollOpen(value => !value)}><Icon name="dice" />Roll</button><button className="daggery-primary" disabled={!canWrite || locked || !message.trim()}><Icon name="arrow" />Send</button></div></div>
         </form>
       </section>
       <aside className="ai-ledger" aria-label="Adventure details">
@@ -464,7 +467,9 @@ function ActionCard({ message, sheet, disabled, resolve }: { message: AiMessage;
   const card = message.interaction!;
   const [experienceId, setExperience] = useState(''), [advantage, setAdvantage] = useState('normal'), [useArmor, setArmor] = useState(false);
   const [focus, setFocus] = useState(false), [prayerIndex, setPrayerIndex] = useState('');
-  const [mode, setMode] = useState<'digital' | 'physical'>('digital');
+  const campaign = getActiveCampaign();
+  const [mode, setMode] = useState<DiceMode>(() => diceModeFor(campaign.id));
+  const chooseMode = (next: DiceMode) => { setMode(next); setDiceMode(campaign.id, next); };
   const [hopeDie, setHopeDie] = useState(''), [fearDie, setFearDie] = useState(''), [advantageDie, setAdvantageDie] = useState(''), [damageDice, setDamageDice] = useState('');
   const weapon = card.kind === 'roll' && card.enemyId && sheet ? weaponForSlot(sheet, 'primary') : undefined;
   const shape = diceShape(weapon && sheet ? damageNotation(weapon.damage, sheet.proficiency) : '');
@@ -482,8 +487,8 @@ function ActionCard({ message, sheet, disabled, resolve }: { message: AiMessage;
       {sheet?.classId === 'ranger' && card.enemyId && <label className="ai-checkbox"><input type="checkbox" checked={focus} disabled={disabled || (sheet?.hope ?? 0) < 1} onChange={event => setFocus(event.target.checked)} />Ranger’s Focus · mark target, costs 1 Hope</label>}
       {prayerDice.length > 0 && <label>Spend a Prayer Die<select aria-label="Prayer Die" value={prayerIndex} disabled={disabled} onChange={event => setPrayerIndex(event.target.value)}><option value="">Keep all dice</option>{prayerDice.map((value, index) => <option key={index} value={index}>d4: {value} (die {index + 1})</option>)}</select></label>}
       <div className="ai-dice-mode" role="group" aria-label="Dice source">
-        <button type="button" aria-pressed={mode === 'digital'} disabled={disabled} onClick={() => setMode('digital')}>Digital dice</button>
-        <button type="button" aria-pressed={mode === 'physical'} disabled={disabled} onClick={() => setMode('physical')}>My physical dice</button>
+        <button type="button" aria-pressed={mode === 'digital'} disabled={disabled} onClick={() => chooseMode('digital')}>Digital dice</button>
+        <button type="button" aria-pressed={mode === 'physical'} disabled={disabled} onClick={() => chooseMode('physical')}>My physical dice</button>
       </div>
       {mode === 'physical' ? <>
         <div className="ai-dice-fields">
@@ -497,6 +502,59 @@ function ActionCard({ message, sheet, disabled, resolve }: { message: AiMessage;
     </> : <>{!card.direct && <label className="ai-checkbox"><input type="checkbox" checked={useArmor} disabled={disabled || !sheet || sheet.armorSlotsMarked >= armorScore(sheet)} onChange={event => setArmor(event.target.checked)} />Use 1 Armor Slot to reduce severity</label>}{prayerDice.length > 0 && <label>Spend a Prayer Die<select aria-label="Prayer Die" value={prayerIndex} disabled={disabled} onChange={event => setPrayerIndex(event.target.value)}><option value="">Keep all dice</option>{prayerDice.map((value, index) => <option key={index} value={index}>reduce damage by {value} (die {index + 1})</option>)}</select></label>}<button className="daggery-primary" disabled={disabled || !sheet} onClick={() => void resolve({ useArmor, ...prayerSpend })}>Apply damage</button></>}
   </div>;
 }
+/** A free roll from the chat: any hero, trait, optional Experience and advantage, digital or physical dice. */
+function FreeRoll({ base, chatId, heroes, disabled, onClose, onDone }: { base: string; chatId: string; heroes: Sheet[]; disabled: boolean; onClose: () => void; onDone: () => Promise<unknown> }) {
+  const campaign = getActiveCampaign();
+  const [heroId, setHeroId] = useState(heroes[0]?.id ?? ''), [trait, setTrait] = useState<string>('instinct');
+  const [experienceId, setExperience] = useState(''), [advantage, setAdvantage] = useState('normal'), [reason, setReason] = useState('');
+  const [mode, setMode] = useState<DiceMode>(() => diceModeFor(campaign.id));
+  const [hopeDie, setHopeDie] = useState(''), [fearDie, setFearDie] = useState(''), [advantageDie, setAdvantageDie] = useState('');
+  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const sheet = heroes.find(hero => hero.id === heroId);
+  const advantageNeeded = advantage === 'advantage' || advantage === 'disadvantage';
+  const physicalValid = validDie(hopeDie, 12) && validDie(fearDie, 12) && (!advantageNeeded || validDie(advantageDie, 6));
+  const chooseMode = (next: DiceMode) => { setMode(next); setDiceMode(campaign.id, next); };
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!sheet || !reason.trim()) return;
+    setBusy(true);
+    setError('');
+    try {
+      await api(`${base}/sessions/${encodeURIComponent(chatId)}/free-roll`, 'POST', {
+        requestId: crypto.randomUUID(), heroId, trait, experienceId, advantage, reason: reason.trim(),
+        ...(mode === 'physical' ? { dice: { hope: Number(hopeDie), fear: Number(fearDie), ...(advantageNeeded ? { advantageDie: Number(advantageDie) } : {}) } } : {}),
+      });
+      await onDone();
+      onClose();
+    } catch (failure) {
+      setError(errorText(failure));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return <form className="ai-free-roll" onSubmit={submit} aria-label="Free roll">
+    <div className="ai-free-roll-head"><strong><Icon name="dice" />Free roll</strong><button type="button" className="ai-link" onClick={onClose}>Close</button></div>
+    <div className="ai-free-roll-grid">
+      <label>Hero<select value={heroId} disabled={disabled || busy} onChange={event => { setHeroId(event.target.value); setExperience(''); }}>{heroes.map(hero => <option key={hero.id} value={hero.id}>{hero.name}</option>)}</select></label>
+      <label>Trait<select value={trait} disabled={disabled || busy} onChange={event => setTrait(event.target.value)}>{TRAITS.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+      <label>Experience · costs 1 Hope<select value={experienceId} disabled={disabled || busy} onChange={event => setExperience(event.target.value)}><option value="">No Experience</option>{sheet?.experiences.map(experience => <option key={experience.id} value={experience.id} disabled={(sheet?.hope ?? 0) < 1}>{experience.name} +{experience.modifier}</option>)}</select></label>
+      <label>Advantage<select value={advantage} disabled={disabled || busy} onChange={event => setAdvantage(event.target.value)}><option value="normal">Normal roll</option><option value="advantage">Advantage +d6</option><option value="disadvantage">Disadvantage −d6</option></select></label>
+    </div>
+    <label>Why?<input maxLength={300} value={reason} disabled={disabled || busy} placeholder="Leap the gap before the bridge falls" onChange={event => setReason(event.target.value)} /></label>
+    <div className="ai-dice-mode" role="group" aria-label="Dice source">
+      <button type="button" aria-pressed={mode === 'digital'} disabled={disabled || busy} onClick={() => chooseMode('digital')}>Digital dice</button>
+      <button type="button" aria-pressed={mode === 'physical'} disabled={disabled || busy} onClick={() => chooseMode('physical')}>My physical dice</button>
+    </div>
+    {mode === 'physical' && <div className="ai-dice-fields">
+      <label>Hope d12<input aria-label="Hope d12" type="number" min={1} max={12} inputMode="numeric" value={hopeDie} disabled={disabled || busy} onChange={event => setHopeDie(event.target.value)} /></label>
+      <label>Fear d12<input aria-label="Fear d12" type="number" min={1} max={12} inputMode="numeric" value={fearDie} disabled={disabled || busy} onChange={event => setFearDie(event.target.value)} /></label>
+      {advantageNeeded && <label>{advantage === 'advantage' ? 'Advantage' : 'Disadvantage'} d6<input aria-label="Advantage d6" type="number" min={1} max={6} inputMode="numeric" value={advantageDie} disabled={disabled || busy} onChange={event => setAdvantageDie(event.target.value)} /></label>}
+    </div>}
+    {error && <p className="ai-error" role="alert">{error}</p>}
+    <div className="ai-free-roll-actions"><small>Rolls are real: the GM narrates the result and never asks for it again.</small><button className="daggery-primary" disabled={disabled || busy || !sheet || !reason.trim() || (mode === 'physical' && !physicalValid)}>{busy ? 'Rolling…' : 'Roll'}</button></div>
+  </form>;
+}
+
 function Memory({ value, disabled, save }: { value: string; disabled: boolean; save: (value: string) => Promise<void> }) {
   const [draft, setDraft] = useState(value);
   return <details><summary>GM secrets & plans</summary><label className="ai-sr-label">Private GM memory<textarea aria-label="Private GM memory" rows={6} maxLength={4000} value={draft} onChange={event => setDraft(event.target.value)} /></label><button className="daggery-roll-toggle" disabled={disabled || draft === value} onClick={() => void save(draft)}>Save memory</button></details>;

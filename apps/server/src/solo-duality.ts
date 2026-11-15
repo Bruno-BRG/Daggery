@@ -11,6 +11,8 @@ export interface DualityRoll {
   rng: Rng;
   input: Record<string, unknown>;
   question: string;
+  /** When true, a Fear cost is reported as a suggestion and the caller never writes the pool. */
+  advisory?: boolean;
 }
 /** `fearSpent` is Fear the engine took from the pool; the caller saves the new value. */
 export interface DualityOutcome { result: SoloResult; question?: string; fearSpent: number }
@@ -99,7 +101,9 @@ class Table {
     return move.value;
   }
   done(title: string, tone: SoloTone, extra: Partial<SoloResult> = {}, question?: string): DualityOutcome {
-    if (this.spent) this.lines.push(`Fear spent: ${this.spent} (${this.fear} left).`);
+    if (this.spent) this.lines.push(this.roll.advisory
+      ? `Suggested Fear cost: ${this.spent} (Fear pool ${this.roll.fear}). Pay it with spend_fear only if you use this move.`
+      : `Fear spent: ${this.spent} (${this.fear} left).`);
     return { result: { title, detail: this.lines.join('\n'), tone, ...extra }, question, fearSpent: this.spent };
   }
 }

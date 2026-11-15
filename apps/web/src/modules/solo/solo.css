@@ -145,6 +145,12 @@
 .solo-ask > button { flex: none; min-height: 44px; }
 .solo-ask .solo-field, .solo-table-roll .solo-field, .solo-result-keep .solo-field, .solo-table-filter { margin-bottom: 0; }
 .solo-field select { font: inherit; font-weight: 400; min-width: 0; width: 100%; min-height: 44px; color: var(--ds-ink); background: var(--ds-inset); padding: 10px 12px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); }
+.solo-dice-mode { display: inline-flex; align-self: flex-start; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); overflow: hidden; }
+.solo-dice-mode button { min-height: 40px; padding: 0 12px; border: 0; background: transparent; color: var(--ds-muted); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.solo-dice-mode button + button { border-left: 1px solid var(--ds-control); }
+.solo-dice-mode button[aria-pressed="true"] { background: var(--ds-brand-soft); color: var(--ds-brand); }
+.solo-dice-fields { display: flex; flex-wrap: wrap; gap: 12px; flex: 1 1 100%; }
+.solo-dice-fields .solo-field { flex: 1 1 110px; margin-bottom: 0; }
 .solo-table-roll { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; padding: 14px 16px 0; }
 .solo-table-roll .solo-field { flex: 0 1 240px; }
 .solo-table > .solo-reference-table { margin-top: 14px; }

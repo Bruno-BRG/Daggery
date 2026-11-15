@@ -56,6 +56,7 @@ export function registerAiRoutes(app: FastifyInstance, options: {
   app.post(base + '/stop', handle(request => { ai.cancel(user(request), campaign(request)); return { stopped: true }; }));
   app.post(base + '/retry', handle(request => ai.retry(user(request), campaign(request), text(record(request.body).turnId, 100))));
   app.post(base + '/messages/:messageId/resolve', handle(request => ai.resolve(user(request), campaign(request), param(request, 'messageId'), request.body)));
+  app.post(base + '/sessions/:chat/free-roll', handle(request => ai.freeRoll(user(request), campaign(request), param(request, 'chat'), request.body)));
   app.post(base + '/canon', handle(request => ai.importCanon(user(request), campaign(request), request.body)));
   app.get(base + '/journal', handle(request => ai.journalPage(user(request), campaign(request), query(request))));
   app.post(base + '/journal', handle(request => ({ entry: ai.addJournal(user(request), campaign(request), request.body) })));

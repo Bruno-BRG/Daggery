@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { adversaries, ancestries, armor, classes, communities, consumables, domainCards, environments, items, transformations, weapons } from '@daggery/content';
-import { hasFeature, maxDiceTotal, rollDice, rollDie, type AiBudget, type AiInteraction, type AiState } from '@daggery/shared';
+import { DUALITY_LIKELIHOODS, DUALITY_MAX_FEAR, DUALITY_MEANING_CHOICES, DUALITY_MOVE_TRIGGERS, DUALITY_TABLES, hasFeature, initialSoloState, maxDiceTotal, rollDice, rollDie, SOLO_TRACKER_LIMIT, type AiBudget, type AiInteraction, type AiState, type SoloResult, type SoloState } from '@daggery/shared';
 import { armorScore, classResourceDefinitions, classResourceValue, evasion, getArmor, getClass, getCommunity, getDomainCard, getSubclass, heritageDisplayName, hpMax, markStress, MAX_HOPE, sheetAncestries, spellcastTraitName, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { SoloService } from '../solo';
+import { rollDuality } from '../solo-duality';
 import { effectiveContextWindow, type ToolDefinition } from './provider';
 import { AiCanon, CANON_KINDS, canonKind } from './canon';
 import { catalogSemantic } from './catalog-index';
@@ -13,13 +14,21 @@ import { AiChats } from './chats';
 import type { EmbeddingIndex } from './embeddings';
 import { CAMPAIGN_FRAMES, findCampaignFrame } from './frames';
 import { AiJournal } from './journal';
+import { AiNpcs, catalogCombatStats, NPC_ATTACK_RANGES, NPC_FEATURE_KINDS, NPC_SEARCH_LIMIT, NPC_STATUSES, NPC_TYPES, npcDocCombatStats, type CombatStats } from './npc';
 import { listSourcebooks, readSourcebookPage, searchSourcebooks } from './sourcebook';
-import { applyStatePatch, emptyState, limitsFor, normalizeState, SECRETS_LIMIT, snapshotFor } from './memory';
+import { applyStatePatch, emptyState, limitsFor, normalizeState, outsideActivityFor, SECRETS_LIMIT, snapshotFor } from './memory';
 import { integer, number, record, text } from './validation';
 
 const s = { type: 'string' }, n = { type: 'number' };
 const schema = (properties: Record<string, unknown>, required: string[] = Object.keys(properties)) => ({ type: 'object', properties, required, additionalProperties: false });
 const tool = (name: string, description: string, properties: Record<string, unknown>, required?: string[]): ToolDefinition => ({ name, description, parameters: schema(properties, required) });
+
+/** Oracle kinds the GM sees, mapped to the engine's roll types. */
+const ORACLE_KINDS = {
+  'yes-no': 'duality-oracle', 'fear-check': 'duality-fear-check', scene: 'duality-scene', 'gm-move': 'duality-move',
+  'random-event': 'duality-event', meaning: 'duality-meaning', adversary: 'duality-adversary', npc: 'duality-npc',
+  plot: 'duality-plot', site: 'duality-site', journey: 'duality-journey', table: 'duality-table', list: 'duality-list',
+} as const;
 
 /** Horde (X): at half or more HP marked, the standard attack deals X instead (Core Rulebook p. 199). */
 function hordeDamage(features: { name: string }[], hpMarked: number, hp: number, base: string): string {
@@ -77,14 +86,61 @@ export const GM_TOOLS: ToolDefinition[] = [
   tool('advance_countdown', 'Advance a relevant countdown by 1–3 once for its cause. Do not charge the same consequence twice.', { countdownId: s, amount: n, reason: s }),
   tool('roll_loot', 'Roll a printed loot table from the Core Set or Additional (Hope & Fear) tables. Rarity sets the allowed d12 pool: Common 1–2d12, Uncommon 2–3d12, Rare 3–4d12, Legendary 4–5d12. Omit dice to use the smaller pool.', { table: { type: 'string', enum: ['items', 'consumables'] }, set: { type: 'string', enum: ['core', 'additional'] }, rarity: { type: 'string', enum: ['Common', 'Uncommon', 'Rare', 'Legendary'] }, dice: n, note: s }, ['table', 'rarity']),
   tool('give_item', 'Give a known catalog item or consumable to a hero. Use this after agreeing the reward; it changes inventory.', { heroId: s, catalogId: s, quantity: n }),
-  tool('solo_oracle', 'Consult the solo oracle or thematic scene engine without changing Hope/Fear. Available only in Solo rulesets.', { kind: { type: 'string', enum: ['oracle', 'scene', 'prompt', 'response'] }, question: s, likelihood: { type: 'string', enum: ['very-likely', 'likely', 'even', 'unlikely', 'very-unlikely'] } }, ['kind', 'question']),
+  tool('consult_oracle', 'Roll the Duality Solo Engine to settle a fact the fiction leaves open: a yes/no question, a GM move, a random event, a scene frame, an NPC, a site, a plot hook, a journey leg, a table cell, a meaning, an adversary spotlight, or a pick from the Threads/NPC lists. It rolls real dice and never changes Hope, Fear, resources, or the table state; a Fear cost in the result is only a suggestion you pay with spend_fear if you use the move. The dice are shown to the players unless hidden is true; set hidden for results the players must discover in play, such as a plot twist, an NPC’s secret, or a fact the heroes cannot know yet. Interpret the result concretely and consistently with canon, the snapshot, and your prep. Prefer yes-no for uncertain facts and the generators to improvise instead of inventing from nothing.', {
+    kind: { type: 'string', enum: Object.keys(ORACLE_KINDS) },
+    question: s,
+    likelihood: { type: 'string', enum: DUALITY_LIKELIHOODS.map(item => item.id) },
+    trigger: { type: 'string', enum: DUALITY_MOVE_TRIGGERS.map(item => item.id) },
+    focus: n,
+    choice: { type: 'string', enum: DUALITY_MEANING_CHOICES.map(item => item.id) },
+    count: n,
+    chain: { type: 'boolean' },
+    tableId: { type: 'string', enum: DUALITY_TABLES.map(item => item.id) },
+    column: n,
+    list: { type: 'string', enum: ['threads', 'characters'] },
+    hidden: { type: 'boolean' },
+  }, ['kind']),
   tool('offer_choices', 'Offer 2–4 possible next actions without choosing for the player. The player can always type something else.', { prompt: s, choices: { type: 'array', items: s, minItems: 2, maxItems: 4 } }),
   tool('withdraw_request', 'Withdraw an obsolete roll or choice card when the player changes their intention. Cannot withdraw already incurred damage. Never use this to reroll a resolved action.', { messageId: s, reason: s }),
+  tool('npc_create', 'Create a secret, full NPC sheet (a playable stat block plus a backstory) that only you can see. Use it only for an NPC who will recur or matter: a patron, rival, villain, companion or faction leader, never a passer-by. The players learn about this NPC only through your narration. The sheet is stored server-side and is never shown to them. Refuses a duplicate active name and caps a campaign at 60 active NPCs. Supply the identity, stats and story; want and voice are required. basedOn optionally names a catalog adversary you adapted.', {
+    name: s, role: s, ancestry: s, community: s, appearance: s, tier: n, type: { type: 'string', enum: [...NPC_TYPES] },
+    difficulty: n, thresholds: { type: 'object', additionalProperties: false, properties: { major: n, severe: n }, required: ['major', 'severe'] },
+    hp: n, stress: n,
+    attack: { type: 'object', additionalProperties: false, properties: { name: s, modifier: n, range: { type: 'string', enum: [...NPC_ATTACK_RANGES] }, damage: s }, required: ['name', 'modifier', 'range', 'damage'] },
+    experiences: { type: 'array', maxItems: 5, items: { type: 'object', additionalProperties: false, properties: { name: s, modifier: n }, required: ['name', 'modifier'] } },
+    features: { type: 'array', maxItems: 6, items: { type: 'object', additionalProperties: false, properties: { name: s, kind: { type: 'string', enum: [...NPC_FEATURE_KINDS] }, text: s, fearCost: n }, required: ['name', 'kind', 'text'] } },
+    basedOn: s,
+    background: s, want: s, fear: s, secret: s, voice: s, motives: s,
+    relationships: { type: 'array', maxItems: 10, items: { type: 'object', additionalProperties: false, properties: { name: s, relation: s }, required: ['name'] } },
+    notes: s, lastSeen: s,
+  }, ['name', 'role', 'tier', 'type', 'difficulty', 'thresholds', 'hp', 'stress', 'attack', 'want', 'voice']),
+  tool('npc_update', 'Update a secret NPC sheet by id. Send only the fields that changed; arrays replace the stored list and attack/thresholds replace the whole object. A status change is allowed (active, dead, missing, retired). Use it when the NPC’s status, lastSeen, relationships, notes or plans change.', {
+    id: s, status: { type: 'string', enum: [...NPC_STATUSES] },
+    name: s, role: s, ancestry: s, community: s, appearance: s, tier: n, type: { type: 'string', enum: [...NPC_TYPES] },
+    difficulty: n, thresholds: { type: 'object', additionalProperties: false, properties: { major: n, severe: n }, required: ['major', 'severe'] },
+    hp: n, stress: n,
+    attack: { type: 'object', additionalProperties: false, properties: { name: s, modifier: n, range: { type: 'string', enum: [...NPC_ATTACK_RANGES] }, damage: s }, required: ['name', 'modifier', 'range', 'damage'] },
+    experiences: { type: 'array', maxItems: 5, items: { type: 'object', additionalProperties: false, properties: { name: s, modifier: n }, required: ['name', 'modifier'] } },
+    features: { type: 'array', maxItems: 6, items: { type: 'object', additionalProperties: false, properties: { name: s, kind: { type: 'string', enum: [...NPC_FEATURE_KINDS] }, text: s, fearCost: n }, required: ['name', 'kind', 'text'] } },
+    basedOn: s,
+    background: s, want: s, fear: s, secret: s, voice: s, motives: s,
+    relationships: { type: 'array', maxItems: 10, items: { type: 'object', additionalProperties: false, properties: { name: s, relation: s }, required: ['name'] } },
+    notes: s, lastSeen: s,
+  }, ['id']),
+  tool('npc_read', 'Read one secret NPC sheet in full by id or exact name (case and accents ignored). Read it before that NPC speaks or acts, so their voice, motives and numbers stay consistent.', { id: s, name: s }, []),
+  tool('npc_search', 'Search your secret NPC sheets by name, role and story text. Returns at most six summaries with id, name, role, status, tier, want and lastSeen. An empty query lists the newest sheets.', { query: s }, []),
+  tool('npc_to_encounter', 'Put a secret NPC into the encounter and the active map, like add_adversary but with the NPC’s own combat stats. The table sees only what a printed adversary token would show: name, HP, Difficulty, thresholds and an attack summary. It never sees the backstory, want, fear, secret, voice or relationships. Use the NPC’s own stats instead of inventing numbers.', { npcId: s, x: n, y: n }, ['npcId']),
 ];
 
 const ACTION_LABELS: Record<string, string> = {
-  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', deal_damage: 'Dealt damage', mark_stress: 'Marked Stress', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
+  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', npc_create: 'Updated GM notes', npc_update: 'Updated GM notes', npc_read: 'Consulted GM notes', npc_search: 'Consulted GM notes', npc_to_encounter: 'Prepared an encounter', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', deal_damage: 'Dealt damage', mark_stress: 'Marked Stress', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', consult_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
 };
+
+/**
+ * Tools whose full result belongs to the model alone. The human-visible activity ledger stores a
+ * neutral result for them, so the campaign owner cannot read an NPC sheet through it.
+ */
+const SECRET_NPC_TOOLS = new Set(['npc_create', 'npc_update', 'npc_read', 'npc_search', 'npc_to_encounter']);
 
 export interface ActionContext {
   campaign: string; owner: string; turn: string; callId: string;
@@ -152,10 +208,20 @@ export class GmActions {
   readonly journal: AiJournal;
   readonly chats: AiChats;
   readonly canon: AiCanon;
+  readonly npcs: AiNpcs;
   constructor(private db: Database.Database, private campaigns: CampaignService, readonly embeddings?: EmbeddingIndex) {
     this.journal = new AiJournal(db, embeddings);
     this.chats = new AiChats(db);
     this.canon = new AiCanon(db, embeddings);
+    this.npcs = new AiNpcs(db);
+  }
+
+  /** Catalog or NPC-backed combat stats for a present adversary document. Never reads NPC story. */
+  combatStats(campaign: string, doc: Record<string, any> | undefined): CombatStats | null {
+    if (!doc || doc.kind !== 'adversary') return null;
+    if (typeof doc.npcId === 'string' && doc.npcId) return npcDocCombatStats(doc);
+    const source = adversaries.find(item => item.id === doc.catalogId);
+    return source ? catalogCombatStats(source) : null;
   }
 
   /** Snippet length for journal and canon searches: larger budgets and context windows get longer hits. */
@@ -191,9 +257,9 @@ export class GmActions {
   writeState(campaign: string, state: AiState): void {
     this.db.prepare('UPDATE campaign_ai SET state = ?, updated = ? WHERE campaign_id = ?').run(JSON.stringify(state), new Date().toISOString(), campaign);
   }
-  snapshot(campaign: string, owner: string): Record<string, unknown> {
+  snapshot(campaign: string, owner: string, chat?: string | null): Record<string, unknown> {
     const solo = hasFeature(this.campaigns.configuration(campaign), 'daggerheart.solo') ? new SoloService(this.db, this.campaigns).snapshot(owner, campaign) : null;
-    return Object.assign(snapshotFor(this.db, this, campaign), { state: this.readState(campaign), solo: solo ? solo.state : null });
+    return Object.assign(snapshotFor(this.db, this, campaign), { state: this.readState(campaign), solo: solo ? solo.state : null, ...(chat ? { outsideActivity: outsideActivityFor(this.db, campaign, chat) } : {}) });
   }
   isHiddenCombat(campaign: string, combatId: string): boolean { return this.hiddenToken(campaign, combatId); }
   /** GM secrets must be text of at most SECRETS_LIMIT characters. Longer text is refused, never cut. */
@@ -260,10 +326,14 @@ export class GmActions {
   execute(name: string, raw: unknown, ctx: ActionContext): unknown {
     ctx.assertActive(); this.campaigns.requireGm(ctx.owner, ctx.campaign);
     const previous = this.db.prepare('SELECT result FROM ai_actions WHERE turn_id = ? AND call_id = ?').get(ctx.turn, ctx.callId) as { result: string } | undefined;
-    if (previous) return JSON.parse(previous.result) as unknown;
+    // Secret NPC reads are redacted in the ledger, so a retried read runs again (it changes nothing)
+    // instead of replaying the neutral ledger text to the model.
+    const rereadNpc = !!previous && (name === 'npc_read' || name === 'npc_search');
+    if (previous && !rereadNpc) return JSON.parse(previous.result) as unknown;
     if (!GM_TOOLS.some(tool => tool.name === name)) throw new Error('Invalid GM tool');
     const args = record(raw), changed: { ns: string; id: string; value: unknown }[] = [];
     const rolls: { kind: string; result: unknown }[] = [];
+    const extra: { ns: string; id: string; value: unknown }[] = [];
     const chat = ctx.chat ? ctx.chat : this.chats.resolveActive(ctx.campaign, null);
     const put = (ns: string, id: string, value: unknown) => { this.write(ctx.campaign, ns, id, value); changed.push({ ns, id, value }); };
     const hero = (id: unknown) => {
@@ -278,7 +348,7 @@ export class GmActions {
     let result: unknown;
     this.db.transaction(() => {
       ctx.assertActive();
-      if (name === 'get_context') result = { ...this.snapshot(ctx.campaign, ctx.owner), preparations: this.preparationDocs(ctx.campaign), assets: this.imageAssets(ctx.campaign) };
+      if (name === 'get_context') result = { ...this.snapshot(ctx.campaign, ctx.owner, chat), preparations: this.preparationDocs(ctx.campaign), assets: this.imageAssets(ctx.campaign) };
       else if (name === 'search_rules') {
         const catalog: Record<string, readonly { id: string }[]> = { adversaries, ancestries, communities, environments, items, consumables, weapons, armor, cards: domainCards, classes, transformations };
         const category = text(args.category, 30), query = text(args.query, 200, '').toLowerCase(), id = text(args.id, 120, '');
@@ -327,16 +397,55 @@ export class GmActions {
       else if (name === 'get_adversary') {
         const id = text(args.adversaryId, 120), doc = this.read<Record<string, any>>(ctx.campaign, 'combat', id);
         const source = doc?.kind === 'adversary' ? adversaries.find(item => item.id === doc.catalogId) : undefined;
-        if (!doc || !source) throw new Error('Invalid adversary');
-        result = {
-          id: source.id, name: source.name, type: source.type, difficulty: source.difficulty,
-          attack: { modifier: source.attack.modifier, damage: source.attack.damage },
-          thresholds: source.thresholds ?? null, hp: source.hp, stress: source.stress,
-          features: source.features.map(feature => ({ name: feature.name, kind: feature.kind, text: feature.text })),
-          adversaryId: id, tableName: doc.name,
-          hpMarked: doc.hpMarked, stressMarked: doc.stressMarked, defeated: doc.defeated ?? 0, groupSize: doc.groupSize ?? null,
-          conditions: Object.keys(doc.conditions ?? {}).filter(key => doc.conditions[key] === true),
+        const npc = doc?.kind === 'adversary' && typeof doc.npcId === 'string' ? this.npcs.get(ctx.campaign, doc.npcId) : undefined;
+        if (!doc || (!source && !npc)) throw new Error('Invalid adversary');
+        const marks = { adversaryId: id, tableName: doc.name, hpMarked: doc.hpMarked, stressMarked: doc.stressMarked, defeated: doc.defeated ?? 0, groupSize: doc.groupSize ?? null, conditions: Object.keys(doc.conditions ?? {}).filter(key => doc.conditions[key] === true) };
+        // An NPC-backed adversary returns only its printed-stat-block fields. Its story and feature
+        // text stay behind npc_read, so this result is safe in the owner-visible activity ledger.
+        result = npc ? {
+          id: npc.id, name: npc.data.identity.name, type: npc.data.identity.type, difficulty: npc.data.stats.difficulty,
+          attack: { modifier: npc.data.stats.attack.modifier, damage: npc.data.stats.attack.damage, range: npc.data.stats.attack.range, name: npc.data.stats.attack.name },
+          thresholds: npc.data.stats.thresholds, hp: npc.data.stats.hp, stress: npc.data.stats.stress,
+          features: [], ...marks,
+        } : {
+          id: source!.id, name: source!.name, type: source!.type, difficulty: source!.difficulty,
+          attack: { modifier: source!.attack.modifier, damage: source!.attack.damage },
+          thresholds: source!.thresholds ?? null, hp: source!.hp, stress: source!.stress,
+          features: source!.features.map(feature => ({ name: feature.name, kind: feature.kind, text: feature.text })),
+          ...marks,
         };
+      }
+      else if (name === 'npc_create') result = this.npcs.create(ctx.campaign, args);
+      else if (name === 'npc_update') result = this.npcs.update(ctx.campaign, args);
+      else if (name === 'npc_read') {
+        const reference = text(args.id, 120, '') || text(args.name, 120, '');
+        if (!reference) throw new Error('Invalid NPC: send an id or an exact name');
+        const npc = this.npcs.resolve(ctx.campaign, reference);
+        if (!npc) throw new Error('Invalid NPC');
+        result = npc;
+      }
+      else if (name === 'npc_search') {
+        result = this.npcs.search(ctx.campaign, text(args.query, 200, ''), NPC_SEARCH_LIMIT).map(record => ({
+          id: record.id, name: record.data.identity.name, role: record.data.identity.role,
+          status: record.status, tier: record.data.identity.tier, want: record.data.story.want, lastSeen: record.data.story.lastSeen,
+        }));
+      }
+      else if (name === 'npc_to_encounter') {
+        const npc = this.npcs.get(ctx.campaign, text(args.npcId, 120));
+        if (!npc) throw new Error('Invalid NPC');
+        const scene = activeScene(), tokenId = randomUUID(), combatId = 'adv:' + randomUUID(), label = npc.data.identity.name;
+        // The synced combat document carries a printed token only: name, HP, Difficulty, thresholds
+        // and an attack summary. The NPC's story is never copied here.
+        put('combat', combatId, {
+          kind: 'adversary', sceneId: scene.id, npcId: npc.id, npcType: npc.data.identity.type, name: label,
+          addedAt: Date.now(), hpMarked: 0, stressMarked: 0, groupSize: npc.data.identity.type === 'Minion' ? 1 : null,
+          defeated: 0, conditions: { vulnerable: false, restrained: false, hidden: false }, counters: [],
+          hpMax: npc.data.stats.hp, difficulty: npc.data.stats.difficulty, thresholds: npc.data.stats.thresholds,
+          attack: { name: npc.data.stats.attack.name, modifier: npc.data.stats.attack.modifier, range: npc.data.stats.attack.range, damage: npc.data.stats.attack.damage },
+        });
+        const x = number(args.x, 0, scene.cols - 1, 3), y = number(args.y, 0, scene.rows - 1, 3);
+        put('map', 'token:' + tokenId, { id: tokenId, name: label, sceneId: scene.id, kind: 'adversary', combatRefId: combatId, x: x * scene.cell, y: y * scene.cell, size: 1, hidden: false, color: '#b1344a', conditions: [], rotation: 0 });
+        result = { tokenId: 'token:' + tokenId, adversaryId: combatId, name: label };
       }
       else if (name === 'set_memory') {
         this.db.prepare('UPDATE campaign_ai SET memory = ?, updated = ? WHERE campaign_id = ?').run(this.secretsText(args.memory), new Date().toISOString(), ctx.campaign); result = { saved: true };
@@ -524,9 +633,9 @@ export class GmActions {
         if (pending) throw new Error('Invalid action: wait for the pending player roll');
         let difficulty = integer(args.difficulty, 1, 40); const enemyId = text(args.enemyId, 120, '');
         if (enemyId) {
-          const enemy = this.read(ctx.campaign, 'combat', enemyId); const source = adversaries.find(item => item.id === enemy?.catalogId);
-          if (!source) throw new Error('Invalid attack target');
-          difficulty = source.difficulty;
+          const enemy = this.read(ctx.campaign, 'combat', enemyId); const stats = this.combatStats(ctx.campaign, enemy);
+          if (!stats) throw new Error('Invalid attack target');
+          difficulty = stats.difficulty;
           const weapon = weaponForSlot(sheet, 'primary'); if (!weapon) throw new Error('Invalid attack: equip a primary weapon');
           trait = weapon.trait.toLowerCase();
           if (trait === 'spellcast') trait = spellcastTraitName(sheet) ?? trait;
@@ -535,16 +644,16 @@ export class GmActions {
         result = { requestId: id, hero: sheet.name, difficulty, waitingForPlayer: true };
       }
       else if (name === 'adversary_attack') {
-        const enemy = this.read(ctx.campaign, 'combat', text(args.adversaryId, 120)), source = adversaries.find(item => item.id === enemy?.catalogId), sheet = hero(args.heroId);
-        if (!enemy || !source || enemy.hpMarked >= source.hp || source.type === 'Minion' && enemy.defeated >= (enemy.groupSize ?? 1)) throw new Error('Invalid or defeated adversary');
+        const enemy = this.read(ctx.campaign, 'combat', text(args.adversaryId, 120)), stats = this.combatStats(ctx.campaign, enemy), sheet = hero(args.heroId);
+        if (!enemy || !stats || enemy.hpMarked >= stats.hp || stats.type === 'Minion' && enemy.defeated >= (enemy.groupSize ?? 1)) throw new Error('Invalid or defeated adversary');
         // Most adversaries have a flat attack modifier; some, like the Outer Realms Abomination, roll dice for it.
-        const rawModifier = source.attack.modifier;
+        const rawModifier = stats.attack.modifier;
         const modifierNotation = typeof rawModifier === 'string' ? rawModifier : String(integer(Number(rawModifier), -30, 30));
         const attack = rollDice('1d20' + (modifierNotation.startsWith('-') ? '' : '+') + modifierNotation); rolls.push({ kind: 'dice', result: attack });
         const hit = attack.rolls[0] === 20 || attack.total >= evasion(sheet);
         let damage = 0;
         if (hit) {
-          const notation = hordeDamage(source.features, enemy.hpMarked, source.hp, source.attack.damage);
+          const notation = hordeDamage(stats.features, enemy.hpMarked, stats.hp, stats.attack.damage);
           const rolled = rollDice(notation); damage = rolled.total;
           if (attack.rolls[0] === 20) damage += maxDiceTotal(notation);
           rolls.push({ kind: 'dice', result: rolled });
@@ -619,8 +728,35 @@ export class GmActions {
         if (existing) existing.qty += qty; else inventory.push({ id: randomUUID(), name: item.name, description: item.description, catalogId: item.id, qty, kind });
         put('sheets', sheet.id, { ...sheet, inventory, updatedAt: new Date().toISOString() }); result = { given: item.name, quantity: qty, hero: sheet.name };
       }
-      else if (name === 'solo_oracle') {
-        result = new SoloService(this.db, this.campaigns).roll(ctx.owner, ctx.campaign, { requestId: randomUUID(), kind: text(args.kind, 30), question: text(args.question, 2000), likelihood: text(args.likelihood, 30, 'even') });
+      else if (name === 'consult_oracle') {
+        const kind = text(args.kind, 30), mapped = (ORACLE_KINDS as Record<string, string>)[kind];
+        if (!mapped) throw new Error('Invalid oracle kind');
+        const question = text(args.question, 2000, '');
+        const solo = hasFeature(this.campaigns.configuration(ctx.campaign), 'daggerheart.solo');
+        const state: SoloState = (solo ? this.read<SoloState>(ctx.campaign, 'solo', 'state') : undefined) ?? initialSoloState();
+        const memory = this.readState(ctx.campaign);
+        if (!(state.threads ?? []).some(item => !item.done)) {
+          state.threads = memory.threads.filter(item => item.status !== 'resolved').slice(0, SOLO_TRACKER_LIMIT).map(item => ({ id: item.id, name: item.title, note: item.note, done: false }));
+        }
+        if (!(state.characters ?? []).some(item => !item.done)) {
+          state.characters = memory.npcs.slice(0, SOLO_TRACKER_LIMIT).map(item => ({ id: item.id, name: item.name, note: item.role, done: false }));
+        }
+        const fear = Math.min(DUALITY_MAX_FEAR, Math.max(0, Math.trunc(Number(this.read<{ value: number }>(ctx.campaign, 'combat', 'fear')?.value) || 0)));
+        const input: Record<string, unknown> = {};
+        for (const key of ['likelihood', 'trigger', 'focus', 'choice', 'count', 'chain', 'tableId', 'column', 'list']) if (args[key] !== undefined) input[key] = args[key];
+        const outcome = rollDuality(mapped, { state, fear, rng: Math.random, input, question, advisory: true });
+        const rolled = outcome.result, asked = (outcome.question ?? '').trim() || kind;
+        // A hidden consult stays with the GM: no transcript line and no Solo log entry the players could read.
+        const hidden = args.hidden === true;
+        if (!hidden) this.message(ctx.campaign, chat, ctx.turn, 'roll', `Oracle · ${asked}: ${rolled.title}\n${rolled.detail.replace(/ Pay it with spend_fear only if you use this move\./g, '')}`);
+        if (solo && !hidden) {
+          const entry = new SoloService(this.db, this.campaigns).recordEntry(ctx.campaign, mapped, outcome.question ?? question, rolled);
+          extra.push({ ns: 'solo', id: 'entry:' + entry.id, value: entry });
+        }
+        const view: Record<string, unknown> = { kind: mapped, title: rolled.title, detail: rolled.detail, tone: rolled.tone };
+        if (outcome.question) view.question = outcome.question;
+        for (const key of ['hope', 'fear', 'total', 'target'] as const) if (rolled[key] !== undefined) view[key] = rolled[key];
+        result = view;
       }
       else if (name === 'offer_choices') {
         if (!Array.isArray(args.choices) || args.choices.length < 2 || args.choices.length > 4) throw new Error('Invalid choices');
@@ -635,11 +771,16 @@ export class GmActions {
         this.message(ctx.campaign, chat, ctx.turn, 'notice', 'Request withdrawn: ' + text(args.reason, 800)); result = { withdrawn: id };
       }
       this.recordEvent(name, args, result, ctx.campaign, chat, ctx.turn);
-      const encoded = JSON.stringify(result ?? { done: true });
-      this.db.prepare('INSERT INTO ai_actions(id,campaign_id,turn_id,call_id,tool,label,result,created) VALUES (?,?,?,?,?,?,?,?)').run(randomUUID(), ctx.campaign, ctx.turn, ctx.callId, name, ACTION_LABELS[name] ?? name, encoded, new Date().toISOString());
+      // Secret NPC tools store a neutral result for the human-visible ledger. The model still gets
+      // the full result from this method's return value (and the private turn checkpoint).
+      // A replayed write only needs the opaque NPC id, so the model can read the sheet again.
+      const npcRef = result && typeof result === 'object' ? (result as Record<string, unknown>).id ?? (result as Record<string, unknown>).npcId : undefined;
+      const encoded = SECRET_NPC_TOOLS.has(name) ? JSON.stringify(typeof npcRef === 'string' && name !== 'npc_read' ? { done: true, npcId: npcRef } : { done: true }) : JSON.stringify(result ?? { done: true });
+      if (!rereadNpc) this.db.prepare('INSERT INTO ai_actions(id,campaign_id,turn_id,call_id,tool,label,result,created) VALUES (?,?,?,?,?,?,?,?)').run(randomUUID(), ctx.campaign, ctx.turn, ctx.callId, name, ACTION_LABELS[name] ?? name, encoded, new Date().toISOString());
     })();
     for (const doc of changed) ctx.publish(ctx.campaign, doc.ns, doc.id, doc.value);
-    for (const roll of rolls) ctx.publishRoll(ctx.campaign, roll.kind, roll.result);
+    for (const doc of extra) ctx.publish(ctx.campaign, doc.ns, doc.id, doc.value);
+    for (const roll of rolls) ctx.publishRoll(ctx.campaign, roll.kind, { ...(roll.result as Record<string, unknown>), aiGm: true });
     return result ?? { done: true };
   }
 }
