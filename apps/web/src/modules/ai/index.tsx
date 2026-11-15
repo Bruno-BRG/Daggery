@@ -321,7 +321,7 @@ export default function Adventure({ author: _author }: { author: string }) {
         <div className="ai-transcript" role="log" aria-label="Adventure messages" ref={transcript} onScroll={event => { const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 60; }}>
           {sameChat && feed.cursor && <div className="ai-earlier"><button type="button" className="daggery-roll-toggle" disabled={olderBusy} onClick={() => void loadOlder()}>{olderBusy ? 'Loading earlier messages…' : 'Load earlier messages'}</button></div>}
           {messages.map(entry => entry.role === 'notice' ? <p key={entry.id} className="ai-notice"><span>{entry.text}</span></p> : <article key={entry.id} className={`ai-message ai-message-${entry.role}`}>
-            <header><strong>{entry.role === 'gm' ? 'Game Master' : entry.role === 'player' ? 'Player' : 'At the dice'}</strong><time dateTime={entry.at}>{timeOf(entry.at)}</time></header>
+            <header><strong>{entry.role === 'gm' ? 'Game Master' : entry.role === 'player' ? 'Player' : entry.role === 'roll' && entry.text.startsWith('Oracle ·') ? 'Oracle' : 'At the dice'}</strong><time dateTime={entry.at}>{timeOf(entry.at)}</time></header>
             <Narration text={entry.text} />
             {entry.interaction && !entry.interaction.resolved && <ActionCard message={entry} sheet={sheets[entry.interaction.heroId ?? '']} disabled={locked || !canWrite} resolve={value => perform(`/messages/${encodeURIComponent(entry.id)}/resolve`, value)} />}
             {entry.interaction?.resolved && <small className="ai-resolved">Resolved</small>}

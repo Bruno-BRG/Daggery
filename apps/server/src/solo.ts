@@ -167,6 +167,15 @@ export class SoloService {
     if (fearAfter) this.publish(campaign, 'combat', 'fear', fearAfter);
     return entry;
   }
+  /**
+   * Stores an oracle entry from the AI GM. It skips the solo authority check because the AI runner
+   * already checked authority; the caller publishes the returned entry.
+   */
+  recordEntry(campaign: string, kind: string, question: string, result: SoloResult): SoloEntry {
+    const entry: SoloEntry = { id: randomUUID(), at: new Date().toISOString(), kind, question, result, interpretation: '', accepted: false, rulesVersion: SOLO_RULES_VERSION };
+    this.write(campaign, 'solo', `entry:${entry.id}`, entry);
+    return entry;
+  }
   /** The current state, for a client to resync after a roll. */
   current(userId: string, campaign: string): SoloState {
     this.authorize(userId, campaign);

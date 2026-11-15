@@ -111,9 +111,8 @@ Typed GM actions cover campaign context, catalog and printed-source searches, so
 page reads, campaign frames, GM secrets, campaign state, journal notes and searches,
 setting and scenario preparation, notes on the Notes page, scenes, miniatures, drawings,
 fog, conditions, spotlight, adversaries, standard attacks, requested hero rolls, Fear
-costs, countdowns, loot, inventory rewards and choices. In Solo campaigns the GM can
-consult the configured oracles, themes and weighted pool. The engine generates the dice
-and provides their results to the model.
+costs, countdowns, loot, inventory rewards, choices and oracle consults. The engine
+generates the dice and provides their results to the model.
 
 Action cards use actual sheet traits, Experience costs, Hope/Fear and critical Stress
 recovery. Basic attacks with an equipped weapon update adversary HP. Incoming damage requires
@@ -123,10 +122,30 @@ handles class/card abilities, special adversary features, reactions, recovery, a
 and death moves through the sheets and tools. The GM can consult source text; arbitrary
 printed abilities are not automatically run.
 
-AI + Solo uses ordinary GM responses and explicit Fear payments. The prompt instructs
-the model to avoid also applying solo automatic Fear spending for the same response.
-The manual Solo workspace remains available. Fictional judgment and pacing remain the
-model's responsibility; not every narrative rule can be enforced mechanically.
+AI + Solo uses ordinary GM responses and explicit Fear payments. The manual Solo workspace
+remains available. Fictional judgment and pacing remain the model's responsibility; not every
+narrative rule can be enforced mechanically.
+
+## Oracles
+
+In every AI campaign, Group or Solo, the GM can roll the Duality Solo Engine with
+`consult_oracle` instead of deciding open facts itself. The kinds are `yes-no` (with a
+likelihood, twists and random events on doubles), `fear-check`, `scene`, `gm-move` (with
+its trigger), `random-event`, `meaning`, `adversary` (and `chain`), `npc`, `plot`, `site`,
+`journey`, `table` (any Duality table and column) and `list` (a d12 pick from Threads or NPCs).
+
+- The engine rolls with the real Fear pool but never writes it. A Fear cost appears as a
+  suggestion, and the GM pays it with `spend_fear` only if it uses the move, so nothing is
+  charged twice.
+- When the Solo tracker's Threads or NPC list has no open line, the pick uses the open and
+  stalled threads and the NPCs from the AI campaign state.
+- Each consult appears in the transcript as an **Oracle** message with the dice and the
+  result, and in Solo campaigns it is also stored in the Solo log. With `hidden: true` (plot
+  twists, NPC secrets) the result goes only to the model: no transcript message and no Solo
+  log entry.
+- The prompt (section "Oracles and randomness", `gm-prompt-5`) tells the GM when to consult,
+  limits consults to two per turn unless a random event chains, and asks it to record durable
+  results in canon. When a player asks the oracle a question, the GM consults it on their behalf.
 
 ## Sessions
 

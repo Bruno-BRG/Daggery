@@ -1,8 +1,10 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
+import { initialSoloState } from '@daggery/shared';
 import { openCampaignDatabase } from './campaign-db';
 import { CampaignService } from './campaign-service';
 import { SoloService } from './solo';
+import { rollDuality } from './solo-duality';
 
 /** A raw rng value that makes rollDie land on `face` of a d12. */
 const face = (value: number) => (value - 0.5) / 12;
@@ -130,6 +132,24 @@ test('generators, journeys, tables and lists roll d12s', async () => {
     assert.equal(fixture.roll('duality-list', { list: 'characters' }).result.title, 'Empty list');
     assert.throws(() => fixture.roll('mythic-oracle', { question: 'Old?', odds: 'likely' }), /Invalid solo roll type/);
   } finally { fixture.close(); }
+});
+
+test('advisory rolls suggest the Fear cost instead of spending it, and only the Fear line differs', () => {
+  const state = initialSoloState();
+  const normal = rollDuality('duality-scene', { state, fear: 6, rng: queue(3, 2), input: {}, question: '' });
+  const advisory = rollDuality('duality-scene', { state, fear: 6, rng: queue(3, 2), input: {}, question: '', advisory: true });
+  assert.equal(normal.fearSpent, 1);
+  assert.equal(advisory.fearSpent, 1, 'the engine still reports what the move would cost');
+  assert.match(normal.result.detail, /Fear spent: 1 \(5 left\)\./);
+  assert.doesNotMatch(normal.result.detail, /Suggested Fear cost/);
+  assert.match(advisory.result.detail, /Suggested Fear cost: 1 \(Fear pool 6\)\. Pay it with spend_fear only if you use this move\./);
+  assert.doesNotMatch(advisory.result.detail, /Fear spent:/);
+  assert.equal(advisory.result.title, normal.result.title);
+  assert.equal(
+    advisory.result.detail.replace('Suggested Fear cost: 1 (Fear pool 6). Pay it with spend_fear only if you use this move.', ''),
+    normal.result.detail.replace('Fear spent: 1 (5 left).', ''),
+    'decisions and every other line are unchanged',
+  );
 });
 
 test('the tracker keeps lists to twelve open lines and saves countdowns', async () => {

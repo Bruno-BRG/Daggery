@@ -690,7 +690,7 @@ export class AiService {
       conversation = await this.prepare(rt, settings, tokens, row.request_id.startsWith('open:') ? OPENING_INSTRUCTION : null);
       save();
     }
-    const tools = GM_TOOLS.filter(tool => tool.name !== 'solo_oracle' || this.campaigns.configuration(rt.campaign).rulesetId === 'solo');
+    const tools = GM_TOOLS;
     const context = { campaign: rt.campaign, owner: rt.owner, turn: rt.turn, chat: rt.chat, assertActive: rt.assertActive, publish: this.publish, publishRoll: this.publishRoll };
     // Semantic recall is computed once per turn; a cold or unavailable model simply falls back to BM25.
     const recallVector = await this.embeddings.embedQuery(this.recallQuery(rt.campaign, rt.chat));

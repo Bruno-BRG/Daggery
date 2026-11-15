@@ -7,7 +7,7 @@ judge how narration reads. Use this checklist with a real key and a live model.
 
 Use a fresh campaign with two or three heroes, at least one personal bond or hook recorded
 in the campaign state or canon. Note the model, the memory size and the prompt version shown
-in the GM request (`gm-prompt-3` at the time of writing).
+in the GM request (`gm-prompt-5` at the time of writing).
 
 ## Scenes
 
@@ -21,6 +21,10 @@ Run these in order, with short player messages.
    stakes, requests named-hero rolls, and resolves damage through the cards.
 4. Resumed session: compact or end and begin a new session, then return to the same
    situation. Note what the recap keeps and what it invents.
+5. Oracle: ask an open question the canon cannot answer ("Is the ferryman still loyal?") and
+   enter an unplanned place. Note whether the GM consults the oracle instead of deciding,
+   respects the answer, interprets the generated NPC or site consistently with canon, and
+   pays any suggested Fear only through a Fear spend.
 
 ## Criteria
 

@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { adversaries, ancestries, armor, classes, communities, consumables, domainCards, environments, items, transformations, weapons } from '@daggery/content';
-import { hasFeature, maxDiceTotal, rollDice, rollDie, type AiBudget, type AiInteraction, type AiState } from '@daggery/shared';
+import { DUALITY_LIKELIHOODS, DUALITY_MAX_FEAR, DUALITY_MEANING_CHOICES, DUALITY_MOVE_TRIGGERS, DUALITY_TABLES, hasFeature, initialSoloState, maxDiceTotal, rollDice, rollDie, SOLO_TRACKER_LIMIT, type AiBudget, type AiInteraction, type AiState, type SoloResult, type SoloState } from '@daggery/shared';
 import { armorScore, classResourceDefinitions, classResourceValue, evasion, getArmor, getClass, getCommunity, getDomainCard, getSubclass, heritageDisplayName, hpMax, markStress, MAX_HOPE, sheetAncestries, spellcastTraitName, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { SoloService } from '../solo';
+import { rollDuality } from '../solo-duality';
 import { effectiveContextWindow, type ToolDefinition } from './provider';
 import { AiCanon, CANON_KINDS, canonKind } from './canon';
 import { catalogSemantic } from './catalog-index';
@@ -20,6 +21,13 @@ import { integer, number, record, text } from './validation';
 const s = { type: 'string' }, n = { type: 'number' };
 const schema = (properties: Record<string, unknown>, required: string[] = Object.keys(properties)) => ({ type: 'object', properties, required, additionalProperties: false });
 const tool = (name: string, description: string, properties: Record<string, unknown>, required?: string[]): ToolDefinition => ({ name, description, parameters: schema(properties, required) });
+
+/** Oracle kinds the GM sees, mapped to the engine's roll types. */
+const ORACLE_KINDS = {
+  'yes-no': 'duality-oracle', 'fear-check': 'duality-fear-check', scene: 'duality-scene', 'gm-move': 'duality-move',
+  'random-event': 'duality-event', meaning: 'duality-meaning', adversary: 'duality-adversary', npc: 'duality-npc',
+  plot: 'duality-plot', site: 'duality-site', journey: 'duality-journey', table: 'duality-table', list: 'duality-list',
+} as const;
 
 /** Horde (X): at half or more HP marked, the standard attack deals X instead (Core Rulebook p. 199). */
 function hordeDamage(features: { name: string }[], hpMarked: number, hp: number, base: string): string {
@@ -77,13 +85,26 @@ export const GM_TOOLS: ToolDefinition[] = [
   tool('advance_countdown', 'Advance a relevant countdown by 1–3 once for its cause. Do not charge the same consequence twice.', { countdownId: s, amount: n, reason: s }),
   tool('roll_loot', 'Roll a printed loot table from the Core Set or Additional (Hope & Fear) tables. Rarity sets the allowed d12 pool: Common 1–2d12, Uncommon 2–3d12, Rare 3–4d12, Legendary 4–5d12. Omit dice to use the smaller pool.', { table: { type: 'string', enum: ['items', 'consumables'] }, set: { type: 'string', enum: ['core', 'additional'] }, rarity: { type: 'string', enum: ['Common', 'Uncommon', 'Rare', 'Legendary'] }, dice: n, note: s }, ['table', 'rarity']),
   tool('give_item', 'Give a known catalog item or consumable to a hero. Use this after agreeing the reward; it changes inventory.', { heroId: s, catalogId: s, quantity: n }),
-  tool('solo_oracle', 'Consult the solo oracle or thematic scene engine without changing Hope/Fear. Available only in Solo rulesets.', { kind: { type: 'string', enum: ['oracle', 'scene', 'prompt', 'response'] }, question: s, likelihood: { type: 'string', enum: ['very-likely', 'likely', 'even', 'unlikely', 'very-unlikely'] } }, ['kind', 'question']),
+  tool('consult_oracle', 'Roll the Duality Solo Engine to settle a fact the fiction leaves open: a yes/no question, a GM move, a random event, a scene frame, an NPC, a site, a plot hook, a journey leg, a table cell, a meaning, an adversary spotlight, or a pick from the Threads/NPC lists. It rolls real dice and never changes Hope, Fear, resources, or the table state; a Fear cost in the result is only a suggestion you pay with spend_fear if you use the move. The dice are shown to the players unless hidden is true; set hidden for results the players must discover in play, such as a plot twist, an NPC’s secret, or a fact the heroes cannot know yet. Interpret the result concretely and consistently with canon, the snapshot, and your prep. Prefer yes-no for uncertain facts and the generators to improvise instead of inventing from nothing.', {
+    kind: { type: 'string', enum: Object.keys(ORACLE_KINDS) },
+    question: s,
+    likelihood: { type: 'string', enum: DUALITY_LIKELIHOODS.map(item => item.id) },
+    trigger: { type: 'string', enum: DUALITY_MOVE_TRIGGERS.map(item => item.id) },
+    focus: n,
+    choice: { type: 'string', enum: DUALITY_MEANING_CHOICES.map(item => item.id) },
+    count: n,
+    chain: { type: 'boolean' },
+    tableId: { type: 'string', enum: DUALITY_TABLES.map(item => item.id) },
+    column: n,
+    list: { type: 'string', enum: ['threads', 'characters'] },
+    hidden: { type: 'boolean' },
+  }, ['kind']),
   tool('offer_choices', 'Offer 2–4 possible next actions without choosing for the player. The player can always type something else.', { prompt: s, choices: { type: 'array', items: s, minItems: 2, maxItems: 4 } }),
   tool('withdraw_request', 'Withdraw an obsolete roll or choice card when the player changes their intention. Cannot withdraw already incurred damage. Never use this to reroll a resolved action.', { messageId: s, reason: s }),
 ];
 
 const ACTION_LABELS: Record<string, string> = {
-  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', deal_damage: 'Dealt damage', mark_stress: 'Marked Stress', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', solo_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
+  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', deal_damage: 'Dealt damage', mark_stress: 'Marked Stress', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', consult_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
 };
 
 export interface ActionContext {
@@ -264,6 +285,7 @@ export class GmActions {
     if (!GM_TOOLS.some(tool => tool.name === name)) throw new Error('Invalid GM tool');
     const args = record(raw), changed: { ns: string; id: string; value: unknown }[] = [];
     const rolls: { kind: string; result: unknown }[] = [];
+    const extra: { ns: string; id: string; value: unknown }[] = [];
     const chat = ctx.chat ? ctx.chat : this.chats.resolveActive(ctx.campaign, null);
     const put = (ns: string, id: string, value: unknown) => { this.write(ctx.campaign, ns, id, value); changed.push({ ns, id, value }); };
     const hero = (id: unknown) => {
@@ -619,8 +641,35 @@ export class GmActions {
         if (existing) existing.qty += qty; else inventory.push({ id: randomUUID(), name: item.name, description: item.description, catalogId: item.id, qty, kind });
         put('sheets', sheet.id, { ...sheet, inventory, updatedAt: new Date().toISOString() }); result = { given: item.name, quantity: qty, hero: sheet.name };
       }
-      else if (name === 'solo_oracle') {
-        result = new SoloService(this.db, this.campaigns).roll(ctx.owner, ctx.campaign, { requestId: randomUUID(), kind: text(args.kind, 30), question: text(args.question, 2000), likelihood: text(args.likelihood, 30, 'even') });
+      else if (name === 'consult_oracle') {
+        const kind = text(args.kind, 30), mapped = (ORACLE_KINDS as Record<string, string>)[kind];
+        if (!mapped) throw new Error('Invalid oracle kind');
+        const question = text(args.question, 2000, '');
+        const solo = hasFeature(this.campaigns.configuration(ctx.campaign), 'daggerheart.solo');
+        const state: SoloState = (solo ? this.read<SoloState>(ctx.campaign, 'solo', 'state') : undefined) ?? initialSoloState();
+        const memory = this.readState(ctx.campaign);
+        if (!(state.threads ?? []).some(item => !item.done)) {
+          state.threads = memory.threads.filter(item => item.status !== 'resolved').slice(0, SOLO_TRACKER_LIMIT).map(item => ({ id: item.id, name: item.title, note: item.note, done: false }));
+        }
+        if (!(state.characters ?? []).some(item => !item.done)) {
+          state.characters = memory.npcs.slice(0, SOLO_TRACKER_LIMIT).map(item => ({ id: item.id, name: item.name, note: item.role, done: false }));
+        }
+        const fear = Math.min(DUALITY_MAX_FEAR, Math.max(0, Math.trunc(Number(this.read<{ value: number }>(ctx.campaign, 'combat', 'fear')?.value) || 0)));
+        const input: Record<string, unknown> = {};
+        for (const key of ['likelihood', 'trigger', 'focus', 'choice', 'count', 'chain', 'tableId', 'column', 'list']) if (args[key] !== undefined) input[key] = args[key];
+        const outcome = rollDuality(mapped, { state, fear, rng: Math.random, input, question, advisory: true });
+        const rolled = outcome.result, asked = (outcome.question ?? '').trim() || kind;
+        // A hidden consult stays with the GM: no transcript line and no Solo log entry the players could read.
+        const hidden = args.hidden === true;
+        if (!hidden) this.message(ctx.campaign, chat, ctx.turn, 'roll', `Oracle · ${asked}: ${rolled.title}\n${rolled.detail.replace(/ Pay it with spend_fear only if you use this move\./g, '')}`);
+        if (solo && !hidden) {
+          const entry = new SoloService(this.db, this.campaigns).recordEntry(ctx.campaign, mapped, outcome.question ?? question, rolled);
+          extra.push({ ns: 'solo', id: 'entry:' + entry.id, value: entry });
+        }
+        const view: Record<string, unknown> = { kind: mapped, title: rolled.title, detail: rolled.detail, tone: rolled.tone };
+        if (outcome.question) view.question = outcome.question;
+        for (const key of ['hope', 'fear', 'total', 'target'] as const) if (rolled[key] !== undefined) view[key] = rolled[key];
+        result = view;
       }
       else if (name === 'offer_choices') {
         if (!Array.isArray(args.choices) || args.choices.length < 2 || args.choices.length > 4) throw new Error('Invalid choices');
@@ -639,6 +688,7 @@ export class GmActions {
       this.db.prepare('INSERT INTO ai_actions(id,campaign_id,turn_id,call_id,tool,label,result,created) VALUES (?,?,?,?,?,?,?,?)').run(randomUUID(), ctx.campaign, ctx.turn, ctx.callId, name, ACTION_LABELS[name] ?? name, encoded, new Date().toISOString());
     })();
     for (const doc of changed) ctx.publish(ctx.campaign, doc.ns, doc.id, doc.value);
+    for (const doc of extra) ctx.publish(ctx.campaign, doc.ns, doc.id, doc.value);
     for (const roll of rolls) ctx.publishRoll(ctx.campaign, roll.kind, roll.result);
     return result ?? { done: true };
   }
