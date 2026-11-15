@@ -16,6 +16,7 @@ import { ModelProvider, PROVIDERS, ProviderError, effectiveContextWindow, type M
 import { CAMPAIGN_FRAMES, findCampaignFrame, framePrompt } from './frames';
 import { COMPACT_TAIL, COMPACT_TRIGGER, MESSAGE_CHARS, SECRETS_LIMIT, TOOL_RESULT_CHARS, budgetTable, budgetTokens, emptyState, estimateTokens, fitJson, fitMemory, limitsFor, renderState, shorten, snapshotText, type MemoryPart } from './memory';
 import { COMPACTION_PROMPT, GM_PROMPT, GM_PROMPT_VERSION, OPENING_INSTRUCTION } from './prompts';
+import { renderNpcList } from './npc';
 import { hasQueryTerms } from './retrieval';
 import { QUICK_CLASSES, quickHero } from './daggerheart';
 import { SecretVault } from './vault';
@@ -39,7 +40,7 @@ const TURN_ACTIONS = 24;
 /** Tools whose query is embedded for hybrid (BM25 + semantic) retrieval. */
 const SEMANTIC_TOOLS = new Set(['search_journal', 'canon_search', 'search_sourcebook', 'search_rules']);
 /** Canon reads return a whole source record, so they get room for a full body plus its metadata. */
-const TOOL_RESULT_OVERRIDES: Record<string, number> = { canon_read: 9000, canon_write: 9000, search_sourcebook: 12000, read_sourcebook_page: 9000, load_campaign_frame: 9000 };
+const TOOL_RESULT_OVERRIDES: Record<string, number> = { canon_read: 9000, canon_write: 9000, search_sourcebook: 12000, read_sourcebook_page: 9000, load_campaign_frame: 9000, npc_read: 12000, npc_create: 12000, npc_update: 12000 };
 /** The whole turn, including its compaction rounds, must finish within this time. */
 const TURN_TIMEOUT_MS = 300000;
 const TRANSCRIPT_PAGE = 60;
@@ -844,6 +845,10 @@ export class AiService {
     if (preparation) parts.push({ kind: 'preparation', text: preparation });
     const canon = this.canonPart(campaign, limits.canonChars);
     if (canon) parts.push({ kind: 'canon', text: canon });
+    // Secret NPCs are listed like canon titles. The block is dropped with the recall block when
+    // memory is tight, before canon or the secrets are shortened.
+    const npcs = renderNpcList(this.actions.npcs.active(campaign), limits.npcChars);
+    if (npcs) parts.push({ kind: 'npcs', text: npcs });
     const chapters = this.journal.recentChapters(campaign, limits.chapters);
     // Recall must not repeat chapters that are already in the memory block.
     const recall = this.recallPart(campaign, chat, limits.recallChars, new Set(chapters.map(chapter => chapter.id)), queryVector);
@@ -878,7 +883,10 @@ export class AiService {
     const journal = this.actions.journal.search(campaign, true, query, 20, { snippetChars: 260, minScore: RECALL_MIN_SCORE, queryVector }).filter(entry => !excludeJournal.has(entry.id)).slice(0, 6);
     // Rules the words may have missed: a handful of catalog entries retrieved by meaning.
     const rules = queryVector ? catalogSemantic(queryVector, { limit: 2, minSimilarity: 0.45 }) : [];
-    if (!canon.length && !journal.length && !rules.length) return null;
+    // A secret NPC named in the latest player messages or the active scene: voice and motives help
+    // the GM keep them consistent. At most three NPCs, 500 characters each.
+    const npcs = this.actions.npcs.mentioned(campaign, this.npcMentionText(campaign, chat), 3);
+    if (!canon.length && !journal.length && !rules.length && !npcs.length) return null;
     const lines = ['Relevant memory (recall; use canon_read or journal_read for the full text):'];
     if (canon.length) {
       lines.push('Canon:');
@@ -896,8 +904,22 @@ export class AiService {
       lines.push('Rules (call search_rules with the category and id for details):');
       for (const hit of rules) lines.push('- [' + hit.entry.category + '] ' + hit.entry.name + ' (id ' + hit.entry.id + ')');
     }
+    if (npcs.length) {
+      lines.push('Secret NPCs in play (GM only; keep their voice, want and motives consistent):');
+      for (const npc of npcs) {
+        const detail = ['voice: ' + npc.data.story.voice, 'want: ' + npc.data.story.want, 'motives: ' + npc.data.story.motives]
+          .filter(value => !value.endsWith(': ')).join('; ');
+        lines.push('- ' + npc.data.identity.name + ' (id ' + npc.id + '): ' + oneLine(detail).slice(0, 500));
+      }
+    }
     const text = shorten(lines.join(NL), room, '(relevant memory shortened to fit the memory limit)');
     return text ? { kind: 'recall', text } : null;
+  }
+
+  /** The latest player messages and the active scene name, used to notice a secret NPC by name. */
+  private npcMentionText(campaign: string, chat: string): string {
+    const recent = this.db.prepare("SELECT text FROM ai_messages WHERE chat_id = ? AND role = 'player' ORDER BY rowid DESC LIMIT 3").all(chat) as { text: string }[];
+    return [...recent.map(item => item.text), this.activeSceneName(campaign)].join(' ').slice(0, 1200);
   }
 
   /** The recall query: latest player messages plus location, objective, open threads and the scene. */
@@ -1138,8 +1160,8 @@ export class AiService {
           eventHidden = !!interaction.enemyId && this.actions.isHiddenCombat(campaign, interaction.enemyId);
           if (success && weapon && interaction.enemyId) {
             const enemy = this.actions.read<Record<string, any>>(campaign, 'combat', interaction.enemyId);
-            const source = adversaries.find(entry => entry.id === enemy?.catalogId);
-            if (!enemy || !source) throw new Error('Invalid attack target');
+            const stats = this.actions.combatStats(campaign, enemy);
+            if (!enemy || !stats) throw new Error('Invalid attack target');
             const notation = weaponDamageNotation(sheet, weapon);
             let damage: DiceRoll;
             if (damageFaces) {
@@ -1155,24 +1177,24 @@ export class AiService {
             }
             const total = damage.total + (rolled.critical ? maxDiceTotal(notation) : 0);
             dice.push({ kind: 'dice', result: damage });
-            if (source.type === 'Minion') {
-              const match = source.features.find(feature => /^Minion \(/.test(feature.name))?.name.match(/\((\d+)\)/);
+            if (stats.type === 'Minion') {
+              const match = stats.features.find(feature => /^Minion \(/.test(feature.name))?.name.match(/\((\d+)\)/);
               enemy.defeated = Math.min(enemy.groupSize ?? 1, enemy.defeated + (total > 0 ? 1 + Math.floor(total / Number(match?.[1] ?? Infinity)) : 0));
             } else {
-              const thresholds = source.thresholds;
+              const thresholds = stats.thresholds;
               const marks = total <= 0 ? 0 : thresholds ? (thresholds.severe !== null && total >= thresholds.severe ? 3 : total >= thresholds.major ? 2 : 1) : 1;
-              enemy.hpMarked = Math.min(source.hp, enemy.hpMarked + marks);
+              enemy.hpMarked = Math.min(stats.hp, enemy.hpMarked + marks);
             }
             // Ranger's Focus: the success makes this adversary the Focus. A hero already focusing
             // this target keeps it. Damaging the Focus forces it to mark 1 Stress.
             const wasFocused = focusTargetId(sheet) === interaction.enemyId;
             if (focus) sheet = setFocusTarget(sheet, interaction.enemyId);
             const focused = focus || wasFocused;
-            if (focused && total > 0) enemy.stressMarked = Math.min(source.stress ?? Infinity, (enemy.stressMarked ?? 0) + 1);
+            if (focused && total > 0) enemy.stressMarked = Math.min(stats.stress ?? Infinity, (enemy.stressMarked ?? 0) + 1);
             put('combat', interaction.enemyId, enemy);
-            resultText += ' ' + weapon.name + ' deals ' + String(total) + ' damage to ' + String(enemy.name) + '; marked HP ' + String(enemy.hpMarked) + '/' + String(source.hp) + '.';
+            resultText += ' ' + weapon.name + ' deals ' + String(total) + ' damage to ' + String(enemy.name) + '; marked HP ' + String(enemy.hpMarked) + '/' + String(stats.hp) + '.';
             if (focused && total > 0) resultText += ' The Focused target marks 1 Stress.';
-            const defeated = source.type === 'Minion' ? (enemy.defeated ?? 0) >= (enemy.groupSize ?? 1) : enemy.hpMarked >= source.hp;
+            const defeated = stats.type === 'Minion' ? (enemy.defeated ?? 0) >= (enemy.groupSize ?? 1) : enemy.hpMarked >= stats.hp;
             if (defeated) {
               // The printed Focus ends when its target is defeated; clear it wherever it points here.
               sheet = clearFocusTarget(sheet);

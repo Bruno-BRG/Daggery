@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
  * the old tables and never exposes these new ones.
  */
 export const LEGACY_CAMPAIGN_ID = 'legacy-unclaimed';
-export const CURRENT_VERSION = 9;
+export const CURRENT_VERSION = 10;
 
 /** Schema 6 adds AI sessions and the adventure journal. It only adds tables and columns, then backfills Session 1 for each AI campaign. Every step is idempotent. */
 function migrateAiSessions(db: Database.Database): void {
@@ -282,6 +282,23 @@ export function migrateCampaignDatabase(db: Database.Database): void {
           PRIMARY KEY(campaign_id, kind, ref_id)
         );
         CREATE INDEX IF NOT EXISTS ai_embeddings_kind ON ai_embeddings(campaign_id, kind);
+      `);
+    }
+    // Version 10 adds the secret NPC sheets. This table is server only: no route reads it and no
+    // synced document mirrors it. The campaign foreign key cascades, so deleting a campaign removes
+    // the sheets with it.
+    if (version < 10) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ai_npcs (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','dead','missing','retired')),
+          data TEXT NOT NULL,
+          created TEXT NOT NULL,
+          updated TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ai_npcs_campaign ON ai_npcs(campaign_id);
       `);
     }
   })();

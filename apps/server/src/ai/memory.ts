@@ -30,26 +30,28 @@ export interface MemoryLimits {
   memoryChars: number; chapters: number; prepChars: number; stateChars: number;
   /** Room for the active canon title list in the prompt. */
   canonChars: number;
+  /** Room for the secret NPC list in the prompt. It scales like the canon title list. */
+  npcChars: number;
   /** Room for the proactive recall block. */
   recallChars: number;
   /** Characters returned per search hit by search_journal and canon_search. */
   snippetChars: number;
 }
-const BASE_LIMITS: MemoryLimits = { memoryChars: MEMORY_CHARS, chapters: 3, prepChars: PREP_CHARS, stateChars: STATE_CHARS, canonChars: 1500, recallChars: 2400, snippetChars: 600 };
-const MAXIMUM_LIMITS: MemoryLimits = { memoryChars: 60000, chapters: 12, prepChars: 12000, stateChars: 20000, canonChars: 6000, recallChars: 5000, snippetChars: 1500 };
+const BASE_LIMITS: MemoryLimits = { memoryChars: MEMORY_CHARS, chapters: 3, prepChars: PREP_CHARS, stateChars: STATE_CHARS, canonChars: 1500, npcChars: 1500, recallChars: 2400, snippetChars: 600 };
+const MAXIMUM_LIMITS: MemoryLimits = { memoryChars: 60000, chapters: 12, prepChars: 12000, stateChars: 20000, canonChars: 6000, npcChars: 6000, recallChars: 5000, snippetChars: 1500 };
 /** From this context window on, Balanced and Rich get more room than the fixed tiers. */
 export const MID_CONTEXT_WINDOW = 80_000;
 /** A very large window (DeepSeek V4's 1M) gets the largest memory caps. */
 export const LARGE_CONTEXT_WINDOW = 200_000;
 const MID_LIMITS: Record<Exclude<AiBudget, 'lean'>, MemoryLimits> = {
-  balanced: { memoryChars: 30000, chapters: 6, prepChars: 6000, stateChars: 11000, canonChars: 3500, recallChars: 3200, snippetChars: 1000 },
-  rich: { memoryChars: 45000, chapters: 9, prepChars: 9000, stateChars: 16000, canonChars: 5500, recallChars: 4200, snippetChars: 1200 },
-  maximum: { memoryChars: 100000, chapters: 18, prepChars: 20000, stateChars: 32000, canonChars: 10000, recallChars: 7000, snippetChars: 1500 },
+  balanced: { memoryChars: 30000, chapters: 6, prepChars: 6000, stateChars: 11000, canonChars: 3500, npcChars: 3500, recallChars: 3200, snippetChars: 1000 },
+  rich: { memoryChars: 45000, chapters: 9, prepChars: 9000, stateChars: 16000, canonChars: 5500, npcChars: 5500, recallChars: 4200, snippetChars: 1200 },
+  maximum: { memoryChars: 100000, chapters: 18, prepChars: 20000, stateChars: 32000, canonChars: 10000, npcChars: 10000, recallChars: 7000, snippetChars: 1500 },
 };
 const LARGE_LIMITS: Record<Exclude<AiBudget, 'lean'>, MemoryLimits> = {
-  balanced: { memoryChars: 42000, chapters: 9, prepChars: 9000, stateChars: 15000, canonChars: 5000, recallChars: 4000, snippetChars: 1200 },
-  rich: { memoryChars: 65000, chapters: 14, prepChars: 14000, stateChars: 22000, canonChars: 8000, recallChars: 6000, snippetChars: 1500 },
-  maximum: { memoryChars: 150000, chapters: 30, prepChars: 30000, stateChars: 50000, canonChars: 16000, recallChars: 10000, snippetChars: 1500 },
+  balanced: { memoryChars: 42000, chapters: 9, prepChars: 9000, stateChars: 15000, canonChars: 5000, npcChars: 5000, recallChars: 4000, snippetChars: 1200 },
+  rich: { memoryChars: 65000, chapters: 14, prepChars: 14000, stateChars: 22000, canonChars: 8000, npcChars: 8000, recallChars: 6000, snippetChars: 1500 },
+  maximum: { memoryChars: 150000, chapters: 30, prepChars: 30000, stateChars: 50000, canonChars: 16000, npcChars: 16000, recallChars: 10000, snippetChars: 1500 },
 };
 
 /** Memory caps for one budget and context window. An unknown window (0) keeps the original fixed caps. */
@@ -195,7 +197,7 @@ export function snapshotFor(db: Database.Database, source: DocSource, campaign: 
   const present = combat.filter(doc => doc.value.kind === 'adversary' && (!scene || doc.value.sceneId === scene.id)).slice(0, 12).map(doc => {
     const catalog = adversaries.find(item => item.id === doc.value.catalogId);
     const conditions = Object.keys(doc.value.conditions ?? {}).filter(key => doc.value.conditions[key] === true);
-    return { id: doc.id, name: doc.value.name, hpMarked: doc.value.hpMarked, hpMax: catalog?.hp ?? null, defeated: doc.value.defeated ?? 0, groupSize: doc.value.groupSize ?? null, conditions };
+    return { id: doc.id, name: doc.value.name, hpMarked: doc.value.hpMarked, hpMax: catalog?.hp ?? (typeof doc.value.hpMax === 'number' ? doc.value.hpMax : null), defeated: doc.value.defeated ?? 0, groupSize: doc.value.groupSize ?? null, conditions };
   });
   const cards = db.prepare("SELECT id, interaction FROM ai_messages WHERE campaign_id = ? AND interaction IS NOT NULL AND json_extract(interaction, '$.resolved') = 0 ORDER BY rowid DESC LIMIT 5").all(campaign) as { id: string; interaction: string }[];
   return {
@@ -252,7 +254,7 @@ export function outsideActivityFor(db: Database.Database, campaign: string, chat
   return [...rolls, ...solo].sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0).slice(-limit);
 }
 
-export interface MemoryPart { kind: 'setup' | 'preparation' | 'canon' | 'recall' | 'digest' | 'chapter' | 'secrets' | 'state' | 'summary' | 'resume'; text: string }
+export interface MemoryPart { kind: 'setup' | 'preparation' | 'canon' | 'npcs' | 'recall' | 'digest' | 'chapter' | 'secrets' | 'state' | 'summary' | 'resume'; text: string }
 
 /** Cuts text to at most room characters and ends it with a note. The first lines are kept. */
 export function shorten(text: string, room: number, note: string): string {
@@ -263,8 +265,8 @@ export function shorten(text: string, room: number, note: string): string {
 
 /**
  * Keeps the memory parts within maxChars. Older chapters go first, then the proactive recall block
- * is dropped whole (it is a convenience, not canon), and only then are canon titles, preparations
- * and secrets shortened.
+ * and the secret NPC list are dropped whole (they are convenience lists, not canon), and only then
+ * are canon titles, preparations and secrets shortened.
  */
 export function fitMemory(parts: MemoryPart[], maxChars: number): MemoryPart[] {
   const kept = parts.map(part => ({ ...part }));
@@ -275,8 +277,11 @@ export function fitMemory(parts: MemoryPart[], maxChars: number): MemoryPart[] {
     kept.splice(oldest, 1);
   }
   if (total() > maxChars) {
-    const recall = kept.findIndex(part => part.kind === 'recall');
-    if (recall >= 0) kept.splice(recall, 1);
+    // The NPC list shares the recall block's priority: both go before canon or secrets are cut.
+    for (const kind of ['recall', 'npcs'] as const) {
+      const index = kept.findIndex(part => part.kind === kind);
+      if (index >= 0) kept.splice(index, 1);
+    }
   }
   const notes = { canon: '(canon titles shortened to fit the memory limit)', preparation: '(preparations shortened to fit the memory limit)', secrets: '(GM secrets shortened to fit the memory limit)' };
   for (const kind of ['canon', 'preparation', 'secrets'] as const) {

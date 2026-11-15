@@ -160,7 +160,7 @@ its trigger), `random-event`, `meaning`, `adversary` (and `chain`), `npc`, `plot
   result, and in Solo campaigns it is also stored in the Solo log. With `hidden: true` (plot
   twists, NPC secrets) the result goes only to the model: no transcript message and no Solo
   log entry.
-- The prompt (section "Oracles and randomness", `gm-prompt-6`) tells the GM when to consult,
+- The prompt (section "Oracles and randomness", `gm-prompt-7`) tells the GM when to consult,
   limits consults to two per turn unless a random event chains, and asks it to record durable
   results in canon. When a player asks the oracle a question, the GM consults it on their behalf.
 
@@ -213,6 +213,32 @@ filtered by kind and searched by text. The GM can search the journal with `searc
 That search covers every entry, including those visible only to the owner. It returns four
 results by default and never more than six, with each body trimmed to 600 characters.
 
+## Secret NPCs
+
+The GM can build full character sheets for important NPCs: a playable stat block plus a
+backstory, kept on the server so the NPC stays consistent in voice, motives and numbers. A sheet
+is created with `npc_create`, changed with `npc_update`, read with `npc_read` and found with
+`npc_search`. It covers identity (name, role, ancestry, community, appearance, tier, adversary
+type), stats (Difficulty, damage thresholds, HP, Stress, an attack, Experiences, features and an
+optional `basedOn` catalog adversary) and story (background, want, fear, secret, voice, motives
+and tactics, relationships, notes, last seen). The server validates every field and clips lengths.
+
+Sheets live only in the SQLite table `ai_npcs`, added by schema version 10. The table is server
+only: no HTTP route reads it, no campaign document is synced from it, and deleting a campaign
+removes its rows through the campaign foreign key. A campaign may hold 60 active NPCs; dead,
+missing and retired sheets stay readable but do not count toward that cap. An active NPC name
+must be unique in the campaign, compared case- and accent-insensitively.
+
+Privacy is the point of the feature. The players, including the campaign owner, learn about a
+secret NPC only through the GM's narration. Every `npc_*` tool stores a neutral result
+(`{ "done": true }`) and a neutral label in the owner-visible activity ledger; the model still
+receives the full result, which is checkpointed privately for retry and never returned by a
+route. No journal event is written for an `npc_*` tool. When the GM puts an NPC into an encounter
+with `npc_to_encounter`, the synced combat document and map token carry only what a printed
+adversary token would show: the name, current and maximum HP, Difficulty, damage thresholds and
+an attack summary. The backstory, want, fear, secret, voice, relationships and notes are never
+copied there. That combat snapshot is the feature's one intentional exposure.
+
 ## Memory and compaction
 
 Each GM request starts with the static GM prompt, and the tool schemas are sent with it. The
@@ -222,19 +248,23 @@ blocks below follow as system messages, in this order:
 2. GM preparations: the setting and the two newest scenarios. See below.
 3. Canon: the active entry titles, newest first, with their IDs. The room for this list scales
    with the model's context window (about 1,500 characters by default, more on a large model).
-4. Relevant memory: proactive recall of at most six canon entries and six journal entries that
+4. Secret NPCs: one line per active sheet, `name — role — want (id …)`, newest updated first. The
+   room scales like the canon title list. See [Secret NPCs](#secret-npcs).
+5. Relevant memory: proactive recall of at most six canon entries and six journal entries that
    match the latest player messages, the location, the objective, the open thread titles and the
    active scene. Each hit carries its ID, and journal hits also carry their session label and
-   date. The block is left out when nothing scores above the recall threshold.
-5. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
-6. The recent chapters (three by default; more when the context window allows).
-7. The GM secrets and plans, visible only to the owner.
-8. The campaign state, visible only to the owner.
-9. The session summary, a working summary of the current session of up to 300 words. When the
-   current session has no summary yet, the newest previous session summary appears instead, so
-   the opening recap can use it.
-10. The recent messages of the session that fit in the budget.
-11. The table snapshot, which comes last on every request.
+   date. When the latest player messages or the active scene name a secret NPC, the block also
+   carries that NPC's voice, want and motives (at most three NPCs, 500 characters each). The block
+   is left out when nothing scores above the recall threshold.
+6. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
+7. The recent chapters (three by default; more when the context window allows).
+8. The GM secrets and plans, visible only to the owner.
+9. The campaign state, visible only to the owner.
+10. The session summary, a working summary of the current session of up to 300 words. When the
+    current session has no summary yet, the newest previous session summary appears instead, so
+    the opening recap can use it.
+11. The recent messages of the session that fit in the budget.
+12. The table snapshot, which comes last on every request.
 
 The blocks are rebuilt on every request, so changes apply at once.
 
@@ -267,8 +297,9 @@ state up to 6,000 characters, and the session summary up to 2,000 characters.
 
 Lean, Balanced and Rich stay within 17,000 characters by default, about 4,860 estimated tokens;
 Maximum allows 60,000. When the blocks are over that cap, the oldest chapter goes first, one at
-a time, until they fit. The proactive recall block is dropped whole next, before any durable
-text is touched. If they are still over after every chapter and the recall block have gone, the
+a time, until they fit. The proactive recall block and the secret NPC list are dropped whole next,
+before any durable text is touched. If they are still over after every chapter and those two
+blocks have gone, the
 preparations block and then the canon title list are cut, each ending with a note that says it
 was shortened, and the secrets are shortened last. The setup, the digest, the campaign state
 and the session summary are never trimmed by the cap.
@@ -465,7 +496,8 @@ server creates `ai-keyring.key` in `DAGGERY_DATA_DIR`. Keep it private and **bac
 with the database**. Losing or replacing it requires entering the provider keys again. Do
 not commit it. Schema migrations 4, 5 and 6 add AI tables, checkpoints, sessions and the
 journal. Migration 6 gives each existing AI campaign one session named Session 1 and moves
-its existing messages into that session. Existing campaign data and the database backup
+its existing messages into that session. Migration 7 adds canon, 9 the semantic index and 10 the
+secret NPC sheets (`ai_npcs`). Existing campaign data and the database backup
 made before a migration are preserved.
 
 The runner has no account, invitation or tools for campaign administration. Each request
