@@ -17,6 +17,7 @@ import { CAMPAIGN_FRAMES, findCampaignFrame, framePrompt } from './frames';
 import { COMPACT_TAIL, COMPACT_TRIGGER, MESSAGE_CHARS, SECRETS_LIMIT, TOOL_RESULT_CHARS, budgetTable, budgetTokens, emptyState, estimateTokens, fitJson, fitMemory, limitsFor, renderState, shorten, snapshotText, type MemoryPart } from './memory';
 import { COMPACTION_PROMPT, GM_PROMPT, GM_PROMPT_VERSION, OPENING_INSTRUCTION } from './prompts';
 import { renderNpcList } from './npc';
+import { renderClueList } from './clues';
 import { hasQueryTerms } from './retrieval';
 import { QUICK_CLASSES, quickHero } from './daggerheart';
 import { SecretVault } from './vault';
@@ -849,6 +850,10 @@ export class AiService {
     // memory is tight, before canon or the secrets are shortened.
     const npcs = renderNpcList(this.actions.npcs.active(campaign), limits.npcChars);
     if (npcs) parts.push({ kind: 'npcs', text: npcs });
+    // The open clue ledger is listed like the secret NPCs. It is dropped with the recall block and
+    // the NPC list when memory is tight, before canon or the secrets are shortened.
+    const clues = renderClueList(this.actions.clues.open(campaign), limits.clueChars);
+    if (clues) parts.push({ kind: 'clues', text: clues });
     const chapters = this.journal.recentChapters(campaign, limits.chapters);
     // Recall must not repeat chapters that are already in the memory block.
     const recall = this.recallPart(campaign, chat, limits.recallChars, new Set(chapters.map(chapter => chapter.id)), queryVector);

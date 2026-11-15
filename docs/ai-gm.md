@@ -239,6 +239,33 @@ adversary token would show: the name, current and maximum HP, Difficulty, damage
 an attack summary. The backstory, want, fear, secret, voice, relationships and notes are never
 copied there. That combat snapshot is the feature's one intentional exposure.
 
+## Clues and foreshadowing
+
+The GM keeps a ledger of the hints it plants so it can pay them off instead of forgetting them. A
+clue is recorded with `clue_plant` at the moment it is narrated, changed with `clue_update`, and
+listed with `clue_list` (oldest first, at most 30 entries). Each entry has a kind (`clue`,
+`foreshadowing` or `mystery`), what the
+players actually saw (`shown`), the hidden truth it points to (`truth`), an optional thread ID and
+NPC ID, a status (`planted`, `found`, `paid-off` or `abandoned`), the session and time it was
+planted, and a payoff note. `clue_update` edits only the supplied fields; links can be cleared with
+an empty string.
+
+Clues live only in the SQLite table `ai_clues`, added by schema version 12. The table is server
+only: no HTTP route reads it, no campaign document is synced from it, and deleting a campaign
+removes its rows through the campaign foreign key. Every `clue_*` tool stores a neutral result and
+a neutral label in the owner-visible activity ledger: `clue_plant` and `clue_update` keep only
+`{ "done": true, "clueId": "…" }`, and `clue_list` keeps `{ "done": true }`. The model still receives
+the full result, which is checkpointed privately for retry and never returned by a route. Because
+the redacted result would be useless to the model, a retried `clue_list` runs again instead of
+replaying the neutral ledger text. No journal event is written for a `clue_*` tool, so neither the
+players nor the owner ever read the hidden truth through the journal, a note or an export.
+
+The GM prompt uses the three-clue rule for important conclusions: at least three independent clues
+should point at the same truth before the party must reach it. The prompt also asks the GM to record
+every meaningful hint when it is narrated, to pay off or consciously abandon open clues, and never
+to state the truth outright. The open clue ledger is part of memory (see below), and it flags a clue
+planted more than 48 hours ago and never paid off as `STALE` so the GM brings it back.
+
 ## Memory and compaction
 
 Each GM request starts with the static GM prompt, and the tool schemas are sent with it. The
@@ -250,21 +277,24 @@ blocks below follow as system messages, in this order:
    with the model's context window (about 1,500 characters by default, more on a large model).
 4. Secret NPCs: one line per active sheet, `name — role — want (id …)`, newest updated first. The
    room scales like the canon title list. See [Secret NPCs](#secret-npcs).
-5. Relevant memory: proactive recall of at most six canon entries and six journal entries that
+5. Open clues: one line per planted or found clue, `shown → truth (planted age) (id …)`, oldest
+   planted first. Clues planted more than 48 hours ago are marked `STALE`. The room scales like the
+   secret NPC list, and the block is dropped with it. See [Clues and foreshadowing](#clues-and-foreshadowing).
+6. Relevant memory: proactive recall of at most six canon entries and six journal entries that
    match the latest player messages, the location, the objective, the open thread titles and the
    active scene. Each hit carries its ID, and journal hits also carry their session label and
    date. When the latest player messages or the active scene name a secret NPC, the block also
    carries that NPC's voice, want and motives (at most three NPCs, 500 characters each). The block
    is left out when nothing scores above the recall threshold.
-6. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
-7. The recent chapters (three by default; more when the context window allows).
-8. The GM secrets and plans, visible only to the owner.
-9. The campaign state, visible only to the owner.
-10. The session summary, a working summary of the current session of up to 300 words. When the
+7. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
+8. The recent chapters (three by default; more when the context window allows).
+9. The GM secrets and plans, visible only to the owner.
+10. The campaign state, visible only to the owner.
+11. The session summary, a working summary of the current session of up to 300 words. When the
     current session has no summary yet, the newest previous session summary appears instead, so
     the opening recap can use it.
-11. The recent messages of the session that fit in the budget.
-12. The table snapshot, which comes last on every request.
+12. The recent messages of the session that fit in the budget.
+13. The table snapshot, which comes last on every request.
 
 The blocks are rebuilt on every request, so changes apply at once.
 
@@ -496,8 +526,8 @@ server creates `ai-keyring.key` in `DAGGERY_DATA_DIR`. Keep it private and **bac
 with the database**. Losing or replacing it requires entering the provider keys again. Do
 not commit it. Schema migrations 4, 5 and 6 add AI tables, checkpoints, sessions and the
 journal. Migration 6 gives each existing AI campaign one session named Session 1 and moves
-its existing messages into that session. Migration 7 adds canon, 9 the semantic index and 10 the
-secret NPC sheets (`ai_npcs`). Existing campaign data and the database backup
+its existing messages into that session. Migration 7 adds canon, 9 the semantic index, 10 the
+secret NPC sheets (`ai_npcs`) and 12 the clue ledger (`ai_clues`). Existing campaign data and the database backup
 made before a migration are preserved.
 
 The runner has no account, invitation or tools for campaign administration. Each request
