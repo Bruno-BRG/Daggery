@@ -44,6 +44,8 @@ export function registerAiRoutes(app: FastifyInstance, options: {
   app.put(base + '/setup', handle(request => ({ setup: ai.configure(user(request), campaign(request), request.body) })));
   app.put(base + '/enabled', handle(request => { const body = record(request.body); if (typeof body.enabled !== 'boolean') throw new Error('Invalid enabled state'); ai.pause(user(request), campaign(request), body.enabled); return { enabled: body.enabled }; }));
   app.put(base + '/memory', handle(request => { ai.memory(user(request), campaign(request), record(request.body).memory); return { saved: true }; }));
+  app.get(base + '/profile', handle(request => ({ profile: ai.profile(user(request), campaign(request)) })));
+  app.put(base + '/profile', handle(request => ({ profile: ai.saveProfile(user(request), campaign(request), request.body) })));
   app.post(base + '/chats', handle(request => ai.createChat(user(request), campaign(request), request.body)));
   app.post(base + '/begin', handle(request => ai.begin(user(request), campaign(request), request.body)));
   app.patch(base + '/chats/:chatId', handle(request => ai.renameChat(user(request), campaign(request), param(request, 'chatId'), request.body)));

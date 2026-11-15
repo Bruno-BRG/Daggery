@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { type AiAdventure, type AiBudget, type AiChat, type AiConnection, type AiJournalEntry, type AiJournalPage, type AiMessage, type AiModel, type AiProvider, type AiState, type AiTurnKind } from '@daggery/shared';
+import { type AiAdventure, type AiBudget, type AiChat, type AiConnection, type AiJournalEntry, type AiJournalPage, type AiMessage, type AiModel, type AiPacing, type AiProfile, type AiProvider, type AiState, type AiTurnKind } from '@daggery/shared';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import { armorScore, damageNotation, hpMax, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
 import { api } from '../../api';
@@ -15,6 +15,8 @@ const errorText = (error: unknown) => error instanceof Error ? error.message : '
 const navigate = (page: string) => window.dispatchEvent(new CustomEvent('daggery:navigate', { detail: page }));
 const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+/** One preference item per line in the profile text areas. */
+const splitList = (value: string) => value.split(/\r?\n/).map(item => item.trim()).filter(item => item !== '');
 const tokens = (count: number) => count >= 1000000 ? `${(count / 1000000).toFixed(1).replace(/\.0$/, '')}M` : `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k`;
 const timeOf = (value: string) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const stampOf = (value: string) => new Date(value).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
@@ -23,6 +25,8 @@ const RUN_TEXT: Record<AiTurnKind, string> = { turn: 'Your GM is taking a turn�
 const THINKING_TEXT: Record<AiTurnKind, string> = { turn: 'The GM is preparing the next moment', compact: 'The GM is saving the story so far', end: 'The GM is writing the final chapter', pause: 'The GM is saving where play stopped' };
 const BUDGETS: AiBudget[] = ['lean', 'balanced', 'rich', 'maximum'];
 const BUDGET_LABEL: Record<AiBudget, string> = { lean: 'Lean', balanced: 'Balanced', rich: 'Rich', maximum: 'Maximum' };
+const PACINGS: AiPacing[] = ['fast', 'balanced', 'slow'];
+const WEIGHTS = [0, 1, 2, 3];
 const ENDED_NOTE = 'This session has ended. Start a new session to keep playing.';
 const TRAITS = ['agility', 'strength', 'finesse', 'instinct', 'presence', 'knowledge'] as const;
 
@@ -49,7 +53,7 @@ export default function Adventure({ author: _author }: { author: string }) {
   const wide = useMediaQuery('(min-width: 1050px)');
   const [feed, setFeed] = useState<Feed | null>(null), [chatId, setChatId] = useState<string | null>(null);
   const [error, setError] = useState(''), [loadError, setLoadError] = useState('');
-  const [connectionOpen, setConnectionOpen] = useState(false), [setupOpen, setSetupOpen] = useState(false), [sessionsOpen, setSessionsOpen] = useState(false);
+  const [connectionOpen, setConnectionOpen] = useState(false), [setupOpen, setSetupOpen] = useState(false), [sessionsOpen, setSessionsOpen] = useState(false), [preferencesOpen, setPreferencesOpen] = useState(false);
   const [message, setMessage] = useState(''), [busy, setBusy] = useState(false), [olderBusy, setOlderBusy] = useState(false), [rollOpen, setRollOpen] = useState(false);
   const [recent, setRecent] = useState<AiJournalEntry[] | null>(null), [recentError, setRecentError] = useState('');
   const chatRef = useRef<string | null>(null), latest = useRef(0), follow = useRef(true), prepend = useRef<number | null>(null);
@@ -300,6 +304,7 @@ export default function Adventure({ author: _author }: { author: string }) {
     </div>;
   const toolbar = <div className="ai-toolbar">
     {!wide && <button type="button" className="daggery-roll-toggle" aria-haspopup="dialog" onClick={() => setSessionsOpen(true)}><Icon name="book" />Sessions</button>}
+    <button type="button" className="daggery-roll-toggle" aria-haspopup="dialog" onClick={() => setPreferencesOpen(true)}><Icon name="custom" />Preferences</button>
     {data.isGm && <button type="button" className="daggery-roll-toggle" onClick={() => setConnectionOpen(true)}><Icon name="settings" />{data.connection ? 'GM connection' : 'Connect OpenCode'}</button>}
     {data.isGm && data.ready && <button type="button" className="daggery-roll-toggle" disabled={busy} onClick={() => void perform('/enabled', { enabled: !data.enabled }, 'PUT')}>{data.enabled ? 'Pause GM' : 'Resume GM'}</button>}
   </div>;
@@ -372,6 +377,7 @@ export default function Adventure({ author: _author }: { author: string }) {
       </aside>
     </div>
     {connectionOpen && <Connection connection={data.connection} onClose={() => setConnectionOpen(false)} onSaved={async () => { const next = await load(chatRef.current); setConnectionOpen(false); if (next.connection && !next.ready) setSetupOpen(true); }} />}
+    {preferencesOpen && <Preferences base={base} onClose={() => setPreferencesOpen(false)} />}
     {setupOpen && <Setup base={base} session={data} heroes={heroes} onClose={() => setSetupOpen(false)} onSaved={async () => { await load(chatRef.current); setSetupOpen(false); }} />}
     {!wide && <Dialog open={sessionsOpen} onClose={() => setSessionsOpen(false)} title="Sessions">{sessions(false, () => setSessionsOpen(false))}</Dialog>}
   </div>;
@@ -555,6 +561,87 @@ function FreeRoll({ base, chatId, heroes, disabled, onClose, onDone }: { base: s
   </form>;
 }
 
+function Preferences({ base, onClose }: { base: string; onClose: () => void }) {
+  const [loaded, setLoaded] = useState(false);
+  const [tone, setTone] = useState(''), [pacing, setPacing] = useState<AiPacing>('balanced');
+  const [combat, setCombat] = useState(1), [roleplay, setRoleplay] = useState(1), [exploration, setExploration] = useState(1);
+  const [lines, setLines] = useState(''), [veils, setVeils] = useState(''), [likes, setLikes] = useState(''), [dislikes, setDislikes] = useState('');
+  const [notes, setNotes] = useState<AiProfile['notes']>([]);
+  const [removed, setRemoved] = useState<string[]>([]), [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [saved, setSaved] = useState(false);
+
+  const apply = (profile: AiProfile) => {
+    setTone(profile.tone); setPacing(profile.pacing);
+    setCombat(profile.combat); setRoleplay(profile.roleplay); setExploration(profile.exploration);
+    setLines(profile.lines.join('\n')); setVeils(profile.veils.join('\n'));
+    setLikes(profile.likes.join('\n')); setDislikes(profile.dislikes.join('\n'));
+    setNotes(profile.notes); setRemoved([]); setNote('');
+  };
+
+  useEffect(() => {
+    let active = true;
+    api<{ profile: AiProfile }>(`${base}/profile`)
+      .then(result => { if (active) { apply(result.profile); setLoaded(true); } })
+      .catch(failure => { if (active) { setError(errorText(failure)); setLoaded(true); } });
+    return () => { active = false; };
+  }, [base]);
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    setSaved(false);
+    try {
+      const result = await api<{ profile: AiProfile }>(`${base}/profile`, 'PUT', {
+        tone, pacing, combat, roleplay, exploration,
+        lines: splitList(lines), veils: splitList(veils), likes: splitList(likes), dislikes: splitList(dislikes),
+        ...(removed.length ? { removeNoteIds: removed } : {}),
+        ...(note.trim() ? { note: note.trim() } : {}),
+      });
+      apply(result.profile);
+      setSaved(true);
+    } catch (failure) {
+      setError(errorText(failure));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const visibleNotes = notes.filter(item => removed.indexOf(item.id) < 0);
+  return <Dialog open onClose={onClose} title="Player preferences"><form className="ai-form ai-preferences" onSubmit={save}>
+    <p>Tell your GM what you enjoy. Lines are never included, and veils fade to black before they happen. Only you and your GM see this profile.</p>
+    {!loaded ? <p>Loading preferences…</p> : <>
+      <label>Tone<input maxLength={200} data-autofocus value={tone} placeholder="Grim and grounded, with moments of warmth" onChange={event => setTone(event.target.value)} /></label>
+      <label>Pacing<select value={pacing} onChange={event => setPacing(event.target.value as AiPacing)}>{PACINGS.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
+      <fieldset className="ai-profile-weights">
+        <legend>Scene focus · 0 to 3</legend>
+        <label>Combat<select value={combat} onChange={event => setCombat(Number(event.target.value))}>{WEIGHTS.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+        <label>Roleplay<select value={roleplay} onChange={event => setRoleplay(Number(event.target.value))}>{WEIGHTS.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+        <label>Exploration<select value={exploration} onChange={event => setExploration(Number(event.target.value))}>{WEIGHTS.map(value => <option key={value} value={value}>{value}</option>)}</select></label>
+      </fieldset>
+      <label>Lines · never include<textarea rows={3} maxLength={4000} value={lines} placeholder="One per line" onChange={event => setLines(event.target.value)} /></label>
+      <small>Hard limits. The GM cuts away before these ever appear.</small>
+      <label>Veils · fade to black<textarea rows={3} maxLength={4000} value={veils} placeholder="One per line" onChange={event => setVeils(event.target.value)} /></label>
+      <small>The GM suggests the moment and moves on without describing it.</small>
+      <label>Likes<textarea rows={3} maxLength={4000} value={likes} placeholder="Puzzles, heists, quiet character scenes" onChange={event => setLikes(event.target.value)} /></label>
+      <label>Dislikes<textarea rows={3} maxLength={4000} value={dislikes} placeholder="Shopping scenes, long travel montages" onChange={event => setDislikes(event.target.value)} /></label>
+      <div className="ai-profile-notes">
+        <h3>Notes</h3>
+        {visibleNotes.length === 0 ? <p>Your GM has not recorded any notes yet.</p> : <ul>
+          {visibleNotes.map(item => <li key={item.id}>
+            <span><span className="ai-badge">{item.source === 'gm' ? 'GM' : 'You'}</span>{item.text}</span>
+            <button type="button" className="ai-link ai-danger" onClick={() => setRemoved(current => current.indexOf(item.id) < 0 ? current.concat(item.id) : current)}>Remove</button>
+          </li>)}
+        </ul>}
+      </div>
+      <label>Add your own note<input maxLength={200} value={note} placeholder="I like leading the plan" onChange={event => setNote(event.target.value)} /></label>
+      <small>Notes are short reminders. Your GM records new ones sparingly as you play.</small>
+      {error && <p className="ai-error" role="alert">{error}</p>}
+      {saved && <p className="ai-muted" role="status">Preferences saved.</p>}
+      <button className="daggery-primary" disabled={busy}>{busy ? 'Saving…' : 'Save preferences'}</button>
+    </>}
+  </form></Dialog>;
+}
 function Memory({ value, disabled, save }: { value: string; disabled: boolean; save: (value: string) => Promise<void> }) {
   const [draft, setDraft] = useState(value);
   return <details><summary>GM secrets & plans</summary><label className="ai-sr-label">Private GM memory<textarea aria-label="Private GM memory" rows={6} maxLength={4000} value={draft} onChange={event => setDraft(event.target.value)} /></label><button className="daggery-roll-toggle" disabled={disabled || draft === value} onClick={() => void save(draft)}>Save memory</button></details>;

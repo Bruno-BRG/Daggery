@@ -17,6 +17,7 @@ import { CAMPAIGN_FRAMES, findCampaignFrame } from './frames';
 import { AiJournal } from './journal';
 import { AiNpcs, catalogCombatStats, NPC_ATTACK_RANGES, NPC_FEATURE_KINDS, NPC_SEARCH_LIMIT, NPC_STATUSES, NPC_TYPES, npcDocCombatStats, type CombatStats } from './npc';
 import { AiFronts, FRONT_CLOCK_SIZES, FRONT_KINDS, FRONT_STATUSES } from './fronts';
+import { AiProfiles } from './profile';
 import { listSourcebooks, readSourcebookPage, searchSourcebooks } from './sourcebook';
 import { applyStatePatch, emptyState, limitsFor, normalizeState, outsideActivityFor, SECRETS_LIMIT, snapshotFor } from './memory';
 import { integer, number, record, text } from './validation';
@@ -50,6 +51,7 @@ export const GM_TOOLS: ToolDefinition[] = [
   tool('get_adversary', 'Read one present adversary: its catalog stats and full feature text, plus its current marks, defeated count, group size, and active conditions. Read-only.', { adversaryId: s }, ['adversaryId']),
   tool('set_memory', 'Rewrite the GM-only secrets and plans as one short text of at most 4000 characters. Players never see it, and the new text replaces the previous one entirely.', { memory: s }),
   tool('set_resume_note', 'Record the exact situation where play stops, so it survives a pause: what decision is pending, positions, active effects, and the next trigger. At most 1500 characters. It is shown to the GM as "Where we stopped" when play resumes.', { note: s }),
+  tool('profile_note', 'Record one durable preference you noticed while running this player: a scene they light up in, a topic they skip, a style they enjoy. It is saved as a GM-learned note on their player profile, capped and shown to them. Note it sparingly, at most once per turn. This tool cannot change the player’s lines or veils.', { text: s }, ['text']),
   tool('update_state', 'Merge changes into the campaign state: location, time of day, objective, threads, NPCs, promises, and facts. List items upsert by id; use removeIds to delete. Caps: 12 threads, 30 NPCs, 10 promises, 20 facts.', {
     location: s,
     timeOfDay: s,
@@ -152,7 +154,7 @@ export const GM_TOOLS: ToolDefinition[] = [
 ];
 
 const ACTION_LABELS: Record<string, string> = {
-  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', npc_create: 'Updated GM notes', npc_update: 'Updated GM notes', npc_read: 'Consulted GM notes', npc_search: 'Consulted GM notes', npc_to_encounter: 'Prepared an encounter', front_create: 'Updated GM notes', front_update: 'Updated GM notes', front_advance: 'Advanced GM plans', front_list: 'Consulted GM notes', clue_plant: 'Updated GM notes', clue_update: 'Updated GM notes', clue_list: 'Consulted GM notes', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', deal_damage: 'Dealt damage', mark_stress: 'Marked Stress', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', consult_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
+  get_context: 'Reviewed the table', search_rules: 'Consulted the rules', search_sourcebook: 'Searched the sourcebooks', read_sourcebook_page: 'Read a sourcebook page', get_character: 'Reviewed a hero sheet', get_adversary: 'Reviewed an adversary', set_memory: 'Updated GM secrets', npc_create: 'Updated GM notes', npc_update: 'Updated GM notes', npc_read: 'Consulted GM notes', npc_search: 'Consulted GM notes', npc_to_encounter: 'Prepared an encounter', front_create: 'Updated GM notes', front_update: 'Updated GM notes', front_advance: 'Advanced GM plans', front_list: 'Consulted GM notes', profile_note: 'Noted a player preference', clue_plant: 'Updated GM notes', clue_update: 'Updated GM notes', clue_list: 'Consulted GM notes', set_resume_note: 'Recorded where play stopped', update_state: 'Updated the campaign state', journal_add: 'Wrote a journal note', search_journal: 'Searched the journal', journal_read: 'Read the journal', canon_write: 'Wrote canon', canon_search: 'Searched canon', canon_read: 'Read canon', list_campaign_frames: 'Reviewed campaign frames', load_campaign_frame: 'Opened a campaign frame', write_prep: 'Prepared the world', write_note: 'Recorded a note', create_scene: 'Created a scene', activate_scene: 'Changed the scene', place_token: 'Placed a miniature', move_token: 'Moved a miniature', fog_area: 'Updated scene fog', draw_on_scene: 'Annotated the map', set_condition: 'Updated a condition', set_spotlight: 'Passed the spotlight', add_adversary: 'Added an adversary', request_roll: 'Requested a hero roll', adversary_attack: 'Resolved an adversary attack', deal_damage: 'Dealt damage', mark_stress: 'Marked Stress', spend_fear: 'Spent Fear', create_countdown: 'Started a countdown', advance_countdown: 'Advanced a countdown', roll_loot: 'Rolled a reward', give_item: 'Added an inventory reward', consult_oracle: 'Consulted the oracle', offer_choices: 'Offered a choice', withdraw_request: 'Withdrew an obsolete request',
 };
 
 /**
@@ -166,6 +168,8 @@ const REREAD_SECRET_TOOLS = new Set(['npc_read', 'npc_search', 'clue_list', 'fro
 
 export interface ActionContext {
   campaign: string; owner: string; turn: string; callId: string;
+  /** The player whose turn this is. GM-learned preferences attach to their profile. */
+  player?: string;
   /** Session that receives messages and journal entries. Defaults to the open session. */
   chat?: string;
   /** Query embedding for hybrid search tools, computed by the service before the call. */
@@ -233,6 +237,7 @@ export class GmActions {
   readonly npcs: AiNpcs;
   readonly clues: AiClues;
   readonly fronts: AiFronts;
+  readonly profiles: AiProfiles;
   constructor(private db: Database.Database, private campaigns: CampaignService, readonly embeddings?: EmbeddingIndex) {
     this.journal = new AiJournal(db, embeddings);
     this.chats = new AiChats(db);
@@ -240,6 +245,7 @@ export class GmActions {
     this.npcs = new AiNpcs(db);
     this.clues = new AiClues(db);
     this.fronts = new AiFronts(db);
+    this.profiles = new AiProfiles(db);
   }
 
   /** Catalog or NPC-backed combat stats for a present adversary document. Never reads NPC story. */
@@ -488,6 +494,7 @@ export class GmActions {
         if (!note || note.length > 1500) throw new Error('Invalid resume note: at most 1500 characters.');
         this.chats.setResumeNote(ctx.campaign, chat, note); result = { saved: true };
       }
+      else if (name === 'profile_note') result = this.profiles.note(ctx.campaign, ctx.player ?? ctx.owner, args);
       else if (name === 'update_state') {
         const next = applyStatePatch(this.readState(ctx.campaign), args);
         this.writeState(ctx.campaign, next);

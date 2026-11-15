@@ -265,6 +265,7 @@ should point at the same truth before the party must reach it. The prompt also a
 every meaningful hint when it is narrated, to pay off or consciously abandon open clues, and never
 to state the truth outright. The open clue ledger is part of memory (see below), and it flags a clue
 planted more than 48 hours ago and never paid off as `STALE` so the GM brings it back.
+
 ## Fronts
 
 The GM can track **fronts**: threats, factions, villains and disasters with a goal that advances
@@ -298,40 +299,68 @@ turn** instruction that lists the active fronts and asks the GM to consider adva
 `front_advance`, optionally consulting the oracle for randomness. The GM shows each portent
 through the fiction and never reveals the clock.
 
+## Player preferences
+
+The AI GM adapts to what the player enjoys, the way a human GM learns their table. Each campaign
+member has one preference profile, stored per campaign and user in the `ai_profiles` table added by
+schema version 13. A profile belongs to the player: they read and edit it from the **Preferences**
+button in the AI GM header. Deleting the campaign or the user removes the row through the foreign
+keys.
+
+A profile holds a free-text tone, a pacing (`fast`, `balanced`, `slow`), a 0–3 weight for combat,
+roleplay and exploration, and four lists: lines (hard no-go content), veils (content that fades to
+black), likes and dislikes. It also holds short notes. A note is written either by the player or by
+the GM with the `profile_note` tool, which records an observed preference such as "lights up during
+puzzles" or "skips shopping scenes". `profile_note` only appends `source: 'gm'` notes and can never
+edit the lines or veils; the player can remove any note.
+
+The current player's profile is always part of the GM memory as a compact "Player preferences"
+block. Lines and veils come first and are never dropped, even when memory is tight; the remaining
+fields trim to fit. The GM prompt tells the GM to respect lines absolutely, fade veils to black,
+steer scenes toward the likes and away from the dislikes, and note new preferences sparingly.
+
+`GET /api/campaigns/:id/ai/profile` returns the current user's profile, and
+`PUT /api/campaigns/:id/ai/profile` merges an edit into it. The PUT body accepts `tone`, `pacing`,
+`combat`, `roleplay`, `exploration`, `lines`, `veils`, `likes`, `dislikes`, an optional `note`
+string, and an optional `removeNoteIds` list. Omitted fields keep their stored value.
+
 ## Memory and compaction
 
 Each GM request starts with the static GM prompt, and the tool schemas are sent with it. The
 blocks below follow as system messages, in this order:
 
 1. Campaign setup: the game system, the premise, the tone and the player's hero.
-2. GM preparations: the setting and the two newest scenarios. See below.
-3. Canon: the active entry titles, newest first, with their IDs. The room for this list scales
+2. Player preferences: the current player's tone, pacing, scene weights, lines, veils, likes,
+   dislikes and GM-learned notes. Lines and veils come first and are never dropped. See
+   [Player preferences](#player-preferences).
+3. GM preparations: the setting and the two newest scenarios. See below.
+4. Canon: the active entry titles, newest first, with their IDs. The room for this list scales
    with the model's context window (about 1,500 characters by default, more on a large model).
-4. Secret NPCs: one line per active sheet, `name — role — want (id …)`, newest updated first. The
+5. Secret NPCs: one line per active sheet, `name — role — want (id …)`, newest updated first. The
    room scales like the canon title list. See [Secret NPCs](#secret-npcs).
-5. Fronts: one line per active front, `name (kind) — clock current/size — next portent: … (id …)`,
+6. Fronts: one line per active front, `name (kind) — clock current/size — next portent: … (id …)`,
    newest updated first. The room scales like the secret NPC list. See [Fronts](#fronts).
-6. World turn: when the session has no GM reply yet or the in-fiction time of day changed since the
+7. World turn: when the session has no GM reply yet or the in-fiction time of day changed since the
    previous turn, a short instruction lists the active fronts and asks the GM to consider advancing
    one. It is dropped with the front and recall lists when memory is tight.
-7. Open clues: one line per planted or found clue, `shown → truth (planted age) (id …)`, oldest
+8. Open clues: one line per planted or found clue, `shown → truth (planted age) (id …)`, oldest
    planted first. Clues planted more than 48 hours ago are marked `STALE`. The room scales like the
    secret NPC list, and the block is dropped with it. See [Clues and foreshadowing](#clues-and-foreshadowing).
-8. Relevant memory: proactive recall of at most six canon entries and six journal entries that
+9. Relevant memory: proactive recall of at most six canon entries and six journal entries that
    match the latest player messages, the location, the objective, the open thread titles and the
    active scene. Each hit carries its ID, and journal hits also carry their session label and
    date. When the latest player messages or the active scene name a secret NPC, the block also
    carries that NPC's voice, want and motives (at most three NPCs, 500 characters each). The block
    is left out when nothing scores above the recall threshold.
-9. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
-10. The recent chapters (three by default; more when the context window allows).
-11. The GM secrets and plans, visible only to the owner.
-12. The campaign state, visible only to the owner.
-13. The session summary, a working summary of the current session of up to 300 words. When the
+10. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
+11. The recent chapters (three by default; more when the context window allows).
+12. The GM secrets and plans, visible only to the owner.
+13. The campaign state, visible only to the owner.
+14. The session summary, a working summary of the current session of up to 300 words. When the
     current session has no summary yet, the newest previous session summary appears instead, so
     the opening recap can use it.
-14. The recent messages of the session that fit in the budget.
-15. The table snapshot, which comes last on every request.
+15. The recent messages of the session that fit in the budget.
+16. The table snapshot, which comes last on every request.
 
 The blocks are rebuilt on every request, so changes apply at once.
 

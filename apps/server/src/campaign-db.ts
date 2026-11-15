@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
  * the old tables and never exposes these new ones.
  */
 export const LEGACY_CAMPAIGN_ID = 'legacy-unclaimed';
-export const CURRENT_VERSION = 12;
+export const CURRENT_VERSION = 13;
 
 /** Schema 6 adds AI sessions and the adventure journal. It only adds tables and columns, then backfills Session 1 for each AI campaign. Every step is idempotent. */
 function migrateAiSessions(db: Database.Database): void {
@@ -349,6 +349,29 @@ export function migrateCampaignDatabase(db: Database.Database): void {
           updated TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ai_clues_campaign ON ai_clues(campaign_id, status);
+      `);
+    }
+    // Version 13 adds the player preference profile. One row per member and campaign; the
+    // campaign and user foreign keys cascade, so deleting either removes the profile with it.
+    if (version < 13) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ai_profiles (
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          tone TEXT NOT NULL DEFAULT '',
+          pacing TEXT NOT NULL DEFAULT 'balanced' CHECK(pacing IN ('fast','balanced','slow')),
+          combat INTEGER NOT NULL DEFAULT 1,
+          roleplay INTEGER NOT NULL DEFAULT 1,
+          exploration INTEGER NOT NULL DEFAULT 1,
+          lines TEXT NOT NULL DEFAULT '[]',
+          veils TEXT NOT NULL DEFAULT '[]',
+          likes TEXT NOT NULL DEFAULT '[]',
+          dislikes TEXT NOT NULL DEFAULT '[]',
+          notes TEXT NOT NULL DEFAULT '[]',
+          updated TEXT NOT NULL,
+          PRIMARY KEY(campaign_id, user_id)
+        );
+        CREATE INDEX IF NOT EXISTS ai_profiles_campaign ON ai_profiles(campaign_id);
       `);
     }
   })();
