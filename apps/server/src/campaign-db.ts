@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
  * the old tables and never exposes these new ones.
  */
 export const LEGACY_CAMPAIGN_ID = 'legacy-unclaimed';
-export const CURRENT_VERSION = 10;
+export const CURRENT_VERSION = 12;
 
 /** Schema 6 adds AI sessions and the adventure journal. It only adds tables and columns, then backfills Session 1 for each AI campaign. Every step is idempotent. */
 function migrateAiSessions(db: Database.Database): void {
@@ -299,6 +299,29 @@ export function migrateCampaignDatabase(db: Database.Database): void {
           updated TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ai_npcs_campaign ON ai_npcs(campaign_id);
+      `);
+    }
+    // Version 12 adds the clue and foreshadowing ledger. Like ai_npcs it is server only: no route
+    // reads it and no synced document mirrors it, and the hidden truth never leaves the server.
+    // The campaign foreign key cascades, so deleting a campaign removes its clues with it.
+    if (version < 12) {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ai_clues (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL DEFAULT 'clue' CHECK(kind IN ('clue','foreshadowing','mystery')),
+          shown TEXT NOT NULL,
+          truth TEXT NOT NULL,
+          thread_id TEXT NOT NULL DEFAULT '',
+          npc_id TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL DEFAULT 'planted' CHECK(status IN ('planted','found','paid-off','abandoned')),
+          planted_chat TEXT NOT NULL DEFAULT '',
+          planted_at TEXT NOT NULL,
+          payoff TEXT NOT NULL DEFAULT '',
+          created TEXT NOT NULL,
+          updated TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ai_clues_campaign ON ai_clues(campaign_id, status);
       `);
     }
   })();
