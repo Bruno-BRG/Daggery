@@ -14,7 +14,7 @@ import type { AiJournal } from './journal';
 import { GmActions, GM_TOOLS } from './tools';
 import { ModelProvider, PROVIDERS, ProviderError, effectiveContextWindow, type ModelMessage, type ToolCall } from './provider';
 import { CAMPAIGN_FRAMES, findCampaignFrame, framePrompt } from './frames';
-import { COMPACT_TAIL, COMPACT_TRIGGER, MESSAGE_CHARS, SECRETS_LIMIT, TOOL_RESULT_CHARS, budgetTable, budgetTokens, emptyState, estimateTokens, fitJson, fitMemory, limitsFor, renderState, shorten, snapshotText, type MemoryPart } from './memory';
+import { COMPACT_TAIL, COMPACT_TRIGGER, MESSAGE_CHARS, SECRETS_LIMIT, TOOL_RESULT_CHARS, budgetTable, budgetTokens, emptyState, estimateTokens, fitJson, fitMemory, limitsFor, renderProfile, renderState, shorten, snapshotText, type MemoryPart } from './memory';
 import { COMPACTION_PROMPT, GM_PROMPT, GM_PROMPT_VERSION, OPENING_INSTRUCTION } from './prompts';
 import { renderNpcList } from './npc';
 import { hasQueryTerms } from './retrieval';
@@ -68,7 +68,7 @@ interface ActionRow { id: string; tool: string; label: string; result: string; a
 interface Pending { seq: number; role: string; text: string; created: string; tokens: number }
 interface SummaryCanon { kind: CanonKind; title: string; body: string }
 interface Summary { chapter: string; working: string; digest: string; canon: SummaryCanon[] }
-interface Runtime { campaign: string; owner: string; turn: string; chat: string; provider: AiProvider; model: string; key: string; temperature: boolean; signal: AbortSignal; assertActive: () => void }
+interface Runtime { campaign: string; owner: string; player: string; turn: string; chat: string; provider: AiProvider; model: string; key: string; temperature: boolean; signal: AbortSignal; assertActive: () => void }
 type Publish = (campaign: string, ns: string, id: string, value: unknown) => void;
 type PublishRoll = (campaign: string, kind: string, result: unknown, author?: string) => void;
 
@@ -320,7 +320,7 @@ export class AiService {
     const contextWindow = credential ? effectiveContextWindow(credential.model, credential.context_window) : 0;
     const tokens = budgetTokens(budget, contextWindow);
     const budgets = budgetTable(contextWindow);
-    const usage = settings && active ? this.assemble(campaign, settings, active, tokens) : null;
+    const usage = settings && active ? this.assemble(campaign, settings, active, tokens, user) : null;
     const latest = this.db.prepare('SELECT id, kind, chat_id, status, error, steps, cost, updated AS at FROM ai_turns WHERE campaign_id = ? ORDER BY rowid DESC LIMIT 1').get(campaign) as RunRow | undefined;
     const actions = gm && active
       ? (this.db.prepare('SELECT a.id, a.tool, a.label, a.result, a.created AS at FROM ai_actions a JOIN ai_turns t ON t.id = a.turn_id WHERE a.campaign_id = ? AND t.chat_id = ? ORDER BY a.rowid DESC LIMIT 30').all(campaign, active) as ActionRow[])
@@ -393,6 +393,18 @@ export class AiService {
     const memory = typeof value === 'string' ? value.trim() : '';
     if (typeof value !== 'string' || memory.length > SECRETS_LIMIT) throw new Error('Invalid memory: at most 4000 characters.');
     this.db.prepare('UPDATE campaign_ai SET memory = ?, updated = ? WHERE campaign_id = ?').run(memory, new Date().toISOString(), campaign);
+  }
+
+  /** The current user's player preference profile in this campaign. */
+  profile(user: string, campaign: string) {
+    this.authorize(user, campaign);
+    return this.actions.profiles.get(campaign, user);
+  }
+
+  /** Edits the current user's own profile. Other members' profiles are never touched. */
+  saveProfile(user: string, campaign: string, raw: unknown) {
+    this.authorize(user, campaign);
+    return this.actions.profiles.save(campaign, user, raw);
   }
 
   cancel(user: string, campaign: string) {
@@ -625,7 +637,7 @@ export class AiService {
       this.campaigns.requireGm(owner, campaign);
     };
     const rt: Runtime = {
-      campaign, owner, turn: id, chat: row.chat_id, provider: credential.provider, model: credential.model,
+      campaign, owner, player: row.user_id, turn: id, chat: row.chat_id, provider: credential.provider, model: credential.model,
       key: this.vault.open(credential.encrypted_key, owner), temperature: credential.temperature === 1, signal, assertActive,
     };
     if (row.kind === 'turn') return this.takeTurn(rt, row, settings, credential);
@@ -634,7 +646,7 @@ export class AiService {
 
   /** Compact now, end a session, or pause it. None counts toward the turn's model-response limit. */
   private async housekeeping(rt: Runtime, settings: Settings, tokens: number, kind: AiTurnKind) {
-    const usage = this.assemble(rt.campaign, settings, rt.chat, tokens);
+    const usage = this.assemble(rt.campaign, settings, rt.chat, tokens, rt.player);
     await this.compact(rt, kind === 'end' ? 'final' : 'manual', usage.messageBudget);
     const at = new Date().toISOString();
     const cleared: { ns: string; id: string; value: unknown }[] = [];
@@ -674,10 +686,10 @@ export class AiService {
   }
 
   private async prepare(rt: Runtime, settings: Settings, tokens: number, instruction: string | null): Promise<ModelMessage[]> {
-    const first = this.assemble(rt.campaign, settings, rt.chat, tokens);
+    const first = this.assemble(rt.campaign, settings, rt.chat, tokens, rt.player);
     await this.compact(rt, 'auto', first.messageBudget);
     const current = this.settings(rt.campaign) ?? settings;
-    const conversation = this.assemble(rt.campaign, current, rt.chat, tokens).history;
+    const conversation = this.assemble(rt.campaign, current, rt.chat, tokens, rt.player).history;
     if (instruction) conversation.push({ role: 'user', content: instruction });
     return conversation;
   }
@@ -692,7 +704,7 @@ export class AiService {
       save();
     }
     const tools = GM_TOOLS;
-    const context = { campaign: rt.campaign, owner: rt.owner, turn: rt.turn, chat: rt.chat, assertActive: rt.assertActive, publish: this.publish, publishRoll: this.publishRoll };
+    const context = { campaign: rt.campaign, owner: rt.owner, player: rt.player, turn: rt.turn, chat: rt.chat, assertActive: rt.assertActive, publish: this.publish, publishRoll: this.publishRoll };
     // Semantic recall is computed once per turn; a cold or unavailable model simply falls back to BM25.
     const recallVector = await this.embeddings.embedQuery(this.recallQuery(rt.campaign, rt.chat));
     for (;;) {
@@ -716,7 +728,7 @@ export class AiService {
       }
       const steps = (this.db.prepare('SELECT steps FROM ai_turns WHERE id = ?').get(rt.turn) as { steps: number }).steps;
       if (steps >= TURN_STEPS) throw new ProviderError('The GM reached this turn’s request limit. Send a new message to continue; completed actions are saved.');
-      const request = [...this.systemMessages(rt.campaign, rt.chat, recallVector), ...conversation, this.snapshotMessage(rt)];
+      const request = [...this.systemMessages(rt.campaign, rt.chat, recallVector, rt.player), ...conversation, this.snapshotMessage(rt)];
       const response = await this.provider.complete(rt.provider, rt.key, rt.model, request, tools, rt.signal, rt.chat, rt.temperature ? { temperature: 0.85 } : {});
       rt.assertActive();
       this.db.prepare('UPDATE ai_turns SET steps = steps + 1, cost = cost + ?, updated = ? WHERE id = ?').run(response.cost, new Date().toISOString(), rt.turn);
@@ -825,7 +837,7 @@ export class AiService {
   }
 
   /** Memory parts in prompt order. They are rebuilt for every request, so edits take effect at once. */
-  private blocks(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null): MemoryPart[] {
+  private blocks(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null, player?: string): MemoryPart[] {
     const limits = limitsFor(budgetOf(settings), this.contextWindowFor(campaign));
     const config = this.campaigns.configuration(campaign);
     const setup = setupOf(settings);
@@ -841,6 +853,10 @@ export class AiService {
         hero ? 'Player hero: ' + hero.name : setup.heroId ? 'Player hero: not chosen' : this.partyLine(campaign),
       ].filter(line => line !== '').join(NL),
     }];
+    // The profile belongs to the player who is playing this turn. It is always present, and its
+    // lines and veils are never dropped; only its optional fields trim to fit.
+    const profile = this.actions.profiles.get(campaign, player ?? settings.owner_id);
+    parts.push({ kind: 'profile', text: renderProfile(profile, limits.profileChars) });
     const preparation = this.preparations(campaign, limits.prepChars);
     if (preparation) parts.push({ kind: 'preparation', text: preparation });
     const canon = this.canonPart(campaign, limits.canonChars);
@@ -1001,24 +1017,24 @@ export class AiService {
   }
 
   /** The memory parts after the cap is applied, ready to send as system messages. */
-  private memoryParts(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null): MemoryPart[] {
-    return fitMemory(this.blocks(campaign, settings, chat, queryVector), limitsFor(budgetOf(settings), this.contextWindowFor(campaign)).memoryChars);
+  private memoryParts(campaign: string, settings: Settings, chat: string | null, queryVector?: Float32Array | null, player?: string): MemoryPart[] {
+    return fitMemory(this.blocks(campaign, settings, chat, queryVector, player), limitsFor(budgetOf(settings), this.contextWindowFor(campaign)).memoryChars);
   }
 
-  private systemMessages(campaign: string, chat: string | null, queryVector?: Float32Array | null): ModelMessage[] {
+  private systemMessages(campaign: string, chat: string | null, queryVector?: Float32Array | null, player?: string): ModelMessage[] {
     const settings = this.settings(campaign);
     if (!settings) throw new Error('AI turn stopped');
     const messages: ModelMessage[] = [{ role: 'system', content: GM_PROMPT }];
     const setup = setupOf(settings);
     const frame = setup.frame ? findCampaignFrame(setup.frame) : undefined;
     if (frame) messages.push({ role: 'system', content: framePrompt(frame) });
-    messages.push(...this.memoryParts(campaign, settings, chat, queryVector).map(part => ({ role: 'system' as const, content: part.text })));
+    messages.push(...this.memoryParts(campaign, settings, chat, queryVector, player).map(part => ({ role: 'system' as const, content: part.text })));
     return messages;
   }
 
   /** Memory plus the recent messages that fit. Messages get whatever budget the memory leaves. */
-  private assemble(campaign: string, settings: Settings, chat: string | null, tokens: number) {
-    const parts = this.memoryParts(campaign, settings, chat);
+  private assemble(campaign: string, settings: Settings, chat: string | null, tokens: number, player?: string) {
+    const parts = this.memoryParts(campaign, settings, chat, undefined, player);
     const memoryTokens = parts.reduce((sum, part) => sum + estimateTokens(part.text), 0);
     const messageBudget = Math.max(1000, tokens - memoryTokens);
     const pending = chat ? this.pending(chat) : [];

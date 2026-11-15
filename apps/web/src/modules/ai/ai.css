@@ -101,6 +101,16 @@
 .ai-scene dd{margin:0;overflow-wrap:anywhere}
 .ai-ledger textarea{width:100%;background:var(--ai-panel);border:1px solid var(--ai-line);border-radius:var(--radius-sm);padding:10px;font-size:12px}
 .ai-sr-label{font-size:11px;color:var(--ai-muted)}
+.ai-preferences fieldset.ai-profile-weights{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr));gap:10px;margin:0;padding:12px;border:1px solid var(--ai-line);border-radius:var(--radius-sm);min-width:0}
+.ai-profile-weights legend{padding:0 6px;font-size:10px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;color:var(--ai-muted)}
+.ai-profile-notes{display:grid;gap:8px}
+.ai-profile-notes h3{margin:0;font-size:12px;font-weight:650}
+.ai-profile-notes p{margin:0;font-size:12px}
+.ai-profile-notes ul{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.ai-profile-notes li{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 11px;border:1px solid var(--ai-line);border-radius:var(--radius-sm);font-size:12px;line-height:1.55}
+.ai-profile-notes li>span{overflow-wrap:anywhere;min-width:0}
+.ai-profile-notes .ai-badge{margin:0 6px 0 0}
+.ai-profile-notes .ai-link{width:auto;padding:0;font-size:11px;flex:none}
 .ai-form{display:flex;flex-direction:column;gap:18px}
 .ai-form label,.ai-action-card label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:550}
 .ai-form input,.ai-form select,.ai-form textarea,.ai-action-card select,.ai-action-card input{width:100%;min-width:0;background:var(--ai-panel);color:inherit;border:1px solid var(--ai-line);border-radius:var(--radius-sm);padding:11px;font-size:14px}

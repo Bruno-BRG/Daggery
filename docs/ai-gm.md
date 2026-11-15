@@ -239,32 +239,60 @@ adversary token would show: the name, current and maximum HP, Difficulty, damage
 an attack summary. The backstory, want, fear, secret, voice, relationships and notes are never
 copied there. That combat snapshot is the feature's one intentional exposure.
 
+## Player preferences
+
+The AI GM adapts to what the player enjoys, the way a human GM learns their table. Each campaign
+member has one preference profile, stored per campaign and user in the `ai_profiles` table added by
+schema version 13. A profile belongs to the player: they read and edit it from the **Preferences**
+button in the AI GM header. Deleting the campaign or the user removes the row through the foreign
+keys.
+
+A profile holds a free-text tone, a pacing (`fast`, `balanced`, `slow`), a 0–3 weight for combat,
+roleplay and exploration, and four lists: lines (hard no-go content), veils (content that fades to
+black), likes and dislikes. It also holds short notes. A note is written either by the player or by
+the GM with the `profile_note` tool, which records an observed preference such as "lights up during
+puzzles" or "skips shopping scenes". `profile_note` only appends `source: 'gm'` notes and can never
+edit the lines or veils; the player can remove any note.
+
+The current player's profile is always part of the GM memory as a compact "Player preferences"
+block. Lines and veils come first and are never dropped, even when memory is tight; the remaining
+fields trim to fit. The GM prompt tells the GM to respect lines absolutely, fade veils to black,
+steer scenes toward the likes and away from the dislikes, and note new preferences sparingly.
+
+`GET /api/campaigns/:id/ai/profile` returns the current user's profile, and
+`PUT /api/campaigns/:id/ai/profile` merges an edit into it. The PUT body accepts `tone`, `pacing`,
+`combat`, `roleplay`, `exploration`, `lines`, `veils`, `likes`, `dislikes`, an optional `note`
+string, and an optional `removeNoteIds` list. Omitted fields keep their stored value.
+
 ## Memory and compaction
 
 Each GM request starts with the static GM prompt, and the tool schemas are sent with it. The
 blocks below follow as system messages, in this order:
 
 1. Campaign setup: the game system, the premise, the tone and the player's hero.
-2. GM preparations: the setting and the two newest scenarios. See below.
-3. Canon: the active entry titles, newest first, with their IDs. The room for this list scales
+2. Player preferences: the current player's tone, pacing, scene weights, lines, veils, likes,
+   dislikes and GM-learned notes. Lines and veils come first and are never dropped. See
+   [Player preferences](#player-preferences).
+3. GM preparations: the setting and the two newest scenarios. See below.
+4. Canon: the active entry titles, newest first, with their IDs. The room for this list scales
    with the model's context window (about 1,500 characters by default, more on a large model).
-4. Secret NPCs: one line per active sheet, `name — role — want (id …)`, newest updated first. The
+5. Secret NPCs: one line per active sheet, `name — role — want (id …)`, newest updated first. The
    room scales like the canon title list. See [Secret NPCs](#secret-npcs).
-5. Relevant memory: proactive recall of at most six canon entries and six journal entries that
+6. Relevant memory: proactive recall of at most six canon entries and six journal entries that
    match the latest player messages, the location, the objective, the open thread titles and the
    active scene. Each hit carries its ID, and journal hits also carry their session label and
    date. When the latest player messages or the active scene name a secret NPC, the block also
    carries that NPC's voice, want and motives (at most three NPCs, 500 characters each). The block
    is left out when nothing scores above the recall threshold.
-6. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
-7. The recent chapters (three by default; more when the context window allows).
-8. The GM secrets and plans, visible only to the owner.
-9. The campaign state, visible only to the owner.
-10. The session summary, a working summary of the current session of up to 300 words. When the
+7. The campaign digest, a rolling summary of the whole campaign of up to 250 words.
+8. The recent chapters (three by default; more when the context window allows).
+9. The GM secrets and plans, visible only to the owner.
+10. The campaign state, visible only to the owner.
+11. The session summary, a working summary of the current session of up to 300 words. When the
     current session has no summary yet, the newest previous session summary appears instead, so
     the opening recap can use it.
-11. The recent messages of the session that fit in the budget.
-12. The table snapshot, which comes last on every request.
+12. The recent messages of the session that fit in the budget.
+13. The table snapshot, which comes last on every request.
 
 The blocks are rebuilt on every request, so changes apply at once.
 

@@ -37,6 +37,39 @@ export interface AiState {
   threads: AiThread[]; npcs: AiNpc[]; promises: { id: string; text: string }[]; facts: string[];
 }
 export interface AiMemoryStatus { chapters: number; contextTokens: number; budgetTokens: number }
+/** How the GM paces scenes for one player. */
+export type AiPacing = 'fast' | 'balanced' | 'slow';
+export const AI_PROFILE_PACINGS: AiPacing[] = ['fast', 'balanced', 'slow'];
+/** The highest weight a player can give combat, roleplay or exploration. */
+export const AI_PROFILE_WEIGHT_MAX = 3;
+export const AI_PROFILE_TONE_CHARS = 200;
+export const AI_PROFILE_ITEM_CHARS = 200;
+export const AI_PROFILE_LIST_LIMIT = 20;
+export const AI_PROFILE_NOTE_CHARS = 200;
+export const AI_PROFILE_NOTE_LIMIT = 20;
+/** A player-authored note or one the GM learned during play. */
+export type AiProfileNoteSource = 'player' | 'gm';
+export interface AiProfileNote { id: string; text: string; source: AiProfileNoteSource; at: string }
+/**
+ * One player's preferences in a campaign. It belongs to that player: the campaign owner
+ * reads and edits their own row, and the GM only ever appends `source: 'gm'` notes.
+ */
+export interface AiProfile {
+  tone: string;
+  pacing: AiPacing;
+  /** Scene weights from 0 to AI_PROFILE_WEIGHT_MAX. */
+  combat: number;
+  roleplay: number;
+  exploration: number;
+  /** Hard no-go content. The GM never includes it. */
+  lines: string[];
+  /** Content that fades to black before it happens. */
+  veils: string[];
+  likes: string[];
+  dislikes: string[];
+  notes: AiProfileNote[];
+  updated: string;
+}
 /**
  * Adventure page payload. Owner-only fields are empty strings or null for other members:
  * memory, digest, state, chatSummary, connection, actions.
