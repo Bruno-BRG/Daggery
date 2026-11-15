@@ -41,6 +41,29 @@ test('a GM turn publishes narration deltas to the campaign and never streams too
   } finally { await f.close(); }
 });
 
+test('prose in a reply that goes on to call tools never streams, and a long one is withdrawn', async () => {
+  let calls = 0;
+  const long = 'PLAN-SECRET ' + 'x'.repeat(500);
+  const f = await fixture(() => {
+    calls++;
+    const tool = (id: string) => frame({ choices: [{ delta: { tool_calls: [{ index: 0, id, type: 'function', function: { name: 'get_context', arguments: '{}' } }] } }] });
+    if (calls === 1) return sse([frame({ choices: [{ delta: { content: 'I will make the innkeeper SHORT-SECRET.' } }] }), tool('a'), 'data: [DONE]\n\n']);
+    if (calls === 2) return sse([frame({ choices: [{ delta: { content: long } }] }), tool('b'), 'data: [DONE]\n\n']);
+    return sse([frame({ choices: [{ delta: { content: 'Rain on the docks.' } }] }), 'data: [DONE]\n\n']);
+  });
+  try {
+    f.ai.start(f.user.id, f.campaign, { requestId: 'stream-hold', message: 'Look around.' });
+    const state = await finished(f.ai, f.user.id, f.campaign);
+    assert.equal(state.run?.status, 'complete');
+    assert.ok(!f.deltas.some(delta => delta.text.includes('SHORT-SECRET')), 'short pre-tool prose is held and dropped');
+    const clear = f.deltas.findIndex(delta => delta.text === '');
+    assert.ok(clear > 0, 'a long tool-round reply that already streamed is cleared');
+    const last = f.deltas.at(-1)!;
+    assert.equal(last.text, 'Rain on the docks.');
+    assert.ok(last.round > f.deltas[0]!.round, 'the narration arrives in a later round, replacing the withdrawn text');
+  } finally { await f.close(); }
+});
+
 test('a provider that answers with JSON still completes the turn without streaming', async () => {
   const f = await fixture(() => new Response(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'Plain reply.' } }], usage: { cost: 0 } }), { status: 200, headers: { 'content-type': 'application/json' } }));
   try {

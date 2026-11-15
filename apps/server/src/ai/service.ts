@@ -39,6 +39,8 @@ const CANON_PER_COMPACTION = 6;
 const TURN_ACTIONS = 24;
 /** Narration deltas are coalesced into at most one realtime publish per window. */
 const STREAM_THROTTLE_MS = 80;
+/** A reply's text is held until it reaches this length, so short pre-tool remarks never stream. */
+const STREAM_HOLD_CHARS = 400;
 /** Tools whose query is embedded for hybrid (BM25 + semantic) retrieval. */
 const SEMANTIC_TOOLS = new Set(['search_journal', 'canon_search', 'search_sourcebook', 'search_rules']);
 /** Canon reads return a whole source record, so they get room for a full body plus its metadata. */
@@ -74,7 +76,7 @@ interface Runtime { campaign: string; owner: string; turn: string; chat: string;
 type Publish = (campaign: string, ns: string, id: string, value: unknown) => void;
 type PublishRoll = (campaign: string, kind: string, result: unknown, author?: string) => void;
 /** A narration delta for the in-progress GM turn. Tool arguments never travel here. */
-type PublishDelta = (campaign: string, turn: string, chat: string, text: string) => void;
+type PublishDelta = (campaign: string, turn: string, chat: string, round: number, text: string) => void;
 
 function clip(value: string, max: number): string {
   return value.length > max ? value.slice(0, max) : value;
@@ -692,20 +694,34 @@ export class AiService {
    * source of truth, so a dropped or late delta can never change the transcript.
    */
   private deltaStream(campaign: string, turn: string, chat: string) {
-    let pending = '', last = 0;
+    // Prose written in a round that ends in tool calls was never shown before streaming existed, and
+    // it can think aloud about GM-only material ("I'll make the innkeeper the cult leader"). So each
+    // round holds its text until it is long enough to be narration, drops held text when the round
+    // turns out to call tools, and tells clients to clear a bubble that already showed such a round.
+    let pending = '', last = 0, round = 0, roundText = 0, shown = false;
     const flush = () => {
       if (!pending) return;
       const text = pending;
       pending = '';
       last = Date.now();
-      this.publishDelta(campaign, turn, chat, text);
+      shown = true;
+      this.publishDelta(campaign, turn, chat, round, text);
     };
     return {
       push: (delta: string) => {
         pending += delta;
-        if (Date.now() - last >= STREAM_THROTTLE_MS) flush();
+        roundText += delta.length;
+        if (roundText >= STREAM_HOLD_CHARS && Date.now() - last >= STREAM_THROTTLE_MS) flush();
       },
-      flush,
+      /** Ends one model reply. Narration is flushed; a tool round's text is dropped or cleared. */
+      end: (calledTools: boolean) => {
+        if (!calledTools) flush();
+        else {
+          pending = '';
+          if (shown) this.publishDelta(campaign, turn, chat, round + 1, '');
+        }
+        round++; roundText = 0; shown = false;
+      },
     };
   }
 
@@ -746,7 +762,7 @@ export class AiService {
       if (steps >= TURN_STEPS) throw new ProviderError('The GM reached this turn’s request limit. Send a new message to continue; completed actions are saved.');
       const request = [...this.systemMessages(rt.campaign, rt.chat, recallVector), ...conversation, this.snapshotMessage(rt)];
       const response = await this.provider.complete(rt.provider, rt.key, rt.model, request, tools, rt.signal, rt.chat, { ...(rt.temperature ? { temperature: 0.85 } : {}), onDelta: stream.push });
-      stream.flush();
+      stream.end(!!response.message.tool_calls?.length);
       rt.assertActive();
       this.db.prepare('UPDATE ai_turns SET steps = steps + 1, cost = cost + ?, updated = ? WHERE id = ?').run(response.cost, new Date().toISOString(), rt.turn);
       if (response.message.tool_calls?.length) {

@@ -111,8 +111,8 @@ export async function fixture(handler: Handler, budget = 'balanced', embedder?: 
   }) as typeof fetch);
   const vault = new SecretVault(randomBytes(32));
   const rolls: { kind: string; result: any }[] = [];
-  const deltas: { campaign: string; turn: string; chat: string; text: string }[] = [];
-  const ai = new AiService(db, campaigns, vault, provider, () => {}, (_campaign, kind, result) => { rolls.push({ kind, result }); }, embedder, (campaignId, turn, chat, text) => { deltas.push({ campaign: campaignId, turn, chat, text }); });
+  const deltas: { campaign: string; turn: string; chat: string; round: number; text: string }[] = [];
+  const ai = new AiService(db, campaigns, vault, provider, () => {}, (_campaign, kind, result) => { rolls.push({ kind, result }); }, embedder, (campaignId, turn, chat, round, text) => { deltas.push({ campaign: campaignId, turn, chat, round, text }); });
   await ai.saveConnection(user.id, { provider: 'opencode', model: MODEL, apiKey: 'test-secret-never-in-context' });
   const setup = ai.configure(user.id, campaign, { premise: 'Find the vanished keeper', budget, quickHero: { name: 'Ash', classId: 'warrior' } });
   return { ai, db, campaigns, user, campaign, requests, setup, provider, vault, rolls, deltas, close: async () => { await ai.close(); db.close(); } };

@@ -4,6 +4,8 @@ import { gameSocketUrl } from '../campaign-context';
 export interface AiStreamState {
   turnId: string;
   chatId: string;
+  /** The model reply this text belongs to; a new round replaces the text instead of extending it. */
+  round: number;
   /** Narration received so far for this turn. */
   text: string;
 }
@@ -32,14 +34,16 @@ export function useAiStream(chatId: string | null): AiStreamState | null {
       };
       ws.onmessage = (event: MessageEvent<string>) => {
         if (!isCurrent()) return;
-        let message: { type?: string; turnId?: string; chatId?: string; text?: string };
+        let message: { type?: string; turnId?: string; chatId?: string; round?: number; text?: string };
         try { message = JSON.parse(event.data) as typeof message; } catch { return; }
-        if (message.type !== 'ai-stream' || typeof message.turnId !== 'string' || typeof message.chatId !== 'string' || typeof message.text !== 'string') return;
+        if (message.type !== 'ai-stream' || typeof message.turnId !== 'string' || typeof message.chatId !== 'string' || typeof message.text !== 'string' || typeof message.round !== 'number') return;
         if (message.chatId !== activeChat.current) return;
-        const { turnId, chatId: target, text } = message;
-        setStream(previous => previous && previous.turnId === turnId
+        const { turnId, chatId: target, text, round } = message;
+        // A new reply round (or an empty clear) replaces the bubble: a round that went on to call tools
+        // is withdrawn by the server, so its text must not linger.
+        setStream(previous => previous && previous.turnId === turnId && previous.round === round
           ? { ...previous, text: previous.text + text }
-          : { turnId, chatId: target, text });
+          : { turnId, chatId: target, round, text });
       };
     };
     connect();
@@ -55,5 +59,5 @@ export function useAiStream(chatId: string | null): AiStreamState | null {
   // A different session never inherits the previous one's partial bubble.
   useEffect(() => { setStream(null); }, [chatId]);
 
-  return stream;
+  return stream && stream.text ? stream : null;
 }
