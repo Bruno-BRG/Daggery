@@ -1,157 +1,565 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  DUALITY_ENGINE_VERSION, DUALITY_LIKELIHOODS, DUALITY_MAX_FEAR,
-  dualityTable, fearCheck, hasFeature, readDualityMeaning,
-  type DualityMeaningTable, type DualityTable,
+  DUALITY_ENGINE_VERSION, DUALITY_LIKELIHOODS, DUALITY_MAX_FEAR, DUALITY_TABLES,
+  IRON_MOVE_GROUPS, IRON_MOVES, IRON_OUTCOME_LABELS,
+  dualityTable, fearCheck, hasFeature, readDualityMeaning, resolveIronProgress,
+  type DualityMeaningTable, type DualityTable, type IronMove, type IronOutcome,
 } from '@daggery/shared';
 import { getActiveCampaign } from '../../campaign-context';
-import { Icon } from '../../components/Icon';
-import { SOLO_SECTIONS, type RefBlock, type SoloSection } from './reference';
+import { Icon, type IconName } from '../../components/Icon';
+import { SOLO_SECTIONS, type RefBlock } from './reference';
+import { DIFFICULTIES, MOVE_FLOWS, MOVE_GROUP_META, OUTCOME_ORDER, type MoveFlow, type Step } from './workflow';
 import './solo.css';
 
 /** Tables rolled with the Duality Dice instead of a single d12. */
 const MEANING_TABLES = new Set<string>(['action', 'subject', 'descriptor']);
 
-/** A uniform d12 from the platform CSPRNG, with rejection sampling to avoid modulo bias. */
-function rollD12(): number {
-  const limit = Math.floor(0x1_0000_0000 / 12) * 12;
+/** A uniform die from the platform CSPRNG, with rejection sampling to avoid modulo bias. */
+function rollDie(sides: number): number {
+  const limit = Math.floor(0x1_0000_0000 / sides) * sides;
   const buffer = new Uint32Array(1);
   for (;;) {
     crypto.getRandomValues(buffer);
     const value = buffer[0]!;
-    if (value < limit) return (value % 12) + 1;
+    if (value < limit) return (value % sides) + 1;
   }
 }
+const rollD12 = () => rollDie(12);
 
 /** Every roll gets a number so the same result rolled twice still flashes. */
 let rollSequence = 0;
 const nextRoll = () => ++rollSequence;
 
+// ------------------------------------------------------------------- the roll log
+
+type Tone = 'yes' | 'no' | 'crit' | 'plain';
+interface LogEntry {
+  n: number; at: number; icon: IconName;
+  /** What was rolled: "Ask the Oracle · Likely", "Face Danger", "Pay the Price". */
+  title: string;
+  /** The answer, big. */
+  answer: string;
+  tone: Tone;
+  /** Named parts of a multi-column result. */
+  lines?: readonly (readonly [string, string])[];
+  /** The dice, small. */
+  detail?: string;
+  /** A rule reminder that matters for this result. */
+  note?: string;
+  /** What to roll next, from the move or table rules. */
+  next?: readonly Step[];
+}
+
+const LOG_KEY = 'daggery.solo.log';
+const FEAR_KEY = 'daggery.solo.fear';
+const LOG_LIMIT = 60;
+
+/** The log only lives for this browser session: the story itself stays in the player's notebook. */
+function loadSession<T>(key: string, fallback: T): T {
+  try { const raw = sessionStorage.getItem(key); return raw ? JSON.parse(raw) as T : fallback; } catch { return fallback; }
+}
+
 interface ColumnRoll { roll: number; entry: string; n: number }
 type TableRolls = Record<number, ColumnRoll>;
 interface MeaningRoll { hope: number; fear: number; entry: string; n: number }
-
 const EMPTY_ROLLS: TableRolls = {};
+
+type Mode = 'moves' | 'tables' | 'rules';
+const MODES: { id: Mode; label: string; icon: IconName }[] = [
+  { id: 'moves', label: 'Moves', icon: 'compass' },
+  { id: 'tables', label: 'Tables', icon: 'grid' },
+  { id: 'rules', label: 'Rules', icon: 'book' },
+];
 
 export default function SoloPlay({ author: _author }: { author: string }) {
   if (!hasFeature(getActiveCampaign().configuration, 'daggerheart.solo') || getActiveCampaign().role !== 'gm') return <p>Solo play is not enabled for this campaign.</p>;
   return <Workspace />;
 }
 
-/** Reads the section id from a hash such as `#solo-combat`. */
-function sectionFromHash(): string {
-  const id = window.location.hash.replace(/^#solo-/, '');
-  return SOLO_SECTIONS.some(section => section.id === id) ? id : SOLO_SECTIONS[0]!.id;
+/** Reads `#solo-tables-combat` or `#solo-moves-face-danger` into a mode and a selection. */
+function readHash(): { mode: Mode; id?: string } {
+  const match = /^#solo-(moves|tables|rules)(?:-(.+))?$/.exec(window.location.hash);
+  if (match) return { mode: match[1] as Mode, id: match[2] };
+  // Older links point straight at a table section, such as #solo-combat.
+  const legacy = window.location.hash.replace(/^#solo-/, '');
+  if (SOLO_SECTIONS.some(section => section.id === legacy)) return { mode: 'tables', id: legacy };
+  return { mode: 'moves' };
 }
 
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-const scrollToId = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
 
 function Workspace() {
-  const [sectionId, setSectionId] = useState(sectionFromHash);
-  // Results live only here: nothing is saved, and switching sections keeps them for the session.
+  const initial = useMemo(readHash, []);
+  const [mode, setMode] = useState<Mode>(initial.mode);
+  const [moveId, setMoveId] = useState(initial.mode === 'moves' && IRON_MOVES.some(move => move.id === initial.id) ? initial.id! : 'face-danger');
+  const [sectionId, setSectionId] = useState(initial.mode === 'tables' && SOLO_SECTIONS.some(section => section.id === initial.id) ? initial.id! : SOLO_SECTIONS[0]!.id);
+  const [query, setQuery] = useState('');
+  const [fear, setFear] = useState(() => loadSession(FEAR_KEY, 0));
+  const [log, setLog] = useState<LogEntry[]>(() => loadSession(LOG_KEY, []));
   const [tableRolls, setTableRolls] = useState<Record<string, TableRolls>>({});
   const [meaningRolls, setMeaningRolls] = useState<Record<string, MeaningRoll>>({});
-  const workspace = useRef<HTMLDivElement>(null);
-  const nav = useRef<HTMLElement>(null);
+  const [moveOutcomes, setMoveOutcomes] = useState<Record<string, { outcome: IronOutcome; n: number }>>({});
+  const [dockPulse, setDockPulse] = useState(0);
+  const search = useRef<HTMLInputElement>(null);
+  const dock = useRef<HTMLElement>(null);
 
+  useEffect(() => { try { sessionStorage.setItem(LOG_KEY, JSON.stringify(log)); } catch { /* storage full or blocked */ } }, [log]);
+  useEffect(() => { try { sessionStorage.setItem(FEAR_KEY, JSON.stringify(fear)); } catch { /* storage blocked */ } }, [fear]);
+
+  // Links such as #solo-tables-combat or #solo-moves-make-camp open that view.
   useEffect(() => {
-    const sync = () => setSectionId(sectionFromHash());
+    const sync = () => {
+      const { mode: next, id } = readHash();
+      setMode(next); setQuery('');
+      if (next === 'moves' && IRON_MOVES.some(move => move.id === id)) setMoveId(id!);
+      if (next === 'tables' && SOLO_SECTIONS.some(section => section.id === id)) setSectionId(id!);
+    };
     window.addEventListener('hashchange', sync);
     return () => window.removeEventListener('hashchange', sync);
   }, []);
 
-  // On phones the section bar scrolls sideways: keep the current section in view.
+  // "/" jumps to search from anywhere on the page, as in most rules tools.
   useEffect(() => {
-    const bar = nav.current, active = bar?.querySelector<HTMLElement>('[aria-current]');
-    if (!bar || !active) return;
-    const box = bar.getBoundingClientRect(), tab = active.getBoundingClientRect();
-    if (tab.left < box.left || tab.right > box.right) bar.scrollTo({ left: bar.scrollLeft + tab.left - box.left - 12 });
-  }, [sectionId]);
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || target?.closest('input, textarea, select, [contenteditable]')) return;
+      event.preventDefault();
+      search.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
-  // The sticky section bar changes height when it wraps; jump targets stop just below it.
-  useLayoutEffect(() => {
-    const bar = nav.current, root = workspace.current;
+  // The dock sticks to the top; the log column sticks just below it.
+  useEffect(() => {
+    const bar = dock.current, root = bar?.closest<HTMLElement>('.solo-shell');
     if (!bar || !root) return;
-    const measure = () => root.style.setProperty('--solo-nav-height', `${bar.offsetHeight}px`);
+    const measure = () => root.style.setProperty('--solo-dock-height', `${bar.offsetHeight}px`);
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(bar);
     return () => observer.disconnect();
   }, []);
 
-  function selectSection(id: string) {
-    setSectionId(id);
-    if (window.location.hash !== `#solo-${id}`) window.history.replaceState(null, '', `#solo-${id}`);
-    // Only jump when the reader has scrolled past the top of the section.
-    const heading = document.getElementById('solo-section-top');
-    const navBottom = nav.current?.getBoundingClientRect().bottom ?? 0;
-    if (heading && heading.getBoundingClientRect().top < navBottom) heading.scrollIntoView({ block: 'start' });
+  function setHash(next: string) {
+    if (window.location.hash !== next) window.history.replaceState(null, '', next);
+  }
+  function openMode(next: Mode) {
+    setMode(next); setQuery('');
+    setHash(next === 'moves' ? `#solo-moves-${moveId}` : next === 'tables' ? `#solo-tables-${sectionId}` : '#solo-rules');
+  }
+  function openMove(id: string) {
+    setMode('moves'); setMoveId(id); setQuery(''); setHash(`#solo-moves-${id}`);
+  }
+  function openSection(id: string) {
+    setSectionId(id); setHash(`#solo-tables-${id}`);
   }
 
-  function rollTable(table: DualityTable, column: number) {
-    const roll = rollD12();
-    const entry = table.columns[column]!.entries[roll - 1]!;
-    const n = nextRoll();
-    setTableRolls(previous => ({ ...previous, [table.id]: { ...previous[table.id], [column]: { roll, entry, n } } }));
+  const push = (entry: Omit<LogEntry, 'n' | 'at'>) => setLog(previous => [{ ...entry, n: nextRoll(), at: Date.now() }, ...previous].slice(0, LOG_LIMIT));
+
+  // ---- the rolls
+
+  function rollTable(id: string, column?: number) {
+    const table = dualityTable(id);
+    if (MEANING_TABLES.has(id)) { rollMeaningTable(id as DualityMeaningTable); return; }
+    const columns = column === undefined ? table.columns.map((_, index) => index) : [column];
+    const rolls = columns.map(index => {
+      const roll = rollD12();
+      return { index, roll, entry: table.columns[index]!.entries[roll - 1]!, n: nextRoll() };
+    });
+    setTableRolls(previous => {
+      const next = { ...previous[id] };
+      for (const roll of rolls) next[roll.index] = { roll: roll.roll, entry: roll.entry, n: roll.n };
+      return { ...previous, [id]: next };
+    });
+    const single = rolls.length === 1;
+    const title = single && table.columns.length > 1 ? `${table.title} · ${table.columns[rolls[0]!.index]!.label}` : table.title;
+    push({
+      icon: 'dice', title, tone: 'plain',
+      answer: single ? rolls[0]!.entry : rolls.map(roll => roll.entry).join(' · '),
+      lines: single ? undefined : rolls.map(roll => [table.columns[roll.index]!.label, roll.entry] as const),
+      detail: `d12: ${rolls.map(roll => roll.roll).join(', ')}`,
+      note: id === 'iron-price' ? 'A severe price rolls twice. Take the most obvious outcome if one comes to mind first.' : undefined,
+      next: id === 'fear-spend' && rolls.some(roll => roll.roll >= 11) ? [{ kind: 'table', table: 'iron-price', label: 'Hard Move: severe price' }] : undefined,
+    });
   }
 
-  function rollMeaning(id: DualityMeaningTable): MeaningRoll {
-    const hope = rollD12();
-    const fear = rollD12();
-    const result = { hope, fear, entry: readDualityMeaning(id, hope, fear), n: nextRoll() };
+  function meaningRoll(id: DualityMeaningTable): MeaningRoll {
+    const hope = rollD12(), fearDie = rollD12();
+    const result = { hope, fear: fearDie, entry: readDualityMeaning(id, hope, fearDie), n: nextRoll() };
     setMeaningRolls(previous => ({ ...previous, [id]: result }));
     return result;
   }
+  function rollMeaningTable(id: DualityMeaningTable) {
+    const result = meaningRoll(id);
+    push({ icon: 'book', title: `Meaning · ${dualityTable(id).title}`, answer: result.entry, tone: 'plain', detail: `Hope ${result.hope} picks the row · Fear ${result.fear} is ${result.fear % 2 ? 'odd: A' : 'even: B'}` });
+  }
+  function rollMeaningPair(first: 'action' | 'descriptor') {
+    const a = meaningRoll(first), b = meaningRoll('subject');
+    push({
+      icon: 'book', title: first === 'action' ? 'Meaning · What happens' : 'Meaning · What it is like', tone: 'plain',
+      answer: `${a.entry} + ${b.entry}`,
+      detail: `${first === 'action' ? 'Action' : 'Descriptor'} ${a.hope}/${a.fear} · Subject ${b.hope}/${b.fear}`,
+      note: 'Take the first reading that fits the scene. Keep it small.',
+    });
+  }
 
-  const section = SOLO_SECTIONS.find(item => item.id === sectionId) ?? SOLO_SECTIONS[0]!;
+  function askOracle(likelihood: (typeof DUALITY_LIKELIHOODS)[number]) {
+    const hope = rollD12(), fearDie = rollD12();
+    const yes = hope + fearDie >= likelihood.target, doubles = hope === fearDie;
+    push({
+      icon: 'spark', title: `Ask the Oracle · ${likelihood.label}`, tone: doubles ? 'crit' : yes ? 'yes' : 'no',
+      answer: doubles ? (yes ? 'Yes, and more' : 'No, and worse') : yes ? 'Yes' : 'No',
+      detail: `Hope ${hope} + Fear ${fearDie} = ${hope + fearDie} · needs ${likelihood.target}+`,
+      note: doubles ? 'Doubles: an extreme result or a twist.' : undefined,
+      next: doubles ? [{ kind: 'meaning', first: 'action' }] : undefined,
+    });
+  }
 
-  return <div className="solo-workspace" ref={workspace}>
-    <header className="solo-heading">
-      <p className="solo-kicker">{`Duality GME ${DUALITY_ENGINE_VERSION}`}</p>
-      <h1>Solo play</h1>
+  function rollFearCheck() {
+    const roll = rollD12(), pass = fearCheck(roll, fear);
+    push({
+      icon: 'adversary', title: `Fear Check · Fear ${fear}`, tone: pass ? 'no' : 'yes',
+      answer: pass ? 'The world acts' : 'All quiet',
+      detail: `d12 ${roll} ${pass ? '≤' : '>'} Fear ${fear}${fear === 0 ? ' (always fails at 0)' : ''}`,
+      note: pass ? 'In a fight: spend Fear and roll Fear Spend. On the road: spend 1 Fear and roll Danger.' : 'In a fight: a free action from Tactics. On the road: roll Discovery.',
+      next: pass
+        ? [{ kind: 'table', table: 'fear-spend', label: 'Fear Spend' }, { kind: 'table', table: 'journey', column: 0, label: 'Journey danger' }]
+        : [{ kind: 'table', table: 'tactics', label: 'Tactics (free)' }, { kind: 'table', table: 'journey', column: 1, label: 'Journey discovery' }],
+    });
+  }
+
+  function rollAction(move: IronMove, difficulty: number, modifier: number) {
+    const hope = rollD12(), fearDie = rollD12(), total = hope + fearDie + modifier;
+    const crit = hope === fearDie, success = crit || total >= difficulty, withHope = crit || hope > fearDie;
+    const outcome: IronOutcome = !success ? 'miss' : withHope ? 'strong' : 'weak';
+    const kind = crit ? 'Critical success' : `${success ? 'Success' : 'Failure'} with ${withHope ? 'Hope' : 'Fear'}`;
+    if (!withHope) setFear(value => Math.min(DUALITY_MAX_FEAR, value + 1));
+    const flow = MOVE_FLOWS[move.id];
+    setMoveOutcomes(previous => ({ ...previous, [move.id]: { outcome, n: nextRoll() } }));
+    push({
+      icon: 'dice', title: move.name, tone: crit ? 'crit' : outcome === 'miss' ? 'no' : 'yes',
+      answer: IRON_OUTCOME_LABELS[outcome],
+      detail: `${kind} · Hope ${hope} + Fear ${fearDie}${modifier ? ` ${modifier > 0 ? '+' : '−'} ${Math.abs(modifier)}` : ''} = ${total} vs ${difficulty}`,
+      note: [move[outcome], crit ? 'Gain a Hope and clear a Stress.' : withHope ? 'Gain a Hope.' : 'The world gains a Fear (added to the tracker).',
+        !success && !withHope ? 'The world may spend 1 Fear to make the price severe: roll it twice.' : ''].filter(Boolean).join(' '),
+      next: flow?.[outcome],
+    });
+  }
+
+  function rollProgress(move: IronMove, score: number) {
+    const c1 = rollDie(10), c2 = rollDie(10);
+    const { outcome, match } = resolveIronProgress(score, c1, c2);
+    setMoveOutcomes(previous => ({ ...previous, [move.id]: { outcome, n: nextRoll() } }));
+    push({
+      icon: 'target', title: `${move.name} · progress roll`, tone: outcome === 'miss' ? 'no' : match ? 'crit' : 'yes',
+      answer: `${IRON_OUTCOME_LABELS[outcome]}${match ? ', with a match' : ''}`,
+      detail: `Score ${score} against ${c1} and ${c2}`,
+      note: [move[outcome], match ? (outcome === 'miss' ? 'A match on a miss: a dire turn.' : 'A match on a hit: a favor or a twist in your favor.') : ''].filter(Boolean).join(' '),
+      next: MOVE_FLOWS[move.id]?.[outcome],
+    });
+  }
+
+  function recordOutcome(move: IronMove, outcome: IronOutcome) {
+    setMoveOutcomes(previous => ({ ...previous, [move.id]: { outcome, n: nextRoll() } }));
+    push({ icon: 'check', title: move.name, tone: outcome === 'miss' ? 'no' : 'yes', answer: IRON_OUTCOME_LABELS[outcome], detail: 'Rolled at the table', note: move[outcome], next: MOVE_FLOWS[move.id]?.[outcome] });
+  }
+
+  function runStep(step: Step) {
+    if (step.kind === 'table') rollTable(step.table, step.column);
+    else if (step.kind === 'meaning') rollMeaningPair(step.first);
+    else if (step.kind === 'fear-check') rollFearCheck();
+    else {
+      // The oracle lives in the dock: bring it into view and point at it.
+      dock.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest' });
+      dock.current?.querySelector<HTMLButtonElement>('.solo-dock-oracle button')?.focus({ preventScroll: true });
+      setDockPulse(value => value + 1);
+    }
+  }
+
+  async function copyLog() {
+    const text = [...log].reverse().map(entry => `${entry.title}: ${entry.answer}${entry.detail ? ` (${entry.detail})` : ''}`).join('\n');
+    try { await navigator.clipboard.writeText(text); } catch { /* clipboard blocked: nothing to do */ }
+  }
+
+  const trimmed = query.trim().toLowerCase();
+
+  return <div className="solo-shell">
+    <header className="solo-top">
+      <div className="solo-title">
+        <p className="solo-kicker">{`Duality GME ${DUALITY_ENGINE_VERSION}`}</p>
+        <h1>Solo play</h1>
+      </div>
+      <nav className="solo-modes" aria-label="Solo views">
+        {MODES.map(item => <button key={item.id} type="button" aria-current={!trimmed && mode === item.id ? 'page' : undefined} onClick={() => openMode(item.id)}>
+          <Icon name={item.icon} /><span>{item.label}</span>
+        </button>)}
+      </nav>
+      <label className="solo-search">
+        <Icon name="search" />
+        <input ref={search} type="search" value={query} placeholder="Find a move or table" aria-label="Find a move or table" onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') setQuery(''); }} />
+        {!query && <kbd aria-hidden="true">/</kbd>}
+      </label>
     </header>
-    <nav className="solo-tabs" aria-label="Solo sections" ref={nav}>
-      {SOLO_SECTIONS.map(item => <button key={item.id} type="button" aria-current={item.id === sectionId ? 'page' : undefined} onClick={() => selectSection(item.id)}>
-        <Icon name={item.icon} /><span>{item.label}</span>
-      </button>)}
-    </nav>
-    <SectionView key={section.id} section={section} tableRolls={tableRolls} meaningRolls={meaningRolls} onRollTable={rollTable} onRollMeaning={rollMeaning} />
+
+    <OracleDock ref={dock} pulse={dockPulse} fear={fear} setFear={setFear} onAsk={askOracle} onMeaning={rollMeaningPair} onFearCheck={rollFearCheck} onPrice={() => rollTable('iron-price')} />
+
+    <div className="solo-body">
+      <main className="solo-main">
+        {trimmed
+          ? <SearchResults query={trimmed} tableRolls={tableRolls} meaningRolls={meaningRolls} onOpenMove={openMove} onRoll={rollTable} />
+          : mode === 'moves'
+            ? <MovesView moveId={moveId} onSelect={openMove} outcomes={moveOutcomes} onRunStep={runStep} onAction={rollAction} onProgress={rollProgress} onRecord={recordOutcome} />
+            : mode === 'tables'
+              ? <TablesView sectionId={sectionId} onSection={openSection} tableRolls={tableRolls} meaningRolls={meaningRolls} onRoll={rollTable} onPair={rollMeaningPair} />
+              : <RulesView />}
+      </main>
+      <RollLog log={log} onRunStep={runStep} onCopy={copyLog} onClear={() => setLog([])} />
+    </div>
   </div>;
 }
 
-function SectionView({ section, tableRolls, meaningRolls, onRollTable, onRollMeaning }: {
-  section: SoloSection;
-  tableRolls: Record<string, TableRolls>;
-  meaningRolls: Record<string, MeaningRoll>;
-  onRollTable: (table: DualityTable, column: number) => void;
-  onRollMeaning: (id: DualityMeaningTable) => MeaningRoll;
-}) {
-  const tables = section.tables.map(id => dualityTable(id));
-  return <section className="solo-section" aria-labelledby={`solo-section-${section.id}`}>
-    <header className="solo-section-heading" id="solo-section-top">
-      <h2 id={`solo-section-${section.id}`}>{section.label}</h2>
-      <p>{section.intro}</p>
-      <div className="solo-jump" role="group" aria-label={`Jump to a table in ${section.label}`}>
-        {tables.map(table => <button key={table.id} type="button" onClick={() => scrollToId(`solo-table-${table.id}`)}>{table.title}</button>)}
-        {section.reference.length > 0 && <button type="button" className="is-rules" onClick={() => scrollToId(`solo-rules-${section.id}`)}><Icon name="book" />Rules</button>}
+// ------------------------------------------------------------------- oracle dock
+
+
+interface DockProps {
+  pulse: number; fear: number; setFear: (update: (value: number) => number) => void;
+  onAsk: (likelihood: (typeof DUALITY_LIKELIHOODS)[number]) => void;
+  onMeaning: (first: 'action' | 'descriptor') => void;
+  onFearCheck: () => void; onPrice: () => void;
+}
+
+/** The four things you reach for in every scene, one tap away wherever you are on the page. */
+const OracleDock = forwardRef<HTMLElement, DockProps>(function OracleDock({ pulse, fear, setFear, onAsk, onMeaning, onFearCheck, onPrice }, ref) {
+  return <section ref={ref} className="solo-dock" aria-label="Oracle and Fear">
+    <div key={pulse} className={`solo-dock-group solo-dock-oracle${pulse ? ' is-pulsing' : ''}`} role="group" aria-labelledby="solo-dock-ask">
+      <span className="solo-dock-label" id="solo-dock-ask">Ask the Oracle</span>
+      <div className="solo-dock-buttons">
+        {DUALITY_LIKELIHOODS.map(likelihood => <button key={likelihood.id} type="button" title={`${likelihood.label}: Hope + Fear ${likelihood.target}+ (${likelihood.chance})`} onClick={() => onAsk(likelihood)}>
+          <span>{likelihood.label}</span><small>{likelihood.chance}</small>
+        </button>)}
       </div>
-    </header>
-    {section.id === 'core' && <CoreWidgets />}
-    {section.id === 'meaning' && <MeaningCombos onRoll={onRollMeaning} />}
-    <div className="solo-table-grid">
-      {tables.map(table => MEANING_TABLES.has(table.id)
-        ? <MeaningCard key={table.id} table={table} rolled={meaningRolls[table.id]} onRoll={() => onRollMeaning(table.id as DualityMeaningTable)} />
-        : <TableCard key={table.id} table={table} rolls={tableRolls[table.id] ?? EMPTY_ROLLS} onRoll={column => onRollTable(table, column)} />)}
     </div>
-    {section.reference.length > 0 && <section className="solo-rules" id={`solo-rules-${section.id}`} aria-labelledby={`solo-rules-title-${section.id}`}>
-      <h2 id={`solo-rules-title-${section.id}`}>Rules at a glance</h2>
-      <div className="solo-reference-grid">{section.reference.map(block => <ReferenceBlock key={block.title} block={block} />)}</div>
+    <div className="solo-dock-group" role="group" aria-labelledby="solo-dock-meaning">
+      <span className="solo-dock-label" id="solo-dock-meaning">Meaning</span>
+      <div className="solo-dock-buttons">
+        <button type="button" title="Action + Subject: what someone wants, or what happens" onClick={() => onMeaning('action')}><span>What happens</span><small>Action + Subject</small></button>
+        <button type="button" title="Descriptor + Subject: what something is, or what a place is like" onClick={() => onMeaning('descriptor')}><span>What it is like</span><small>Descriptor + Subject</small></button>
+      </div>
+    </div>
+    <div className="solo-dock-group solo-dock-fear" role="group" aria-labelledby="solo-dock-fear">
+      <span className="solo-dock-label" id="solo-dock-fear">Fear</span>
+      <div className="solo-dock-buttons">
+        <div className="solo-stepper is-fear">
+          <button type="button" aria-label="Spend a Fear" disabled={fear <= 0} onClick={() => setFear(value => Math.max(0, value - 1))}><Icon name="minus" /></button>
+          <output aria-live="polite" aria-label={`Fear ${fear} of ${DUALITY_MAX_FEAR}`}>{fear}</output>
+          <button type="button" aria-label="Gain a Fear" disabled={fear >= DUALITY_MAX_FEAR} onClick={() => setFear(value => Math.min(DUALITY_MAX_FEAR, value + 1))}><Icon name="plus" /></button>
+        </div>
+        <button type="button" title="d12 at or under the current Fear: the world acts" onClick={onFearCheck}><span>Fear Check</span><small>d12 ≤ {fear}</small></button>
+      </div>
+    </div>
+    <div className="solo-dock-group" role="group" aria-labelledby="solo-dock-price">
+      <span className="solo-dock-label" id="solo-dock-price">On a miss</span>
+      <div className="solo-dock-buttons">
+        <button type="button" className="is-price" onClick={onPrice}><span>Pay the Price</span><small>d12</small></button>
+      </div>
+    </div>
+  </section>;
+});
+
+// ------------------------------------------------------------------- moves view
+
+function MovesView({ moveId, onSelect, outcomes, onRunStep, onAction, onProgress, onRecord }: {
+  moveId: string; onSelect: (id: string) => void;
+  outcomes: Record<string, { outcome: IronOutcome; n: number }>;
+  onRunStep: (step: Step) => void;
+  onAction: (move: IronMove, difficulty: number, modifier: number) => void;
+  onProgress: (move: IronMove, score: number) => void;
+  onRecord: (move: IronMove, outcome: IronOutcome) => void;
+}) {
+  const move = IRON_MOVES.find(item => item.id === moveId) ?? IRON_MOVES[0]!;
+  const detail = useRef<HTMLDivElement>(null);
+  const select = (id: string) => {
+    onSelect(id);
+    // On narrow screens the detail sits under the list: bring it up.
+    if (window.matchMedia?.('(max-width: 900px)').matches) requestAnimationFrame(() => detail.current?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' }));
+  };
+  return <div className="solo-moves">
+    <nav className="solo-move-list" aria-label="Moves">
+      {IRON_MOVE_GROUPS.map(group => <section key={group.id} aria-labelledby={`solo-group-${group.id}`}>
+        <h2 id={`solo-group-${group.id}`}><Icon name={MOVE_GROUP_META[group.id].icon} />{group.label.replace(/ moves$/, '')}</h2>
+        <ul>{IRON_MOVES.filter(item => item.group === group.id).map(item => <li key={item.id}>
+          <button type="button" aria-current={item.id === move.id ? 'true' : undefined} onClick={() => select(item.id)}>
+            <span>{item.name}</span>
+            {MOVE_FLOWS[item.id]?.resolve === 'action' && <small>Roll</small>}
+            {MOVE_FLOWS[item.id]?.resolve === 'progress' && <small>Progress</small>}
+          </button>
+        </li>)}</ul>
+      </section>)}
+    </nav>
+    <div ref={detail} className="solo-move-detail-wrap">
+      <MoveDetail key={move.id} move={move} rolled={outcomes[move.id]} onRunStep={onRunStep} onAction={onAction} onProgress={onProgress} onRecord={onRecord} />
+    </div>
+  </div>;
+}
+
+function stepLabel(step: Step): string {
+  if (step.kind === 'table') return step.label ?? dualityTable(step.table).title;
+  if (step.kind === 'meaning') return step.first === 'action' ? 'What happens' : 'What it is like';
+  if (step.kind === 'fear-check') return 'Fear Check';
+  return 'Ask the Oracle';
+}
+const stepIcon = (step: Step): IconName => step.kind === 'oracle' ? 'spark' : step.kind === 'meaning' ? 'book' : step.kind === 'fear-check' ? 'adversary' : 'dice';
+
+function StepChips({ steps, onRun, compact }: { steps: readonly Step[] | undefined; onRun: (step: Step) => void; compact?: boolean }) {
+  if (!steps?.length) return null;
+  return <div className={`solo-steps${compact ? ' is-compact' : ''}`}>
+    {steps.map((step, index) => <button key={index} type="button" className={step.kind === 'table' && step.table === 'iron-price' ? 'is-price' : undefined} onClick={() => onRun(step)}>
+      <Icon name={stepIcon(step)} />{stepLabel(step)}
+    </button>)}
+  </div>;
+}
+
+function MoveDetail({ move, rolled, onRunStep, onAction, onProgress, onRecord }: {
+  move: IronMove; rolled: { outcome: IronOutcome; n: number } | undefined;
+  onRunStep: (step: Step) => void;
+  onAction: (move: IronMove, difficulty: number, modifier: number) => void;
+  onProgress: (move: IronMove, score: number) => void;
+  onRecord: (move: IronMove, outcome: IronOutcome) => void;
+}) {
+  const flow: MoveFlow = MOVE_FLOWS[move.id] ?? { resolve: 'none' };
+  const group = IRON_MOVE_GROUPS.find(item => item.id === move.group)!;
+  const hasOutcomes = Boolean(move.strong || move.weak || move.miss);
+  return <article className="solo-move" aria-labelledby="solo-move-name">
+    <header className="solo-move-head">
+      <p className="solo-move-group"><Icon name={MOVE_GROUP_META[move.group].icon} />{group.label}</p>
+      <h2 id="solo-move-name">{move.name}</h2>
+      <p className="solo-move-trigger">{move.trigger}</p>
+      {move.roll && <p className="solo-move-roll"><Icon name="dice" />{move.roll}</p>}
+    </header>
+
+    {move.text && <p className="solo-move-text">{move.text}</p>}
+
+    {flow.tools && <section className="solo-move-block" aria-label="Rolls for this move">
+      <h3>Roll for this move</h3>
+      <StepChips steps={flow.tools} onRun={onRunStep} />
     </section>}
+
+    {flow.resolve === 'action' && <ActionRoller move={move} onAction={onAction} onRecord={onRecord} />}
+    {flow.resolve === 'progress' && <ProgressRoller move={move} onProgress={onProgress} onRecord={onRecord} />}
+
+    {hasOutcomes && <section className="solo-outcomes" aria-label="Outcomes" data-rolled={rolled?.outcome}>
+      {OUTCOME_ORDER.filter(outcome => move[outcome]).map(outcome => <div key={outcome} className={`solo-outcome is-${outcome}${rolled?.outcome === outcome ? ' is-current' : ''}`}>
+        <h3>{IRON_OUTCOME_LABELS[outcome]}<small>{outcome === 'strong' ? 'Success with Hope' : outcome === 'weak' ? 'Success with Fear' : 'Failure'}</small></h3>
+        <p>{move[outcome]}</p>
+        <StepChips steps={flow[outcome]} onRun={onRunStep} compact />
+      </div>)}
+    </section>}
+  </article>;
+}
+
+function Stepper({ label, value, min, max, onChange, format }: { label: string; value: number; min: number; max: number; onChange: (value: number) => void; format?: (value: number) => string }) {
+  return <div className="solo-stepper" role="group" aria-label={label}>
+    <button type="button" aria-label={`Lower ${label}`} disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}><Icon name="minus" /></button>
+    <output aria-live="polite">{format ? format(value) : value}</output>
+    <button type="button" aria-label={`Raise ${label}`} disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))}><Icon name="plus" /></button>
+  </div>;
+}
+
+function RecordOutcome({ move, onRecord }: { move: IronMove; onRecord: (move: IronMove, outcome: IronOutcome) => void }) {
+  return <div className="solo-record">
+    <span>Rolled at the table?</span>
+    {OUTCOME_ORDER.map(outcome => <button key={outcome} type="button" className={`is-${outcome}`} onClick={() => onRecord(move, outcome)}>{IRON_OUTCOME_LABELS[outcome]}</button>)}
+  </div>;
+}
+
+function ActionRoller({ move, onAction, onRecord }: { move: IronMove; onAction: (move: IronMove, difficulty: number, modifier: number) => void; onRecord: (move: IronMove, outcome: IronOutcome) => void }) {
+  const [difficulty, setDifficulty] = useState(13);
+  const [modifier, setModifier] = useState(0);
+  const hint = DIFFICULTIES.find(item => item.value === difficulty)?.hint;
+  return <section className="solo-roller" aria-label="Action roll">
+    <div className="solo-roller-row">
+      <div className="solo-field">
+        <span className="solo-field-label">Difficulty</span>
+        <div className="solo-segmented" role="radiogroup" aria-label="Difficulty">
+          {DIFFICULTIES.map(item => <button key={item.value} type="button" role="radio" aria-checked={difficulty === item.value} title={item.hint} onClick={() => setDifficulty(item.value)}>
+            <strong>{item.value}</strong><small>{item.label}</small>
+          </button>)}
+        </div>
+      </div>
+      <div className="solo-field">
+        <span className="solo-field-label">Trait + modifiers</span>
+        <Stepper label="modifier" value={modifier} min={-5} max={10} onChange={setModifier} format={value => value > 0 ? `+${value}` : `${value}`} />
+      </div>
+      <button type="button" className="solo-primary" onClick={() => onAction(move, difficulty, modifier)}><Icon name="dice" />Roll the Duality Dice</button>
+    </div>
+    <p className="solo-roller-hint">{hint} Lock the Difficulty in before you roll.</p>
+    <RecordOutcome move={move} onRecord={onRecord} />
   </section>;
 }
 
-// ------------------------------------------------------------------- table cards
+function ProgressRoller({ move, onProgress, onRecord }: { move: IronMove; onProgress: (move: IronMove, score: number) => void; onRecord: (move: IronMove, outcome: IronOutcome) => void }) {
+  const [score, setScore] = useState(5);
+  return <section className="solo-roller" aria-label="Progress roll">
+    <div className="solo-roller-row">
+      <div className="solo-field">
+        <span className="solo-field-label">Full boxes on the track</span>
+        <div className="solo-boxes" role="radiogroup" aria-label="Progress score">
+          {Array.from({ length: 11 }, (_, value) => <button key={value} type="button" role="radio" aria-checked={score === value} aria-label={`${value} boxes`} className={value > 0 && value <= score ? 'is-filled' : undefined} onClick={() => setScore(value)}>{value === 0 ? '0' : ''}</button>)}
+        </div>
+      </div>
+      <button type="button" className="solo-primary" onClick={() => onProgress(move, score)}><Icon name="target" />Progress roll · {score}</button>
+    </div>
+    <p className="solo-roller-hint">Your score against two d10. No Hope, Fear or modifiers.</p>
+    <RecordOutcome move={move} onRecord={onRecord} />
+  </section>;
+}
+
+// ------------------------------------------------------------------ tables view
+
+function TablesView({ sectionId, onSection, tableRolls, meaningRolls, onRoll, onPair }: {
+  sectionId: string; onSection: (id: string) => void;
+  tableRolls: Record<string, TableRolls>; meaningRolls: Record<string, MeaningRoll>;
+  onRoll: (id: string, column?: number) => void; onPair: (first: 'action' | 'descriptor') => void;
+}) {
+  const section = SOLO_SECTIONS.find(item => item.id === sectionId) ?? SOLO_SECTIONS[0]!;
+  return <div className="solo-tables">
+    <nav className="solo-chips" aria-label="Table groups">
+      {SOLO_SECTIONS.map(item => <button key={item.id} type="button" aria-current={item.id === section.id ? 'true' : undefined} onClick={() => onSection(item.id)}>
+        <Icon name={item.icon} />{item.label}<small>{item.tables.length}</small>
+      </button>)}
+    </nav>
+    <p className="solo-section-intro">{section.intro}</p>
+    {section.id === 'meaning' && <div className="solo-pair-bar">
+      <button type="button" className="solo-primary" onClick={() => onPair('action')}><Icon name="dice" />Action + Subject</button>
+      <button type="button" className="solo-primary is-quiet" onClick={() => onPair('descriptor')}><Icon name="dice" />Descriptor + Subject</button>
+    </div>}
+    <div className="solo-card-grid">
+      {section.tables.map(id => <TableCard key={id} table={dualityTable(id)} rolls={tableRolls[id] ?? EMPTY_ROLLS} meaning={meaningRolls[id]} onRoll={column => onRoll(id, column)} />)}
+    </div>
+  </div>;
+}
+
+function SearchResults({ query, tableRolls, meaningRolls, onOpenMove, onRoll }: {
+  query: string; tableRolls: Record<string, TableRolls>; meaningRolls: Record<string, MeaningRoll>;
+  onOpenMove: (id: string) => void; onRoll: (id: string, column?: number) => void;
+}) {
+  const moves = IRON_MOVES.filter(move => `${move.name} ${move.trigger}`.toLowerCase().includes(query));
+  const tables = DUALITY_TABLES.filter(table => `${table.title} ${table.columns.map(column => column.label).join(' ')}`.toLowerCase().includes(query));
+  if (!moves.length && !tables.length) return <p className="solo-empty">Nothing matches “{query}”. Try a word from a move or table name, such as camp, price or name.</p>;
+  return <div className="solo-search-results">
+    {moves.length > 0 && <section aria-labelledby="solo-found-moves">
+      <h2 id="solo-found-moves">Moves</h2>
+      <div className="solo-found-moves">{moves.map(move => <button key={move.id} type="button" onClick={() => onOpenMove(move.id)}>
+        <strong>{move.name}</strong><span>{move.trigger}</span>
+      </button>)}</div>
+    </section>}
+    {tables.length > 0 && <section aria-labelledby="solo-found-tables">
+      <h2 id="solo-found-tables">Tables</h2>
+      <div className="solo-card-grid">{tables.map(table => <TableCard key={table.id} table={table} rolls={tableRolls[table.id] ?? EMPTY_ROLLS} meaning={meaningRolls[table.id]} onRoll={column => onRoll(table.id, column)} />)}</div>
+    </section>}
+  </div>;
+}
 
 interface Segment { start: number; end: number; text: string }
 /** Runs of identical rows: the printed ranges such as 1–2 or 3–5. Rows are 1-based. */
@@ -167,128 +575,108 @@ function segments(entries: readonly string[]): Segment[] {
 const rangeLabel = ({ start, end }: Segment) => start === end ? `${start}` : `${start}–${end}`;
 const within = (segment: Segment, roll: number | undefined) => roll !== undefined && roll >= segment.start && roll <= segment.end;
 
-function RollBadge({ value }: { value: number }) {
-  return <span className="solo-badge" aria-hidden="true">{value}</span>;
-}
-
-/** One table card: every row visible, ranges merged as printed, one roll per column. */
-function TableCard({ table, rolls, onRoll }: { table: DualityTable; rolls: TableRolls; onRoll: (column: number) => void }) {
-  const multi = table.columns.length > 1;
-  const columns = table.columns.map(column => segments(column.entries));
-  const breaks = columns.map(runs => runs.map(run => run.start).join(','));
-  // When every column breaks on the same rows, the d12 column itself shows the ranges.
-  const grouped = breaks.every(value => value === breaks[0]);
-  const rolledAny = table.columns.some((_, index) => rolls[index]);
-  const rollAll = () => table.columns.forEach((_, index) => onRoll(index));
-
-  return <article className="solo-table-card" id={`solo-table-${table.id}`}>
+/** A compact card: the latest result up front, the full table one click away. */
+function TableCard({ table, rolls, meaning, onRoll }: { table: DualityTable; rolls: TableRolls; meaning: MeaningRoll | undefined; onRoll: (column?: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const isMeaning = MEANING_TABLES.has(table.id);
+  const multi = !isMeaning && table.columns.length > 1;
+  const rolledAny = isMeaning ? Boolean(meaning) : table.columns.some((_, index) => rolls[index]);
+  return <article className="solo-card" id={`solo-table-${table.id}`}>
     <header className="solo-card-head">
-      <h3>{table.title}</h3>
-      <button type="button" className="solo-roll" onClick={multi ? rollAll : () => onRoll(0)}><Icon name="dice" />{multi ? 'Roll all' : 'Roll d12'}</button>
+      <div>
+        <h3>{table.title}</h3>
+        <p>{isMeaning ? 'Duality Dice: Hope picks the row, Fear odd/even picks A/B' : multi ? `d12 per column · ${table.columns.map(column => column.label).join(', ')}` : 'd12'}</p>
+      </div>
+      <button type="button" className="solo-roll" onClick={() => onRoll()}><Icon name="dice" />Roll</button>
     </header>
     <div className="solo-card-result" aria-live="polite" data-empty={!rolledAny || undefined}>
       {!rolledAny
-        ? <span className="solo-result-idle">{multi ? 'Roll all, or tap a column to roll it alone.' : 'Roll a d12.'}</span>
-        : multi
-          ? <dl className="solo-result-lines">{table.columns.map((column, index) => {
-            const value = rolls[index];
-            return value ? <div key={`${column.label}-${value.n}`} className="solo-flash"><dt>{column.label}</dt><dd><RollBadge value={value.roll} /><span>{value.entry}</span></dd></div> : null;
-          })}</dl>
-          : <p key={rolls[0]!.n} className="solo-result-single solo-flash"><RollBadge value={rolls[0]!.roll} /><strong>{rolls[0]!.entry}</strong></p>}
+        ? <span className="solo-result-idle">No roll yet</span>
+        : isMeaning
+          ? <p key={meaning!.n} className="solo-result-single solo-flash"><strong>{meaning!.entry}</strong><small>Hope {meaning!.hope} · Fear {meaning!.fear}</small></p>
+          : multi
+            ? <dl className="solo-result-lines">{table.columns.map((column, index) => {
+              const value = rolls[index];
+              return value ? <div key={`${column.label}-${value.n}`} className="solo-flash"><dt>{column.label}</dt><dd><span className="solo-badge">{value.roll}</span><span>{value.entry}</span></dd></div> : null;
+            })}</dl>
+            : <p key={rolls[0]!.n} className="solo-result-single solo-flash"><span className="solo-badge">{rolls[0]!.roll}</span><strong>{rolls[0]!.entry}</strong></p>}
     </div>
-    <div className="solo-table-scroll">
-      <table className="solo-table">
-        <thead><tr>
-          <th scope="col" className="solo-range">d12</th>
-          {table.columns.map((column, index) => <th scope="col" key={column.label}>
-            {multi
-              ? <button type="button" className="solo-column-roll" title="Roll this column" aria-label={`Roll d12 for ${column.label}`} onClick={() => onRoll(index)}>{column.label}<Icon name="dice" /></button>
-              : column.label}
-          </th>)}
-        </tr></thead>
-        <tbody>{grouped
-          ? columns[0]!.map((segment, row) => {
-            const hits = table.columns.map((_, index) => within(columns[index]![row]!, rolls[index]?.roll));
-            return <tr key={segment.start} className={hits.some(Boolean) ? 'is-rolled' : undefined}>
-              <th scope="row" className="solo-range">{rangeLabel(segment)}</th>
-              {table.columns.map((column, index) => <td key={hits[index] ? `${column.label}-${rolls[index]!.n}` : column.label} className={hits[index] ? 'is-answer' : undefined}>{columns[index]![row]!.text}</td>)}
-            </tr>;
-          })
-          : Array.from({ length: 12 }, (_, offset) => {
-            const row = offset + 1;
-            const rolledRow = table.columns.some((_, index) => rolls[index]?.roll === row);
-            return <tr key={row} className={rolledRow ? 'is-rolled' : undefined}>
-              <th scope="row" className="solo-range">{row}</th>
-              {table.columns.map((column, index) => {
-                const segment = columns[index]!.find(run => run.start === row);
-                if (!segment) return null;
-                const hit = within(segment, rolls[index]?.roll);
-                return <td key={hit ? `${column.label}-${rolls[index]!.n}` : column.label} rowSpan={segment.end - segment.start + 1} className={hit ? 'is-answer' : undefined}>
-                  {segment.text}{segment.end > segment.start && <small className="solo-cell-range">{rangeLabel(segment)}</small>}
-                </td>;
-              })}
-            </tr>;
-          })}</tbody>
-      </table>
-    </div>
+    <button type="button" className="solo-card-toggle" aria-expanded={open} onClick={() => setOpen(value => !value)}>
+      <Icon name="chevron" />{open ? 'Hide the table' : 'Show the table'}
+    </button>
+    {open && (isMeaning ? <MeaningTable table={table} rolled={meaning} /> : <FullTable table={table} rolls={rolls} onRoll={onRoll} />)}
   </article>;
 }
 
-/** Meaning is read with both Duality Dice: Hope picks the row, Fear picks odd/even A/B. */
-function MeaningCard({ table, rolled, onRoll }: { table: DualityTable; rolled: MeaningRoll | undefined; onRoll: () => void }) {
-  const answerColumn = rolled ? (rolled.fear % 2 === 1 ? 0 : 1) : -1;
-  return <article className="solo-table-card" id={`solo-table-${table.id}`}>
-    <header className="solo-card-head">
-      <h3>{table.title}</h3>
-      <button type="button" className="solo-roll" onClick={onRoll}><Icon name="dice" />Roll Duality Dice</button>
-    </header>
-    <div className="solo-card-result" aria-live="polite" data-empty={!rolled || undefined}>
-      {rolled
-        ? <p key={rolled.n} className="solo-result-single solo-flash"><strong>{rolled.entry}</strong><small>Hope {rolled.hope} picks the row · Fear {rolled.fear} is {rolled.fear % 2 === 1 ? 'odd: A' : 'even: B'}</small></p>
-        : <span className="solo-result-idle">Hope die picks the row; Fear die picks the column (odd: A, even: B).</span>}
-    </div>
-    <div className="solo-table-scroll">
-      <table className="solo-table">
-        <thead><tr>
-          <th scope="col" className="solo-range">Hope</th>
-          {table.columns.map(column => <th scope="col" key={column.label}>{column.label}</th>)}
-        </tr></thead>
-        <tbody>{Array.from({ length: 12 }, (_, row) => {
-          const isRow = rolled?.hope === row + 1;
-          return <tr key={row} className={isRow ? 'is-rolled' : undefined}>
-            <th scope="row" className="solo-range">{row + 1}</th>
+function FullTable({ table, rolls, onRoll }: { table: DualityTable; rolls: TableRolls; onRoll: (column?: number) => void }) {
+  const multi = table.columns.length > 1;
+  const columns = table.columns.map(column => segments(column.entries));
+  const breaks = columns.map(runs => runs.map(run => run.start).join(','));
+  const grouped = breaks.every(value => value === breaks[0]);
+  return <div className="solo-table-scroll">
+    <table className="solo-table">
+      <thead><tr>
+        <th scope="col" className="solo-range">d12</th>
+        {table.columns.map((column, index) => <th scope="col" key={column.label}>
+          {multi ? <button type="button" className="solo-column-roll" aria-label={`Roll d12 for ${column.label}`} onClick={() => onRoll(index)}>{column.label}<Icon name="dice" /></button> : column.label}
+        </th>)}
+      </tr></thead>
+      <tbody>{grouped
+        ? columns[0]!.map((segment, row) => {
+          const hits = table.columns.map((_, index) => within(columns[index]![row]!, rolls[index]?.roll));
+          return <tr key={segment.start} className={hits.some(Boolean) ? 'is-rolled' : undefined}>
+            <th scope="row" className="solo-range">{rangeLabel(segment)}</th>
+            {table.columns.map((column, index) => <td key={hits[index] ? `${column.label}-${rolls[index]!.n}` : column.label} className={hits[index] ? 'is-answer' : undefined}>{columns[index]![row]!.text}</td>)}
+          </tr>;
+        })
+        : Array.from({ length: 12 }, (_, offset) => {
+          const row = offset + 1;
+          return <tr key={row} className={table.columns.some((_, index) => rolls[index]?.roll === row) ? 'is-rolled' : undefined}>
+            <th scope="row" className="solo-range">{row}</th>
             {table.columns.map((column, index) => {
-              const hit = isRow && index === answerColumn;
-              return <td key={hit ? `${column.label}-${rolled!.n}` : column.label} className={hit ? 'is-answer' : undefined}>{column.entries[row]}</td>;
+              const segment = columns[index]!.find(run => run.start === row);
+              if (!segment) return null;
+              const hit = within(segment, rolls[index]?.roll);
+              return <td key={hit ? `${column.label}-${rolls[index]!.n}` : column.label} rowSpan={segment.end - segment.start + 1} className={hit ? 'is-answer' : undefined}>
+                {segment.text}{segment.end > segment.start && <small className="solo-cell-range">{rangeLabel(segment)}</small>}
+              </td>;
             })}
           </tr>;
         })}</tbody>
-      </table>
-    </div>
-  </article>;
+    </table>
+  </div>;
 }
 
-/** The two pairs the manual reads together: what happens, and what something is. */
-function MeaningCombos({ onRoll }: { onRoll: (id: DualityMeaningTable) => MeaningRoll }) {
-  const [pair, setPair] = useState<{ first: MeaningRoll; second: MeaningRoll; firstId: DualityMeaningTable } | null>(null);
-  const roll = (firstId: DualityMeaningTable) => setPair({ firstId, first: onRoll(firstId), second: onRoll('subject') });
-  return <div className="solo-widgets solo-widgets-pair">
-    <section className="solo-widget" aria-labelledby="solo-combo-title">
-      <h3 id="solo-combo-title">Roll a pair</h3>
-      <p className="solo-widget-note">Action + Subject for what someone wants or what happens. Descriptor + Subject for what something is.</p>
-      <div className="solo-combo-buttons">
-        <button type="button" className="solo-roll" onClick={() => roll('action')}><Icon name="dice" />Action + Subject</button>
-        <button type="button" className="solo-roll" onClick={() => roll('descriptor')}><Icon name="dice" />Descriptor + Subject</button>
-      </div>
-    </section>
-    <section className="solo-widget solo-widget-answer" aria-live="polite">
-      {pair
-        ? <div key={pair.first.n} className="solo-flash">
-          <strong className="solo-pair">{pair.first.entry} <span>+</span> {pair.second.entry}</strong>
-          <small>{pair.firstId === 'action' ? 'Action' : 'Descriptor'}: Hope {pair.first.hope}, Fear {pair.first.fear} · Subject: Hope {pair.second.hope}, Fear {pair.second.fear}</small>
-        </div>
-        : <span className="solo-widget-idle">Your pair shows here, and both tables below light up.</span>}
-    </section>
+function MeaningTable({ table, rolled }: { table: DualityTable; rolled: MeaningRoll | undefined }) {
+  const answerColumn = rolled ? (rolled.fear % 2 === 1 ? 0 : 1) : -1;
+  return <div className="solo-table-scroll">
+    <table className="solo-table">
+      <thead><tr>
+        <th scope="col" className="solo-range">Hope</th>
+        {table.columns.map(column => <th scope="col" key={column.label}>{column.label}</th>)}
+      </tr></thead>
+      <tbody>{Array.from({ length: 12 }, (_, row) => {
+        const isRow = rolled?.hope === row + 1;
+        return <tr key={row} className={isRow ? 'is-rolled' : undefined}>
+          <th scope="row" className="solo-range">{row + 1}</th>
+          {table.columns.map((column, index) => {
+            const hit = isRow && index === answerColumn;
+            return <td key={hit ? `${column.label}-${rolled!.n}` : column.label} className={hit ? 'is-answer' : undefined}>{column.entries[row]}</td>;
+          })}
+        </tr>;
+      })}</tbody>
+    </table>
+  </div>;
+}
+
+// ------------------------------------------------------------------- rules view
+
+function RulesView() {
+  return <div className="solo-rules">
+    {SOLO_SECTIONS.filter(section => section.reference.length).map(section => <section key={section.id} aria-labelledby={`solo-rules-${section.id}`}>
+      <h2 id={`solo-rules-${section.id}`}><Icon name={section.icon} />{section.label}</h2>
+      <div className="solo-reference-grid">{section.reference.map(block => <ReferenceBlock key={block.title} block={block} />)}</div>
+    </section>)}
   </div>;
 }
 
@@ -300,71 +688,51 @@ function ReferenceBlock({ block }: { block: RefBlock }) {
   </section>;
 }
 
-// ------------------------------------------------------------------ core widgets
+// ---------------------------------------------------------------------- the log
 
-interface OracleResult { label: string; target: number; hope: number; fear: number; yes: boolean; doubles: boolean; n: number }
+const timeFormat = new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' });
 
-/** The three rolls the engine runs on: the oracle, the Fear Check and the Duality Dice. */
-function CoreWidgets() {
-  const [oracle, setOracle] = useState<OracleResult | null>(null);
-  const [fear, setFear] = useState(0);
-  const [check, setCheck] = useState<{ roll: number; pass: boolean; fear: number; n: number } | null>(null);
-  const [duality, setDuality] = useState<{ hope: number; fear: number; n: number } | null>(null);
-
-  function ask(likelihood: (typeof DUALITY_LIKELIHOODS)[number]) {
-    const hope = rollD12();
-    const fearDie = rollD12();
-    setOracle({ label: likelihood.label, target: likelihood.target, hope, fear: fearDie, yes: hope + fearDie >= likelihood.target, doubles: hope === fearDie, n: nextRoll() });
-  }
-
-  return <div className="solo-widgets">
-    <section className="solo-widget solo-oracle" aria-labelledby="solo-oracle-title">
-      <h3 id="solo-oracle-title">Ask the Oracle</h3>
-      <p className="solo-widget-note">Pick how likely a yes is. Hope + Fear must reach the target.</p>
-      <div className="solo-likelihoods" role="group" aria-label="Likelihood">
-        {DUALITY_LIKELIHOODS.map(likelihood => <button key={likelihood.id} type="button" aria-pressed={oracle?.label === likelihood.label} onClick={() => ask(likelihood)}>
-          <span>{likelihood.label}</span><small>{likelihood.target}+ · {likelihood.chance}</small>
-        </button>)}
+function RollLog({ log, onRunStep, onCopy, onClear }: { log: LogEntry[]; onRunStep: (step: Step) => void; onCopy: () => void; onClear: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const [showOlder, setShowOlder] = useState(false);
+  const [latest, ...older] = log;
+  return <aside className="solo-log" aria-label="Results">
+    <header className="solo-log-head">
+      <h2>Results</h2>
+      <div>
+        <button type="button" disabled={!log.length} onClick={() => { onCopy(); setCopied(true); window.setTimeout(() => setCopied(false), 1400); }} title="Copy every result as text, to paste into your notes"><Icon name={copied ? 'check' : 'copy'} />{copied ? 'Copied' : 'Copy'}</button>
+        <button type="button" disabled={!log.length} onClick={onClear} title="Clear the results"><Icon name="trash" /></button>
       </div>
-      <div className="solo-widget-result" aria-live="polite">
-        {oracle
-          ? <div key={oracle.n} className="solo-flash">
-            <strong className={oracle.yes ? 'is-yes' : 'is-no'}>{oracle.yes ? 'Yes' : 'No'}{oracle.doubles && <em>, and doubles</em>}</strong>
-            <span>Hope {oracle.hope} + Fear {oracle.fear} = {oracle.hope + oracle.fear} · {oracle.label} needs {oracle.target}+</span>
-            {oracle.doubles && <span className="solo-twist">Doubles: an extreme result or a twist.</span>}
-          </div>
-          : <span className="solo-widget-idle">Ask a yes/no question, then pick its likelihood.</span>}
-      </div>
-    </section>
+    </header>
+    <div className="solo-log-scroll" aria-live="polite">
+      {!latest
+        ? <div className="solo-log-empty">
+          <Icon name="dice" />
+          <strong>Envision, then roll.</strong>
+          <span>Pick a move on the left, or ask the Oracle above. Every result lands here, newest first, with what to roll next.</span>
+        </div>
+        : <>
+          <LogCard key={latest.n} entry={latest} featured onRunStep={onRunStep} />
+          {older.length > 0 && <>
+            {/* On narrow screens the results sit above the work: earlier ones fold away. */}
+            <button type="button" className="solo-log-more" aria-expanded={showOlder} onClick={() => setShowOlder(value => !value)}>
+              <Icon name="chevron" />{showOlder ? 'Hide earlier results' : `Earlier results (${older.length})`}
+            </button>
+            <ol className="solo-log-list" data-open={showOlder || undefined}>{older.map(entry => <li key={entry.n}><LogCard entry={entry} onRunStep={onRunStep} /></li>)}</ol>
+          </>}
+        </>}
+    </div>
+  </aside>;
+}
 
-    <section className="solo-widget" aria-labelledby="solo-fear-check-title">
-      <h3 id="solo-fear-check-title">Fear Check</h3>
-      <p className="solo-widget-note">Set the Fear you have, then roll a d12. At or under your Fear, the world acts.</p>
-      <div className="solo-fear-stepper" role="group" aria-label="Current Fear">
-        <button type="button" aria-label="Decrease Fear" disabled={fear <= 0} onClick={() => setFear(value => Math.max(0, value - 1))}>−</button>
-        <span className="solo-fear-value" aria-live="polite"><small>Fear</small><strong>{fear}</strong><i>/ {DUALITY_MAX_FEAR}</i></span>
-        <button type="button" aria-label="Increase Fear" disabled={fear >= DUALITY_MAX_FEAR} onClick={() => setFear(value => Math.min(DUALITY_MAX_FEAR, value + 1))}>+</button>
-      </div>
-      <button type="button" className="solo-roll" onClick={() => { const roll = rollD12(); setCheck({ roll, pass: fearCheck(roll, fear), fear, n: nextRoll() }); }}><Icon name="dice" />Fear Check</button>
-      <div className="solo-widget-result" aria-live="polite">
-        {check
-          ? <div key={check.n} className="solo-flash"><strong className={check.pass ? 'is-no' : 'is-yes'}>{check.pass ? 'The world acts' : 'All quiet'}</strong><span>d12 {check.roll} against Fear {check.fear}{check.fear === 0 ? ' (always fails at 0)' : ''}</span></div>
-          : <span className="solo-widget-idle">No check rolled yet.</span>}
-      </div>
-    </section>
-
-    <section className="solo-widget" aria-labelledby="solo-duality-title">
-      <h3 id="solo-duality-title">Duality Dice</h3>
-      <p className="solo-widget-note">Two d12: Hope and Fear. The higher die sets the tone; doubles are a Critical.</p>
-      <button type="button" className="solo-roll" onClick={() => setDuality({ hope: rollD12(), fear: rollD12(), n: nextRoll() })}><Icon name="dice" />Roll 2d12</button>
-      <div className="solo-widget-result" aria-live="polite">
-        {duality
-          ? <div key={duality.n} className="solo-flash">
-            <strong className={duality.hope === duality.fear ? 'is-crit' : duality.hope > duality.fear ? 'is-yes' : 'is-no'}>{duality.hope === duality.fear ? 'Critical' : duality.hope > duality.fear ? 'With Hope' : 'With Fear'}</strong>
-            <span className="solo-dice-pair"><b className="is-hope">{duality.hope}</b> Hope · <b className="is-fear">{duality.fear}</b> Fear · total {duality.hope + duality.fear}</span>
-          </div>
-          : <span className="solo-widget-idle">Roll for an action without the full sheet.</span>}
-      </div>
-    </section>
-  </div>;
+function LogCard({ entry, featured, onRunStep }: { entry: LogEntry; featured?: boolean; onRunStep: (step: Step) => void }) {
+  return <article className={`solo-entry is-${entry.tone}${featured ? ' is-featured solo-flash' : ''}`}>
+    <header><Icon name={entry.icon} /><span>{entry.title}</span><time dateTime={new Date(entry.at).toISOString()}>{timeFormat.format(entry.at)}</time></header>
+    {entry.lines
+      ? <dl className="solo-entry-lines">{entry.lines.map(([label, text]) => <div key={label}><dt>{label}</dt><dd>{text}</dd></div>)}</dl>
+      : <strong className="solo-entry-answer">{entry.answer}</strong>}
+    {entry.detail && <p className="solo-entry-detail">{entry.detail}</p>}
+    {featured && entry.note && <p className="solo-entry-note">{entry.note}</p>}
+    {featured && entry.next && <div className="solo-entry-next"><span>Next</span><StepChips steps={entry.next} onRun={onRunStep} compact /></div>}
+  </article>;
 }
