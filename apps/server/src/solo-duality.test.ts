@@ -28,83 +28,6 @@ async function context(fear: number, ...dice: number[]) {
   return { db, user, campaign, solo, published, pool, roll, close: () => db.close() };
 }
 
-test('the oracle adds the Duality Dice, twists on a wide gap, and never touches Fear', async () => {
-  const fixture = await context(5, 9, 3);
-  try {
-    const entry = fixture.roll('duality-oracle', { question: 'Is the gate open?', likelihood: 'likely' });
-    assert.equal(entry.result.title, 'Yes, and…');
-    assert.equal(entry.result.tone, 'hope');
-    assert.equal(entry.result.total, 12);
-    assert.match(entry.result.detail, /Hope 9 \+ Fear 3 = 12 · Likely needs 10\+/);
-    assert.equal(fixture.pool(), 5);
-    assert.equal(fixture.published.length, 0);
-    assert.equal(fixture.roll('duality-oracle', { question: ' ', likelihood: 'likely' }).question, 'Oracle', 'the question is optional at the table');
-    assert.throws(() => fixture.roll('duality-oracle', { question: 'Why?', likelihood: 'certain' }), /Invalid likelihood/);
-  } finally { fixture.close(); }
-});
-
-test('oracle doubles bring a Random Event that invokes a list', async () => {
-  // 4 + 4, then Event Focus 7 (a Thread advances), list d12 1, Action 1/1, Subject 2/2.
-  const fixture = await context(0, 4, 4, 7, 1, 1, 1, 2, 2);
-  try {
-    const state = fixture.solo.current(fixture.user.id, fixture.campaign);
-    fixture.solo.track(fixture.user.id, fixture.campaign, { revision: state.revision, threads: [{ id: 't1', name: 'Find the caravan', note: '', done: false }] });
-    const entry = fixture.roll('duality-oracle', { question: 'Is it far?', likelihood: 'even' });
-    assert.equal(entry.result.title, 'No');
-    assert.equal(entry.result.tone, 'revelation');
-    assert.match(entry.result.detail, /Doubles: a Random Event occurs as well\./);
-    assert.match(entry.result.detail, /Event Focus d12 7: A Thread advances/);
-    assert.match(entry.result.detail, /Threads d12 1: Find the caravan/);
-    assert.match(entry.result.detail, /Meaning \(Hope\/Fear 1\/1, 2\/2\): Seek \/ Stranger/);
-  } finally { fixture.close(); }
-});
-
-test('setting the scene rolls a complication, then spends 1 Fear when the Fear Check passes', async () => {
-  // Complication 1, Fear Check 3 (odd pass), Altered Scene 2.
-  const altered = await context(6, 1, 3, 2);
-  try {
-    const entry = altered.roll('duality-scene');
-    assert.equal(entry.result.title, 'Altered scene: An expected NPC is absent · Hostile forces oppose you');
-    assert.deepEqual(entry.result.cells, [{ table: 'scene-complication', column: 0, roll: 1 }, { table: 'altered-scene', column: 0, roll: 2 }]);
-    assert.match(entry.result.detail, /Fear Check d12 3 vs Fear 6: passes/);
-    assert.match(entry.result.detail, /Fear spent: 1 \(5 left\)\./);
-    assert.equal(altered.pool(), 5);
-    assert.deepEqual(altered.published.at(-1), { ns: 'combat', id: 'fear', value: { kind: 'fear', value: 5 } });
-  } finally { altered.close(); }
-  const interrupted = await context(6, 1, 4, 2);
-  try {
-    assert.match(interrupted.roll('duality-scene').result.title, /^Interrupted scene: A strange omen or mystery/);
-    assert.equal(interrupted.pool(), 5);
-  } finally { interrupted.close(); }
-  const expected = await context(6, 2, 9);
-  try {
-    assert.equal(expected.roll('duality-scene').result.title, 'Complication: An obstacle blocks your way');
-    assert.equal(expected.pool(), 6);
-    assert.equal(expected.published.length, 0);
-  } finally { expected.close(); }
-});
-
-test('GM Moves: soft without a check, hard on a passed check, and a 12 spends again', async () => {
-  const soft = await context(12, 5);
-  try {
-    assert.equal(soft.roll('duality-move', { trigger: 'success-fear' }).result.title, 'Soft Move: Mark a Stress');
-    assert.equal(soft.pool(), 12);
-  } finally { soft.close(); }
-  const hard = await context(3, 2, 12, 1, 6);
-  try {
-    const entry = hard.roll('duality-move', { trigger: 'failure-fear' });
-    assert.equal(entry.result.title, 'Hard Move: An adversary strikes: take damage + Enemy reinforcements arrive');
-    assert.equal(hard.pool(), 1);
-  } finally { hard.close(); }
-  const failed = await context(3, 9, 1);
-  try {
-    assert.equal(failed.roll('duality-move', { trigger: 'failure-fear' }).result.title, 'Soft Move: Show how the world reacts');
-    assert.equal(failed.roll('duality-move', { trigger: 'stall' }).result.title, 'No move');
-    assert.equal(failed.pool(), 3);
-    assert.throws(() => failed.roll('duality-move', { trigger: 'critical' }), /Invalid move trigger/);
-  } finally { failed.close(); }
-});
-
 test('adversaries act for free on a failed check, spend on a pass, and chain until a fail', async () => {
   const fixture = await context(2, 5, 4, 1, 7, 1, 2, 9);
   try {
@@ -139,8 +62,8 @@ test('generators, journeys, tables and lists roll d12s', async () => {
 
 test('advisory rolls suggest the Fear cost instead of spending it, and only the Fear line differs', () => {
   const state = initialSoloState();
-  const normal = rollDuality('duality-scene', { state, fear: 6, rng: queue(1, 3, 2), input: {}, question: '' });
-  const advisory = rollDuality('duality-scene', { state, fear: 6, rng: queue(1, 3, 2), input: {}, question: '', advisory: true });
+  const normal = rollDuality('iron-price', { state, fear: 6, rng: queue(1, 3), input: { severe: true }, question: '' });
+  const advisory = rollDuality('iron-price', { state, fear: 6, rng: queue(1, 3), input: { severe: true }, question: '', advisory: true });
   assert.equal(normal.fearSpent, 1);
   assert.equal(advisory.fearSpent, 1, 'the engine still reports what the move would cost');
   assert.match(normal.result.detail, /Fear spent: 1 \(5 left\)\./);
@@ -224,8 +147,56 @@ test('the tracker saves the engine variant and progress tracks', async () => {
     assert.deepEqual(saved.tracks?.[0]?.clock, { size: 6, filled: 2 });
     const track = (patch: Record<string, unknown>) => fixture.solo.track(fixture.user.id, fixture.campaign, { revision: fixture.solo.current(fixture.user.id, fixture.campaign).revision, ...patch });
     assert.throws(() => track({ variant: 'fate' }), /Invalid engine variant/);
+    assert.throws(() => track({ variant: 'duality' }), /Invalid engine variant/);
     assert.throws(() => track({ variant: 'mythic' }), /Invalid engine variant/);
     assert.throws(() => track({ tracks: [{ id: 'v1', name: 'X', kind: 'vow', rank: 'legendary', ticks: 0, done: false }] }), /Invalid rank/);
     assert.throws(() => track({ tracks: [{ id: 'v1', name: 'X', kind: 'scene', rank: 'formidable', ticks: 0, done: false, clock: { size: 5, filled: 0 } }] }), /Invalid tension clock/);
   } finally { fixture.close(); }
+});
+
+// Old selection values must never reactivate a second engine or discard adventure data.
+test('new and saved campaigns always use GME, preserving tracks, notes and revisions', async () => {
+  const f = await context(0);
+  try {
+    assert.equal(initialSoloState().variant, 'iron');
+    for (const variant of [undefined, 'duality', 'iron']) {
+      const state = { ...initialSoloState(), revision: 7, variant, scene: { ...initialSoloState().scene, title: 'The lighthouse' },
+        tracks: [{ id: 'oath-1', name: 'Find the keeper', kind: 'vow', rank: 'dangerous', ticks: 8, done: false }],
+        threads: [{ id: 'thread-1', name: 'A missing friend', note: 'Search the harbor', done: false }] };
+      f.db.prepare("INSERT INTO campaign_docs(campaign_id,ns,id,value,updated) VALUES (?,'solo','state',?,'2026') ON CONFLICT(campaign_id,ns,id) DO UPDATE SET value=excluded.value").run(f.campaign, JSON.stringify(state));
+      const snapshot = f.solo.snapshot(f.user.id, f.campaign);
+      assert.deepEqual(snapshot.state, { ...state, variant: 'iron' });
+      assert.deepEqual(f.solo.current(f.user.id, f.campaign), snapshot.state);
+      const saved = f.solo.track(f.user.id, f.campaign, { revision: 7, characters: [] });
+      assert.equal(saved.variant, 'iron');
+      assert.equal(saved.revision, 8);
+      assert.deepEqual(saved.tracks, state.tracks);
+      assert.deepEqual(saved.threads, state.threads);
+    }
+  } finally { f.close(); }
+});
+
+test('all current and legacy Duality oracle calls use GME matches, never wide-gap twists or events', () => {
+  for (const kind of ['iron-oracle', 'duality-oracle']) {
+    const run = (...dice: number[]) => rollDuality(kind, { state: initialSoloState(), fear: 5, rng: queue(...dice), input: { likelihood: 'even' }, question: 'Is it open?' });
+    assert.equal(run(10, 4).result.title, 'Yes');
+    assert.equal(run(4, 10).result.title, 'Yes');
+    const match = run(7, 7);
+    assert.equal(match.result.title, 'Yes, with a twist');
+    assert.equal(match.result.cells, undefined);
+    assert.equal(match.fearSpent, 0);
+  }
+  for (const kind of ['duality-scene', 'duality-move', 'duality-event'])
+    assert.throws(() => rollDuality(kind, { state: initialSoloState(), fear: 0, rng: queue(1), input: {}, question: '' }), /Invalid solo roll type/);
+});
+
+test('combat severe prices roll twice, record both dice and pay Fear exactly once', async () => {
+  const f = await context(1, 1, 11, 5, 6);
+  try {
+    const entry = f.roll('duality-adversary');
+    assert.equal(entry.result.title, 'Severe Pay the Price: Mark a Stress + Take damage (by tier)');
+    assert.deepEqual(entry.result.cells, [{ table: 'iron-price', column: 0, roll: 5 }, { table: 'iron-price', column: 0, roll: 6 }]);
+    assert.equal(f.pool(), 0);
+    assert.match(entry.result.detail, /Fear spent: 1 \(0 left\)/);
+  } finally { f.close(); }
 });

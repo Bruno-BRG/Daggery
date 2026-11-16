@@ -290,37 +290,6 @@
 <script>
 // BEGIN TABLES
 const T = {
- "oracle": {
-  "h": [
-   "Likelihood",
-   "Yes on",
-   "Chance"
-  ],
-  "nonum": true,
-  "c": [
-   [
-    "Near certain",
-    "Likely",
-    "50 / 50",
-    "Unlikely",
-    "Long shot"
-   ],
-   [
-    "7+",
-    "10+",
-    "13+",
-    "16+",
-    "19+"
-   ],
-   [
-    "90%",
-    "75%",
-    "54%",
-    "31%",
-    "15%"
-   ]
-  ]
- },
  "iron-oracle": {
   "h": [
    "Likelihood",
@@ -402,90 +371,6 @@ const T = {
    "6-7",
    "8-10",
    "11-12"
-  ]
- },
- "scene-complication": {
-  "h": [
-   "Scene Complication"
-  ],
-  "c": [
-   [
-    "Hostile forces oppose you",
-    "An obstacle blocks your way",
-    "Wouldn’t it be bad if…",
-    "An NPC acts suddenly",
-    "All is not as it seems",
-    "Things actually go as planned",
-    "Time is shorter than you thought",
-    "Innocents are caught in it",
-    "A rival wants the same thing",
-    "Your gear or magic misbehaves",
-    "The environment turns dangerous",
-    "A debt or the past comes due"
-   ]
-  ]
- },
- "altered-scene": {
-  "h": [
-   "Altered Scene"
-  ],
-  "c": [
-   [
-    "The place is not as described",
-    "An expected NPC is absent",
-    "An unexpected NPC is present",
-    "Someone got here first",
-    "The danger is greater than expected",
-    "The danger is elsewhere, for now",
-    "Weather, light, or terrain turns",
-    "Something valuable is missing",
-    "A countdown is already running",
-    "An old Thread intrudes",
-    "Remove one element of the scene",
-    "Add a Scene Complication"
-   ]
-  ]
- },
- "soft-move": {
-  "h": [
-   "Soft Move"
-  ],
-  "c": [
-   [
-    "Show how the world reacts",
-    "Reveal an unwelcome truth",
-    "Signal a threat approaching off-screen",
-    "Offer what you want, at a cost",
-    "Mark a Stress",
-    "Shift the environment against you",
-    "An NPC acts on their Motive",
-    "Tick a countdown",
-    "Put an item or resource at risk",
-    "Close off the easy path",
-    "Your background or a past choice catches up",
-    "Add a Scene Complication"
-   ]
-  ]
- },
- "hard-move": {
-  "h": [
-   "Hard Move (costs 1 Fear)"
-  ],
-  "c": [
-   [
-    "An adversary strikes: take damage",
-    "A new danger arrives",
-    "Separate you from an ally or your gear",
-    "You are captured, pinned, or cornered",
-    "An opportunity is lost for good",
-    "Enemy reinforcements arrive",
-    "Force a choice between two losses",
-    "A countdown ticks twice",
-    "Someone or something you care about is harmed",
-    "Your success is turned against you",
-    "The environment erupts: collapse, fire, flood",
-    "Spend 1 more Fear if able: roll twice, both happen"
-   ]
   ]
  },
  "action": {
@@ -701,7 +586,7 @@ const T = {
     "Use a Fear feature, paying its cost (none? attack, then spotlight a second adversary for 1 Fear)",
     "Attack, then spotlight a second adversary (1 Fear)",
     "The environment acts: use its Fear feature or a hazard (1 Fear)",
-    "Hard Move: roll on the Hard Move table (1 Fear)"
+    "Severe Pay the Price (1 Fear)"
    ]
   ],
   "n": [
@@ -867,27 +752,6 @@ const T = {
     "The real threat is far bigger",
     "Success has a moral cost",
     "It ties to your past"
-   ]
-  ]
- },
- "event-focus": {
-  "h": [
-   "Event Focus"
-  ],
-  "c": [
-   [
-    "Something far away changes",
-    "A strange omen or mystery",
-    "A new NPC enters",
-    "A known NPC acts",
-    "Bad for an NPC",
-    "Good for an NPC",
-    "A Thread advances",
-    "A Thread is set back",
-    "A Thread closes or transforms",
-    "Bad for you",
-    "Good for you",
-    "The environment acts"
    ]
   ]
  },

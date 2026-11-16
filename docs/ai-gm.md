@@ -171,10 +171,10 @@ non-streaming path, so a turn still completes.
 
 ## Oracles
 
-In every AI campaign, Group or Solo, the GM can roll the Duality Solo Engine with
+In every AI campaign, Group or Solo, the GM can roll Duality GME with
 `consult_oracle` instead of deciding open facts itself. The kinds are `yes-no` (with a
-likelihood, twists and random events on doubles), `fear-check`, `scene`, `gm-move` (with
-its trigger), `random-event`, `meaning`, `adversary` (and `chain`), `npc`, `plot`, `site`,
+likelihood and an extreme result or twist on doubles), `fear-check`, `pay-price`
+(with optional `severe`), `meaning`, `adversary` (and `chain`), `npc`, `plot`, `site`,
 `journey`, `table` (any Duality table and column) and `list` (a d12 pick from Threads or NPCs).
 
 - The engine rolls with the real Fear pool but never writes it. A Fear cost appears as a
@@ -186,8 +186,8 @@ its trigger), `random-event`, `meaning`, `adversary` (and `chain`), `npc`, `plot
   result, and in Solo campaigns it is also stored in the Solo log. With `hidden: true` (plot
   twists, NPC secrets) the result goes only to the model: no transcript message and no Solo
   log entry.
-- The prompt (section "Oracles and randomness", `gm-prompt-8`) tells the GM when to consult,
-  limits consults to two per turn unless a random event chains, and asks it to record durable
+- The prompt (section "Oracles and randomness", the current prompt version) tells the GM when to consult,
+  limits consults to two per turn unless a move needs additional dice, and asks it to record durable
   results in canon. When a player asks the oracle a question, the GM consults it on their behalf.
 
 ## Sessions

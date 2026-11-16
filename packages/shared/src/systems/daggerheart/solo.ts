@@ -111,7 +111,7 @@ export interface SoloProgressTrack {
 export const SOLO_PROGRESS_LIMIT = 24;
 export interface SoloState {
   revision: number;
-  /** Which engine the screen plays: the base Duality loop, or Duality GME (id `iron`). */
+  /** Legacy storage field. Reads normalize old `duality` or missing values to GME (`iron`). */
   variant?: 'duality' | 'iron';
   /** Duality GME's progress tracks. */
   tracks?: SoloProgressTrack[];
@@ -129,7 +129,7 @@ export interface SoloState {
   beat: { id: string; contributions: string[]; fearSpent: boolean; outcomeApplied: boolean; assistedHeroId?: string; assistConsumed?: boolean };
 }
 export function initialSoloState(): SoloState {
-  return { revision: 0, scene: { title: '', goal: '', expected: '', signature: '', signatureCost: 1 },
+  return { revision: 0, variant: 'iron', tracks: [], scene: { title: '', goal: '', expected: '', signature: '', signatureCost: 1 },
     pool: Array<string>(12).fill(''), theme: 'mystery', secondaryTheme: '',
     countdowns: { progress: 4, progressStart: 4, progressName: '', consequence: 6, consequenceStart: 6, consequenceName: '' },
     companions: [], beat: { id: 'initial', contributions: [], fearSpent: false, outcomeApplied: false } };

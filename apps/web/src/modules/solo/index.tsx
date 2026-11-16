@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  DUALITY_ENGINE_VERSION, DUALITY_VARIANTS, isDualityVariant, DUALITY_LIKELIHOODS, DUALITY_MAX_FEAR, DUALITY_MEANING_CHOICES, DUALITY_MOVE_TRIGGERS, DUALITY_TABLE_GROUPS,
+  DUALITY_ENGINE_VERSION, DUALITY_MAX_FEAR, DUALITY_MEANING_CHOICES, DUALITY_TABLE_GROUPS,
   DUALITY_TABLES, dualityTable, getRuleset, hasFeature, rollDice, SOLO_CLOCK_LIMIT, SOLO_TRACKER_LIMIT,
   type DiceRoll, type DualityList, type DualityTable, type SoloClock, type SoloEntry, type SoloEntryPage, type SoloSnapshot,
   type SoloState, type SoloTrackerItem,
@@ -13,17 +13,15 @@ import { changeResourceCount } from '../sheets/resource-track';
 import { getActiveCampaign } from '../../campaign-context';
 import { Icon } from '../../components/Icon';
 import { useDiceTray } from '../../dice3d';
-import { diceModeFor, setDiceMode, type DiceMode } from './diceMode';
 import './solo.css';
 import './folio.css';
 import { IronPlay } from './IronPlay';
 import { Rulebook } from './Rulebook';
-import { CombatStep, Journey, KIND_LABELS, landed, LookupTable, ResultCard, Step, useRolled, validDie, type Play } from './parts';
+import { KIND_LABELS, landed, LookupTable, ResultCard, useRolled, type Play } from './parts';
 
 type Tab = 'play' | 'tables' | 'generators' | 'tracker' | 'dice' | 'notes' | 'guide';
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Could not complete the action.';
 const root = () => `/api/campaigns/${encodeURIComponent(getActiveCampaign().id)}/solo`;
-const EVENT_FOCUS = dualityTable('event-focus').columns[0]!.entries;
 
 export default function SoloPlay({ author: _author }: { author: string }) {
   if (!hasFeature(getActiveCampaign().configuration, 'daggerheart.solo') || getActiveCampaign().role !== 'gm') return <p>Solo play is not enabled for this campaign.</p>;
@@ -145,7 +143,6 @@ function Workspace() {
   }
 
   const play: Play = { entries, busy, roll, accept, state, track, command, fear };
-  const variant = isDualityVariant(state?.variant) ? state.variant : 'duality';
   const openSheet = () => window.dispatchEvent(new CustomEvent('daggery:navigate', { detail: 'sheets' }));
   const tabs: [Tab, string][] = [['play', 'Play'], ['tables', 'All tables'], ['generators', 'Generators'], ['tracker', 'Threads & NPCs'], ['dice', 'Dice'], ['notes', 'Notes']];
 
@@ -153,7 +150,7 @@ function Workspace() {
     <header className="solo-heading">
       <div className="solo-heading-copy">
         <span className="solo-emblem" aria-hidden="true"><Icon name="dice" /><Icon name="spark" /></span>
-        <p className="solo-kicker">{getRuleset(campaign.configuration)?.name} · {variant === 'duality' ? `Duality Solo Engine ${DUALITY_ENGINE_VERSION}` : `${DUALITY_VARIANTS.find(item => item.id === variant)!.label} 0.1`}</p>
+        <p className="solo-kicker">{getRuleset(campaign.configuration)?.name} · {`Duality GME ${DUALITY_ENGINE_VERSION}`}</p>
         <h1>Solo play</h1>
         <p className="solo-heading-description">A world to discover. A story only you can tell.</p>
       </div>
@@ -162,7 +159,6 @@ function Workspace() {
         <button type="button" className="daggery-roll-toggle solo-sheet-link" onClick={openSheet}><Icon name="sheet" />Character sheet</button>
       </div>
     </header>
-    <VariantSwitch play={play} variant={variant} />
     <button type="button" className="solo-resource-toggle" aria-expanded={resourcesOpen} aria-controls="solo-resources" onClick={() => setResourcesOpen(value => !value)}><Icon name="heart" /><span>Character resources</span><span className="solo-resource-fear">Fear {fear} / {DUALITY_MAX_FEAR}</span><Icon name={resourcesOpen ? 'minus' : 'plus'} /></button>
     <div id="solo-resources" className={`solo-resources${resourcesOpen ? ' is-expanded' : ''}`}><HeroStrip /><FearPanel play={play} /></div>
     <nav className="solo-tabs" aria-label="Solo sections">
@@ -170,25 +166,14 @@ function Workspace() {
     </nav>
     {error && <p role="alert" className="solo-alert">{error}</p>}
     {notice && <p role="status" className="solo-notice"><Icon name="check" />{notice}</p>}
-    <div className="solo-play-surface" hidden={tab !== 'play'}>{variant === 'iron' ? <IronPlay play={play} /> : <PlayTab play={play} />}</div>
-    {tab === 'guide' && <Rulebook variant={variant} onReturn={() => setTab('play')} />}
+    <div className="solo-play-surface" hidden={tab !== 'play'}><IronPlay play={play} /></div>
+    {tab === 'guide' && <Rulebook onReturn={() => setTab('play')} />}
     {tab === 'tables' && <TablesTab play={play} />}
     {tab === 'generators' && <GeneratorsTab play={play} />}
     {tab === 'tracker' && (state ? <TrackerTab play={play} /> : !error && <p className="solo-empty">Loading your lists…</p>)}
     {tab === 'dice' && <DiceTab play={play} />}
     {tab === 'notes' && <NotesTab play={play} nextCursor={nextCursor} older={older} />}
   </div>;
-}
-
-/** Chooses which engine the Play tab runs. Saved with the campaign, so it survives reloads. */
-function VariantSwitch({ play, variant }: { play: Play; variant: string }) {
-  const current = DUALITY_VARIANTS.find(item => item.id === variant) ?? DUALITY_VARIANTS[0]!;
-  return <section className="solo-variant" aria-label="Engine">
-    <div className="solo-dice-mode" role="radiogroup" aria-label="Engine">
-      {DUALITY_VARIANTS.map(item => <button key={item.id} type="button" role="radio" aria-checked={item.id === variant} disabled={play.busy || !play.state} onClick={() => void play.track({ variant: item.id })}>{item.label}</button>)}
-    </div>
-    <p className="solo-muted">{current.tagline}</p>
-  </section>;
 }
 
 /** The hero's resources, so marking HP or spending Hope does not mean leaving the oracle. */
@@ -328,7 +313,7 @@ function ClocksPanel({ play }: { play: Play }) {
 
   return <section className="solo-panel">
     <h2>Countdowns</h2>
-    <p className="solo-muted">Give every looming threat a countdown. Soft and Hard Moves tick it; at zero it happens, with no Fear needed.</p>
+    <p className="solo-muted">Give every looming threat a countdown. Advance it when a move or the fiction calls for it; at zero the threat happens.</p>
     {clocks.length > 0 && <ul className="solo-clock-list">{clocks.map(item => <li key={item.id} className={item.current === 0 ? 'is-done' : undefined}>
       <span>{item.name}{item.current === 0 && <strong> · it happens</strong>}</span>
       <div className="solo-fear-stepper" role="group" aria-label={`Countdown: ${item.name}`}>
@@ -344,172 +329,6 @@ function ClocksPanel({ play }: { play: Play }) {
       <button className="daggery-roll-toggle" disabled={play.busy || full || !name.trim()}><Icon name="plus" />Add countdown</button>
     </form>
   </section>;
-}
-
-const LOOP: [string, string][] = [
-  ['step-hook', 'Plot hook'], ['step-event', 'Random Event'], ['step-scene', 'Set the scene'], ['step-oracle', 'Oracle'],
-  ['step-moves', 'GM Moves'], ['step-combat', 'Combat'], ['step-next', 'Next scene'],
-];
-
-/**
- * The play loop, in the order you use it (after the One Page Solo Engine): roll a plot hook and a
- * Random Event, set the scene, ask the oracle, play, make GM Moves, then set the next scene.
- */
-function PlayTab({ play }: { play: Play }) {
-  return <Journey steps={LOOP} title="Follow the story" hint="Start with a hook. Set the scene, ask questions, and let the world answer.">
-    <HookStep play={play} />
-    <EventStep play={play} />
-    <SceneStep play={play} />
-    <OracleStep play={play} />
-    <MovesStep play={play} />
-    <CombatStep play={play} />
-    <NextStep play={play} jump={id => window.dispatchEvent(new CustomEvent('solo:step', { detail: id }))} />
-  </Journey>;
-}
-
-function NextStep({ play, jump }: { play: Play; jump: (id: string) => void }) {
-  const [lead, rollLead] = useRolled(play);
-  const [rest, rollRest] = useRolled(play);
-  return <Step n="7" id="step-next" title="Set the next scene" hint="Decide what your character does next, update your Threads and NPCs if you track them, and set the scene again. Stuck? Roll a lead. Resting? Roll what happens; rests add Fear as the rules say."
-    tables={<><LookupTable id="rumor" hits={landed([lead])} /><LookupTable id="rest" hits={landed([rest])} /></>}>
-    <div className="solo-actions">
-      <button type="button" className="daggery-primary" onClick={() => jump('step-scene')}><Icon name="dice" />Set the next scene</button>
-      <button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void rollLead('duality-generate', { tableId: 'rumor' })}><Icon name="dice" />Roll a lead</button>
-      <button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void rollRest('duality-generate', { tableId: 'rest' })}><Icon name="dice" />Roll the rest</button>
-      <button type="button" className="daggery-roll-toggle" disabled={play.busy || !play.state} onClick={() => void play.command({ command: 'end-scene' })}>Log the end of this scene</button>
-    </div>
-    <div aria-live="polite">{lead && <ResultCard key={lead.id} entry={lead} play={play} />}</div>
-    <div aria-live="polite">{rest && <ResultCard key={rest.id} entry={rest} play={play} />}</div>
-  </Step>;
-}
-
-function HookStep({ play }: { play: Play }) {
-  const [rolled, run] = useRolled(play);
-  const hits = landed([rolled]);
-  return <Step n="1" id="step-hook" title="Plot hook" hint="Why is your character here? Roll once per column: Objective, Opposition, Reward, and a Twist you keep hidden until a Random Event or Hard Move gives it an opening."
-    tables={<><LookupTable id="plot-hook" hits={hits} /><LookupTable id="plot-stakes" hits={hits} /></>}>
-    <div className="solo-actions"><button type="button" className="daggery-primary" disabled={play.busy} onClick={() => void run('duality-plot')}><Icon name="dice" />Roll a plot hook</button></div>
-    <div aria-live="polite">{rolled && <ResultCard key={rolled.id} entry={rolled} play={play} />}</div>
-  </Step>;
-}
-
-function EventStep({ play }: { play: Play }) {
-  const [focus, setFocus] = useState('');
-  const [rolled, run] = useRolled(play);
-  const hits = landed([rolled]);
-  return <Step n="2" id="step-event" title="Random Event" hint="Something is already in motion. Roll the Event Focus, then Action + Subject for what happens. Oracle doubles and Interrupted scenes roll one too. Focus 4–6 picks an NPC from your list, 7–9 a Thread."
-    tables={<><LookupTable id="event-focus" hits={hits} /><LookupTable id="action" hits={hits} open={false} /><LookupTable id="subject" hits={hits} open={false} /></>}>
-    <form className="solo-ask" onSubmit={submit => { submit.preventDefault(); void run('duality-event', { focus: focus === '' ? undefined : Number(focus) }); }}>
-      <label className="solo-field">Event focus<select value={focus} onChange={change => setFocus(change.target.value)}>
-        <option value="">Roll d12</option>
-        {EVENT_FOCUS.map((label, index) => <option key={index} value={index + 1}>{index + 1}. {label}</option>)}
-      </select></label>
-      <button className="daggery-primary" disabled={play.busy}><Icon name="dice" />Roll a Random Event</button>
-    </form>
-    <div aria-live="polite">{rolled && <ResultCard key={rolled.id} entry={rolled} play={play} />}</div>
-  </Step>;
-}
-
-function SceneStep({ play }: { play: Play }) {
-  const [where, setWhere] = useState('');
-  const [rolled, run] = useRolled(play);
-  const hits = landed([rolled]);
-  return <Step n="3" id="step-scene" title="Set the scene" hint={<>Say where your character is and what they are trying to do (here or in your notebook). Every scene gets a <b>Scene Complication</b>. Then a Fear Check ({play.fear} Fear): a pass spends 1 Fear and the scene is <b>Altered</b> (odd roll) or <b>Interrupted</b> by a Random Event (even roll).</>}
-    tables={<><LookupTable id="scene-complication" hits={hits} /><LookupTable id="altered-scene" hits={hits} /></>}>
-    <form className="solo-ask" onSubmit={submit => { submit.preventDefault(); void run('duality-scene', { question: where.trim() }).then(entry => { if (entry) setWhere(''); }); }}>
-      <label className="solo-field">Scene (optional)<input value={where} maxLength={200} onChange={change => setWhere(change.target.value)} placeholder="Sneaking into the keep at night" /></label>
-      <button className="daggery-primary" disabled={play.busy}><Icon name="dice" />Set the scene</button>
-    </form>
-    <div aria-live="polite">{rolled && <ResultCard key={rolled.id} entry={rolled} play={play} />}</div>
-  </Step>;
-}
-
-function OracleStep({ play }: { play: Play }) {
-  const campaign = getActiveCampaign();
-  const [question, setQuestion] = useState('');
-  const [likelihood, setLikelihood] = useState('even');
-  const [mode, setMode] = useState<DiceMode>(() => diceModeFor(campaign.id));
-  const [hopeDie, setHopeDie] = useState('');
-  const [fearDie, setFearDie] = useState('');
-  const [choice, setChoice] = useState('action-subject');
-  const [answer, ask] = useRolled(play);
-  const [much, rollMuch] = useRolled(play);
-  const [meaning, rollMeaning] = useRolled(play);
-  const physical = mode === 'physical';
-  const diceReady = !physical || (validDie(hopeDie, 12) && validDie(fearDie, 12));
-  const chooseMode = (next: DiceMode) => { setMode(next); setDiceMode(campaign.id, next); };
-  const askedBand = answer?.result.target;
-
-  async function submit() {
-    const entry = await ask('duality-oracle', { question: question.trim(), likelihood, ...(physical ? { dice: { hope: Number(hopeDie), fear: Number(fearDie) } } : {}) });
-    if (entry) { setQuestion(''); setHopeDie(''); setFearDie(''); }
-  }
-
-  return <Step n="4" id="step-oracle" title="Ask the Oracle" hint="Whenever you would ask a GM, ask a yes or no question, pick how likely a yes is, and roll Hope + Fear. Dice 4 or more apart twist the answer; doubles also bring a Random Event. Oracle rolls never make Hope or Fear."
-    tables={<>
-      <div className="solo-reference-table solo-oracle-chart-wrap">
-        <table className="solo-oracle-chart">
-          <thead><tr><th scope="col">Likelihood</th><th scope="col">Yes on</th><th scope="col">Chance</th></tr></thead>
-          <tbody>{DUALITY_LIKELIHOODS.map(row => <tr key={row.id} className={answer && askedBand === row.target ? 'is-rolled' : row.id === 'even' ? 'is-mid' : undefined}>
-            <th scope="row">{row.label}</th><td className="solo-range">{row.target}+</td><td className="solo-range">{row.chance}</td>
-          </tr>)}</tbody>
-        </table>
-      </div>
-      <p className="solo-shift-note">Hope higher by 4+: <i>Yes, and…</i> / <i>No, but…</i>. Fear higher by 4+: <i>Yes, but…</i> / <i>No, and…</i>.</p>
-      <LookupTable id="how-much" hits={landed([much])} />
-      <LookupTable id="action" hits={landed([meaning])} open={false} />
-      <LookupTable id="subject" hits={landed([meaning])} open={false} />
-      <LookupTable id="descriptor" hits={landed([meaning])} open={false} />
-    </>}>
-    <form className="solo-oracle-form" onSubmit={event => { event.preventDefault(); void submit(); }}>
-      <label className="solo-field">Question (optional)<input value={question} maxLength={2000} onChange={change => setQuestion(change.target.value)} placeholder="Is the gate guarded?" /></label>
-      <div className="solo-likelihoods" role="radiogroup" aria-label="Likelihood">
-        {DUALITY_LIKELIHOODS.map(row => <button key={row.id} type="button" role="radio" aria-checked={likelihood === row.id} onClick={() => setLikelihood(row.id)}>{row.label}<small>{row.chance}</small></button>)}
-      </div>
-      <div className="solo-row">
-        <div className="solo-dice-mode" role="group" aria-label="Dice">
-          <button type="button" aria-pressed={!physical} onClick={() => chooseMode('digital')}>Digital dice</button>
-          <button type="button" aria-pressed={physical} onClick={() => chooseMode('physical')}>My physical dice</button>
-        </div>
-        {physical && <div className="solo-dice-fields">
-          <label className="solo-field">Hope d12<input inputMode="numeric" value={hopeDie} maxLength={2} onChange={change => setHopeDie(change.target.value)} placeholder="1-12" /></label>
-          <label className="solo-field">Fear d12<input inputMode="numeric" value={fearDie} maxLength={2} onChange={change => setFearDie(change.target.value)} placeholder="1-12" /></label>
-        </div>}
-        <button className="daggery-primary" disabled={play.busy || !diceReady}><Icon name="dice" />Ask the Oracle</button>
-      </div>
-    </form>
-    <div aria-live="polite">{answer && <ResultCard key={answer.id} entry={answer} play={play} />}</div>
-
-    <h3 className="solo-subhead">How much? How well?</h3>
-    <p className="solo-muted">How big, strong, many or good something is.</p>
-    <div className="solo-actions"><button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void rollMuch('duality-table', { tableId: 'how-much', column: 0 })}><Icon name="dice" />Roll How Much</button></div>
-    <div aria-live="polite">{much && <ResultCard key={much.id} entry={much} play={play} />}</div>
-
-    <h3 className="solo-subhead">Open questions: Meaning</h3>
-    <p className="solo-muted">For what a yes or no cannot answer. Hope die picks the row, Fear die the column (odd A, even B).</p>
-    <form className="solo-ask" onSubmit={event => { event.preventDefault(); void rollMeaning('duality-meaning', { choice, count: 1 }); }}>
-      <label className="solo-field">Words<select value={choice} onChange={change => setChoice(change.target.value)}>
-        {DUALITY_MEANING_CHOICES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-        <option value="generic">Generic generator (what it is, what it does, how much)</option>
-      </select></label>
-      <button className="daggery-roll-toggle" disabled={play.busy}><Icon name="dice" />Roll meaning</button>
-    </form>
-    <div aria-live="polite">{meaning && <ResultCard key={meaning.id} entry={meaning} play={play} />}</div>
-  </Step>;
-}
-
-function MovesStep({ play }: { play: Play }) {
-  const [moved, move] = useRolled(play);
-  const hits = landed([moved]);
-  return <Step n="5" id="step-moves" title="GM Moves" hint="After an action roll, say how it went. Success with Hope and criticals need no move. Failure with Fear and a stalled story make a Fear Check: a pass is a Hard Move and spends 1 Fear."
-    tables={<><LookupTable id="soft-move" hits={hits} /><LookupTable id="hard-move" hits={hits} /></>}>
-    <div className="solo-move-grid">
-      {DUALITY_MOVE_TRIGGERS.map(trigger => <button key={trigger.id} type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void move('duality-move', { trigger: trigger.id, question: trigger.label })}>
-        <Icon name="dice" />{trigger.label}{trigger.checks ? <small>Fear Check</small> : <small>Soft Move</small>}
-      </button>)}
-    </div>
-    <div aria-live="polite">{moved && <ResultCard key={moved.id} entry={moved} play={play} />}</div>
-  </Step>;
 }
 
 type GeneratorItem = { id: string; title: string; hint: string; tables: string[]; actions: { label: string; kind: string; values?: Record<string, unknown> }[] };
@@ -568,9 +387,7 @@ function Generator({ item, play }: { item: GeneratorItem; play: Play }) {
 function TablesTab({ play }: { play: Play }) {
   const [filter, setFilter] = useState('');
   const needle = filter.trim().toLowerCase();
-  const variant = isDualityVariant(play.state?.variant) ? play.state.variant : 'duality';
   const shown = DUALITY_TABLE_GROUPS
-    .filter(group => !group.variant || group.variant === variant)
     .map(group => ({ ...group, tables: DUALITY_TABLES.filter(table => table.group === group.id && table.title.toLowerCase().includes(needle)) }))
     .filter(group => group.tables.length > 0);
 

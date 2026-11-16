@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import { adversaries, ancestries, armor, classes, communities, consumables, domainCards, environments, items, transformations, weapons } from '@daggery/content';
-import { DUALITY_LIKELIHOODS, DUALITY_MAX_FEAR, DUALITY_MEANING_CHOICES, DUALITY_MOVE_TRIGGERS, DUALITY_TABLES, hasFeature, initialSoloState, maxDiceTotal, rollDice, rollDie, SOLO_TRACKER_LIMIT, type AiBudget, type AiInteraction, type AiState, type SoloResult, type SoloState } from '@daggery/shared';
+import { IRON_LIKELIHOODS, DUALITY_MAX_FEAR, DUALITY_MEANING_CHOICES, DUALITY_TABLES, hasFeature, initialSoloState, maxDiceTotal, rollDice, rollDie, SOLO_TRACKER_LIMIT, type AiBudget, type AiInteraction, type AiState, type SoloResult, type SoloState } from '@daggery/shared';
 import { armorScore, classResourceDefinitions, classResourceValue, evasion, getArmor, getClass, getCommunity, getDomainCard, getSubclass, heritageDisplayName, hpMax, markStress, MAX_HOPE, sheetAncestries, spellcastTraitName, stressMax, weaponForSlot } from '@daggery/shared/daggerheart';
 import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
@@ -28,8 +28,7 @@ const tool = (name: string, description: string, properties: Record<string, unkn
 
 /** Oracle kinds the GM sees, mapped to the engine's roll types. */
 const ORACLE_KINDS = {
-  'yes-no': 'duality-oracle', 'fear-check': 'duality-fear-check', scene: 'duality-scene', 'gm-move': 'duality-move',
-  'random-event': 'duality-event', meaning: 'duality-meaning', adversary: 'duality-adversary', npc: 'duality-npc',
+  'yes-no': 'iron-oracle', 'fear-check': 'duality-fear-check', 'pay-price': 'iron-price', meaning: 'duality-meaning', adversary: 'duality-adversary', npc: 'duality-npc',
   plot: 'duality-plot', site: 'duality-site', journey: 'duality-journey', table: 'duality-table', list: 'duality-list',
   encounter: 'duality-encounter', generate: 'duality-generate',
 } as const;
@@ -91,12 +90,11 @@ export const GM_TOOLS: ToolDefinition[] = [
   tool('advance_countdown', 'Advance a relevant countdown by 1–3 once for its cause. Do not charge the same consequence twice.', { countdownId: s, amount: n, reason: s }),
   tool('roll_loot', 'Roll a printed loot table from the Core Set or Additional (Hope & Fear) tables. Rarity sets the allowed d12 pool: Common 1–2d12, Uncommon 2–3d12, Rare 3–4d12, Legendary 4–5d12. Omit dice to use the smaller pool.', { table: { type: 'string', enum: ['items', 'consumables'] }, set: { type: 'string', enum: ['core', 'additional'] }, rarity: { type: 'string', enum: ['Common', 'Uncommon', 'Rare', 'Legendary'] }, dice: n, note: s }, ['table', 'rarity']),
   tool('give_item', 'Give a known catalog item or consumable to a hero. Use this after agreeing the reward; it changes inventory.', { heroId: s, catalogId: s, quantity: n }),
-  tool('consult_oracle', 'Roll the Duality Solo Engine to settle a fact the fiction leaves open: a yes/no question, a GM move, a random event, a scene frame, an NPC, a site, a plot hook, a journey leg, a table cell, a meaning, an adversary spotlight, or a pick from the Threads/NPC lists. It rolls real dice and never changes Hope, Fear, resources, or the table state; a Fear cost in the result is only a suggestion you pay with spend_fear if you use the move. The dice are shown to the players unless hidden is true; set hidden for results the players must discover in play, such as a plot twist, an NPC’s secret, or a fact the heroes cannot know yet. Interpret the result concretely and consistently with canon, the snapshot, and your prep. Prefer yes-no for uncertain facts and the generators to improvise instead of inventing from nothing.', {
+  tool('consult_oracle', 'Roll Duality GME to settle a fact the fiction leaves open: a yes/no question, Pay the Price, an NPC, a site, a plot hook, a journey leg, a table cell, a meaning, an adversary spotlight, or a pick from the Threads/NPC lists. It rolls real dice and never changes Hope, Fear, resources, or the table state; a Fear cost in the result is only a suggestion you pay with spend_fear if you use the move. The dice are shown to the players unless hidden is true; set hidden for results the players must discover in play, such as a plot twist, an NPC’s secret, or a fact the heroes cannot know yet. Interpret the result concretely and consistently with canon, the snapshot, and your prep. Prefer yes-no for uncertain facts and the generators to improvise instead of inventing from nothing.', {
     kind: { type: 'string', enum: Object.keys(ORACLE_KINDS) },
     question: s,
-    likelihood: { type: 'string', enum: DUALITY_LIKELIHOODS.map(item => item.id) },
-    trigger: { type: 'string', enum: DUALITY_MOVE_TRIGGERS.map(item => item.id) },
-    focus: n,
+    likelihood: { type: 'string', enum: IRON_LIKELIHOODS.map(item => item.id) },
+    severe: { type: 'boolean' },
     choice: { type: 'string', enum: DUALITY_MEANING_CHOICES.map(item => item.id) },
     count: n,
     chain: { type: 'boolean' },
@@ -784,7 +782,7 @@ export class GmActions {
         }
         const fear = Math.min(DUALITY_MAX_FEAR, Math.max(0, Math.trunc(Number(this.read<{ value: number }>(ctx.campaign, 'combat', 'fear')?.value) || 0)));
         const input: Record<string, unknown> = {};
-        for (const key of ['likelihood', 'trigger', 'focus', 'choice', 'count', 'chain', 'tableId', 'column', 'list']) if (args[key] !== undefined) input[key] = args[key];
+        for (const key of ['likelihood', 'severe', 'choice', 'count', 'chain', 'tableId', 'column', 'list']) if (args[key] !== undefined) input[key] = args[key];
         const outcome = rollDuality(mapped, { state, fear, rng: Math.random, input, question, advisory: true });
         const rolled = outcome.result, asked = (outcome.question ?? '').trim() || kind;
         // A hidden consult stays with the GM: no transcript line and no Solo log entry the players could read.

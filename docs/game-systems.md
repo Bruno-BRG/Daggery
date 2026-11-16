@@ -100,15 +100,18 @@ presentation rather than masquerading as a Daggerheart action.
 
 ## Solo workspace
 
-- **Engine:** the Duality Solo Engine (`docs/solo-rules.md`), a d12 emulator
+- **Engine:** Duality GME (`docs/solo-rules-gme.md`), the only solo engine,
   in which the campaign Fear pool plays the GM. A Fear Check (d12 at or under
   current Fear) decides when the engine spends Fear and acts.
 - **Oracle:** yes/no questions on Hope + Fear against five likelihoods, with
-  twists when the dice are 4 or more apart and Random Events on doubles.
+  an extreme result or twist on matching dice (no automatic Random Event).
   Results are generated on the server and saved with their raw dice and rules
   version. Request IDs make retries idempotent.
-- **Scene & moves:** scene setup with Altered and Interrupted scenes, Soft and
-  Hard GM Moves after action rolls, and Random Events with an Event Focus.
+- **Moves & progress:** oaths, expeditions, connections and scene challenges.
+  Daggerheart action outcomes become strong hits, weak hits or misses; misses
+  Pay the Price. Progress rolls compare full boxes to two d10.
+- **Rules reference:** `docs/duality-solo-engine/duality-gme-manual.pdf` is the
+  complete standalone manual; `duality-gme.pdf` is a quick reference to the same rules.
 - **Lists & countdowns:** Threads and NPCs lists of up to 12 open lines, picked
   by a d12, and countdowns for looming threats.
 - **Generators:** adversary spotlight with Tactics and Fear Spend, NPCs, plot

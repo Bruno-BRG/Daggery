@@ -2063,12 +2063,12 @@ test('the GM system prompt frames the players as a party and carries the current
     assert.ok(system.content!.includes('give each hero the spotlight in turn'));
     assert.ok(system.content!.includes('Call get_character before resolving or describing a hero’s class feature'));
     assert.ok(!system.content!.includes('The player controls one hero'), 'the single-hero framing is gone');
-    assert.ok(system.content!.includes('gm-prompt-10'), 'the prompt version is current');
+    assert.ok(system.content!.includes('gm-prompt-11'), 'the prompt version is current');
     assert.ok(system.content!.includes('Oracles and randomness'), 'the oracle guidance is present');
     assert.ok(system.content!.includes('Fronts (GM only)'), 'the fronts guidance is present');
     assert.ok(system.content!.includes('rolls and oracle answers the players made outside your cards'), 'the outside-activity guidance is present');
     const stored = f.db.prepare('SELECT prompt_version FROM ai_turns ORDER BY rowid DESC LIMIT 1').get() as { prompt_version: string };
-    assert.equal(stored.prompt_version, 'gm-prompt-10', 'the turn records the current prompt version');
+    assert.equal(stored.prompt_version, 'gm-prompt-11', 'the turn records the current prompt version');
   } finally {
     await f.close();
   }

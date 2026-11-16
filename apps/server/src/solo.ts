@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { DUALITY_MAX_FEAR, hasFeature, IRON_CLOCK_SIZES, IRON_TRACK_TICKS, ironRank, isDualityVariant, SOLO_PROGRESS_LIMIT, type SoloProgressTrack, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_CLOCK_LIMIT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_TRACKER_LIMIT, SOLO_WORLD_MOVES, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone, type SoloTrackerItem } from '@daggery/shared';
+import { DUALITY_MAX_FEAR, hasFeature, IRON_CLOCK_SIZES, IRON_TRACK_TICKS, ironRank, SOLO_PROGRESS_LIMIT, type SoloProgressTrack, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_CLOCK_LIMIT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_TRACKER_LIMIT, SOLO_WORLD_MOVES, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone, type SoloTrackerItem } from '@daggery/shared';
 import { openLines, rollDuality } from './solo-duality';
 import type { CampaignService } from './campaign-service';
 import { readSessionToken } from './campaign-routes';
@@ -51,9 +51,13 @@ export class SoloService {
     this.db.prepare(`INSERT INTO campaign_docs(campaign_id,ns,id,value,updated) VALUES (?,?,?,?,?)
       ON CONFLICT(campaign_id,ns,id) DO UPDATE SET value=excluded.value,updated=excluded.updated`).run(campaign, ns, id, JSON.stringify(value), new Date().toISOString());
   }
+  /** Migrate engine selection in memory without changing revisions or any saved adventure data. */
+  private readState(campaign: string): SoloState {
+    return { ...(this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState()), variant: 'iron' };
+  }
   snapshot(userId: string, campaign: string): SoloSnapshot {
     this.authorize(userId, campaign);
-    return { state: this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState(), ...this.entries(userId, campaign) };
+    return { state: this.readState(campaign), ...this.entries(userId, campaign) };
   }
   entries(userId: string, campaign: string, before = '') {
     this.authorize(userId, campaign);
@@ -67,7 +71,7 @@ export class SoloService {
   private change(userId: string, campaign: string, revision: unknown, apply: (state: SoloState) => void): SoloState {
     this.authorize(userId, campaign);
     const result = this.db.transaction(() => {
-      const state = this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
+      const state = this.readState(campaign);
       if (revision !== state.revision) throw new SoloConflict();
       apply(state); state.revision++;
       this.write(campaign, 'solo', 'state', state);
@@ -120,7 +124,7 @@ export class SoloService {
       if (input.threads !== undefined) state.threads = list(input.threads);
       if (input.characters !== undefined) state.characters = list(input.characters);
       if (input.variant !== undefined) {
-        if (!isDualityVariant(input.variant)) throw new Error('Invalid engine variant');
+        if (input.variant !== 'iron') throw new Error('Invalid engine variant');
         state.variant = input.variant;
       }
       if (input.tracks !== undefined) {
@@ -161,7 +165,7 @@ export class SoloService {
     const previous = this.read<SoloEntry>(campaign, 'solo', `entry:${id}`);
     if (previous) return previous;
     let question = string(input.question ?? '', 2000);
-    const state = this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
+    const state = this.readState(campaign);
     const reported = (kind === 'oracle' || DICE_ORACLES.includes(kind)) && input.dice !== undefined ? reportedDice(input.dice) : undefined;
     let result: SoloResult;
     let fearAfter: { kind: 'fear'; value: number } | undefined;
@@ -217,7 +221,7 @@ export class SoloService {
   /** The current state, for a client to resync after a roll. */
   current(userId: string, campaign: string): SoloState {
     this.authorize(userId, campaign);
-    return this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
+    return this.readState(campaign);
   }
   accept(userId: string, campaign: string, id: string, interpretation: unknown) {
     this.authorize(userId, campaign);

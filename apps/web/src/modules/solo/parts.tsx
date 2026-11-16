@@ -19,6 +19,7 @@ export interface Play {
 
 export const validDie = (value: string, sides: number) => /^\d+$/.test(value.trim()) && Number(value) >= 1 && Number(value) <= sides;
 
+/** Includes retired roll labels only to keep saved journal entries readable. */
 export const KIND_LABELS: Record<string, string> = {
   'duality-scene': 'Set the scene', 'duality-oracle': 'Oracle', 'duality-meaning': 'Meaning', 'duality-table': 'Table', 'duality-event': 'Random Event',
   'duality-move': 'GM Move', 'duality-list': 'List roll', 'duality-fear-check': 'Fear Check', 'duality-adversary': 'Adversary', 'duality-npc': 'NPC',

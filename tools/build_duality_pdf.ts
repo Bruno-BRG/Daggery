@@ -1,9 +1,9 @@
 /**
- * Rebuilds the printable Duality engines from the engine's own tables, then prints them to PDF.
- *   npx tsx tools/build_duality_pdf.ts                    (every engine: HTML and PDF)
+ * Rebuilds the printable Duality GME references from the engine's own tables, then prints them to PDF.
+ *   npx tsx tools/build_duality_pdf.ts                    (manual and quick reference: HTML and PDF)
  *   npx tsx tools/build_duality_pdf.ts duality-gme        (one engine, by file name)
  *   npx tsx tools/build_duality_pdf.ts --html             (HTML only)
- * Engines: duality-solo-engine, duality-gme, and the Duality GME manual duality-gme-manual
+ * References: duality-gme and the Duality GME manual duality-gme-manual
  * (docs/duality-solo-engine/<name>.html).
  * Each template keeps `// BEGIN TABLES` and `// END TABLES` markers; between them this writes
  * `const T` (every table, by id) and `const M` (the Duality GME moves). The build fails when a
@@ -13,17 +13,15 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { DUALITY_LIKELIHOODS, DUALITY_TABLES } from '../packages/shared/src/duality-engine';
+import { DUALITY_TABLES } from '../packages/shared/src/duality-engine';
 import { IRON_LIKELIHOODS, IRON_MOVE_GROUPS, IRON_MOVES, IRON_RANKS } from '../packages/shared/src/duality-variants';
 
-const ENGINES = ['duality-solo-engine', 'duality-gme', 'duality-gme-manual'];
+const ENGINES = ['duality-gme', 'duality-gme-manual'];
 const folder = new URL('../docs/duality-solo-engine/', import.meta.url);
 
 const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 type Printed = { h: string[]; c: string[][]; n?: string[]; nonum?: boolean };
 const printed: Record<string, Printed> = {
-  oracle: { h: ['Likelihood', 'Yes on', 'Chance'], nonum: true, c: [
-    DUALITY_LIKELIHOODS.map(row => row.label), DUALITY_LIKELIHOODS.map(row => `${row.target}+`), DUALITY_LIKELIHOODS.map(row => row.chance)] },
   'iron-oracle': { h: ['Likelihood', 'Yes on', 'Chance'], nonum: true, c: [
     IRON_LIKELIHOODS.map(row => row.label), IRON_LIKELIHOODS.map(row => `${row.target}+`), IRON_LIKELIHOODS.map(row => row.chance)] },
   'iron-ranks': { h: ['Rank', 'Mark progress', 'Difficulty'], nonum: true, c: [

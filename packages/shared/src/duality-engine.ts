@@ -1,5 +1,5 @@
 /**
- * Duality Solo Engine: a d12 game master emulator for solo Daggerheart.
+ * Duality GME: shared tables and dice procedures for solo Daggerheart.
  *
  * The Fear pool plays the GM. The engine never creates Fear; a Fear Check
  * decides when to spend what the player's own rolls generated. Every function
@@ -14,8 +14,8 @@ const assertFear = (fear: number) => {
 };
 
 export const DUALITY_MAX_FEAR = 12;
-/** Printed rules version. 2.0 follows the One Page Solo Engine loop: hook, event, scene, oracle, moves. */
-export const DUALITY_ENGINE_VERSION = '2.0';
+/** Printed Duality GME rules version. The full manual is the rules reference. */
+export const DUALITY_ENGINE_VERSION = '0.1';
 
 /** Passes when the d12 is equal to or under current Fear. At 0 Fear it always fails. */
 export function fearCheck(roll: number, fear: number): boolean {
@@ -27,78 +27,18 @@ export function fearCheck(roll: number, fear: number): boolean {
 
 /** `target` is the Hope + Fear total a yes needs. `chance` is exact over the 144 pairs. */
 export const DUALITY_LIKELIHOODS = [
-  { id: 'near-certain', label: 'Near certain', target: 7, chance: '90%' },
+  { id: 'near-certain', label: 'Almost certain', target: 7, chance: '90%' },
   { id: 'likely', label: 'Likely', target: 10, chance: '75%' },
   { id: 'even', label: '50 / 50', target: 13, chance: '54%' },
   { id: 'unlikely', label: 'Unlikely', target: 16, chance: '31%' },
-  { id: 'long-shot', label: 'Long shot', target: 19, chance: '15%' },
+  { id: 'long-shot', label: 'Small chance', target: 19, chance: '15%' },
 ] as const;
 export type DualityLikelihoodId = (typeof DUALITY_LIKELIHOODS)[number]['id'];
-
-/** Dice this far apart add a twist to the answer. */
-export const DUALITY_TWIST_GAP = 4;
-export type DualityTwist = 'favor' | 'against' | null;
-export interface DualityAnswer {
-  hope: number; fear: number; total: number; target: number;
-  yes: boolean;
-  /** Hope higher by the gap bends it the player's way; Fear higher bends it against them. */
-  twist: DualityTwist;
-  /** Doubles: answer as normal, then a Random Event occurs. */
-  randomEvent: boolean;
-}
-
-export function resolveDualityOracle(hope: number, fear: number, likelihood: string): DualityAnswer {
-  assertD12(hope, 'Hope die'); assertD12(fear, 'Fear die');
-  const band = DUALITY_LIKELIHOODS.find(item => item.id === likelihood);
-  if (!band) throw new Error('Invalid likelihood');
-  const total = hope + fear;
-  const twist: DualityTwist = hope - fear >= DUALITY_TWIST_GAP ? 'favor' : fear - hope >= DUALITY_TWIST_GAP ? 'against' : null;
-  return { hope, fear, total, target: band.target, yes: total >= band.target, twist, randomEvent: hope === fear };
-}
-
-export function dualityAnswerLabel(answer: Pick<DualityAnswer, 'yes' | 'twist'>): string {
-  if (!answer.twist) return answer.yes ? 'Yes' : 'No';
-  if (answer.yes) return answer.twist === 'favor' ? 'Yes, and…' : 'Yes, but…';
-  return answer.twist === 'favor' ? 'No, but…' : 'No, and…';
-}
-
-// ------------------------------------------------------------------------ scene
-
-export type DualitySceneTest = 'expected' | 'altered' | 'interrupted';
-/** A passed Fear Check changes the scene: odd roll Altered, even roll Interrupted. */
-export function resolveDualityScene(roll: number, fear: number): DualitySceneTest {
-  return !fearCheck(roll, fear) ? 'expected' : roll % 2 === 1 ? 'altered' : 'interrupted';
-}
-
-// ------------------------------------------------------------------------ moves
-
-/** What prompts a GM Move. `stall` is the story stalling or a golden opportunity. */
-export const DUALITY_MOVE_TRIGGERS = [
-  { id: 'success-fear', label: 'Success with Fear', checks: false },
-  { id: 'failure-hope', label: 'Failure with Hope', checks: false },
-  { id: 'failure-fear', label: 'Failure with Fear', checks: true },
-  { id: 'stall', label: 'Story stalls / golden opportunity', checks: true },
-] as const;
-export type DualityMoveTrigger = (typeof DUALITY_MOVE_TRIGGERS)[number]['id'];
-export type DualityMove = 'soft' | 'hard' | 'none';
-/**
- * Success with Fear and failure with Hope are always a Soft Move. Failure with
- * Fear makes a Fear Check: pass is a Hard Move (1 Fear), fail a Soft Move. A
- * stall only acts on a passed check.
- */
-export function resolveDualityMove(trigger: string, roll: number | undefined, fear: number): DualityMove {
-  const found = DUALITY_MOVE_TRIGGERS.find(item => item.id === trigger);
-  if (!found) throw new Error('Invalid move trigger');
-  if (!found.checks) return 'soft';
-  if (roll === undefined) throw new Error('Invalid d12 roll');
-  if (fearCheck(roll, fear)) return 'hard';
-  return trigger === 'stall' ? 'none' : 'soft';
-}
 
 // ----------------------------------------------------------------------- tables
 
 /** Table groups, in the order you reach for them during play. */
-export type DualityTableGroup = 'start' | 'scene' | 'oracle' | 'moves' | 'meaning' | 'combat' | 'npc' | 'explore' | 'world' | 'iron';
+export type DualityTableGroup = 'start' | 'oracle' | 'meaning' | 'combat' | 'npc' | 'explore' | 'world' | 'iron';
 export interface DualityTable {
   id: string;
   title: string;
@@ -118,25 +58,6 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
   table('how-much', 'How Much? How Well?', 'oracle', { Result: spread(
     [2, 'Far less than expected: scarce, weak, tiny'], [3, 'Somewhat less than expected'], [2, 'About what you would expect'],
     [3, 'Somewhat more than expected'], [2, 'Far more than expected: abundant, mighty, vast']) }),
-  table('scene-complication', 'Scene Complication', 'scene', { 'Scene Complication': [
-    'Hostile forces oppose you', 'An obstacle blocks your way', 'Wouldn’t it be bad if…', 'An NPC acts suddenly',
-    'All is not as it seems', 'Things actually go as planned', 'Time is shorter than you thought', 'Innocents are caught in it',
-    'A rival wants the same thing', 'Your gear or magic misbehaves', 'The environment turns dangerous', 'A debt or the past comes due'] }),
-  table('altered-scene', 'Altered Scene', 'scene', { 'Altered Scene': [
-    'The place is not as described', 'An expected NPC is absent', 'An unexpected NPC is present', 'Someone got here first',
-    'The danger is greater than expected', 'The danger is elsewhere, for now', 'Weather, light, or terrain turns',
-    'Something valuable is missing', 'A countdown is already running', 'An old Thread intrudes',
-    'Remove one element of the scene', 'Add a Scene Complication'] }),
-  table('soft-move', 'Soft Move', 'moves', { 'Soft Move': [
-    'Show how the world reacts', 'Reveal an unwelcome truth', 'Signal a threat approaching off-screen', 'Offer what you want, at a cost',
-    'Mark a Stress', 'Shift the environment against you', 'An NPC acts on their Motive', 'Tick a countdown',
-    'Put an item or resource at risk', 'Close off the easy path', 'Your background or a past choice catches up', 'Add a Scene Complication'] }),
-  table('hard-move', 'Hard Move (costs 1 Fear)', 'moves', { 'Hard Move': [
-    'An adversary strikes: take damage', 'A new danger arrives', 'Separate you from an ally or your gear',
-    'You are captured, pinned, or cornered', 'An opportunity is lost for good', 'Enemy reinforcements arrive',
-    'Force a choice between two losses', 'A countdown ticks twice', 'Someone or something you care about is harmed',
-    'Your success is turned against you', 'The environment erupts: collapse, fire, flood',
-    'Spend 1 more Fear if able: roll twice, both happen'] }),
   table('action', 'Action', 'meaning', {
     'Action A': ['Seek', 'Oppose', 'Communicate', 'Move', 'Harm', 'Create', 'Reveal', 'Command', 'Take', 'Protect', 'Assist', 'Transform'],
     'Action B': ['Deceive', 'Abandon', 'Betray', 'Pursue', 'Trap', 'Destroy', 'Hide', 'Bargain', 'Release', 'Delay', 'Summon', 'Sacrifice'] }),
@@ -168,7 +89,7 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
     [5, 'Use a Fear feature, paying its cost (none? attack, then spotlight a second adversary for 1 Fear)'],
     [3, 'Attack, then spotlight a second adversary (1 Fear)'],
     [2, 'The environment acts: use its Fear feature or a hazard (1 Fear)'],
-    [2, 'Hard Move: roll on the Hard Move table (1 Fear)']) }),
+    [2, 'Severe Pay the Price (1 Fear)']) }),
   table('npc-identity', 'NPC: Role and Motive', 'npc', {
     Role: ['Farmer or laborer', 'Merchant', 'Soldier or guard', 'Outlaw', 'Priest or devotee', 'Scholar or sage', 'Noble or official',
       'Artisan', 'Wanderer or scout', 'Spellcaster', 'Entertainer or trickster', 'Leader or elder'],
@@ -190,10 +111,6 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
     Twist: ['The patron is lying', 'The victim is willing or guilty', 'A third party interferes', 'The clock is shorter', 'The target has moved',
       'The enemy is sympathetic', 'It is a trap', 'The reward is false or cursed', 'An old ally stands on the other side',
       'The real threat is far bigger', 'Success has a moral cost', 'It ties to your past'] }),
-  table('event-focus', 'Event Focus', 'start', { 'Event Focus': [
-    'Something far away changes', 'A strange omen or mystery', 'A new NPC enters', 'A known NPC acts', 'Bad for an NPC',
-    'Good for an NPC', 'A Thread advances', 'A Thread is set back', 'A Thread closes or transforms', 'Bad for you',
-    'Good for you', 'The environment acts'] }),
   table('rumor', 'Rumors and Leads', 'start', { 'Next scene: a rumor or lead': [
     'Lights where no one lives', 'A stranger asks about you', 'Travelers stop coming back', 'A reward for someone missing',
     'A storm uncovered old ruins', 'A merchant needs an escort', 'Animals flee one place', 'A friend sends for you',
@@ -291,16 +208,12 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
       'Cracked but whole', 'Lighter or heavier than it looks', 'Someone wants it back'] }),
 ];
 
-/** Engine variants. `duality` is the base engine (One Page Solo Engine loop). */
-/** `iron` is Duality GME (an old id, kept because saved campaigns store it). */
-export type DualityVariant = 'duality' | 'iron';
-/** Groups with `variant` only belong to that variant's screen and PDF. */
-export const DUALITY_TABLE_GROUPS: { id: DualityTableGroup; label: string; variant?: DualityVariant }[] = [
-  { id: 'start', label: '1. Plot hook and Random Event' }, { id: 'scene', label: '2. Set the scene' },
-  { id: 'oracle', label: '3. Oracle' }, { id: 'moves', label: '4. GM Moves' }, { id: 'meaning', label: 'Meaning' },
-  { id: 'combat', label: 'Adversaries' }, { id: 'npc', label: 'NPCs and names' }, { id: 'explore', label: 'Exploration and places' },
-  { id: 'world', label: 'Factions and loot' },
-  { id: 'iron', label: 'Duality GME', variant: 'iron' },
+/** Table groups in the GME manual's reference order. */
+export const DUALITY_TABLE_GROUPS: { id: DualityTableGroup; label: string }[] = [
+  { id: 'iron', label: 'Moves and progress' }, { id: 'start', label: 'Inciting incidents' },
+  { id: 'oracle', label: 'Oracle' }, { id: 'meaning', label: 'Meaning' },
+  { id: 'combat', label: 'Adversaries' }, { id: 'npc', label: 'NPCs and names' },
+  { id: 'explore', label: 'Exploration and places' }, { id: 'world', label: 'Factions and loot' },
 ];
 
 export function dualityTable(id: string): DualityTable {
@@ -338,14 +251,8 @@ export const DUALITY_MEANING_CHOICES = [
   { id: 'descriptor', label: 'Descriptor', tables: ['descriptor'] },
 ] as const satisfies readonly { id: string; label: string; tables: readonly DualityMeaningTable[] }[];
 
-// ----------------------------------------------------------------- random event
-
+/** Saved Threads and NPC lists, usable by GME's generators. */
 export type DualityList = 'threads' | 'characters';
-/** The List an Event Focus roll invokes, if any. */
-export function eventFocusList(roll: number): DualityList | null {
-  assertD12(roll);
-  return roll >= 4 && roll <= 6 ? 'characters' : roll >= 7 && roll <= 9 ? 'threads' : null;
-}
 
 // -------------------------------------------------------------------- adversary
 

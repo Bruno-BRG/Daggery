@@ -7,9 +7,7 @@ sources/*.pdf
 sources/**/*.pdf
 sources/**/*.vec
 docs/*
-!docs/solo-rules.md
 !docs/solo-rules-gme.md
-!docs/solo-themes.md
 tools
 .git
 .claude

@@ -285,10 +285,7 @@
 .solo-jump li + li::before { display: none; }
 .solo-jump button { font-weight: 550; }
 
-/* Engine variants */
-.solo-variant { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 16px; }
-.solo-variant .solo-muted { margin: 0; font-size: 12px; }
-.solo-variant .solo-dice-mode button { min-height: 40px; padding: 0 14px; font-size: 13px; }
+/* GME moves and progress tracks */
 
 /* Duality GME */
 .solo-results { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 4px; }

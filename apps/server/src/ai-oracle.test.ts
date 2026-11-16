@@ -12,10 +12,10 @@ test('consult_oracle works in a group campaign, shows an Oracle roll message, an
   try {
     await runTurn(f, 'Begin.');
     const turn = currentTurn(f);
-    // At 12 Fear a scene Fear Check always passes, so the engine would normally spend 1.
+    // A severe price would normally spend 1 Fear, but AI consults only suggest that cost.
     f.ai.actions.write(f.campaign, 'combat', 'fear', { kind: 'fear', value: 12 });
-    const scene = act(f, turn, 'consult_oracle', { kind: 'scene' }) as Record<string, any>;
-    assert.equal(scene.kind, 'duality-scene');
+    const scene = act(f, turn, 'consult_oracle', { kind: 'pay-price', severe: true }) as Record<string, any>;
+    assert.equal(scene.kind, 'iron-price');
     assert.match(scene.detail, /Suggested Fear cost: 1 \(Fear pool 12\)\. Pay it with spend_fear only if you use this move\./);
     assert.doesNotMatch(scene.detail, /Fear spent:/);
     assert.equal(fearOf(f), 12, 'the Fear pool is never written by the oracle');
@@ -30,6 +30,9 @@ test('consult_oracle works in a group campaign, shows an Oracle roll message, an
     assert.equal(f.ai.session(f.user.id, f.campaign).messages.length, before, 'a hidden consult writes no transcript message');
 
     assert.throws(() => act(f, turn, 'consult_oracle', { kind: 'yes-no', likelihood: 'even' }), /Invalid question/);
+    for (const kind of ['scene', 'gm-move', 'random-event']) assert.throws(() => act(f, turn, 'consult_oracle', { kind }), /Invalid oracle kind/);
+    const oracle = act(f, turn, 'consult_oracle', { kind: 'yes-no', question: 'Is it open?', likelihood: 'even' }) as Record<string, any>;
+    assert.equal(oracle.kind, 'iron-oracle');
     assert.throws(() => act(f, turn, 'consult_oracle', { kind: 'nope' }), /Invalid oracle kind/);
     assert.throws(() => act(f, turn, 'consult_oracle', { kind: 'yes-no', question: 'Is it open?', likelihood: 'certain' }), /Invalid likelihood/);
   } finally {

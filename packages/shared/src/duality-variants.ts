@@ -1,23 +1,16 @@
 /**
- * Duality GME, the variant of the Duality Solo Engine with oaths, moves, progress tracks and Pay
- * the Price, using the Daggerheart action roll as the move roll. Like the base engine, every
+ * Duality GME: oaths, moves, progress tracks and Pay
+ * the Price, using the Daggerheart action roll as the move roll. Every
  * function takes its dice as arguments: the server rolls, these decide.
  *
  * Its structure follows Ironsworn and Starforged. Code ids keep the old `iron` and `vow` names
  * because saved campaigns store them (variant 'iron', track kind 'vow', rank ids).
  */
-import { DUALITY_LIKELIHOODS, type DualityVariant } from './duality-engine';
+import { DUALITY_LIKELIHOODS } from './duality-engine';
 
 const assertDie = (value: number, sides: number, name: string) => {
   if (!Number.isInteger(value) || value < 1 || value > sides) throw new Error(`Invalid ${name}`);
 };
-
-export const DUALITY_VARIANTS: { id: DualityVariant; label: string; tagline: string }[] = [
-  { id: 'duality', label: 'Duality', tagline: 'One Page Solo Engine loop: hook, event, scene, oracle, GM Moves.' },
-  { id: 'iron', label: 'Duality GME', tagline: 'Oaths, moves and progress tracks: take an oath, make moves, Pay the Price.' },
-];
-export const isDualityVariant = (value: unknown): value is DualityVariant =>
-  typeof value === 'string' && DUALITY_VARIANTS.some(item => item.id === value);
 
 // ====================================================================== Duality GME
 
@@ -50,10 +43,8 @@ export function resolveIronProgress(score: number, challenge1: number, challenge
   return { outcome: beaten === 2 ? 'strong' : beaten === 1 ? 'weak' : 'miss', match: challenge1 === challenge2 };
 }
 
-/** Ironsworn likelihood names over the base engine's Hope + Fear targets. */
-export const IRON_LIKELIHOODS = DUALITY_LIKELIHOODS.map((item, index) => ({
-  ...item, label: ['Almost certain', 'Likely', '50 / 50', 'Unlikely', 'Small chance'][index]!,
-}));
+/** GME likelihoods over the Hope + Fear targets. */
+export const IRON_LIKELIHOODS = DUALITY_LIKELIHOODS;
 export const IRON_CLOCK_SIZES = [4, 6, 8] as const;
 
 export type IronMoveGroup = 'session' | 'quest' | 'adventure' | 'exploration' | 'connection' | 'scene' | 'combat' | 'fate';

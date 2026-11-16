@@ -1,8 +1,8 @@
 import { adversaries } from '@daggery/content';
 import {
-  adversaryTypeName, DUALITY_LIKELIHOODS, IRON_LIKELIHOODS, IRON_OUTCOME_LABELS,
-  resolveIronProgress, DUALITY_MEANING_CHOICES, dualityAnswerLabel, dualityTable, eventFocusList, fearCheck, readDualityMeaning,
-  readDualityTable, resolveDualityMove, resolveDualityOracle, resolveDualityScene, resolveFearSpend, rollDie,
+  adversaryTypeName, IRON_LIKELIHOODS, IRON_OUTCOME_LABELS,
+  resolveIronProgress, DUALITY_MEANING_CHOICES, dualityTable, fearCheck, readDualityMeaning,
+  readDualityTable, resolveFearSpend, rollDie,
   type DualityList, type DualityMeaningTable, type Rng, type SoloResult, type SoloState, type SoloTone, type SoloTrackerItem,
 } from '@daggery/shared';
 
@@ -90,37 +90,18 @@ class Table {
     this.lines.push(`${LIST_LABELS[list]} d12 ${roll}: ${picked.name}`);
     return picked.name;
   }
-  /** Event Focus, the List line it invokes, and an Action + Subject pair. */
-  randomEvent(focusRoll?: number): string {
-    const roll = focusRoll ?? this.d12();
-    const focus = readDualityTable('event-focus', roll);
-    this.cells.push({ table: 'event-focus', column: 0, roll });
-    this.lines.push(`Event Focus ${focusRoll ? '(chosen)' : `d12 ${roll}`}: ${focus}`);
-    const list = eventFocusList(roll);
-    if (list) this.list(list);
-    this.meaning(['action', 'subject']);
-    return focus;
-  }
-  /** A Hard Move already paid for. A 12 spends 1 more Fear, if able, for two moves. */
-  hardMove(): string {
-    const first = this.row('hard-move');
+  /** One price; a 12 resolves two non-recursive prices, keeping every die in the result. */
+  price(): string {
+    const first = this.row('iron-price');
     if (first.roll !== 12) return first.value;
-    if (!this.spend()) { this.lines.push('No Fear left for a second move: roll again for one move.'); return this.rerollHard(); }
-    this.lines.push('1 more Fear spent: two Hard Moves, both happen.');
-    return `${this.rerollHard()} + ${this.rerollHard()}`;
-  }
-  private rerollHard(): string {
-    let roll = this.d12();
-    for (let tries = 0; roll === 12 && tries < 200; tries++) roll = this.d12();
-    const value = readDualityTable('hard-move', Math.min(roll, 11));
-    this.cells.push({ table: 'hard-move', column: 0, roll: Math.min(roll, 11) });
-    this.lines.push(`Hard Move d12 ${roll}: ${value}`);
-    return value;
-  }
-  softMove(): string {
-    const move = this.row('soft-move');
-    if (move.roll === 12) return this.row('scene-complication').value;
-    return move.value;
+    this.lines.push('Two prices: both happen.');
+    const prices: string[] = [];
+    for (let attempts = 0; prices.length < 2 && attempts < 200; attempts++) {
+      const next = this.row('iron-price');
+      if (next.roll !== 12) prices.push(next.value);
+    }
+    if (prices.length < 2) throw new Error('Could not resolve Pay the Price');
+    return prices.join(' + ');
   }
   done(title: string, tone: SoloTone, extra: Partial<SoloResult> = {}, question?: string): DualityOutcome {
     if (this.spent) this.lines.push(this.roll.advisory
@@ -136,22 +117,8 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
   const question = roll.question.trim();
   const t = new Table(roll);
 
-  if (kind === 'duality-oracle') {
-    // The table's own oracle may go unspoken (the player keeps it in a notebook); the AI GM must say what it asks.
-    if (!question && roll.advisory) throw new Error('Invalid question');
-    const hope = t.d12(), fear = t.d12();
-    const answer = resolveDualityOracle(hope, fear, text(input.likelihood, 30));
-    const band = DUALITY_LIKELIHOODS.find(item => item.target === answer.target)!;
-    t.lines.push(`Hope ${hope} + Fear ${fear} = ${answer.total} · ${band.label} needs ${band.target}+`);
-    if (answer.twist === 'favor') t.lines.push('Twist (Hope higher by 4 or more): it bends your way.');
-    if (answer.twist === 'against') t.lines.push('Twist (Fear higher by 4 or more): it bends against you.');
-    if (answer.randomEvent) { t.lines.push('Doubles: a Random Event occurs as well.'); t.randomEvent(); }
-    const tone: SoloTone = answer.randomEvent ? 'revelation' : answer.twist === 'against' ? 'fear' : answer.twist === 'favor' ? 'hope' : 'neutral';
-    return t.done(dualityAnswerLabel(answer), tone, { hope, fear, total: answer.total, target: answer.target }, question || 'Oracle');
-  }
-
   // ------------------------------------------------------------------- Duality GME
-  if (kind === 'iron-oracle') {
+  if (kind === 'iron-oracle' || kind === 'duality-oracle') {
     if (!question && roll.advisory) throw new Error('Invalid question');
     const hope = t.d12(), fear = t.d12(), likelihood = text(input.likelihood, 30, 'even');
     const band = IRON_LIKELIHOODS.find(item => item.id === likelihood);
@@ -174,16 +141,9 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
 
   if (kind === 'iron-price') {
     const severe = input.severe === true;
-    const prices: string[] = [];
-    const one = () => {
-      let price = t.row('iron-price');
-      if (price.roll !== 12) { prices.push(price.value); return; }
-      t.lines.push('Two prices: both happen.');
-      for (let found = 0; found < 2;) { price = t.row('iron-price'); if (price.roll !== 12) { prices.push(price.value); found++; } }
-    };
-    one();
+    const prices = [t.price()];
     if (severe) {
-      if (t.spend()) { t.lines.push('Severe: the GM spends 1 Fear and a second price lands.'); one(); }
+      if (t.spend()) { t.lines.push('Severe: the GM spends 1 Fear and a second price lands.'); prices.push(t.price()); }
       else t.lines.push('Severe, but the GM has no Fear to spend: one price.');
     }
     return t.done(prices.join(' + '), 'fear', {}, question || (severe ? 'Pay the Price (severe)' : 'Pay the Price'));
@@ -193,42 +153,6 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
     const check = t.check();
     t.lines.push(check.passed ? 'The GM acts. Spend Fear for what it does.' : 'The world holds its breath.');
     return t.done(check.passed ? 'Fear Check passes' : 'Fear Check fails', check.passed ? 'fear' : 'neutral', { total: check.roll }, question || 'Fear Check');
-  }
-
-  if (kind === 'duality-scene') {
-    const asked = question || state.scene.title || 'Set the scene';
-    // Every scene gets a complication; the Fear Check then decides whether the scene changes outright.
-    const complication = t.row('scene-complication');
-    const available = t.fear;
-    const check = t.check();
-    const outcome = resolveDualityScene(check.roll, available);
-    if (outcome === 'expected') { t.lines.push('The scene starts as you described, with this complication.'); return t.done(`Complication: ${complication.value}`, 'neutral', { total: check.roll }, asked); }
-    t.spend();
-    if (outcome === 'altered') {
-      t.lines.push('Odd roll: the scene is Altered.');
-      const altered = t.row('altered-scene');
-      const title = altered.roll === 12 ? `${complication.value} + ${t.row('scene-complication').value}` : `${altered.value} · ${complication.value}`;
-      return t.done(`Altered scene: ${title}`, 'fear', { total: check.roll }, asked);
-    }
-    t.lines.push('Even roll: the scene is Interrupted. This Random Event replaces it (drop the complication).');
-    return t.done(`Interrupted scene: ${t.randomEvent()}`, 'revelation', { total: check.roll }, asked);
-  }
-
-  if (kind === 'duality-move') {
-    const trigger = text(input.trigger, 30);
-    const needsCheck = trigger === 'failure-fear' || trigger === 'stall';
-    const available = t.fear;
-    const check = needsCheck ? t.check() : undefined;
-    const move = resolveDualityMove(trigger, check?.roll, available);
-    if (move === 'none') { t.lines.push('Nothing moves against you. Carry on.'); return t.done('No move', 'neutral', { total: check?.roll }, question || 'GM Move'); }
-    if (move === 'hard') { t.spend(); return t.done(`Hard Move: ${t.hardMove()}`, 'fear', { total: check?.roll }, question || 'GM Move'); }
-    return t.done(`Soft Move: ${t.softMove()}`, 'neutral', { total: check?.roll }, question || 'GM Move');
-  }
-
-  if (kind === 'duality-event') {
-    const focus = input.focus === undefined || input.focus === '' || input.focus === null ? undefined : Number(input.focus);
-    if (focus !== undefined && (!Number.isInteger(focus) || focus < 1 || focus > 12)) throw new Error('Invalid event focus');
-    return t.done(t.randomEvent(focus), 'revelation', {}, question || 'Random Event');
   }
 
   if (kind === 'duality-meaning') {
@@ -260,7 +184,7 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
     t.lines.push(`Fear Spend d12 ${spendRoll}: ${spend.action}`);
     if (spend.cost && !t.spend(spend.cost)) { t.lines.push('Not enough Fear for that: it acts for free.'); return t.done(t.row('tactics').value, 'neutral', { total: check.roll }, asked); }
     if (spend.featureCost) t.lines.push('Pay the feature’s own Fear cost on the Fear tracker. If you cannot afford it, roll Tactics.');
-    const title = spend.hardMove ? `Hard Move: ${t.hardMove()}` : spend.action;
+    const title = spend.hardMove ? `Severe Pay the Price: ${t.price()} + ${t.price()}` : spend.action;
     t.lines.push('After it acts, roll “Chain” to see if another adversary follows.');
     return t.done(title, 'fear', { total: check.roll }, asked);
   }
@@ -312,7 +236,7 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
   if (kind === 'duality-plot') {
     const objective = t.row('plot-hook', 0), opposition = t.row('plot-hook', 1);
     t.row('plot-stakes', 0); t.row('plot-stakes', 1);
-    t.lines.push('Keep the Twist hidden until a Random Event or Hard Move gives it an opening.');
+    t.lines.push('Reveal the Twist when a move, a matching oracle roll or the fiction gives it an opening.');
     return t.done(`${objective.value} · ${opposition.value}`, 'neutral', {}, question || 'Plot hook');
   }
 

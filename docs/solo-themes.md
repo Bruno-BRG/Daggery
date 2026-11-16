@@ -1,6 +1,6 @@
 # Daggery Solo: thematic scene pools
 
-Version 0.1 — an original homebrew module for [Daggery Solo](solo-rules.md).
+Version 0.1 — an original homebrew module for [Duality GME](solo-rules-gme.md).
 Works with lone hero, companion, and small-party play.
 
 The goal is to make discoveries feel like parts of this particular adventure.

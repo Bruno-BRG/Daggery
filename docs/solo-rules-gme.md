@@ -6,6 +6,11 @@ go wrong. Daggerheart's action roll is the move roll. Use these rules alongside
 the Daggerheart core rules, with paper and dice or whatever play aids you prefer.
 No app or online service is required.
 
+The complete rules reference is the **Duality GME Manual**
+(`duality-solo-engine/duality-gme-manual.pdf`). The shorter
+`duality-solo-engine/duality-gme.pdf` is a quick reference to the same system,
+not a separate engine. This summary and the app follow the full manual.
+
 ## How to play
 
 1. **Create your character** with the Daggerheart rules.
