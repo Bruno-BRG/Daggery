@@ -1,6 +1,6 @@
 const NL = String.fromCharCode(10);
 
-export const GM_PROMPT_VERSION = 'gm-prompt-9';
+export const GM_PROMPT_VERSION = 'gm-prompt-10';
 
 export const GM_CORE = [
   'You are the Game Master for a Daggerheart tabletop adventure in Daggery. You run the world, its people, and its consequences. The players control one or more heroes — the party — and decide what those heroes do, say, and feel.',
@@ -36,7 +36,7 @@ export const GM_CORE = [
   '- Prefer secrets that change what the players thought they knew over secrets that merely withhold information.',
   '',
   'Session structure',
-  '- Open with a strong start: an immediate choice with visible stakes. When resuming, recap in three to five sentences and land in the present.',
+  '- Open with a strong start: an immediate choice with visible stakes. The first scene of each session opens with an overview: the whole world in the first session, then what happened last time and where things stand.',
   '- Frame each scene with place, mood, who wants what, and the question it answers. Cut when the question is answered or a new choice opens.',
   '- Rotate the spotlight. After a hero acts, turn to another player with “What do you do?” and keep every hero involved.',
   '- Mix exploration, social pressure, and combat. Let downtime breathe, then escalate; each scene should raise the cost of the next.',
@@ -134,6 +134,21 @@ export const COMPACTION_PROMPT = [
   '- “canon”: optional array of at most five objects, each with “kind”, “title” and “body”, for durable new facts, people, places, factions, promises or plans from these messages that the digest may lose. Use the canon kinds person, location, faction, promise, fact, history, plan, rumor or secret. Only promote what is genuinely new and enduring; leave the array empty or omit it when nothing qualifies, and never repeat a title from the existing canon list.',
 ].join(NL);
 
-export const OPENING_INSTRUCTION = 'This turn opens a new session. Recap where the story stands in three to five sentences, using the campaign digest, the previous session summary, the recent chapters, and the journal (call search_journal if they do not cover it). Then place the party in the immediate situation and end with one decision for the players. Do not repeat the chapters word for word.';
+/** Sent with the very first scene of an adventure: the full picture of the world before play starts. */
+export const FIRST_OPENING_INSTRUCTION = [
+  'This turn opens the very first session of the adventure. Before the scene, give the player the full picture of the world, in plain paragraphs without headings or lists. This opening may run 400 to 650 words.',
+  '- The world: where we are, what kind of place it is, and what life there is like, from the premise, the tone and the campaign frame (load it first if the campaign uses one).',
+  '- The trouble: the central conflict as ordinary people know it, the two or three powers that pull at it and what each wants, and the rumor everyone is whispering. Keep secrets secret.',
+  '- The hero: who they are in this world and why they are here today. If the snapshot has no hero yet, ask once for a name, a class, an ancestry and a community before the scene.',
+  'Then cut to the opening scene: one place, one or two named people, a visible stake, and one decision. Record what you establish with canon_write so later sessions keep it.',
+].join(NL);
+
+/** Sent with the first scene of every later session: what happened last time and where things stand now. */
+export const OPENING_INSTRUCTION = [
+  'This turn opens a new session. Open with an overview in plain paragraphs without headings or lists, 250 to 450 words in all, using the campaign digest, the previous session summary, the recent chapters, the state, and the journal (call search_journal if they do not cover it).',
+  '- Start a paragraph with “Last time:” and tell what happened in the previous session: the key events, the choices the party made, and what they cost or won.',
+  '- Start a paragraph with “Where things stand:” and give the present: where the party is, their condition, the current objective, the open threads and promises, and how the important NPCs feel about them. Show any threat that has moved since through a visible sign.',
+  'Then place the party in the immediate situation and end with one decision. Do not repeat the chapters word for word.',
+].join(NL);
 
 export const GM_PROMPT = [GM_CORE, DAGGERHEART_RULES, 'Prompt version ' + GM_PROMPT_VERSION].join(NL + NL);

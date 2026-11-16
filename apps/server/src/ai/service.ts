@@ -15,7 +15,7 @@ import { GmActions, GM_TOOLS } from './tools';
 import { ModelProvider, PROVIDERS, ProviderError, effectiveContextWindow, credentialWindow, MIN_CONTEXT_LIMIT, type ModelMessage, type ToolCall } from './provider';
 import { CAMPAIGN_FRAMES, findCampaignFrame, framePrompt } from './frames';
 import { COMPACT_TAIL, COMPACT_TRIGGER, MESSAGE_CHARS, SECRETS_LIMIT, TOOL_RESULT_CHARS, budgetTable, budgetTokens, emptyState, estimateTokens, fitJson, fitMemory, limitsFor, renderProfile, renderState, shorten, snapshotText, type MemoryPart } from './memory';
-import { COMPACTION_PROMPT, GM_PROMPT, GM_PROMPT_VERSION, OPENING_INSTRUCTION } from './prompts';
+import { COMPACTION_PROMPT, FIRST_OPENING_INSTRUCTION, GM_PROMPT, GM_PROMPT_VERSION, OPENING_INSTRUCTION } from './prompts';
 import { renderNpcList } from './npc';
 import { renderClueList } from './clues';
 import { renderFrontList, renderWorldTurn } from './fronts';
@@ -766,8 +766,8 @@ export class AiService {
     let conversation = (JSON.parse(row.checkpoint || '[]') as ModelMessage[]).filter(message => message.role !== 'system');
     const save = () => this.db.prepare('UPDATE ai_turns SET checkpoint = ?, updated = ? WHERE id = ?').run(JSON.stringify(conversation), new Date().toISOString(), rt.turn);
     if (!conversation.length) {
-      // The request ID marks an opening recap, so its instruction survives a restart before the first checkpoint.
-      conversation = await this.prepare(rt, settings, tokens, row.request_id.startsWith('open:') ? OPENING_INSTRUCTION : null, worldTurn);
+      // The request ID marks an opening (first session or recap), so its instruction survives a restart before the first checkpoint.
+      conversation = await this.prepare(rt, settings, tokens, row.request_id.startsWith('open:') ? OPENING_INSTRUCTION : row.request_id.startsWith('begin:') ? FIRST_OPENING_INSTRUCTION : null, worldTurn);
       save();
     }
     const tools = GM_TOOLS;

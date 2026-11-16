@@ -8,7 +8,7 @@ import type { Sheet } from '@daggery/shared/daggerheart/types';
 import { fitMemory, outsideActivityFor, snapshotFor, type MemoryPart } from './ai/memory';
 import { CURRENT_VERSION, migrateCampaignDatabase } from './campaign-db';
 import { CampaignService } from './campaign-service';
-import { OPENING_INSTRUCTION } from './ai/prompts';
+import { FIRST_OPENING_INSTRUCTION, OPENING_INSTRUCTION } from './ai/prompts';
 import { AiConflict, AiService } from './ai/service';
 import { SecretVault } from './ai/vault';
 import { act, addPlayer, call, completion, currentTurn, finished, fixture, httpApp, json, lastUserText, ORIGIN, prose, runTurn, schemaFiveDatabase, seedHistory, summaryReply, type Captured, type Fixture } from './ai-test-kit';
@@ -727,7 +727,7 @@ test('creating a session starts no GM turn, and Begin opens it with a recap once
   }
 });
 
-test('Begin without journal entries stores the player opening message and sends no recap instruction', async () => {
+test('Begin without journal entries stores the player opening message and sends the first-session overview instead of a recap', async () => {
   const f = await fixture(request => request.tools ? completion('The harbor waits. What do you do?') : summaryReply());
   try {
     const { ai, user, campaign } = f;
@@ -738,7 +738,9 @@ test('Begin without journal entries stores the player opening message and sends 
     assert.equal(state.run?.status, 'complete');
     const messages = f.requests.at(-1)!.body.messages as { role: string; content: string | null }[];
     assert.ok(!messages.some(item => item.content === OPENING_INSTRUCTION), 'no recap instruction without journal entries');
-    assert.equal(messages.filter(item => item.role === 'user').at(-1)?.content?.startsWith('Begin our adventure.'), true, 'the player opening message is sent');
+    const users = messages.filter(item => item.role === 'user');
+    assert.equal(users.at(-1)?.content, FIRST_OPENING_INSTRUCTION, 'the first session asks for the full world overview');
+    assert.equal(users.at(-2)?.content?.startsWith('Begin our adventure.'), true, 'the player opening message is sent before it');
     const stored = ai.session(user.id, campaign, chat).messages;
     assert.deepEqual(stored.map(message => message.role), ['player', 'gm']);
     assert.match(stored[0]!.text, /^Begin our adventure\./);
@@ -2061,12 +2063,12 @@ test('the GM system prompt frames the players as a party and carries the current
     assert.ok(system.content!.includes('give each hero the spotlight in turn'));
     assert.ok(system.content!.includes('Call get_character before resolving or describing a hero’s class feature'));
     assert.ok(!system.content!.includes('The player controls one hero'), 'the single-hero framing is gone');
-    assert.ok(system.content!.includes('gm-prompt-9'), 'the prompt version is current');
+    assert.ok(system.content!.includes('gm-prompt-10'), 'the prompt version is current');
     assert.ok(system.content!.includes('Oracles and randomness'), 'the oracle guidance is present');
     assert.ok(system.content!.includes('Fronts (GM only)'), 'the fronts guidance is present');
     assert.ok(system.content!.includes('rolls and oracle answers the players made outside your cards'), 'the outside-activity guidance is present');
     const stored = f.db.prepare('SELECT prompt_version FROM ai_turns ORDER BY rowid DESC LIMIT 1').get() as { prompt_version: string };
-    assert.equal(stored.prompt_version, 'gm-prompt-9', 'the turn records the current prompt version');
+    assert.equal(stored.prompt_version, 'gm-prompt-10', 'the turn records the current prompt version');
   } finally {
     await f.close();
   }
