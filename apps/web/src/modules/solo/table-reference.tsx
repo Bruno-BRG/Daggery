@@ -16,11 +16,13 @@ export function segments(entries: readonly string[]): Segment[] {
 export const rangeLabel = ({ start, end }: Segment) => start === end ? `${start}` : `${start}–${end}`;
 
 /** A printed-table view. No roll handler, result state or bookkeeping controls. */
-export function ReferenceTableCard({ table }: { table: DualityTable }) {
+export function ReferenceTableCard({ table, headingLevel = 2 }: { table: DualityTable; headingLevel?: 2 | 3 }) {
+  const Heading = headingLevel === 3 ? 'h3' : 'h2';
+  const ColumnHeading = headingLevel === 3 ? 'h4' : 'h3';
   const isMeaning = ['action', 'subject', 'descriptor'].includes(table.id);
   return <article className="solo-reference-table" id={`solo-table-${table.id}`}>
     <header>
-      <h2>{table.title}</h2>
+      <Heading>{table.title}</Heading>
       <p>{isMeaning ? 'Hope d12 picks the row. Fear odd: A. Fear even: B.' : table.columns.length > 1 ? 'Roll a d12 for each column.' : 'Roll a d12 and read the matching row.'}</p>
     </header>
     {isMeaning ? <table className="solo-table">
@@ -30,7 +32,7 @@ export function ReferenceTableCard({ table }: { table: DualityTable }) {
         {table.columns.map(column => <td key={column.label}>{column.entries[row]}</td>)}
       </tr>)}</tbody>
     </table> : table.columns.map(column => <section className="solo-reference-column" key={column.label}>
-      {table.columns.length > 1 && <h3>{column.label}</h3>}
+      {table.columns.length > 1 && <ColumnHeading>{column.label}</ColumnHeading>}
       <table className="solo-table">
         <thead><tr><th scope="col" className="solo-range">d12</th><th scope="col">{column.label}</th></tr></thead>
         <tbody>{segments(column.entries).map(segment => <tr key={segment.start}>

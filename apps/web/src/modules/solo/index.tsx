@@ -7,12 +7,13 @@ import {
 } from '@daggery/shared';
 import { getActiveCampaign } from '../../campaign-context';
 import { Icon, type IconName } from '../../components/Icon';
-import { Dialog } from '../../components/Dialog';
 import { useMediaQuery } from '../../useMediaQuery';
 import { SOLO_SECTIONS, type RefBlock } from './reference';
 import { DIFFICULTIES, MOVE_FLOWS, MOVE_GROUP_META, OUTCOME_ORDER, type MoveFlow, type Step } from './workflow';
-import { ReferenceTableCard, segments, rangeLabel } from './table-reference';
+import { segments, rangeLabel } from './table-reference';
+import { MobileReferenceReader } from './reader';
 import './solo.css';
+import './reader.css';
 
 /** Tables rolled with the Duality Dice instead of a single d12. */
 const MEANING_TABLES = new Set<string>(['action', 'subject', 'descriptor']);
@@ -75,8 +76,9 @@ const MODES: { id: Mode; label: string; icon: IconName }[] = [
 ];
 
 export default function SoloPlay({ author: _author }: { author: string }) {
+  const mobile = useMediaQuery('(max-width: 767px)');
   if (!hasFeature(getActiveCampaign().configuration, 'daggerheart.solo') || getActiveCampaign().role !== 'gm') return <p>Solo play is not enabled for this campaign.</p>;
-  return <Workspace />;
+  return mobile ? <MobileReferenceReader /> : <Workspace />;
 }
 
 /** Reads `#solo-tables-combat` or `#solo-moves-face-danger` into a mode and a selection. */
@@ -92,11 +94,7 @@ function readHash(fallback: Mode = 'moves'): { mode: Mode; id?: string } {
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 function Workspace() {
-  const mobile = useMediaQuery('(max-width: 767px)');
-  const [panel, setPanel] = useState<'moves' | null>(null);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const initial = useMemo(() => readHash(mobile ? 'tables' : 'moves'), []);
-  const [referenceTableId, setReferenceTableId] = useState<string>();
+  const initial = useMemo(() => readHash(), []);
   const [mode, setMode] = useState<Mode>(initial.mode);
   const [moveId, setMoveId] = useState(initial.mode === 'moves' && IRON_MOVES.some(move => move.id === initial.id) ? initial.id! : 'face-danger');
   const [sectionId, setSectionId] = useState(initial.mode === 'tables' && SOLO_SECTIONS.some(section => section.id === initial.id) ? initial.id! : SOLO_SECTIONS[0]!.id);
@@ -116,14 +114,14 @@ function Workspace() {
   // Links such as #solo-tables-combat or #solo-moves-make-camp open that view.
   useEffect(() => {
     const sync = () => {
-      const { mode: next, id } = readHash(mobile ? 'tables' : 'moves');
+      const { mode: next, id } = readHash();
       setMode(next); setQuery('');
       if (next === 'moves' && IRON_MOVES.some(move => move.id === id)) setMoveId(id!);
       if (next === 'tables' && SOLO_SECTIONS.some(section => section.id === id)) setSectionId(id!);
     };
     window.addEventListener('hashchange', sync);
     return () => window.removeEventListener('hashchange', sync);
-  }, [mobile]);
+  }, []);
 
   // "/" jumps to search from anywhere on the page, as in most rules tools.
   useEffect(() => {
@@ -131,17 +129,11 @@ function Workspace() {
       const target = event.target as HTMLElement | null;
       if (event.key !== '/' || event.ctrlKey || event.metaKey || target?.closest('input, textarea, select, [contenteditable]')) return;
       event.preventDefault();
-      setSearchOpen(true);
       search.current?.focus();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
-
-  useEffect(() => {
-    if (searchOpen) search.current?.focus();
-  }, [searchOpen]);
-  useEffect(() => { if (!mobile) setPanel(null); }, [mobile]);
 
   // The dock sticks to the top; the log column sticks just below it.
   useEffect(() => {
@@ -152,7 +144,7 @@ function Workspace() {
     const observer = new ResizeObserver(measure);
     observer.observe(bar);
     return () => observer.disconnect();
-  }, [mobile]);
+  }, []);
 
   function setHash(next: string) {
     if (window.location.hash !== next) window.history.replaceState(null, '', next);
@@ -161,16 +153,15 @@ function Workspace() {
     document.querySelector('.daggery-main')?.scrollTo({ top: 0 });
   }
   function openMode(next: Mode) {
-    setMode(next); setQuery(''); setSearchOpen(false); setPanel(null);
+    setMode(next); setQuery('');
     setHash(next === 'moves' ? `#solo-moves-${moveId}` : next === 'tables' ? `#solo-tables-${sectionId}` : `#solo-${next}`);
     scrollToWork();
   }
   function openMove(id: string) {
-    setMode('moves'); setMoveId(id); setQuery(''); setSearchOpen(false); setPanel(null); setHash(`#solo-moves-${id}`);
-    if (mobile) scrollToWork();
+    setMode('moves'); setMoveId(id); setQuery(''); setHash(`#solo-moves-${id}`);
   }
   function openSection(id: string) {
-    setSectionId(id); setReferenceTableId(undefined); setHash(`#solo-tables-${id}`);
+    setSectionId(id); setHash(`#solo-tables-${id}`);
   }
 
   function push(entry: Omit<LogEntry, 'n' | 'at'>) {
@@ -288,18 +279,11 @@ function Workspace() {
   function openReferenceTable(id: string) {
     const section = SOLO_SECTIONS.find(item => item.tables.includes(id));
     if (!section) return;
-    setMode('tables'); setSectionId(section.id); setReferenceTableId(id); setQuery(''); setSearchOpen(false);
+    setMode('tables'); setSectionId(section.id); setQuery('');
     setHash(`#solo-tables-${section.id}`); scrollToWork();
   }
 
   function runStep(step: Step) {
-    // On phones every link opens a reference. Dice and bookkeeping stay physical.
-    if (mobile) {
-      if (step.kind === 'table') openReferenceTable(step.table);
-      else if (step.kind === 'meaning') openReferenceTable(step.first);
-      else openMode('oracle');
-      return;
-    }
     if (step.kind === 'table') rollTable(step.table, step.column);
     else if (step.kind === 'meaning') rollMeaningPair(step.first);
     else if (step.kind === 'fear-check') rollFearCheck();
@@ -319,12 +303,7 @@ function Workspace() {
   const trimmed = query.trim().toLowerCase();
 
   return <div className="solo-shell">
-    {mobile && <header className="solo-phone-head">
-      <button type="button" className="solo-icon-button" aria-label="Back to campaign" onClick={() => window.dispatchEvent(new CustomEvent('daggery:navigate', { detail: 'home' }))}><Icon name="undo" /></button>
-      <div className="solo-phone-title"><h1>Solo reference</h1><span>Duality GME {DUALITY_ENGINE_VERSION}</span></div>
-      <button type="button" className="solo-icon-button" aria-label="Search moves and tables" aria-expanded={searchOpen} onClick={() => { setSearchOpen(value => !value); setQuery(''); }}><Icon name={searchOpen ? 'close' : 'search'} /></button>
-    </header>}
-    <header className="solo-top" data-search-open={searchOpen || undefined}>
+    <header className="solo-top">
       <div className="solo-title">
         <p className="solo-kicker">{`Duality GME ${DUALITY_ENGINE_VERSION}`}</p>
         <h1>Solo play</h1>
@@ -341,75 +320,20 @@ function Workspace() {
       </label>
     </header>
 
-    {!mobile && <OracleDock ref={dock} pulse={dockPulse} fear={fear} setFear={setFear} onAsk={askOracle} onMeaning={rollMeaningPair} onFearCheck={rollFearCheck} onPrice={() => rollTable('iron-price')} />}
+    <OracleDock ref={dock} pulse={dockPulse} fear={fear} setFear={setFear} onAsk={askOracle} onMeaning={rollMeaningPair} onFearCheck={rollFearCheck} onPrice={() => rollTable('iron-price')} />
 
     <div className="solo-body">
       <main className="solo-main">
         {trimmed
-          ? <SearchResults mobile={mobile} query={trimmed} tableRolls={tableRolls} meaningRolls={meaningRolls} onOpenMove={openMove} onRoll={rollTable} />
+          ? <SearchResults query={trimmed} tableRolls={tableRolls} meaningRolls={meaningRolls} onOpenMove={openMove} onRoll={rollTable} />
           : mode === 'moves'
-            ? <MovesView mobile={mobile} onChoose={() => setPanel('moves')} moveId={moveId} onSelect={openMove} outcomes={moveOutcomes} onRunStep={runStep} onAction={rollAction} onProgress={rollProgress} onRecord={recordOutcome} />
+            ? <MovesView moveId={moveId} onSelect={openMove} outcomes={moveOutcomes} onRunStep={runStep} onAction={rollAction} onProgress={rollProgress} onRecord={recordOutcome} />
             : mode === 'tables'
-              ? <TablesView mobile={mobile} referenceTableId={referenceTableId} onReferenceTable={setReferenceTableId} sectionId={sectionId} onSection={openSection} tableRolls={tableRolls} meaningRolls={meaningRolls} onRoll={rollTable} onPair={rollMeaningPair} />
-              : mode === 'oracle' ? <OracleReference onTable={openReferenceTable} /> : <RulesView mobile={mobile} />}
+              ? <TablesView sectionId={sectionId} onSection={openSection} tableRolls={tableRolls} meaningRolls={meaningRolls} onRoll={rollTable} onPair={rollMeaningPair} />
+              : mode === 'oracle' ? <OracleReference onTable={openReferenceTable} /> : <RulesView />}
       </main>
-      {!mobile && <RollLog log={log} onRunStep={runStep} onCopy={copyLog} onClear={() => setLog([])} />}
+      <RollLog log={log} onRunStep={runStep} onCopy={copyLog} onClear={() => setLog([])} />
     </div>
-    {mobile && <>
-      <nav className="solo-phone-nav" aria-label="Solo navigation">
-        {([
-          { id: 'tables', label: 'Tables', icon: 'grid' },
-          { id: 'moves', label: 'Moves', icon: 'compass' },
-          { id: 'oracle', label: 'Oracle', icon: 'spark' },
-          { id: 'rules', label: 'Rules', icon: 'book' },
-        ] as const).map(item => <button key={item.id} type="button" aria-current={mode === item.id && !trimmed ? 'page' : undefined} onClick={() => openMode(item.id)}><Icon name={item.icon} /><span>{item.label}</span></button>)}
-      </nav>
-      <Dialog open={panel === 'moves'} onClose={() => setPanel(null)} title="Choose a move" className="solo-sheet">
-        <MobileMovePicker moveId={moveId} onSelect={openMove} />
-      </Dialog>
-    </>}
-  </div>;
-}
-
-// --------------------------------------------------------------- phone workspace
-
-function MobileMovePicker({ moveId, onSelect }: { moveId: string; onSelect: (id: string) => void }) {
-  const [groupId, setGroupId] = useState(IRON_MOVES.find(move => move.id === moveId)?.group ?? 'adventure');
-  const [query, setQuery] = useState('');
-  const trimmed = query.trim().toLowerCase();
-  const moves = IRON_MOVES.filter(move => trimmed
-    ? `${move.name} ${move.trigger}`.toLowerCase().includes(trimmed)
-    : move.group === groupId);
-  return <div className="solo-picker">
-    <label className="solo-picker-search"><Icon name="search" /><input type="search" aria-label="Search moves" placeholder="What are you trying to do?" value={query} onChange={event => setQuery(event.target.value)} /></label>
-    {!trimmed && <label className="solo-select-field"><span>Move group</span><select value={groupId} onChange={event => setGroupId(event.target.value as typeof groupId)}>
-      {IRON_MOVE_GROUPS.map(group => <option key={group.id} value={group.id}>{group.label}</option>)}
-    </select></label>}
-    {!trimmed && <p className="solo-picker-hint">{MOVE_GROUP_META[groupId].blurb}</p>}
-    <div className="solo-picker-list">
-      {moves.map(move => <button key={move.id} type="button" aria-current={move.id === moveId ? 'true' : undefined} onClick={() => onSelect(move.id)}>
-        <span><strong>{move.name}</strong><small>{move.trigger}</small></span><Icon name={move.id === moveId ? 'check' : 'chevron'} />
-      </button>)}
-      {!moves.length && <p className="solo-empty">No moves match. Try danger, camp or expedition.</p>}
-    </div>
-  </div>;
-}
-
-function MobileTables({ sectionId, tableId, onSection, onTable }: {
-  sectionId: string; tableId: string | undefined; onSection: (id: string) => void; onTable: (id: string) => void;
-}) {
-  const section = SOLO_SECTIONS.find(item => item.id === sectionId) ?? SOLO_SECTIONS[0]!;
-  const selected = tableId && section.tables.includes(tableId) ? tableId : section.tables[0]!;
-  return <div className="solo-phone-tables">
-    <div className="solo-reference-selects">
-      <label className="solo-select-field"><span>Collection</span><select value={section.id} onChange={event => onSection(event.target.value)}>
-        {SOLO_SECTIONS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-      </select></label>
-      <label className="solo-select-field"><span>Table</span><select value={selected} onChange={event => onTable(event.target.value)}>
-        {section.tables.map(id => <option key={id} value={id}>{dualityTable(id).title}</option>)}
-      </select></label>
-    </div>
-    <ReferenceTableCard key={selected} table={dualityTable(selected)} />
   </div>;
 }
 
@@ -479,8 +403,7 @@ const OracleDock = forwardRef<HTMLElement, DockProps>(function OracleDock({ puls
 
 // ------------------------------------------------------------------- moves view
 
-function MovesView({ mobile, onChoose, moveId, onSelect, outcomes, onRunStep, onAction, onProgress, onRecord }: {
-  mobile: boolean; onChoose: () => void;
+function MovesView({ moveId, onSelect, outcomes, onRunStep, onAction, onProgress, onRecord }: {
   moveId: string; onSelect: (id: string) => void;
   outcomes: Record<string, { outcome: IronOutcome; n: number }>;
   onRunStep: (step: Step) => void;
@@ -496,7 +419,7 @@ function MovesView({ mobile, onChoose, moveId, onSelect, outcomes, onRunStep, on
     if (window.matchMedia?.('(max-width: 900px)').matches) requestAnimationFrame(() => detail.current?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' }));
   };
   return <div className="solo-moves">
-    {mobile ? <button type="button" className="solo-change-move" aria-haspopup="dialog" onClick={onChoose}><Icon name={MOVE_GROUP_META[move.group].icon} /><span>{IRON_MOVE_GROUPS.find(group => group.id === move.group)?.label}<strong>Change move</strong></span><Icon name="chevron" /></button> : <nav className="solo-move-list" aria-label="Moves">
+    <nav className="solo-move-list" aria-label="Moves">
       {IRON_MOVE_GROUPS.map(group => <section key={group.id} aria-labelledby={`solo-group-${group.id}`}>
         <h2 id={`solo-group-${group.id}`}><Icon name={MOVE_GROUP_META[group.id].icon} />{group.label.replace(/ moves$/, '')}</h2>
         <ul>{IRON_MOVES.filter(item => item.group === group.id).map(item => <li key={item.id}>
@@ -507,9 +430,9 @@ function MovesView({ mobile, onChoose, moveId, onSelect, outcomes, onRunStep, on
           </button>
         </li>)}</ul>
       </section>)}
-    </nav>}
+    </nav>
     <div ref={detail} className="solo-move-detail-wrap">
-      <MoveDetail mobile={mobile} key={move.id} move={move} rolled={mobile ? undefined : outcomes[move.id]} onRunStep={onRunStep} onAction={onAction} onProgress={onProgress} onRecord={onRecord} />
+      <MoveDetail key={move.id} move={move} rolled={outcomes[move.id]} onRunStep={onRunStep} onAction={onAction} onProgress={onProgress} onRecord={onRecord} />
     </div>
   </div>;
 }
@@ -531,8 +454,8 @@ function StepChips({ steps, onRun, compact, referenceOnly }: { steps: readonly S
   </div>;
 }
 
-function MoveDetail({ mobile, move, rolled, onRunStep, onAction, onProgress, onRecord }: {
-  mobile: boolean; move: IronMove; rolled: { outcome: IronOutcome; n: number } | undefined;
+function MoveDetail({ move, rolled, onRunStep, onAction, onProgress, onRecord }: {
+  move: IronMove; rolled: { outcome: IronOutcome; n: number } | undefined;
   onRunStep: (step: Step) => void;
   onAction: (move: IronMove, difficulty: number, modifier: number) => void;
   onProgress: (move: IronMove, score: number) => void;
@@ -545,7 +468,7 @@ function MoveDetail({ mobile, move, rolled, onRunStep, onAction, onProgress, onR
     {OUTCOME_ORDER.filter(outcome => move[outcome]).map(outcome => <div key={outcome} className={`solo-outcome is-${outcome}${rolled?.outcome === outcome ? ' is-current' : ''}`}>
       <h3>{IRON_OUTCOME_LABELS[outcome]}<small>{outcome === 'strong' ? 'Success with Hope' : outcome === 'weak' ? 'Success with Fear' : 'Failure'}</small></h3>
       <p>{move[outcome]}</p>
-      <StepChips steps={flow[outcome]} onRun={onRunStep} compact referenceOnly={mobile} />
+      <StepChips steps={flow[outcome]} onRun={onRunStep} compact />
     </div>)}
   </section>;
   return <article className="solo-move" aria-labelledby="solo-move-name">
@@ -559,12 +482,12 @@ function MoveDetail({ mobile, move, rolled, onRunStep, onAction, onProgress, onR
     {move.text && <p className="solo-move-text">{move.text}</p>}
 
     {flow.tools && <section className="solo-move-block" aria-label="Rolls for this move">
-      <h3>{mobile ? 'Related tables' : 'Roll for this move'}</h3>
-      <StepChips steps={flow.tools} onRun={onRunStep} referenceOnly={mobile} />
+      <h3>Roll for this move</h3>
+      <StepChips steps={flow.tools} onRun={onRunStep} />
     </section>}
 
-    {!mobile && flow.resolve === 'action' && <ActionRoller move={move} onAction={onAction} onRecord={onRecord} />}
-    {!mobile && flow.resolve === 'progress' && <ProgressRoller move={move} onProgress={onProgress} onRecord={onRecord} />}
+    {flow.resolve === 'action' && <ActionRoller move={move} onAction={onAction} onRecord={onRecord} />}
+    {flow.resolve === 'progress' && <ProgressRoller move={move} onProgress={onProgress} onRecord={onRecord} />}
 
     {outcomes}
   </article>;
@@ -629,13 +552,12 @@ function ProgressRoller({ move, onProgress, onRecord }: { move: IronMove; onProg
 
 // ------------------------------------------------------------------ tables view
 
-function TablesView({ mobile, referenceTableId, onReferenceTable, sectionId, onSection, tableRolls, meaningRolls, onRoll, onPair }: {
-  mobile: boolean; referenceTableId: string | undefined; onReferenceTable: (id: string) => void; sectionId: string; onSection: (id: string) => void;
+function TablesView({ sectionId, onSection, tableRolls, meaningRolls, onRoll, onPair }: {
+  sectionId: string; onSection: (id: string) => void;
   tableRolls: Record<string, TableRolls>; meaningRolls: Record<string, MeaningRoll>;
   onRoll: (id: string, column?: number) => void; onPair: (first: 'action' | 'descriptor') => void;
 }) {
   const section = SOLO_SECTIONS.find(item => item.id === sectionId) ?? SOLO_SECTIONS[0]!;
-  if (mobile) return <MobileTables sectionId={sectionId} tableId={referenceTableId} onSection={onSection} onTable={onReferenceTable} />;
   return <div className="solo-tables">
     <nav className="solo-chips" aria-label="Table groups">
       {SOLO_SECTIONS.map(item => <button key={item.id} type="button" aria-current={item.id === section.id ? 'true' : undefined} onClick={() => onSection(item.id)}>
@@ -653,8 +575,8 @@ function TablesView({ mobile, referenceTableId, onReferenceTable, sectionId, onS
   </div>;
 }
 
-function SearchResults({ mobile, query, tableRolls, meaningRolls, onOpenMove, onRoll }: {
-  mobile: boolean; query: string; tableRolls: Record<string, TableRolls>; meaningRolls: Record<string, MeaningRoll>;
+function SearchResults({ query, tableRolls, meaningRolls, onOpenMove, onRoll }: {
+  query: string; tableRolls: Record<string, TableRolls>; meaningRolls: Record<string, MeaningRoll>;
   onOpenMove: (id: string) => void; onRoll: (id: string, column?: number) => void;
 }) {
   const moves = IRON_MOVES.filter(move => `${move.name} ${move.trigger}`.toLowerCase().includes(query));
@@ -662,17 +584,16 @@ function SearchResults({ mobile, query, tableRolls, meaningRolls, onOpenMove, on
   if (!moves.length && !tables.length) return <p className="solo-empty">Nothing matches “{query}”. Try a word from a move or table name, such as camp, price or name.</p>;
   const foundTables = tables.length > 0 && <section aria-labelledby="solo-found-tables">
     <h2 id="solo-found-tables">Tables</h2>
-    <div className="solo-card-grid">{tables.map(table => mobile ? <ReferenceTableCard key={table.id} table={table} /> : <TableCard key={table.id} table={table} rolls={tableRolls[table.id] ?? EMPTY_ROLLS} meaning={meaningRolls[table.id]} onRoll={column => onRoll(table.id, column)} />)}</div>
+    <div className="solo-card-grid">{tables.map(table => <TableCard key={table.id} table={table} rolls={tableRolls[table.id] ?? EMPTY_ROLLS} meaning={meaningRolls[table.id]} onRoll={column => onRoll(table.id, column)} />)}</div>
   </section>;
   return <div className="solo-search-results">
-    {mobile && foundTables}
     {moves.length > 0 && <section aria-labelledby="solo-found-moves">
       <h2 id="solo-found-moves">Moves</h2>
       <div className="solo-found-moves">{moves.map(move => <button key={move.id} type="button" onClick={() => onOpenMove(move.id)}>
         <strong>{move.name}</strong><span>{move.trigger}</span>
       </button>)}</div>
     </section>}
-    {!mobile && foundTables}
+    {foundTables}
   </div>;
 }
 
@@ -774,14 +695,7 @@ function MeaningTable({ table, rolled }: { table: DualityTable; rolled: MeaningR
 
 // ------------------------------------------------------------------- rules view
 
-function RulesView({ mobile }: { mobile: boolean }) {
-  if (mobile) return <div className="solo-rules">
-    <h2>Rules reference</h2>
-    {SOLO_SECTIONS.filter(section => section.reference.length).map(section => <details className="solo-rule-section" key={section.id}>
-      <summary><Icon name={section.icon} />{section.label}</summary>
-      <div className="solo-reference-grid">{section.reference.map(block => <ReferenceBlock key={block.title} block={block} />)}</div>
-    </details>)}
-  </div>;
+function RulesView() {
   return <div className="solo-rules">
     {SOLO_SECTIONS.filter(section => section.reference.length).map(section => <section key={section.id} aria-labelledby={`solo-rules-${section.id}`}>
       <h2 id={`solo-rules-${section.id}`}><Icon name={section.icon} />{section.label}</h2>
