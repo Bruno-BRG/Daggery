@@ -9,7 +9,7 @@ export const DAGGERHEART_UI: SystemUI = { optionsEditor: DaggerheartOptions, dic
     { id: 'sheets', feature: 'daggerheart.sheets', label: 'Characters', icon: 'sheet', description: 'Create heroes and manage their sheets', primary: true, component: lazy(() => import('../modules/sheets')) },
     { id: 'compendium', feature: 'daggerheart.compendium', label: 'Compendium', icon: 'book', description: 'Find classes, cards, equipment, and rules', component: lazy(() => import('../modules/compendium')) },
     { id: 'gm', feature: 'daggerheart.gm-tools', label: 'GM tools', icon: 'compass', description: 'Loot tables, setting notes, and scenario preparation', gmOnly: true, component: lazy(() => import('../modules/gm')) },
-    { id: 'solo', feature: 'daggerheart.solo', label: 'Solo play', icon: 'spark', description: 'Oracles, scenes, thematic pools, and your journal', gmOnly: true, primary: true, component: lazy(() => import('../modules/solo')) },
+    { id: 'solo', feature: 'daggerheart.solo', label: 'Solo play', icon: 'spark', description: 'Duality GME tables, organized for play', gmOnly: true, primary: true, component: lazy(() => import('../modules/solo')) },
   ] };
 
 function DaggerheartOptions({ value, onChange }: { value: CampaignConfiguration; onChange: (value: CampaignConfiguration) => void }) {

@@ -1,326 +1,107 @@
-.solo-workspace { max-width: 1080px; margin: 0 auto; padding: 32px; color: var(--ds-ink); }
+.solo-workspace { max-width: 1140px; margin: 0 auto; padding: 32px; color: var(--ds-ink); }
 .solo-workspace h1, .solo-workspace h2, .solo-workspace h3 { letter-spacing: -.02em; }
-.solo-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
-.solo-heading > div { min-width: 0; }
-.solo-heading h1 { display: flex; gap: 10px; align-items: center; font-size: 28px; font-weight: 650; margin: 6px 0 8px; }
-.solo-heading p, .solo-muted { color: var(--ds-muted); font-size: 13px; line-height: 1.65; }
-.solo-kicker { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--ds-brand) !important; font-weight: 650; }
-.solo-sheet-link { white-space: nowrap; }
-.solo-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--ds-border); overflow-x: auto; margin-bottom: 20px; }
-.solo-tabs button { flex-shrink: 0; font-size: 14px; color: var(--ds-muted); min-height: 48px; padding: 0 2px; background: transparent; border: 0; border-bottom: 2px solid transparent; cursor: pointer; }
-.solo-tabs button[aria-current] { color: var(--ds-brand); border-color: var(--ds-brand); }
-.solo-stack { display: grid; gap: 20px; min-width: 0; }
-.solo-panel { min-width: 0; padding: 24px; border: 1px solid var(--ds-border); background: var(--ds-raised); border-radius: var(--radius-md); }
-.solo-panel h2 { font-size: 18px; font-weight: 650; margin-bottom: 12px; }
-.solo-panel h3 { font-size: 15px; font-weight: 650; }
-.solo-panel > .solo-muted { margin-bottom: 18px; }
-.solo-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-size: 13px; font-weight: 550; margin-bottom: 18px; }
-.solo-field input, .solo-field textarea { font: inherit; font-weight: 400; min-width: 0; width: 100%; color: var(--ds-ink); background: var(--ds-inset); padding: 10px 12px; line-height: 1.6; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); }
-.solo-field textarea { resize: vertical; }
-.solo-field ::placeholder { color: var(--ds-faint); }
-.solo-workspace :is(button, input, textarea, summary, a):focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; }
+.solo-workspace :is(button, summary, a):focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 3px; }
 .solo-workspace button:disabled { opacity: .45; cursor: default; }
-.solo-empty { font-size: 14px; line-height: 1.7; color: var(--ds-muted); padding: 4px 0; }
-.solo-empty-state { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.solo-empty-state > svg { width: 26px; height: 26px; color: var(--ds-brand); }
-.solo-empty-state h2 { margin: 0; }
-.solo-empty-state p { color: var(--ds-muted); font-size: 13px; line-height: 1.7; }
-.solo-alert { padding: 14px 16px; margin-bottom: 20px; border: 1px solid var(--ds-brand-line); background: var(--ds-brand-soft); border-radius: var(--radius-xs); font-size: 13px; line-height: 1.7; }
-.solo-alert { border-color: var(--color-rose-500); }
-.solo-chip { display: inline-flex; align-items: center; flex: none; padding: 4px 9px; border: 1px solid var(--ds-border); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; }
 
-/* Fear pool */
-.solo-fear-panel { display: grid; gap: 8px; justify-items: start; padding: 16px 20px; }
-.solo-fear-stepper { display: inline-flex; align-items: center; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); overflow: hidden; }
-.solo-fear-stepper button { display: grid; place-items: center; width: 38px; height: 36px; padding: 0; border: 0; background: transparent; color: var(--ds-ink); font-size: 18px; line-height: 1; cursor: pointer; }
+/* Slim header */
+.solo-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.solo-heading-copy { min-width: 0; }
+.solo-kicker { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--ds-brand); font-weight: 650; }
+.solo-heading h1 { margin: 4px 0 0; font-size: 28px; font-weight: 650; }
+.solo-heading-actions { display: flex; gap: 10px; }
+
+/* Section navigation: one row, scrollable on phones */
+.solo-tabs { display: flex; gap: 4px; margin-bottom: 24px; padding-bottom: 2px; border-bottom: 1px solid var(--ds-border); overflow-x: auto; }
+.solo-tabs button { display: inline-flex; align-items: center; gap: 7px; flex: none; min-height: 46px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ds-muted); font: inherit; font-size: 14px; font-weight: 550; cursor: pointer; white-space: nowrap; }
+.solo-tabs button:hover { color: var(--ds-ink); }
+.solo-tabs button[aria-current] { color: var(--ds-brand); border-color: var(--ds-brand); }
+.solo-tabs .daggery-icon { width: 18px; height: 18px; }
+
+/* One section at a time */
+.solo-section { display: grid; gap: 20px; }
+.solo-section-heading { max-width: 720px; }
+.solo-section-heading h2 { margin: 0 0 6px; font-size: 22px; font-weight: 650; }
+.solo-section-heading p { margin: 0; color: var(--ds-muted); font-size: 13.5px; line-height: 1.7; }
+
+/* Core roll widgets */
+.solo-widgets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.solo-widget { display: grid; align-content: start; gap: 12px; min-width: 0; padding: 16px 18px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-raised); }
+.solo-widget h3 { margin: 0; font-size: 15px; font-weight: 650; }
+.solo-widget-note { margin: 0; color: var(--ds-muted); font-size: 12px; line-height: 1.6; }
+.solo-widget-result { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--ds-border); color: var(--ds-muted); font-size: 12.5px; line-height: 1.5; }
+.solo-widget-result strong { font: 650 20px/1.2 var(--font-display); color: var(--ds-ink); }
+.solo-widget-result strong.is-yes { color: var(--ds-brand); }
+.solo-widget-result strong.is-no { color: var(--ds-fear); }
+.solo-widget-result em { font-style: normal; color: var(--ds-brand-strong); font-weight: 600; }
+.solo-widget-idle { color: var(--ds-faint); }
+
+.solo-likelihoods { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--ds-control); border-radius: var(--radius-xs); overflow: hidden; }
+.solo-likelihoods button { display: grid; gap: 1px; min-height: 46px; padding: 5px 3px; border: 0; background: var(--ds-inset); color: var(--ds-ink); font: inherit; font-size: 11px; font-weight: 600; line-height: 1.2; cursor: pointer; }
+.solo-likelihoods button + button { border-left: 1px solid var(--ds-control); }
+.solo-likelihoods button:hover { background: var(--ds-brand-soft); color: var(--ds-brand-strong); }
+.solo-likelihoods small { font-size: 10px; font-weight: 400; color: var(--ds-faint); }
+
+.solo-fear-stepper { display: inline-flex; align-items: center; justify-self: start; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); overflow: hidden; }
+.solo-fear-stepper button { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 0; background: transparent; color: var(--ds-ink); font-size: 18px; line-height: 1; cursor: pointer; }
 .solo-fear-stepper button:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-brand); }
-.solo-fear-value { display: inline-flex; align-items: baseline; gap: 6px; padding: 0 12px; min-width: 82px; justify-content: center; font-size: 12px; font-weight: 550; color: var(--ds-muted); font-variant-numeric: tabular-nums; }
+.solo-fear-value { display: inline-flex; align-items: baseline; justify-content: center; gap: 5px; min-width: 84px; padding: 0 10px; color: var(--ds-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .solo-fear-value strong { color: var(--ds-ink); font-size: 17px; font-weight: 650; }
-.solo-fear-caption { margin: 0; color: var(--ds-muted); font-size: 12px; line-height: 1.6; }
+.solo-fear-value i { font-style: normal; font-size: 11px; }
 
-/* Shared table defaults (also used by the rulebook) */
-.solo-workspace table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; line-height: 1.7; }
-.solo-workspace th, .solo-workspace td { padding: 10px 12px; vertical-align: top; border-bottom: 1px solid var(--ds-border); }
-.solo-workspace th { font-weight: 600; color: var(--ds-muted); }
+.solo-roll { display: inline-flex; align-items: center; justify-content: center; justify-self: start; gap: 7px; min-height: 40px; padding: 0 14px; border: 1px solid var(--ds-brand-line); border-radius: var(--radius-xs); background: var(--ds-brand-soft); color: var(--ds-brand-strong); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.solo-roll:hover:not(:disabled) { border-color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 20%, transparent); }
+.solo-roll .daggery-icon { width: 15px; height: 15px; }
 
-/* Oracle reference chart */
-.solo-reference-table { overflow-x: auto; max-width: 100%; margin: 16px 0; }
-.solo-oracle-chart-wrap { border: 1px solid var(--ds-border); border-radius: var(--radius-xs); }
-.solo-oracle-chart { min-width: 560px; }
-.solo-oracle-chart thead th { position: sticky; top: 0; z-index: 1; background: var(--ds-raised); white-space: nowrap; }
-.solo-oracle-chart tbody tr:nth-child(even) { background: var(--ds-inset); }
-.solo-oracle-chart tbody tr.is-mid { background: var(--ds-brand-soft); }
-.solo-oracle-chart tbody tr.is-mid th { color: var(--ds-brand); }
-.solo-oracle-chart tbody th { font-weight: 550; color: var(--ds-ink); white-space: nowrap; }
-.solo-range { font-variant-numeric: tabular-nums; white-space: nowrap; }
-.solo-oracle-chart td.is-shifted { color: var(--ds-brand); font-weight: 650; }
-.solo-oracle-chart td.is-shifted::after { content: "•"; margin-left: 4px; font-size: 10px; vertical-align: super; }
-.solo-shift-note { margin: 10px 0 0; color: var(--ds-muted); font-size: 11px; }
+/* Table cards: a responsive grid, 1 column on phones */
+.solo-table-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; align-items: start; }
+.solo-table-card { display: grid; gap: 12px; min-width: 0; padding: 16px 18px 18px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-raised); }
+.solo-card-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.solo-card-head h3 { margin: 0; font-size: 15px; font-weight: 650; line-height: 1.35; }
+.solo-table-actions { display: flex; gap: 8px; }
+.solo-roll-all { min-height: 34px; padding: 0 11px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-ink); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.solo-roll-all:hover { border-color: var(--ds-brand); color: var(--ds-brand); }
+.solo-card-note { margin: 0; color: var(--ds-muted); font-size: 11.5px; line-height: 1.55; }
 
-/* Discover meaning, in balanced columns on wide screens */
-.solo-meaning-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; }
-.solo-meaning-grid .solo-reference-table { margin: 0; }
-.solo-meaning-table { table-layout: fixed; }
-.solo-meaning-table tr > :first-child { width: 64px; }
-.solo-meaning-table th, .solo-meaning-table td { padding: 6px 8px; font-size: 12.5px; }
-.solo-meaning-table td { overflow-wrap: anywhere; }
-/* The single, continuous table is the mobile layout; the chunked grid is the wide one. */
-.solo-meaning-single { display: none; }
-.solo-meaning-single .solo-reference-table { margin: 0; }
-.solo-col-short { display: none; }
+.solo-card-result { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 10px 12px; border: 1px solid var(--ds-brand-line); border-radius: var(--radius-xs); background: var(--ds-brand-soft); font-size: 12.5px; line-height: 1.5; }
+.solo-result-chip { color: var(--ds-brand-strong); font-weight: 600; overflow-wrap: anywhere; }
+.solo-meaning-result { font: 650 18px/1.3 var(--font-display); }
 
-/* Reference tables */
-.solo-tables-group > h2 { font-size: 16px; font-weight: 650; margin-bottom: 10px; }
-.solo-table-stack { display: grid; gap: 8px; }
-.solo-table { border: 1px solid var(--ds-border); border-radius: var(--radius-xs); background: var(--ds-raised); overflow: hidden; }
-.solo-table > summary { display: flex; align-items: center; gap: 10px; padding: 11px 16px; cursor: pointer; list-style: none; }
-.solo-table > summary::-webkit-details-marker { display: none; }
-.solo-table > summary::before { content: ""; flex: none; width: 6px; height: 6px; border-right: 2px solid var(--ds-muted); border-bottom: 2px solid var(--ds-muted); transform: rotate(-45deg); transition: transform .15s; }
-.solo-table[open] > summary::before { transform: rotate(45deg); }
-.solo-table[open] > summary { border-bottom: 1px solid var(--ds-border); }
-.solo-table-title { flex: 1 1 auto; min-width: 0; font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
-.solo-table-scroll { margin: 0; }
-.solo-lookup-table thead th { position: sticky; top: 0; z-index: 1; background: var(--ds-raised); }
-.solo-lookup-table tbody tr:nth-child(even) { background: var(--ds-inset); }
-.solo-lookup-table th, .solo-lookup-table td { padding: 5px 10px; font-size: 12.5px; line-height: 1.55; }
-.solo-lookup-table td.solo-range { color: var(--ds-muted); }
+.solo-table-scroll { overflow-x: auto; margin: 0 -2px; }
+.solo-table-card table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; line-height: 1.45; }
+.solo-table-card th, .solo-table-card td { padding: 4px 7px; border-bottom: 1px solid var(--ds-border); vertical-align: top; }
+.solo-table-card thead th { position: sticky; top: 0; z-index: 1; background: var(--ds-raised); color: var(--ds-muted); font-weight: 600; vertical-align: bottom; }
+.solo-table-card thead th:not(:first-child) { min-width: 96px; }
+.solo-table-card tbody tr:nth-child(even) { background: var(--ds-inset); }
+.solo-table-card tbody tr.is-rolled { background: var(--ds-brand-soft); }
+.solo-table-card .solo-range { color: var(--ds-muted); font-weight: 550; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.solo-table-card td.is-answer { color: var(--ds-ink); font-weight: 650; background: color-mix(in srgb, var(--ds-brand) 18%, transparent); border-radius: 3px; box-shadow: inset 0 0 0 1px var(--ds-brand); }
+.solo-column-roll { display: inline-flex; margin-top: 5px; padding: 3px 7px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-ink); font: inherit; font-size: 10.5px; font-weight: 600; cursor: pointer; }
+.solo-column-roll:hover { border-color: var(--ds-brand); color: var(--ds-brand); }
 
-/* Dice */
-.solo-dice-buttons { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin: 16px 0 20px; }
-.solo-die-button { min-height: 46px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-ink); font-size: 14px; font-weight: 600; cursor: pointer; }
-.solo-die-button:hover:not(:disabled) { border-color: var(--ds-brand); color: var(--ds-brand); }
-.solo-dice-notation { display: flex; gap: 12px; align-items: flex-end; }
-.solo-dice-notation .solo-field { flex: 1 1 auto; margin-bottom: 0; }
-.solo-dice-notation > button { flex: none; }
-.solo-dice-result { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--ds-border); }
-.solo-dice-total { font-family: var(--font-display); font-size: 38px; line-height: 1; font-weight: 550; color: var(--ds-brand); }
+/* Reference blocks */
+.solo-reference-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+.solo-reference-block { min-width: 0; padding: 16px 18px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-raised); }
+.solo-reference-block h3 { margin: 0 0 10px; font-size: 15px; font-weight: 650; }
+.solo-reference-note { margin: 0 0 10px; color: var(--ds-muted); font-size: 12px; line-height: 1.6; }
+.solo-reference-block dl { display: grid; margin: 0; }
+.solo-reference-block dl > div { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(0, 1.6fr); gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--ds-border); font-size: 12.5px; line-height: 1.5; }
+.solo-reference-block dl > div:last-child { border-bottom: 0; }
+.solo-reference-block dt { color: var(--ds-muted); font-weight: 600; }
+.solo-reference-block dd { margin: 0; overflow-wrap: anywhere; }
 
-/* Notes */
-.solo-note-list { list-style: none; margin: 0; padding: 0; display: grid; }
-.solo-note-list > li { padding: 16px 0; border-bottom: 1px solid var(--ds-border); }
-.solo-note-list > li:last-child { border-bottom: 0; }
-.solo-note-list strong { display: block; font-size: 14px; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
-.solo-note-list small { display: block; margin-top: 4px; color: var(--ds-muted); font-size: 11px; }
-.solo-note-list .solo-interpretation { margin-top: 8px; }
-.solo-interpretation { font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 
-.solo-note-filter { display: inline-flex; margin-bottom: 8px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); overflow: hidden; }
-.solo-note-filter button { min-height: 40px; padding: 0 14px; border: 0; background: var(--ds-inset); color: var(--ds-muted); font-size: 13px; cursor: pointer; }
-.solo-note-filter button[aria-pressed="true"] { background: var(--ds-brand-soft); color: var(--ds-brand-strong); font-weight: 600; }
-
-/* Hero strip, scene and lists */
-.solo-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-bottom: 20px; padding: 12px 16px; border: 1px solid var(--folio-frame, var(--ds-border)); border-radius: var(--radius-xs); background: var(--ds-raised); }
-.solo-hero-name { font: 600 18px/1.3 var(--font-display); overflow-wrap: anywhere; }
-.solo-hero > select { min-height: 44px; max-width: 100%; padding: 8px 12px; font: inherit; color: var(--ds-ink); background: var(--ds-inset); border: 1px solid var(--ds-control); border-radius: var(--radius-xs); }
-.solo-hero-tracks { display: grid; grid-template-columns: repeat(4, auto); gap: 8px 18px; margin-left: auto; }
-.solo-hero-track { display: flex; align-items: center; gap: 6px; }
-.solo-hero-track > span { display: grid; margin-right: 2px; font-size: 13px; font-weight: 600; line-height: 1.3; }
-.solo-hero-track small { color: var(--ds-muted); font-size: 11px; font-weight: 400; }
-.solo-hero-track > button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-ink); font-size: 18px; line-height: 1; cursor: pointer; }
-.solo-hero-track > button:hover:not(:disabled) { border-color: var(--ds-brand); color: var(--ds-brand); }
-.solo-hero-track > b { min-width: 46px; text-align: center; font-size: 16px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.solo-hero-track i { color: var(--ds-muted); font-size: 12px; font-style: normal; font-weight: 400; }
-.solo-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.solo-panel > form > .solo-muted { margin-bottom: 18px; }
-.solo-lists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
-.solo-tracker h2 { display: flex; align-items: center; gap: 10px; }
-.solo-tracker-list { list-style: none; margin: 0 0 16px; padding: 0; }
-.solo-tracker-list > li { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--ds-border); }
-.solo-tracker-list label { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; min-height: 44px; font-size: 14px; line-height: 1.5; cursor: pointer; }
-.solo-tracker-list label > span { min-width: 0; overflow-wrap: anywhere; }
-.solo-tracker-list input { width: 18px; height: 18px; flex: none; accent-color: var(--ds-brand); }
-.solo-tracker-list .is-done span { color: var(--ds-muted); text-decoration: line-through; }
-.solo-tracker-list > li > button { display: grid; place-items: center; width: 44px; height: 44px; flex: none; padding: 0; border: 0; background: transparent; color: var(--ds-muted); cursor: pointer; }
-.solo-tracker-list > li > button:hover:not(:disabled) { color: var(--color-rose-300); }
-.solo-tracker-list > li > button .daggery-icon { width: 16px; height: 16px; }
-.solo-tracker-add { display: flex; gap: 10px; align-items: flex-end; }
-.solo-tracker-add .solo-field { flex: 1; margin-bottom: 0; }
-.solo-tracker-add > button { flex: none; min-height: 44px; }
-@media (max-width: 860px) { .solo-lists { grid-template-columns: 1fr; } .solo-hero-tracks { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; margin-left: 0; width: 100%; } .solo-hero-track { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; } .solo-hero-track > span { grid-column: 1 / -1; display: flex; gap: 6px; align-items: baseline; } .solo-hero-track > b { min-width: 0; } .solo-hero > select { width: 100%; } }
-
-/* Asking and rolling */
-.solo-ask { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
-.solo-ask > .solo-field { flex: 1 1 170px; }
-.solo-ask > .solo-field:first-child { flex: 3 1 280px; }
-.solo-ask > button { flex: none; min-height: 44px; }
-.solo-ask .solo-field, .solo-table-roll .solo-field, .solo-result-keep .solo-field, .solo-table-filter { margin-bottom: 0; }
-.solo-field select { font: inherit; font-weight: 400; min-width: 0; width: 100%; min-height: 44px; color: var(--ds-ink); background: var(--ds-inset); padding: 10px 12px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); }
-.solo-dice-mode { display: inline-flex; align-self: flex-start; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); overflow: hidden; }
-.solo-dice-mode button { min-height: 40px; padding: 0 12px; border: 0; background: transparent; color: var(--ds-muted); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
-.solo-dice-mode button + button { border-left: 1px solid var(--ds-control); }
-.solo-dice-mode button[aria-pressed="true"] { background: var(--ds-brand-soft); color: var(--ds-brand); }
-.solo-dice-fields { display: flex; flex-wrap: wrap; gap: 12px; flex: 1 1 100%; }
-.solo-dice-fields .solo-field { flex: 1 1 110px; margin-bottom: 0; }
-.solo-table-roll { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; padding: 14px 16px 0; }
-.solo-table-roll .solo-field { flex: 0 1 240px; }
-.solo-table > .solo-reference-table { margin-top: 14px; }
-.solo-table > div > .solo-result { margin: 14px 16px 0; }
-.solo-result { --tone: var(--ds-brand); display: grid; gap: 8px; margin-top: 16px; padding: 14px 16px; border: 1px solid var(--ds-border); border-left: 3px solid var(--tone); border-radius: var(--radius-xs); background: var(--ds-inset); }
-.solo-tone-hope { --tone: var(--ds-brand); }
-.solo-tone-fear { --tone: var(--ds-fear); }
-.solo-tone-revelation { --tone: var(--ds-brand-strong); }
-.solo-tone-neutral { --tone: var(--ds-control); }
-.solo-result-kind { margin: 0; color: var(--ds-muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.solo-result-title { font: 600 22px/1.3 var(--font-display); color: var(--ds-ink); overflow-wrap: anywhere; }
-.solo-result-detail { margin: 0; color: var(--ds-muted); font-size: 13px; line-height: 1.6; white-space: pre-wrap; font-variant-numeric: tabular-nums; }
-.solo-result-keep { display: grid; gap: 10px; justify-items: start; margin-top: 4px; }
-.solo-result-keep .solo-field { width: 100%; }
-.solo-result .solo-interpretation { display: flex; gap: 8px; align-items: flex-start; margin: 0; }
-.solo-result .solo-interpretation .daggery-icon { width: 16px; height: 16px; margin-top: 3px; flex: none; color: var(--ds-brand); }
-.solo-workspace tbody tr.is-rolled { background: var(--ds-brand-soft); box-shadow: inset 3px 0 var(--ds-brand); }
-.solo-workspace tbody tr.is-rolled > * { color: var(--ds-ink); font-weight: 600; }
-.solo-oracle-chart td.is-answer { color: var(--ds-brand-strong); font-weight: 700; outline: 1px solid var(--ds-brand); outline-offset: -3px; }
-@media (max-width: 700px) { .solo-ask > .solo-field, .solo-ask > .solo-field:first-child { flex-basis: 100%; } .solo-ask > button, .solo-table-roll > button { width: 100%; } .solo-table-roll .solo-field { flex-basis: 100%; } }
-
-/* Shared table defaults moved above the reference table rules. */
-.solo-rulebook { max-width: 850px; font-size: 14px; line-height: 1.8; }
-.solo-rulebook details { margin-top: 24px; border-top: 1px solid var(--ds-border); padding-top: 20px; }
-.solo-rulebook summary { font-weight: 650; font-size: 18px; cursor: pointer; margin-bottom: 20px; }
-.solo-rulebook h2 { font-size: 21px; font-weight: 650; margin: 32px 0 14px; }
-.solo-rulebook h3 { font-size: 17px; font-weight: 600; margin: 24px 0 12px; }
-.solo-rulebook p { margin: 12px 0; }
-.solo-rulebook ul, .solo-rulebook ol { padding-left: 24px; margin: 14px 0; }
-.solo-rulebook ul { list-style-type: disc; }
-.solo-rulebook ol { list-style-type: decimal; }
-.solo-rulebook li { margin: 8px 0; }
-.solo-rulebook a { color: var(--ds-brand); text-decoration: underline; }
-
-@media (max-width: 980px) { .solo-meaning-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 700px) {
-  .solo-workspace { padding: 20px 14px; }
-  .solo-heading { gap: 12px; }
-  .solo-heading h1 { font-size: 24px; }
-  .solo-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0 4px; overflow: visible; }
-  .solo-tabs button { min-width: 0; font-size: 13px; line-height: 1.3; padding: 8px 2px; }
-  .solo-panel { padding: 18px; }
-  /* One continuous meaning table with a single header on narrow screens. */
-  .solo-meaning-grid { display: none; }
-  .solo-meaning-single { display: block; }
-  .solo-meaning-table tr > :first-child { width: 58px; }
-  .solo-meaning-table th, .solo-meaning-table td { padding: 5px 6px; font-size: 12px; }
-  /* Fit the odds chart without horizontal scrolling. */
-  .solo-oracle-chart-wrap { overflow-x: visible; }
-  .solo-oracle-chart { min-width: 0; table-layout: fixed; }
-  .solo-oracle-chart thead th { position: static; white-space: normal; }
-  .solo-oracle-chart tbody th { white-space: normal; overflow-wrap: anywhere; }
-  .solo-oracle-chart thead th:first-child { width: 32%; }
-  .solo-oracle-chart th, .solo-oracle-chart td { padding: 6px 4px; font-size: 11.5px; }
-  .solo-oracle-chart .solo-range { white-space: normal; }
-  .solo-col-full { display: none; }
-  .solo-col-short { display: inline; }
-  .solo-dice-buttons { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .solo-dice-notation { flex-wrap: wrap; }
-  .solo-dice-notation .solo-field { flex-basis: 100%; }
+@media (max-width: 980px) {
+  .solo-widgets { grid-template-columns: 1fr; }
 }
 
-/* Rows of controls, notices and list details */
-.solo-row { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; }
-.solo-actions { align-items: flex-end; }
-.solo-actions > button { min-height: 44px; }
-.solo-inline-field { margin-bottom: 0; flex: 0 1 200px; }
-.solo-check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; font-weight: 550; cursor: pointer; }
-.solo-check input { width: 18px; height: 18px; flex: none; accent-color: var(--ds-brand); }
-.solo-subhead { margin: 24px 0 6px; }
-.solo-panel > .solo-subhead + .solo-muted { margin-bottom: 12px; }
-.solo-tracker > .solo-actions { margin-top: 14px; }
-.solo-notice { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; margin-bottom: 20px; border: 1px solid var(--ds-brand-line); background: var(--ds-brand-soft); border-radius: var(--radius-xs); font-size: 13px; line-height: 1.7; }
-.solo-notice .daggery-icon { width: 16px; height: 16px; flex: none; margin-top: 3px; color: var(--ds-brand); }
-.solo-line-number { display: inline-block; min-width: 22px; margin-right: 6px; color: var(--ds-faint); font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; }
-.solo-icon-button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--ds-muted); cursor: pointer; }
-.solo-icon-button .daggery-icon { width: 16px; height: 16px; }
-@media (max-width: 700px) { .solo-track-boxes { grid-template-columns: repeat(5, minmax(0, 1fr)); } .solo-inline-field { flex-basis: 100%; } }
-.solo-fear-value i { font-style: normal; font-size: 12px; }
-.solo-clock-list { display: grid; gap: 8px; margin: 0 0 12px; padding: 0; list-style: none; }
-.solo-clock-list li { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.solo-clock-list li > span:first-child { flex: 1 1 180px; min-width: 0; }
-.solo-clock-list li.is-done > span:first-child { color: var(--ds-muted); }
-.solo-lookup-table td.is-answer { color: var(--ds-brand-strong); font-weight: 700; }
-
-/* Play loop: a rail of the steps, then one card per step with its tables beside it */
-.solo-loop { display: grid; gap: 10px; }
-.solo-loop ol { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.solo-loop li { display: flex; align-items: center; }
-.solo-loop li + li::before { content: "→"; margin-right: 8px; color: var(--ds-faint); }
-.solo-loop li:last-child button { border-style: dashed; }
-.solo-loop button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.solo-loop button:hover { border-color: var(--ds-brand); color: var(--ds-brand); }
-.solo-loop button b, .solo-step-number { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ds-brand-soft); color: var(--ds-brand-strong); font-size: 12px; font-weight: 700; flex: none; }
-.solo-loop .solo-muted { margin: 0; }
-.solo-step { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; align-items: start; scroll-margin-top: 16px; }
-.solo-step h2 { display: flex; align-items: center; gap: 10px; }
-.solo-step-number { width: 28px; height: 28px; font-size: 14px; }
-.solo-step-main > .solo-muted { margin-bottom: 16px; }
-.solo-step-tables { display: grid; gap: 8px; min-width: 0; }
-.solo-step-tables .solo-reference-table { margin: 0; }
-.solo-step-tables .solo-oracle-chart { min-width: 0; }
-.solo-step-tables .solo-shift-note { margin: 0 0 4px; }
-.solo-step .solo-subhead { margin: 28px 0 4px; }
-.solo-oracle-form { display: grid; gap: 14px; }
-.solo-oracle-form > .solo-field { margin-bottom: 0; }
-.solo-oracle-form .solo-row > button { min-height: 44px; margin-left: auto; }
-.solo-likelihoods { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--ds-control); border-radius: var(--radius-xs); overflow: hidden; }
-.solo-likelihoods button { display: grid; gap: 2px; min-height: 48px; padding: 6px 4px; border: 0; background: var(--ds-inset); color: var(--ds-muted); font: inherit; font-size: 12px; font-weight: 600; line-height: 1.25; cursor: pointer; }
-.solo-likelihoods button + button { border-left: 1px solid var(--ds-control); }
-.solo-likelihoods button small { font-size: 11px; font-weight: 400; color: var(--ds-faint); }
-.solo-likelihoods button[aria-checked="true"] { background: var(--ds-brand-soft); color: var(--ds-brand-strong); }
-.solo-move-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.solo-move-grid > button { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 52px; text-align: left; }
-.solo-move-grid small { flex-basis: 100%; padding-left: 26px; color: var(--ds-muted); font-size: 11px; font-weight: 400; }
-.solo-link-button { justify-self: start; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--ds-muted); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
-.solo-link-button:hover { color: var(--ds-brand); }
-.solo-link-button .daggery-icon { width: 14px; height: 14px; }
-.solo-suggestions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--ds-muted); }
-.solo-sheet-link { white-space: nowrap; }
-@media (max-width: 980px) { .solo-step { grid-template-columns: 1fr; } }
 @media (max-width: 700px) {
-  .solo-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .solo-workspace { padding: 20px 14px; }
+  .solo-heading h1 { font-size: 24px; }
+  .solo-tabs button { padding: 0 9px; font-size: 13px; }
+  .solo-table-grid, .solo-reference-grid { grid-template-columns: 1fr; }
   .solo-likelihoods { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .solo-likelihoods button:nth-child(4) { border-left: 0; }
   .solo-likelihoods button:nth-child(n+4) { border-top: 1px solid var(--ds-control); }
-  .solo-move-grid { grid-template-columns: 1fr; }
-  .solo-loop li + li::before { display: none; }
-  .solo-oracle-form .solo-row > button { width: 100%; margin-left: 0; }
-}
-.solo-step-tables .solo-lookup-table td.is-answer { background: var(--ds-brand-soft); color: var(--ds-ink); font-weight: 650; box-shadow: inset 0 0 0 1px var(--ds-brand); }
-.solo-jump li + li::before { display: none; }
-.solo-jump button { font-weight: 550; }
-
-/* GME moves and progress tracks */
-
-/* Duality GME */
-.solo-results { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 4px; }
-.solo-tracks { display: grid; gap: 14px; margin: 0 0 16px; padding: 0; list-style: none; }
-.solo-tracks > li { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--ds-border); border-radius: var(--radius-xs); background: var(--ds-inset); }
-.solo-tracks > li.is-done { opacity: .6; }
-.solo-tracks > li.is-done strong { text-decoration: line-through; }
-.solo-track-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.solo-track-head strong { margin-right: auto; font-size: 14px; overflow-wrap: anywhere; }
-.solo-boxes { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; max-width: 420px; }
-.solo-box { aspect-ratio: 1; border: 1px solid var(--ds-control); border-radius: 3px; background: var(--ds-raised); }
-.solo-box.ticks-1 { background: linear-gradient(to top, var(--ds-brand) 25%, var(--ds-raised) 25%); }
-.solo-box.ticks-2 { background: linear-gradient(to top, var(--ds-brand) 50%, var(--ds-raised) 50%); }
-.solo-box.ticks-3 { background: linear-gradient(to top, var(--ds-brand) 75%, var(--ds-raised) 75%); }
-.solo-box.ticks-4 { background: var(--ds-brand); border-color: var(--ds-brand); }
-.solo-clock-row { align-items: center; }
-.solo-clock { display: flex; gap: 3px; }
-.solo-clock span { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--ds-control); background: var(--ds-raised); }
-.solo-clock span.is-filled { background: var(--ds-fear); border-color: var(--ds-fear); }
-.solo-clock-row .solo-fear-stepper button { height: 32px; }
-.solo-clock-full { color: var(--ds-fear); font-size: 13px; }
-.solo-moves { display: grid; gap: 10px; margin: 14px 0 0; }
-.solo-move { padding: 10px 12px; border-left: 3px solid var(--ds-brand-line); background: var(--ds-inset); border-radius: var(--radius-xs); }
-.solo-move dt { font-size: 13px; font-weight: 650; }
-.solo-move dt small { color: var(--ds-muted); font-weight: 500; }
-.solo-move dd { margin: 4px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ds-ink); }
-.solo-move dd i { color: var(--ds-muted); }
-.solo-move .is-strong { color: var(--ds-brand-strong); }
-.solo-move .is-weak { color: var(--ds-brand); }
-.solo-move .is-miss { color: var(--ds-fear); }
-.solo-move-reference { padding: 12px 14px 14px; }
-.solo-move-reference h4 { margin: 14px 0 0; font-size: 13px; color: var(--ds-muted); text-transform: uppercase; letter-spacing: .06em; }
-.solo-move-reference h4:first-child { margin-top: 0; }
-@media (max-width: 700px) {
-  .solo-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .solo-results button { border-left: 0 !important; border-top: 1px solid var(--ds-control); }
-  .solo-odds { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .solo-widget, .solo-table-card, .solo-reference-block { padding: 15px; }
+  .solo-table-card { padding-bottom: 17px; }
 }
