@@ -482,6 +482,8 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .daggery-campaign-card p { font-size: 12px; line-height: 1.7; }
 .daggery-campaign-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
 .daggery-campaign-card-actions .daggery-primary { margin-right: auto; }
+.daggery-danger { color: var(--color-rose-300); }
+.daggery-danger:hover:not(:disabled) { border-color: var(--color-rose-400); color: var(--color-rose-200); }
 .daggery-campaigns .daggery-email-link { padding-top: 24px; border-top: 1px solid var(--ds-border); }
 @media (max-width: 639px) {
   .daggery-campaigns-intro { margin-top: 36px; }

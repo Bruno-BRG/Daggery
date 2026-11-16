@@ -1,5 +1,5 @@
 import { createReadStream, mkdirSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { unlink, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { fileTypeFromBuffer } from 'file-type';
@@ -148,7 +148,6 @@ export async function registerSecureGame(app: FastifyInstance, options: Options)
       db.prepare(`INSERT INTO campaign_assets(id,campaign_id,uploaded_by,name,category,media_type,size,storage_name,visibility,created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, campaignId, user.id, part.filename.slice(0, 200), characterImage ? 'character' : type.mime === 'application/pdf' ? 'document' : 'image', type.mime, data.length, storageName, characterImage ? 'shared' : 'gm', new Date().toISOString());
     } catch (error) {
-      const { unlink } = await import('node:fs/promises');
       await unlink(join(assetsDir, storageName));
       throw error;
     }
@@ -170,5 +169,15 @@ export async function registerSecureGame(app: FastifyInstance, options: Options)
     reply.header('Content-Type', asset.mediaType).header('X-Content-Type-Options', 'nosniff').header('Cache-Control', 'private, no-store');
     if (asset.mediaType === 'application/pdf') reply.header('Content-Disposition', request.query && (request.query as { inline?: string }).inline === '1' ? 'inline; filename="reference.pdf"' : 'attachment');
     return reply.send(createReadStream(join(assetsDir, asset.storageName)));
+  });
+  app.delete('/api/campaigns/:campaignId', async request => {
+    const user = userFor(request);
+    if (!user) throw new Error('Unauthorized');
+    const campaignId = params(request).campaignId!;
+    const files = service.deleteCampaign(user.id, campaignId);
+    for (const peer of peers) if (peer.campaignId === campaignId) peer.socket.close(1008, 'Campaign deleted');
+    // The rows are gone; a file that cannot be removed only wastes disk, so it never fails the request.
+    await Promise.all(files.map(name => unlink(join(assetsDir, name)).catch(() => undefined)));
+    return { deleted: true };
   });
 }

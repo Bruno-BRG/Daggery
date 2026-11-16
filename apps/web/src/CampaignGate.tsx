@@ -24,7 +24,7 @@ export default function CampaignGate() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [showArchived, setShowArchived] = useState(false);
-  const [busy, setBusy] = useState<'create' | 'join' | null>(null);
+  const [busy, setBusy] = useState<'create' | 'join' | 'delete' | null>(null);
 
   const refresh = useCallback(async () => {
     const result = await api<{ campaigns: Campaign[] }>('/api/campaigns');
@@ -68,6 +68,21 @@ export default function CampaignGate() {
     try { await api(`/api/campaigns/${campaign.id}`, 'PATCH', { name: nextName, description: campaign.description, archived }); await refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Could not update campaign.'); }
   }
+  /** Permanently deletes archived campaigns after one confirmation; the server refuses anything not archived. */
+  async function remove(targets: Campaign[]) {
+    if (!targets.length) return;
+    const what = targets.length === 1 ? `"${targets[0]!.name}"` : `all ${targets.length} archived campaigns`;
+    if (!window.confirm(`Delete ${what} forever? Sessions, characters, notes, maps, uploads and the AI journal are removed. This cannot be undone.`)) return;
+    setError(''); setBusy('delete');
+    const failed: string[] = [];
+    for (const campaign of targets) {
+      try { await api(`/api/campaigns/${campaign.id}`, 'DELETE'); }
+      catch (e) { failed.push(`${campaign.name}: ${e instanceof Error ? e.message : 'could not delete'}`); }
+    }
+    try { await refresh(); } catch { /* the list refreshes on the next load */ }
+    if (failed.length) setError(failed.join(' · '));
+    setBusy(null);
+  }
   async function logout() {
     try { await api('/api/logout', 'POST'); sessionStorage.removeItem('daggery:campaign'); setActiveCampaign(null); window.location.reload(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Could not sign out.'); }
@@ -76,6 +91,7 @@ export default function CampaignGate() {
   if (active) return <App onLeave={() => { sessionStorage.removeItem('daggery:campaign'); window.location.reload(); }} />;
   if (!user) return <AuthPanel initialError={error} onLogin={async loggedIn => { await refresh(); setUser(loggedIn); }} />;
   const visible = campaigns.filter(c => !!c.archivedAt === showArchived && c.name.toLowerCase().includes(search.trim().toLowerCase()));
+  const deletable = showArchived ? visible.filter(c => c.archivedAt && c.role === 'gm') : [];
   return <main className="daggery-home daggery-campaigns">
     <div className="daggery-campaigns-brand"><div className="daggery-logo"><span className="daggery-logo-mark" aria-hidden="true">✦</span> daggery</div><button className={button} onClick={() => void logout()}>Sign out</button></div>
     <>
@@ -84,8 +100,8 @@ export default function CampaignGate() {
         <form onSubmit={create} className="daggery-home-feature"><h2><span className="daggery-shortcut-icon"><Icon name="compass" /></span>Start an adventure</h2><p>Create a workspace for your party and your next story.</p><label htmlFor="campaign-name">Campaign name</label><input id="campaign-name" className={input} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. The Ashen Wilds" maxLength={100} required /><ConfigurationFields value={configuration} onChange={setConfiguration} /><button className="daggery-primary" type="submit" disabled={busy !== null}>{busy === 'create' ? 'Creating…' : '+ Create campaign'}</button></form>
         <form onSubmit={accept} className="daggery-home-feature"><h2><span className="daggery-shortcut-icon"><Icon name="invite" /></span>Join your party</h2><p>An invitation is all it takes. Your adventure awaits.</p><label htmlFor="invite">Invite code</label><input id="invite" className={input} value={invite} onChange={e => setInvite(e.target.value)} placeholder="Paste your invite code" required /><button className={button} type="submit" disabled={busy !== null}>{busy === 'join' ? 'Joining…' : 'Join campaign'}</button></form>
       </div>
-      <div className="daggery-campaign-list-header"><h2>Your campaigns</h2><input className={input} aria-label="Search campaigns" placeholder="Find a campaign…" value={search} onChange={e => setSearch(e.target.value)} /><button className={button} aria-pressed={showArchived} onClick={() => setShowArchived(value => !value)}>{showArchived ? 'Show active' : 'Show archived'}</button></div>
-      {visible.length === 0 ? <div className="daggery-empty-state"><Icon name="book" /><strong>{search ? 'No matching campaigns.' : showArchived ? 'No archived adventures.' : 'Your next story starts here.'}</strong><p>{search ? 'Try a different name.' : showArchived ? 'Archived campaigns will appear here.' : 'Create a campaign or join your party with an invite.'}</p></div> : <div className="daggery-campaign-grid">{visible.map(c => <section key={c.id} className="daggery-campaign-card"><div className="daggery-campaign-card-heading"><span className="daggery-campaign-monogram">{c.name.slice(0, 1).toUpperCase()}</span><span className="daggery-role-badge">{getRuleset(c.configuration)?.mode === 'solo' ? 'Solo player' : c.role === 'gm' ? 'Game Master' : 'Player'}{c.archivedAt ? ' · Archived' : ''}</span></div><h2>{c.name}</h2><span className="campaign-rule-label">{getRuleset(c.configuration)?.name ?? 'Unavailable system'}{getRuleset(c.configuration)?.mode === 'solo' ? ` · ${c.configuration.options.partyMode === 'party' ? 'Small party' : c.configuration.options.partyMode === 'companion' ? 'Hero + companion' : 'Lone hero'}` : ''}</span><p>{c.description || 'A Daggerheart adventure, told together.'}</p><div className="daggery-campaign-card-actions">{!c.archivedAt && <button className="daggery-primary" onClick={() => enter(c)}>Open campaign<Icon name="arrow" /></button>}{c.role === 'gm' && <><button className={button} onClick={() => setSettings(c)}>Settings</button><button className={button} onClick={() => { if (c.archivedAt || window.confirm('Archive this campaign?')) void update(c, !c.archivedAt); }}>{c.archivedAt ? 'Restore' : 'Archive'}</button></>}</div></section>)}</div>}
+      <div className="daggery-campaign-list-header"><h2>Your campaigns</h2><input className={input} aria-label="Search campaigns" placeholder="Find a campaign…" value={search} onChange={e => setSearch(e.target.value)} /><button className={button} aria-pressed={showArchived} onClick={() => setShowArchived(value => !value)}>{showArchived ? 'Show active' : 'Show archived'}</button>{deletable.length > 1 && <button className={`${button} daggery-danger`} disabled={busy !== null} onClick={() => void remove(deletable)}>{busy === 'delete' ? 'Deleting…' : `Delete all ${deletable.length}`}</button>}</div>
+      {visible.length === 0 ? <div className="daggery-empty-state"><Icon name="book" /><strong>{search ? 'No matching campaigns.' : showArchived ? 'No archived adventures.' : 'Your next story starts here.'}</strong><p>{search ? 'Try a different name.' : showArchived ? 'Archived campaigns will appear here.' : 'Create a campaign or join your party with an invite.'}</p></div> : <div className="daggery-campaign-grid">{visible.map(c => <section key={c.id} className="daggery-campaign-card"><div className="daggery-campaign-card-heading"><span className="daggery-campaign-monogram">{c.name.slice(0, 1).toUpperCase()}</span><span className="daggery-role-badge">{getRuleset(c.configuration)?.mode === 'solo' ? 'Solo player' : c.role === 'gm' ? 'Game Master' : 'Player'}{c.archivedAt ? ' · Archived' : ''}</span></div><h2>{c.name}</h2><span className="campaign-rule-label">{getRuleset(c.configuration)?.name ?? 'Unavailable system'}{getRuleset(c.configuration)?.mode === 'solo' ? ` · ${c.configuration.options.partyMode === 'party' ? 'Small party' : c.configuration.options.partyMode === 'companion' ? 'Hero + companion' : 'Lone hero'}` : ''}</span><p>{c.description || 'A Daggerheart adventure, told together.'}</p><div className="daggery-campaign-card-actions">{!c.archivedAt && <button className="daggery-primary" onClick={() => enter(c)}>Open campaign<Icon name="arrow" /></button>}{c.role === 'gm' && <><button className={button} onClick={() => setSettings(c)}>Settings</button><button className={button} onClick={() => { if (c.archivedAt || window.confirm('Archive this campaign?')) void update(c, !c.archivedAt); }}>{c.archivedAt ? 'Restore' : 'Archive'}</button>{c.archivedAt && <button className={`${button} daggery-danger`} disabled={busy !== null} onClick={() => void remove([c])}>Delete</button>}</>}</div></section>)}</div>}
       <LinkEmail />
       {settings && <CampaignSettings campaign={settings} onClose={() => setSettings(null)} onSaved={() => { setSettings(null); void refresh(); }} />}
     </>

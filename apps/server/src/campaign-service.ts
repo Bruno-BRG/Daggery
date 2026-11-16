@@ -122,6 +122,23 @@ export class CampaignService {
       this.initializeRulesetDocuments(campaignId, config);
     })();
   }
+  /**
+   * Permanently deletes an archived campaign. Every campaign table cascades from `campaigns`, so one
+   * delete removes members, invites, documents, rolls, notes, assets and all AI data. Returns the
+   * stored asset file names so the caller can remove them from disk.
+   */
+  deleteCampaign(userId: string, campaignId: string): string[] {
+    const member = this.db.prepare('SELECT role FROM campaign_members WHERE user_id = ? AND campaign_id = ?').get(userId, campaignId) as { role: CampaignRole } | undefined;
+    if (member?.role !== 'gm') throw new Error('Forbidden');
+    const campaign = this.db.prepare('SELECT archived_at AS archivedAt FROM campaigns WHERE id = ?').get(campaignId) as { archivedAt: string | null } | undefined;
+    if (!campaign?.archivedAt) throw new Error('Invalid action: archive the campaign before deleting it');
+    if (this.db.prepare("SELECT 1 FROM ai_turns WHERE campaign_id = ? AND status = 'running'").get(campaignId)) throw new Error('Invalid action: wait for the GM turn to finish before deleting the campaign');
+    return this.db.transaction(() => {
+      const files = (this.db.prepare('SELECT storage_name AS name FROM campaign_assets WHERE campaign_id = ?').all(campaignId) as { name: string }[]).map(row => row.name);
+      this.db.prepare('DELETE FROM campaigns WHERE id = ?').run(campaignId);
+      return files;
+    })();
+  }
   /** This is for an explicit local-admin command only, never an HTTP endpoint. */
   claimLegacyForLocalAdmin(userId: string): void {
     this.db.transaction(() => {

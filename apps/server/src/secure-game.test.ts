@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import { once } from 'node:events';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Fastify from 'fastify';
@@ -176,4 +176,52 @@ test('WebSockets isolate campaigns, check origin and hide GM documents from play
     for (const socket of sockets) socket.terminate();
     await app.close(); db.close(); rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('a GM can permanently delete an archived campaign, with its AI data and asset files', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'daggery-delete-'));
+  const db = openCampaignDatabase(':memory:');
+  const app = Fastify({ logger: false });
+  try {
+    const service = new CampaignService(db);
+    const gm = await service.register('deletegm', 'a strong password here');
+    const player = await service.register('deleteplayer', 'another strong password');
+    const campaign = service.createCampaign(gm.id, 'Doomed');
+    const kept = service.createCampaign(gm.id, 'Kept');
+    service.acceptInvite(player.id, service.createInvite(gm.id, campaign));
+    await app.register(websocket);
+    await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024, files: 1 } });
+    await registerCampaignRoutes(app, { service, origin, secureCookies: false, allowRegistration: false });
+    await registerSecureGame(app, { db, service, origin, secureCookies: false, assetsDir: dir });
+    const gmCookie = `daggery_session=${service.createSession(gm.id)}`;
+    const playerCookie = `daggery_session=${service.createSession(player.id)}`;
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a0kAAAAASUVORK5CYII=', 'base64');
+    const uploaded = await app.inject({ method: 'POST', url: `/api/campaigns/${campaign}/assets`, headers: { origin, cookie: gmCookie, 'content-type': 'multipart/form-data; boundary=b' }, payload: Buffer.concat([Buffer.from('--b\r\nContent-Disposition: form-data; name="file"; filename="map.png"\r\nContent-Type: image/png\r\n\r\n'), png, Buffer.from('\r\n--b--\r\n')]) });
+    assert.equal(uploaded.statusCode, 201);
+    const file = (db.prepare('SELECT storage_name AS name FROM campaign_assets WHERE campaign_id = ?').get(campaign) as { name: string }).name;
+    // AI rows reference each other without cascades (messages -> turns -> chats); the campaign cascade must still clear them.
+    const at = new Date().toISOString();
+    db.prepare("INSERT INTO ai_chats(id,campaign_id,ordinal,title,status,created,updated) VALUES ('chat-x',?,99,'Session','ended',?,?)").run(campaign, at, at);
+    db.prepare("INSERT INTO ai_turns(id,campaign_id,user_id,request_id,status,created,updated,chat_id) VALUES ('turn-x',?,?,'req-x','complete',?,?,'chat-x')").run(campaign, gm.id, at, at);
+    db.prepare("INSERT INTO ai_messages(id,campaign_id,turn_id,chat_id,role,text,created) VALUES ('msg-x',?,'turn-x','chat-x','gm','Hello',?)").run(campaign, at);
+    db.prepare("INSERT INTO ai_actions(id,campaign_id,turn_id,call_id,tool,label,result,created) VALUES ('act-x',?,'turn-x','call','tool','label','{}',?)").run(campaign, at);
+    db.prepare("INSERT INTO ai_journal(id,campaign_id,chat_id,kind,title,body,visibility,author,created,updated) VALUES ('jr-x',?,'chat-x','note','T','B','gm','gm',?,?)").run(campaign, at, at);
+    const remove = (cookie: string, id = campaign) => app.inject({ method: 'DELETE', url: `/api/campaigns/${id}`, headers: { origin, cookie } });
+    assert.equal((await remove(gmCookie)).statusCode, 400, 'an active campaign must be archived first');
+    service.updateCampaign(gm.id, campaign, 'Doomed', '', true);
+    assert.equal((await remove(playerCookie)).statusCode, 403, 'players cannot delete');
+    assert.equal((await remove('')).statusCode, 401);
+    db.prepare("UPDATE ai_turns SET status = 'running' WHERE id = 'turn-x'").run();
+    assert.equal((await remove(gmCookie)).statusCode, 400, 'a running GM turn blocks deletion');
+    db.prepare("UPDATE ai_turns SET status = 'complete' WHERE id = 'turn-x'").run();
+    const deleted = await remove(gmCookie);
+    assert.equal(deleted.statusCode, 200);
+    assert.deepEqual(deleted.json(), { deleted: true });
+    const tables = (db.prepare("SELECT m.name FROM sqlite_master m WHERE m.type = 'table' AND EXISTS (SELECT 1 FROM pragma_table_info(m.name) WHERE name = 'campaign_id')").all() as { name: string }[]).map(row => row.name);
+    for (const table of tables) assert.equal((db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE campaign_id = ?`).get(campaign) as { n: number }).n, 0, `${table} is cleared`);
+    assert.equal(db.prepare('SELECT 1 FROM campaigns WHERE id = ?').get(campaign), undefined);
+    assert.ok(!existsSync(join(dir, file)), 'the uploaded file is removed from disk');
+    assert.ok(db.prepare('SELECT 1 FROM campaigns WHERE id = ?').get(kept), 'other campaigns are untouched');
+    assert.equal((await remove(gmCookie)).statusCode, 403, 'a deleted campaign cannot be deleted again');
+  } finally { await app.close(); db.close(); rmSync(dir, { recursive: true, force: true }); }
 });
