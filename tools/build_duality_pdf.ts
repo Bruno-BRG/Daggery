@@ -1,9 +1,9 @@
 /**
  * Rebuilds the printable Duality GME references from the engine's own tables, then prints them to PDF.
- *   npx tsx tools/build_duality_pdf.ts                    (manual and quick reference: HTML and PDF)
+ *   npx tsx tools/build_duality_pdf.ts                    (manual, quick reference and playkit: HTML and PDF)
  *   npx tsx tools/build_duality_pdf.ts duality-gme        (one engine, by file name)
  *   npx tsx tools/build_duality_pdf.ts --html             (HTML only)
- * References: duality-gme and the Duality GME manual duality-gme-manual
+ * References: duality-gme, the Duality GME manual duality-gme-manual and the playkit duality-gme-playkit
  * (docs/duality-solo-engine/<name>.html).
  * Each template keeps `// BEGIN TABLES` and `// END TABLES` markers; between them this writes
  * `const T` (every table, by id) and `const M` (the Duality GME moves). The build fails when a
@@ -16,7 +16,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DUALITY_TABLES } from '../packages/shared/src/duality-engine';
 import { IRON_LIKELIHOODS, IRON_MOVE_GROUPS, IRON_MOVES, IRON_RANKS } from '../packages/shared/src/duality-variants';
 
-const ENGINES = ['duality-gme', 'duality-gme-manual'];
+const ENGINES = ['duality-gme', 'duality-gme-manual', 'duality-gme-playkit'];
 const folder = new URL('../docs/duality-solo-engine/', import.meta.url);
 
 const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
