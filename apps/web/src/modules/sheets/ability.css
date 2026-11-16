@@ -37,14 +37,7 @@
 .character-folio .ability-list { gap: 14px; }
 .character-folio .ability-list > li { padding: 0; border: 0; border-radius: 0; background: transparent; }
 .character-folio .sheet-effects-panel .sheet-card-grid { gap: 14px; margin-top: 0; }
-.character-folio .sheet-effects-panel .sheet-vault { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--sheet-line); }
-.character-folio .sheet-effects-panel .sheet-vault > summary { min-height: 38px; font-size: 15px; }
-.character-folio .sheet-features > .sheet-panel { padding: 21px; border-radius: var(--radius-xl); }
-.character-folio .sheet-features .sheet-panel-head { margin-bottom: 20px; }
-.character-folio .sheet-features .sheet-section-title { font-size: 18px; text-transform: none; display: flex; align-items: center; gap: 9px; }
-.character-folio .sheet-features .sheet-section-title > .daggery-icon { width: 20px; height: 20px; color: var(--ds-brand); }
 @container (max-width: 520px) {
-  .character-folio .sheet-features > .sheet-panel { padding: 16px; }
   .character-folio .ability-card { padding: 17px; }
   .character-folio .ability-heading h4 { font-size: 19px; }
   .character-folio .ability-emblem { width: 40px; height: 40px; }

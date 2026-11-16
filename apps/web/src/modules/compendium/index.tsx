@@ -1,26 +1,22 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { cardUrl } from '@daggery/content';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Icon, type IconName } from '../../components/Icon';
-import { inventoryItemIcon, inventoryIconTone } from '../sheets/inventoryIcons';
 import { Dialog } from '../../components/Dialog';
-import { Chip, type ZoomRequest } from './components';
+import { Group, ItemCard, PanelSection, SearchField, TONES } from '../../components/Accordion';
+import { inventoryItemIcon } from '../sheets/inventoryIcons';
+import type { ZoomRequest } from './components';
+import { EntryDetail } from './detail';
 import {
   ALL_ENTRIES,
   CATEGORIES,
   CLASS_OPTIONS,
   DOMAIN_OPTIONS,
   EMPTY_FILTERS,
-  ENTRY_BY_KEY,
   ENTRIES_BY_CATEGORY,
-  ENTRY_KIND_LABEL,
   LEVEL_OPTIONS,
   TIER_OPTIONS,
   categoryForKind,
-  categoryLabel,
-  entriesForCategory,
-  entrySubtitle,
+  domainLabel,
   filterEntries,
-  filterFieldsFor,
   hasActiveFilters,
   typeOptionsFor,
   type CategoryId,
@@ -28,7 +24,6 @@ import {
   type FilterField,
   type Filters,
 } from './data';
-import { EntryDetail } from './detail';
 import './compendium.css';
 
 const FILTER_LABELS: Record<FilterField, string> = {
@@ -38,272 +33,401 @@ const FILTER_LABELS: Record<FilterField, string> = {
   type: 'Type',
   classId: 'Class',
 };
-const PAGE_SIZE = 80;
-const CATEGORY_ICONS:Record<CategoryId,IconName> = {classes:'sheet',domainCards:'magic',ancestries:'ancestry',communities:'users',weapons:'weapon',armor:'armor',items:'backpack',consumables:'potion',adversaries:'adversary',environments:'tree',conditions:'target',transformations:'paw'};
-function EntryGlyph({entry}:{entry:Entry}) {
-  const kind=entry.kind;
-  const icon=kind==='weapon'||kind==='armor'||kind==='item'||kind==='consumable'?inventoryItemIcon({kind,name:entry.name}):CATEGORY_ICONS[categoryForKind(kind)];
-  return <span className="compendium-entry-emblem item-glyph" data-tone={inventoryIconTone(icon)}><Icon name={icon} /></span>;
-}
+const FILTER_ORDER: FilterField[] = ['domain', 'level', 'tier', 'type', 'classId'];
 
+const CATEGORY_ICONS: Record<CategoryId, IconName> = {
+  classes: 'sheet',
+  domainCards: 'magic',
+  ancestries: 'ancestry',
+  communities: 'users',
+  transformations: 'paw',
+  weapons: 'weapon',
+  armor: 'armor',
+  items: 'backpack',
+  consumables: 'potion',
+  adversaries: 'adversary',
+  environments: 'tree',
+  conditions: 'target',
+};
 
-function lootTables(entries: Entry[]): { name: string; rows: Entry[] }[] {
-  const groups = new Map<string, Entry[]>();
-  for (const entry of entries) {
-    if (entry.kind !== 'item' && entry.kind !== 'consumable') continue;
-    const table = entry.data.rollTable;
-    if (!table) continue;
-    groups.set(table.name, [...(groups.get(table.name) ?? []), entry]);
-  }
-  return [...groups]
-    .map(([name, rows]) => ({ name, rows }))
-    .sort((a, b) => TABLE_NAMES.indexOf(a.name) - TABLE_NAMES.indexOf(b.name));
-}
+const CATEGORY_TONES: Record<CategoryId, string> = {
+  classes: TONES.gold,
+  domainCards: TONES.violet,
+  ancestries: TONES.teal,
+  communities: TONES.green,
+  transformations: TONES.violet,
+  weapons: TONES.red,
+  armor: TONES.blue,
+  items: TONES.gold,
+  consumables: TONES.green,
+  adversaries: TONES.fear,
+  environments: TONES.teal,
+  conditions: TONES.pink,
+};
 
-const TABLE_NAMES = [
-  'Core Set Items',
-  'Additional Items',
-  'Core Set Consumables',
-  'Additional Consumables',
+/** Each domain keeps the same tint everywhere, in a stable order. */
+const DOMAIN_TONE_PALETTE = [
+  TONES.violet,
+  TONES.blue,
+  TONES.teal,
+  TONES.green,
+  TONES.pink,
+  TONES.gold,
+  TONES.red,
+  TONES.brand,
+  TONES.fear,
 ];
+const DOMAIN_TONES = new Map(
+  DOMAIN_OPTIONS.map((option, index) => [
+    option.value,
+    DOMAIN_TONE_PALETTE[index % DOMAIN_TONE_PALETTE.length] ?? TONES.violet,
+  ]),
+);
+const DOMAIN_ORDER = new Map(DOMAIN_OPTIONS.map((option, index) => [option.value, index]));
 
+interface EntryGroup {
+  id: string;
+  title: string;
+  entries: Entry[];
+  /** Only used to order tier groups. */
+  order?: number;
+}
+
+interface CategorySection {
+  category: CategoryId;
+  label: string;
+  entries: Entry[];
+  groups: EntryGroup[];
+}
+
+const byName = (a: Entry, b: Entry) => a.name.localeCompare(b.name, 'pt-BR');
+
+function slug(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+function pickGroup(map: Map<string, EntryGroup>, id: string, title: string, entry: Entry, order?: number): void {
+  const existing = map.get(id);
+  if (existing) existing.entries.push(entry);
+  else map.set(id, { id, title, entries: [entry], ...(order === undefined ? {} : { order }) });
+}
+
+/**
+ * Natural sub-groups inside a category: classes by class, domain cards by domain, equipment and
+ * adversaries by tier, loot by its printed roll table, conditions separately from ranges.
+ * Categories without a useful split return no groups and are listed directly.
+ */
+function groupsFor(category: CategoryId, entries: Entry[]): EntryGroup[] {
+  const map = new Map<string, EntryGroup>();
+  switch (category) {
+    case 'classes':
+      for (const entry of entries) {
+        if (entry.kind !== 'class') continue;
+        pickGroup(map, slug(entry.data.name), entry.data.name, entry);
+      }
+      for (const group of map.values()) group.entries.sort(byName);
+      return [...map.values()];
+    case 'domainCards':
+      for (const entry of entries) {
+        if (entry.kind !== 'domainCard') continue;
+        pickGroup(map, entry.data.domain, domainLabel(entry.data.domain), entry);
+      }
+      for (const group of map.values()) {
+        group.entries.sort((a, b) => {
+          if (a.kind !== 'domainCard' || b.kind !== 'domainCard') return byName(a, b);
+          return a.data.level - b.data.level || byName(a, b);
+        });
+      }
+      return [...map.values()].sort(
+        (a, b) => (DOMAIN_ORDER.get(a.id) ?? 99) - (DOMAIN_ORDER.get(b.id) ?? 99),
+      );
+    case 'weapons':
+    case 'armor':
+    case 'adversaries':
+    case 'environments':
+      for (const entry of entries) {
+        const tier =
+          entry.kind === 'weapon' || entry.kind === 'armor' || entry.kind === 'adversary' || entry.kind === 'environment'
+            ? entry.data.tier
+            : 0;
+        pickGroup(map, `tier-${tier}`, `Tier ${tier}`, entry, tier);
+      }
+      for (const group of map.values()) group.entries.sort(byName);
+      return [...map.values()].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    case 'items':
+    case 'consumables': {
+      const fallback = category === 'items' ? 'Other items' : 'Other consumables';
+      for (const entry of entries) {
+        if (entry.kind !== 'item' && entry.kind !== 'consumable') continue;
+        const table = entry.data.rollTable?.name ?? fallback;
+        pickGroup(map, slug(table), table, entry);
+      }
+      for (const group of map.values()) {
+        group.entries.sort((a, b) => {
+          const roll = (entry: Entry) =>
+            entry.kind === 'item' || entry.kind === 'consumable' ? entry.data.rollTable?.roll ?? 99 : 99;
+          return roll(a) - roll(b) || byName(a, b);
+        });
+      }
+      return [...map.values()];
+    }
+    case 'conditions':
+      for (const entry of entries) {
+        const ranges = entry.kind === 'range';
+        pickGroup(map, ranges ? 'ranges' : 'conditions', ranges ? 'Ranges' : 'Conditions', entry);
+      }
+      for (const group of map.values()) group.entries.sort(byName);
+      return [...map.values()];
+    case 'ancestries':
+    case 'communities':
+    case 'transformations':
+      return [];
+  }
+}
+
+function entryCaption(entry: Entry): string {
+  switch (entry.kind) {
+    case 'class':
+      return `Class · ${entry.data.domains.map(domainLabel).join(', ')}`;
+    case 'domainCard':
+      return `Domain · ${domainLabel(entry.data.domain)} · Level ${entry.data.level}`;
+    case 'ancestry':
+      return 'Ancestry';
+    case 'community':
+      return 'Community';
+    case 'transformation':
+      return 'Transformation';
+    case 'weapon':
+      return `Weapon · Tier ${entry.data.tier} · ${entry.data.category}`;
+    case 'armor':
+      return `Armor · Tier ${entry.data.tier}`;
+    case 'item':
+      return entry.data.rollTable
+        ? `Item · ${entry.data.rollTable.name} · Roll ${entry.data.rollTable.roll}`
+        : 'Item';
+    case 'consumable':
+      return entry.data.rollTable
+        ? `Consumable · ${entry.data.rollTable.name} · Roll ${entry.data.rollTable.roll}`
+        : 'Consumable';
+    case 'adversary':
+      return `Adversary · Tier ${entry.data.tier} · ${entry.data.type}`;
+    case 'environment':
+      return `Environment · Tier ${entry.data.tier} · ${entry.data.type}`;
+    case 'condition':
+      return 'Condition';
+    case 'range':
+      return `Range · ${entry.data.distance}`;
+  }
+}
+
+function entryIcon(entry: Entry): IconName {
+  if (entry.kind === 'weapon' || entry.kind === 'armor' || entry.kind === 'item' || entry.kind === 'consumable') {
+    return inventoryItemIcon({ kind: entry.kind, name: entry.name });
+  }
+  return CATEGORY_ICONS[categoryForKind(entry.kind)];
+}
+
+function entryTone(entry: Entry): string {
+  if (entry.kind === 'domainCard') return DOMAIN_TONES.get(entry.data.domain) ?? TONES.violet;
+  return CATEGORY_TONES[categoryForKind(entry.kind)];
+}
+
+function flip(current: ReadonlySet<string>, id: string): ReadonlySet<string> {
+  const next = new Set(current);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
+}
+
+function optionsFor(field: FilterField, typeOptions: { value: string; label: string }[]) {
+  switch (field) {
+    case 'domain':
+      return DOMAIN_OPTIONS;
+    case 'level':
+      return LEVEL_OPTIONS;
+    case 'tier':
+      return TIER_OPTIONS;
+    case 'type':
+      return typeOptions;
+    case 'classId':
+      return CLASS_OPTIONS;
+  }
+}
 
 export default function CompendiumModule({ author }: { author: string }) {
-  const [category, setCategory] = useState<CategoryId>('classes');
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [zoom, setZoom] = useState<ZoomRequest | null>(null);
-  const [visible, setVisible] = useState(PAGE_SIZE);
-  const [width, setWidth] = useState(0);
-  const root = useRef<HTMLDivElement>(null);
-  const wide = width >= 1020;
+  const [closedSections, setClosedSections] = useState<ReadonlySet<string>>(() => new Set());
+  const [closedGroups, setClosedGroups] = useState<ReadonlySet<string>>(() => new Set());
   const searching = !!deferredQuery.trim();
-  const selected = selectedKey ? ENTRY_BY_KEY.get(selectedKey) : undefined;
-  const source = useMemo(() => (searching ? [...ALL_ENTRIES] : entriesForCategory(category)), [category, searching]);
-  const { entries, matchedBeforeFilters } = useMemo(
-    () => filterEntries(source, filters, deferredQuery),
-    [source, filters, deferredQuery],
-  );
-  const fields = filterFieldsFor(category, searching),
-    typeOptions = typeOptionsFor(category, searching);
-  const counts = useMemo(() => {
-    const result = Object.fromEntries(
-      CATEGORIES.map((item) => [item.id, searching ? 0 : ENTRIES_BY_CATEGORY[item.id].length]),
-    ) as Record<CategoryId, number>;
-    if (searching) for (const entry of matchedBeforeFilters) result[categoryForKind(entry.kind)]++;
+  const activeFilters = hasActiveFilters(filters);
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const typeOptions = useMemo(() => typeOptionsFor('classes', true), []);
+
+  useEffect(() => {
+    setClosedSections(new Set());
+    setClosedGroups(new Set());
+  }, [deferredQuery]);
+
+  const sections = useMemo<CategorySection[]>(() => {
+    const result: CategorySection[] = [];
+    if (deferredQuery.trim()) {
+      const { entries } = filterEntries([...ALL_ENTRIES], filters, deferredQuery);
+      const byCategory = new Map<CategoryId, Entry[]>();
+      for (const entry of entries) {
+        const id = categoryForKind(entry.kind);
+        const list = byCategory.get(id);
+        if (list) list.push(entry);
+        else byCategory.set(id, [entry]);
+      }
+      for (const category of CATEGORIES) {
+        const list = byCategory.get(category.id);
+        if (!list?.length) continue;
+        result.push({
+          category: category.id,
+          label: category.label,
+          entries: list,
+          groups: groupsFor(category.id, list),
+        });
+      }
+      return result;
+    }
+    for (const category of CATEGORIES) {
+      const { entries } = filterEntries(ENTRIES_BY_CATEGORY[category.id], filters, '');
+      if (!entries.length) continue;
+      result.push({
+        category: category.id,
+        label: category.label,
+        entries,
+        groups: groupsFor(category.id, entries),
+      });
+    }
     return result;
-  }, [matchedBeforeFilters, searching]);
-  const tables = useMemo(
-    () => (!searching && (category === 'items' || category === 'consumables') ? lootTables(entries) : []),
-    [searching, category, entries],
-  );
-  useEffect(() => {
-    if (!root.current) return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setWidth(entry.contentRect.width);
-    });
-    observer.observe(root.current);
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => {
-    setVisible(PAGE_SIZE);
-  }, [category, deferredQuery, filters]);
-  useEffect(() => {
-    if (selectedKey && !entries.some((entry) => entry.key === selectedKey)) setSelectedKey(null);
-  }, [entries, selectedKey]);
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !zoom) setSelectedKey(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [zoom]);
-  function chooseCategory(id: CategoryId) {
-    setCategory(id);
-    setQuery('');
-    setFilters(EMPTY_FILTERS);
-    setSelectedKey(null);
+  }, [deferredQuery, filters]);
+
+  function card(entry: Entry) {
+    return (
+      <ItemCard
+        key={entry.key}
+        title={entry.name}
+        caption={entryCaption(entry)}
+        icon={entryIcon(entry)}
+        tone={entryTone(entry)}
+      >
+        <EntryDetail entry={entry} author={author} onZoom={setZoom} />
+      </ItemCard>
+    );
   }
-  const detail = selected && <EntryDetail entry={selected} author={author} onZoom={setZoom} />;
+
   return (
-    <div ref={root} className={`daggery-compendium compendium-browser ${wide ? 'is-wide' : ''}`}>
-      <header className="compendium-header">
-        <div>
-          <span className="compendium-eyebrow">YOUR REFERENCE LIBRARY</span>
-          <h1>Compendium</h1>
-        </div>
-        <label className="compendium-search">
-          <Icon name="search" />
-          <input
-            aria-label="Search the compendium"
-            placeholder="Search names, features, or rules…"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          {query && (
-            <button type="button" aria-label="Clear search" onClick={() => setQuery('')}>
-              <Icon name="close" />
-            </button>
-          )}
-        </label>
-      </header>
-      <div className="compendium-body">
-        <nav className="compendium-categories" aria-label="Compendium categories">
-          {CATEGORIES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              aria-current={!searching && item.id === category ? 'page' : undefined}
-              onClick={() => chooseCategory(item.id)}
-            >
-              <Icon name={CATEGORY_ICONS[item.id]} /><span>{item.label}</span>
-              <small>{counts[item.id]}</small>
-            </button>
-          ))}
-        </nav>
-        <section className="compendium-results" aria-label="Compendium entries">
-          <div className="compendium-results-heading">
-            <div>
-              <h2>{searching ? 'Search results' : categoryLabel(category)}</h2>
-              <span role="status">
-                {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
-              </span>
-            </div>
-            <select
-              className="compendium-category-select"
-              aria-label="Category"
-              value={category}
-              onChange={(e) => chooseCategory(e.target.value as CategoryId)}
-            >
-              {CATEGORIES.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          {!!fields.length && (
-            <div className="compendium-filters">
-              {fields.map((field) => (
-                <label key={field}>
-                  {FILTER_LABELS[field]}
-                  <select
-                    aria-label={FILTER_LABELS[field]}
-                    value={filters[field]}
-                    onChange={(e) => setFilters((current) => ({ ...current, [field]: e.target.value }))}
-                  >
-                    <option value="">All</option>
-                    {(field === 'domain'
-                      ? DOMAIN_OPTIONS
-                      : field === 'level'
-                        ? LEVEL_OPTIONS
-                        : field === 'tier'
-                          ? TIER_OPTIONS
-                          : field === 'classId'
-                            ? CLASS_OPTIONS
-                            : typeOptions
-                    ).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-              {hasActiveFilters(filters) && (
-                <button type="button" onClick={() => setFilters(EMPTY_FILTERS)}>
-                  Clear filters
-                </button>
-              )}
-            </div>
-          )}
-          {tables.length > 0 && (
-            <div className="compendium-loot-tables">
-              {tables.map((table) => (
-                <details key={table.name} open>
-                  <summary><h3>{table.name}</h3><span>{table.rows.length} results (1d12)</span></summary>
-                  <table>
-                    <thead><tr><th scope="col">Roll</th><th scope="col">Result</th></tr></thead>
-                    <tbody>
-                      {table.rows.map((entry) => (
-                        <tr key={entry.key}>
-                          <td>{(entry.kind === 'item' || entry.kind === 'consumable' ? entry.data.rollTable?.roll : null) ?? ''}</td>
-                          <td><button type="button" onClick={() => setSelectedKey(entry.key)}>{entry.name}</button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </details>
-              ))}
-            </div>
-          )}
-          <div className="compendium-list-scroll">
-            <ul className="compendium-entry-list">
-              {entries.slice(0, visible).map((entry) => (
-                <li key={entry.key}>
-                  <button
-                    type="button"
-                    aria-label={`Read ${entry.name}`}
-                    aria-current={selectedKey === entry.key ? 'true' : undefined}
-                    onClick={() => setSelectedKey(entry.key)}
-                  >
-                    <EntryGlyph entry={entry} /><span className="compendium-entry-label">
-                      <strong>{entry.name}</strong>
-                      <small>{entrySubtitle(entry)}</small>
-                    </span>
-                    {searching && <Chip>{ENTRY_KIND_LABEL[entry.kind]}</Chip>}
-                    <Icon name="chevron" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-            {!entries.length && (
-              <div className="compendium-empty">
-                <Icon name="search" />
-                <h3>No entries found</h3>
-                <p>Try another search or clear your filters.</p>
-              </div>
-            )}
-            {visible < entries.length && (
-              <button className="compendium-load-more" onClick={() => setVisible((n) => n + PAGE_SIZE)}>
-                Show more ({entries.length - visible} remaining)
+    <div className="sg-page compendium-page">
+      <div className="compendium-toolbar">
+        <p className="sg-page-intro">
+          Search every class, domain card, piece of equipment, adversary and rule in the compendium.
+        </p>
+        <SearchField value={query} onChange={setQuery} placeholder="Search name or key word" />
+        <details className="compendium-filters">
+          <summary>
+            <Icon name="settings" />
+            <span>Filters{activeFilterCount ? ` (${activeFilterCount})` : ''}</span>
+            <Icon name="chevron" />
+          </summary>
+          <div className="compendium-filter-grid">
+            {FILTER_ORDER.map((field) => (
+              <label key={field}>
+                {FILTER_LABELS[field]}
+                <select
+                  aria-label={FILTER_LABELS[field]}
+                  value={filters[field]}
+                  onChange={(event) =>
+                    setFilters((current) => ({ ...current, [field]: event.target.value }))
+                  }
+                >
+                  <option value="">All</option>
+                  {optionsFor(field, typeOptions).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+            {activeFilters && (
+              <button type="button" className="compendium-clear-filters" onClick={() => setFilters(EMPTY_FILTERS)}>
+                Clear filters
               </button>
             )}
           </div>
-        </section>
-        {wide && (
-          <aside className="compendium-reader" aria-label="Entry details">
-            {selected ? (
-              <>
-                <div className="compendium-reader-heading">
-                  <span>{ENTRY_KIND_LABEL[selected.kind]}</span>
-                  <button type="button" aria-label="Close detail" onClick={() => setSelectedKey(null)}>
-                    <Icon name="close" />
-                  </button>
-                </div>
-                <div className="compendium-reader-scroll">{detail}</div>
-              </>
-            ) : (
-              <div className="compendium-empty">
-                <Icon name="book" />
-                <h2>Find your next idea.</h2>
-                <p>Choose an entry to read its rules and features.</p>
-              </div>
-            )}
-          </aside>
-        )}
+        </details>
       </div>
+
+      {sections.map((section) => {
+        const sectionKey = section.category;
+        const groupProps = searching
+          ? {
+              open: !closedSections.has(sectionKey),
+              onToggle: () => setClosedSections((current) => flip(current, sectionKey)),
+            }
+          : {};
+        return (
+          <PanelSection
+            key={section.category}
+            title={
+              <>
+                {section.label}
+                <span className="compendium-count">{section.entries.length}</span>
+              </>
+            }
+            storageKey={`compendium.${section.category}`}
+            defaultOpen={false}
+            {...groupProps}
+          >
+            {section.groups.length > 0
+              ? section.groups.map((group) => {
+                  const groupKey = `${section.category}:${group.id}`;
+                  const foldProps = searching
+                    ? {
+                        open: !closedGroups.has(groupKey),
+                        onToggle: () => setClosedGroups((current) => flip(current, groupKey)),
+                      }
+                    : {};
+                  return (
+                    <Group
+                      key={group.id}
+                      title={group.title}
+                      icon={CATEGORY_ICONS[section.category]}
+                      count={group.entries.length}
+                      storageKey={`compendium.${section.category}.${group.id}`}
+                      defaultOpen={false}
+                      {...foldProps}
+                    >
+                      {group.entries.map(card)}
+                    </Group>
+                  );
+                })
+              : section.entries.map(card)}
+          </PanelSection>
+        );
+      })}
+
+      {!sections.length && (
+        <p className="sg-empty">
+          {deferredQuery.trim()
+            ? `No entry matches “${deferredQuery.trim()}”. Try another name or key word.`
+            : activeFilters
+              ? 'No entries match these filters.'
+              : 'The compendium is empty.'}
+        </p>
+      )}
+
       <Dialog
-        open={!wide && !!selected}
-        onClose={() => setSelectedKey(null)}
-        title={selected?.name ?? 'Entry details'}
-        className="compendium-reader-dialog"
+        open={!!zoom}
+        onClose={() => setZoom(null)}
+        title={zoom?.alt ?? 'Card artwork'}
+        className="daggery-card-preview"
       >
-        <div className="compendium-reader-scroll">{detail}</div>
-      </Dialog>
-      <Dialog open={!!zoom} onClose={() => setZoom(null)} title={zoom?.alt ?? 'Card artwork'} className="daggery-card-preview">
         {zoom && <img src={zoom.src} alt={zoom.alt} />}
       </Dialog>
     </div>

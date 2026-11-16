@@ -15,8 +15,6 @@
 .character-folio .folio-traits-heading { position: relative; }
 .character-folio .folio-traits-heading::after { content: ''; position: absolute; inset: auto 0 0; height: 9px; pointer-events: none; background: var(--ds-brand); opacity: .6; -webkit-mask: var(--orn-rule); mask: var(--orn-rule); }
 .character-folio .sheet-trait:hover { transform: none; }
-.character-folio .sheet-tabs { border-color: var(--folio-frame); border-radius: var(--folio-corner); background: var(--folio-header); }
-.character-folio .sheet-tab.is-active { box-shadow: inset 0 0 0 1px var(--ds-brand-line); }
 .character-folio .sheet-panel { padding: 16px; border-color: var(--folio-frame); border-radius: var(--folio-corner); }
 .character-folio .sheet-panel-head { margin: -16px -16px 16px; padding: 10px 16px; align-items: center; background: var(--folio-header); border-bottom: 1px solid var(--folio-line); border-radius: var(--folio-corner) var(--folio-corner) 0 0; }
 .character-folio .folio-roll-settings { border-color: var(--folio-frame); border-radius: var(--folio-corner); }
@@ -36,9 +34,6 @@
 .character-folio .sheet-mini-label > .daggery-icon { width: 18px; height: 18px; }
 .character-folio :is(.sheet-input, .sheet-textarea, .sheet-field input, .sheet-field select) { font-size: 16px; min-height: 44px; }
 .character-folio .sheet-field { font-size: 14px; }
-.character-folio .sheet-tab { min-height: 46px; font-size: 14px; }
-.character-folio .sheet-tab > .daggery-icon { width: 18px; height: 18px; }
-.folio-tab-short { display: none; }
 .character-folio .folio-resource { padding: 0; border-radius: var(--radius-sm); }
 .character-folio .folio-traits-heading h2 { gap: 8px; font-size: 14px; }
 .character-folio .folio-traits-heading h2 .daggery-icon { width: 22px; height: 22px; }
@@ -135,7 +130,6 @@
 .daggery-shell:has(.character-folio.is-focused) :is(.daggery-workspace, .daggery-content) { height: 100%; }
 .character-folio.is-focused { padding-top: 0; }
 .character-folio.is-focused .folio-toolbar { position: sticky; top: 0; z-index: 12; min-height: 72px; padding: 10px 0; background: var(--ds-surface); border-bottom: 1px solid var(--folio-line); }
-.character-folio.is-focused .sheet-tabs { top: 72px; z-index: 11; }
 .character-folio :is(button, summary, input, textarea, select):focus-visible { outline: 2px solid var(--ds-brand); outline-offset: 3px; }
 
 @container (max-width: 750px) {
@@ -153,10 +147,6 @@
   .character-folio .sheet-session-connection { display: none; }
   .character-folio .folio-resources { grid-template-columns: 1fr; }
   .character-folio .sheet-trait-actions { font-size: 12px; }
-  .character-folio .sheet-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: visible; gap: 3px; }
-  .character-folio .sheet-tab { flex-direction: column; gap: 5px; padding: 10px 2px; font-size: 13px; min-width: 0; }
-  .character-folio .sheet-tab :is(.folio-tab-full, .folio-tab-count) { display: none; }
-  .character-folio .sheet-tab .folio-tab-short { display: inline; }
   .character-folio .sheet-inventory li { flex-wrap: wrap; }
   .character-folio .sheet-inv-name { flex-basis: calc(100% - 46px); }
   .character-folio .sheet-qty { margin-left: 46px; }
@@ -185,9 +175,6 @@
 .character-folio .sheet-trait { padding: 7px 6px; gap: 1px; }
 .character-folio .sheet-trait-label { display: inline-flex; align-items: center; gap: 5px; }
 .character-folio .sheet-trait-label > .daggery-icon { width: 16px; height: 16px; }
-.folio-dash { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
-.character-folio .folio-dash > .sheet-panel { padding: 12px 14px; }
-.character-folio .folio-dash .sheet-panel-head { flex-wrap: nowrap; min-height: 46px; margin: -12px -14px 12px; padding: 5px 14px; }
 .folio-vitals-actions { display: flex; gap: 6px; }
 .character-folio .folio-vitals-actions > .sheet-ghost { min-height: 34px; padding: 0 10px; font-size: 13px; white-space: nowrap; background: var(--ds-raised); }
 .character-folio .folio-vitals-actions > .sheet-ghost:hover { border-color: var(--ds-brand); }
@@ -232,27 +219,16 @@
 .folio-weapon-feature-text { margin: 0; color: var(--ds-muted); font-size: 13px; line-height: 1.55; }
 .folio-spellcast { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; color: var(--ds-muted); font-size: 13px; }
 .character-folio .folio-spellcast .sheet-chip { min-height: 30px; white-space: nowrap; }
-.character-folio .folio-arsenal .sheet-section-title { white-space: nowrap; }
 @container (max-width: 1100px) { .folio-spellcast > span { display: none; } }
-/* Panels share a row; the shorter ones spread their content instead of leaving a gap at the bottom. */
-.character-folio .folio-dash > :is(.folio-vitals, .folio-modifiers) { display: flex; flex-direction: column; }
-.character-folio .folio-vitals .folio-vitals-tracks { flex: 1; grid-auto-rows: 1fr; align-content: stretch; }
-.character-folio .folio-modifiers .folio-experiences { flex: 1; align-content: start; }
-.character-folio .folio-dash > .folio-arsenal { display: flex; flex-direction: column; }
-.character-folio .folio-arsenal .folio-weapon-list { flex: 1; grid-auto-rows: 1fr; }
-.character-folio .folio-arsenal .folio-weapon { align-content: space-between; }
+.character-folio .folio-vitals .folio-vitals-tracks { grid-auto-rows: 1fr; align-content: stretch; }
 .folio-next-summary { display: flex; align-items: center; gap: 10px; margin: 8px 0 0; padding: 6px 10px; border: 1px dashed var(--folio-line); border-radius: var(--radius-xs); color: var(--ds-muted); font-size: 14px; line-height: 1.35; }
 .folio-next-summary > .daggery-icon { flex: none; width: 18px; height: 18px; color: var(--ds-brand); }
 .folio-next-summary strong { color: var(--ds-ink); font-variant-numeric: tabular-nums; }
 .folio-next-summary small { display: block; font-size: 12px; }
 .folio-weapon.is-empty { display: flex; align-items: center; gap: 10px; border-style: dashed; }
 .character-folio .folio-weapon.is-empty .sheet-ghost { min-height: 38px; }
-.character-folio .folio-modifiers .sheet-seg { grid-template-columns: .8fr 1fr 1.2fr; margin: 0; }
-.character-folio .folio-modifiers .sheet-seg button { min-height: 38px; font-size: 13px; }
 .folio-difficulty { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 0 10px; color: var(--ds-muted); font-size: 14px; font-weight: 600; }
 .folio-difficulty > input { width: 110px; min-height: 38px; padding: 5px 8px; border: 1px solid var(--sheet-line); border-radius: var(--radius-sm); background: var(--sheet-sunken); color: var(--ds-ink); font-size: 16px; }
-.character-folio .folio-modifiers .sheet-mini-label { margin-bottom: 6px; }
-.character-folio .folio-modifiers .sheet-mini-label > span { font-weight: 400; letter-spacing: 0; text-transform: none; }
 .folio-experiences { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .folio-experiences button { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px; padding: 6px 10px; border: 1px solid var(--folio-line); border-radius: var(--radius-xs); background: var(--sheet-sunken); color: var(--ds-ink); font-size: 14px; line-height: 1.4; text-align: left; cursor: pointer; }
 .folio-experiences button:hover { border-color: var(--ds-brand); }
@@ -260,24 +236,12 @@
 .folio-experiences button > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .folio-experiences button > strong { flex: none; color: var(--color-emerald-300); font-variant-numeric: tabular-nums; }
 .folio-experiences button[aria-pressed='true'] { border-color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 12%, var(--sheet-sunken)); box-shadow: inset 3px 0 var(--ds-brand); }
-.folio-extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; align-items: start; }
 @container (max-width: 1100px) {
   .character-folio .folio-resource.is-compact { grid-template-columns: minmax(0, 1fr) 40px; padding: 4px 0 2px; }
   .is-compact > .folio-resource-header { grid-area: 1 / 1; display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-height: 26px; }
   .is-compact > .folio-resource-adjustment:not([open]) { grid-area: 1 / 2; }
   .is-compact > .folio-resource-adjustment:not([open]) > summary { min-height: 26px; }
   .is-compact > .folio-resource-track { grid-column: 1 / -1; grid-row: 2; }
-}
-@container (max-width: 900px) {
-  .folio-dash { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .folio-dash > .folio-arsenal { grid-area: 1 / 2 / 3 / 3; }
-  .folio-dash { grid-template-rows: auto 1fr; }
-}
-@container (max-width: 750px) {
-  .folio-dash { grid-template-columns: minmax(0, 1fr); }
-  .character-folio .folio-arsenal .folio-weapon-list { grid-auto-rows: auto; }
-  .folio-dash { grid-template-rows: none; }
-  .folio-dash > .folio-arsenal { grid-area: auto; }
 }
 @container (max-width: 520px) {
   .character-folio { gap: 10px; }
@@ -300,6 +264,6 @@
 @media (pointer: coarse) {
   .character-folio .folio-vitals-actions > .sheet-ghost, .character-folio .folio-weapon-swap, .character-folio .folio-weapon.is-empty .sheet-ghost { min-height: 44px; }
   .character-folio .folio-weapon-swap { width: 44px; }
-  .character-folio .folio-weapon .sheet-attack, .folio-experiences button, .character-folio .folio-modifiers .sheet-seg button, .folio-difficulty > input { min-height: 44px; }
+  .character-folio .folio-weapon .sheet-attack, .folio-experiences button, .folio-difficulty > input { min-height: 44px; }
   .folio-weapon-feature-toggle { min-height: 44px; }
 }

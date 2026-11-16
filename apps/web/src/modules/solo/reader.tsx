@@ -5,7 +5,8 @@ import { ReaderDocument } from './reader-document';
 import { findReaderEntries, READER_ENTRIES, READER_ORACLE_ID, resolveReaderHash } from './reader-model';
 
 /** The phone mounts only the reader—not the desktop dice, log or session state. */
-export function MobileReferenceReader() {
+/** `onClose` returns to the page underneath when the reader is opened over it. */
+export function MobileReferenceReader({ onClose }: { onClose?: () => void } = {}) {
   const [indexOpen, setIndexOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [focusSearch, setFocusSearch] = useState(false);
@@ -52,7 +53,7 @@ export function MobileReferenceReader() {
 
   return <div className="solo-shell solo-reader">
     <header className="solo-reader-toolbar">
-      <button type="button" className="solo-reader-icon" aria-label="Back to campaign" onClick={() => window.dispatchEvent(new CustomEvent('daggery:navigate', { detail: 'home' }))}><Icon name="undo" /></button>
+      <button type="button" className="solo-reader-icon" aria-label={onClose ? 'Close the reference' : 'Back to campaign'} onClick={() => onClose ? onClose() : window.dispatchEvent(new CustomEvent('daggery:navigate', { detail: 'home' }))}><Icon name={onClose ? 'close' : 'undo'} /></button>
       <a className="solo-reader-name" href="#solo-reader-top">Solo reference</a>
       <button type="button" className="solo-reader-index-button" aria-haspopup="dialog" onClick={() => openIndex(false)}><Icon name="book" /><span>Index</span></button>
       <button type="button" className="solo-reader-icon" aria-label="Find in reference" aria-haspopup="dialog" onClick={() => openIndex(true)}><Icon name="search" /></button>

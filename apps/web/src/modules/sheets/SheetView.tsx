@@ -21,6 +21,8 @@ import {
   ancestryFeatures,
   armorScore,
   classArt,
+  classResourceDefinitions,
+  classResourceFacts,
   damageHp,
   damageSeverity,
   damageThresholds,
@@ -57,6 +59,7 @@ import LevelUpDialog from './LevelUpDialog';
 import type { InventoryKind, Sheet } from './types';
 import './sheet.css';
 import { Icon, type IconName } from '../../components/Icon';
+import { Group, PanelSection } from '../../components/Accordion';
 import { Dialog } from '../../components/Dialog';
 import { ResourceCard } from './ResourceCard';
 import { ClassResources } from './ClassResources';
@@ -84,14 +87,6 @@ interface SheetViewProps {
 }
 
 type AdvantageChoice = 'normal' | Advantage;
-type TabId = 'play' | 'features' | 'equipment' | 'details';
-
-const TABS: Array<{ id: TabId; label: string }> = [
-  { id: 'play', label: 'Play' },
-  { id: 'features', label: 'Effects & Features' },
-  { id: 'equipment', label: 'Equipment' },
-  { id: 'details', label: 'Story' },
-];
 
 /** The activation cost a domain card prints at the start of its text, if any. */
 function leadingCardCost(text: string): { track: 'hope' | 'stress'; amount: number } | null {
@@ -136,7 +131,6 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   const [inventoryMessage, setInventoryMessage] = useState('');
   const [inventoryQuery, setInventoryQuery] = useState('');
   const [inventoryFilter, setInventoryFilter] = useState<InventoryKind|'all'>('all');
-  const [tab, setTab] = useState<TabId>('play');
   const [editingHeritage, setEditingHeritage] = useState(false);
   const [vaultDomain, setVaultDomain] = useState<string>('all');
   const [recovery, setRecovery] = useState<'damage' | 'rest' | null>(null);
@@ -185,6 +179,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   const tier = tierForLevel(sheet.level);
   const spellcastTrait = spellcastTraitName(sheet);
   const spellcastOptions = spellcastTraitOptions(sheet);
+  const hasClassResources = classResourceDefinitions(sheet).length > 0 || classResourceFacts(sheet).length > 0;
 
   const loadout = useMemo(
     () => sheet.loadoutIds.map((id) => getDomainCard(id)).filter((card): card is NonNullable<ReturnType<typeof getDomainCard>> => !!card),
@@ -507,7 +502,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
   const heritageLine = [heritage.length > 0 ? heritageDisplayName(sheet) : null, community?.name ?? null].filter(Boolean).join(' · ');
 
   return (
-    <div className={`sheet-page character-folio ${focused ? 'is-focused' : ''}`}>
+    <div className={`sheet-page character-folio sg-page ${focused ? 'is-focused' : ''}`}>
       <header className="sheet-toolbar folio-toolbar">
         <button type="button" onClick={onBack} className="sheet-ghost" aria-label={backLabel}><Icon name="arrow" /><span className="folio-back-label">{backLabel}</span></button>
         <span className="folio-toolbar-label">{focused ? sheet.name : 'CHARACTER SHEET'}</span>{focused && <span role="status" className={`sheet-session-connection ${connection === 'open' ? 'is-connected' : ''}`}><i />{connection === 'open' ? 'Connected' : 'Reconnecting…'}</span>}
@@ -550,49 +545,45 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
         </div>
       </section>
 
-      <div className="folio-dash">
-        <section className="sheet-panel folio-vitals" aria-label="Vitals">
-          <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="heart" />Vitals</h3><div className="folio-vitals-actions"><button type="button" className="sheet-ghost" onClick={() => openRecovery('damage')}><Icon name="shield" />Take damage</button><button type="button" className="sheet-ghost" onClick={() => openRecovery('rest')}><Icon name="moon" />Rest</button></div></div>
-          <div className="sheet-threshold-strip">
-            <Tier label="Minor" note="1 HP" />
-            <TierGate value={thresholds.major} />
-            <Tier label="Major" note="2 HP" />
-            <TierGate value={thresholds.severe} />
-            <Tier label="Severe" note="3 HP" />
-          </div>
-          {sheet.hpMarked >= currentHpMax && <p className="sheet-alert is-rose">Last HP marked — resolve a Death Move (Blaze of Glory, Avoid Death, or Risk It All).</p>}
-          {sheet.stressMarked >= currentStressMax && <p className="sheet-alert is-violet">Last Stress marked — you are Vulnerable until you clear 1 Stress.</p>}
-          <div className="folio-vitals-tracks">
-            <ResourceCard compact label="Hit Points" icon="heart" count={sheet.hpMarked} max={currentHpMax} tone="health" extraSlots={{ value: sheet.extraHpSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraHpSlots', raw)) }} onChange={value => mutate(current => ({ ...current, hpMarked: value }))} />
-            <ResourceCard compact label="Stress" icon="stress" count={sheet.stressMarked} max={currentStressMax} tone="stress" extraSlots={{ value: sheet.extraStressSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraStressSlots', raw)) }} onChange={value => mutate(current => ({ ...current, stressMarked: value }))} />
-            <ResourceCard compact label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" kind="held" onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
-            <ResourceCard compact label="Armor" icon="armor" count={sheet.armorSlotsMarked} max={currentArmorScore} tone="armor" onChange={value => mutate(current => ({ ...current, armorSlotsMarked: value }))} />
-          </div>
-          {reactionFeature && <button type="button" className="sheet-ghost folio-reaction" disabled={!armorSlotAvailable} onClick={useReaction}><Icon name="shield" />{reactionFeature.name} reaction · mark 1 Armor Slot</button>}
-        </section>
-
-        <section className="sheet-panel folio-arsenal">
-          <div className="sheet-panel-head">
-            <h3 className="sheet-section-title"><Icon name="combat" />Active weapons</h3>
-            {spellcastOptions.length > 0 ? (
-              <div className="folio-spellcast" role="group" aria-label="Spellcast trait">
-                <span>Spellcast</span>
-                {spellcastOptions.map((trait) => (
-                  <button key={trait} type="button" title={`Spellcast trait: ${TRAIT_LABELS[trait]}`} aria-pressed={spellcastTrait === trait} onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>
-                    {TRAIT_LABELS[trait]} {traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)}
-                  </button>
-                ))}
-              </div>
-            ) : <span className="sheet-panel-note">Proficiency {sheet.proficiency}</span>}
-          </div>
+      <section className="sheet-panel folio-vitals" aria-label="Vitals">
+        <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="heart" />Vitals</h3><div className="folio-vitals-actions"><button type="button" className="sheet-ghost" onClick={() => openRecovery('damage')}><Icon name="shield" />Take damage</button><button type="button" className="sheet-ghost" onClick={() => openRecovery('rest')}><Icon name="moon" />Rest</button></div></div>
+        <div className="sheet-threshold-strip">
+          <Tier label="Minor" note="1 HP" />
+          <TierGate value={thresholds.major} />
+          <Tier label="Major" note="2 HP" />
+          <TierGate value={thresholds.severe} />
+          <Tier label="Severe" note="3 HP" />
+        </div>
+        {sheet.hpMarked >= currentHpMax && <p className="sheet-alert is-rose">Last HP marked — resolve a Death Move (Blaze of Glory, Avoid Death, or Risk It All).</p>}
+        {sheet.stressMarked >= currentStressMax && <p className="sheet-alert is-violet">Last Stress marked — you are Vulnerable until you clear 1 Stress.</p>}
+        <div className="folio-vitals-tracks">
+          <ResourceCard compact label="Hit Points" icon="heart" count={sheet.hpMarked} max={currentHpMax} tone="health" extraSlots={{ value: sheet.extraHpSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraHpSlots', raw)) }} onChange={value => mutate(current => ({ ...current, hpMarked: value }))} />
+          <ResourceCard compact label="Stress" icon="stress" count={sheet.stressMarked} max={currentStressMax} tone="stress" extraSlots={{ value: sheet.extraStressSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraStressSlots', raw)) }} onChange={value => mutate(current => ({ ...current, stressMarked: value }))} />
+          <ResourceCard compact label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" kind="held" onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
+          <ResourceCard compact label="Armor" icon="armor" count={sheet.armorSlotsMarked} max={currentArmorScore} tone="armor" onChange={value => mutate(current => ({ ...current, armorSlotsMarked: value }))} />
+        </div>
+        {reactionFeature && <button type="button" className="sheet-ghost folio-reaction" disabled={!armorSlotAvailable} onClick={useReaction}><Icon name="shield" />{reactionFeature.name} reaction · mark 1 Armor Slot</button>}
+      </section>
+      {messages.length > 0 && <div className="folio-result-banner" role="status"><Icon name="dice" /><span>{messages[0]}</span></div>}
+      <div className="folio-sections">
+        <PanelSection title="Active weapons" storageKey="sheet.weapons" actions={<span className="sheet-panel-note">Proficiency {sheet.proficiency}</span>}>
+          {spellcastOptions.length > 0 && (
+            <div className="folio-spellcast" role="group" aria-label="Spellcast trait">
+              <span>Spellcast</span>
+              {spellcastOptions.map((trait) => (
+                <button key={trait} type="button" title={`Spellcast trait: ${TRAIT_LABELS[trait]}`} aria-pressed={spellcastTrait === trait} onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>
+                  {TRAIT_LABELS[trait]} {traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="folio-weapon-list">
             {primary ? <WeaponRow weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} /> : <EmptyWeaponRow slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
             {secondary ? <WeaponRow weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} /> : <EmptyWeaponRow slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
           </div>
-        </section>
+        </PanelSection>
 
-        <section className="sheet-panel folio-modifiers">
-          <PanelHead icon="settings" title="Next roll" note={advantage === 'normal' && !selectedExperience && !difficulty ? 'No modifiers' : undefined} />
+        <PanelSection title="Next roll" storageKey="sheet.next-roll" actions={advantage === 'normal' && !selectedExperience && !difficulty ? <span className="sheet-panel-note">No modifiers</span> : undefined}>
           <div className="sheet-seg" role="group" aria-label="Advantage">
             {([['normal', 'Normal'], ['advantage', 'Advantage'], ['disadvantage', 'Disadvantage']] as const).map(([value, label]) => (
               <button key={value} type="button" aria-pressed={advantage === value} onClick={() => setAdvantage(value)} className={advantage === value ? 'is-active' : ''}>{label}</button>
@@ -614,173 +605,143 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
               <small>{selectedExperience ? `${selectedExperience.name} · spends 1 Hope` : 'Tap a trait or Attack to roll'}</small>
             </span>
           </p>
-        </section>
-      </div>
-      {messages.length > 0 && <div className="folio-result-banner" role="status"><Icon name="dice" /><span>{messages[0]}</span></div>}
-      <nav className="sheet-tabs" role="tablist" aria-label="Character sheet sections" onKeyDown={event => {
-        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-        event.preventDefault();
-        const index = TABS.findIndex(item => item.id === tab);
-        const next = event.key === 'Home' ? 0 : event.key === 'End' ? TABS.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length;
-        setTab(TABS[next]!.id);
-        event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus();
-      }}>
-        {TABS.map((item) => (
-          <button key={item.id} type="button" role="tab" id={`folio-tab-${item.id}`} aria-controls="folio-tab-panel" tabIndex={tab === item.id ? 0 : -1} aria-selected={tab === item.id} onClick={() => setTab(item.id)} className={`sheet-tab ${tab === item.id ? 'is-active' : ''}`}>
-            <Icon name={({ play: 'dice', features: 'spark', equipment: 'backpack', details: 'book' } as Record<TabId, IconName>)[item.id]} /><span className={item.id === 'features' ? 'folio-tab-full' : ''}>{item.label}</span>{item.id === 'features' && <><span className="folio-tab-short">Abilities</span><span className="folio-tab-count">{loadout.length}</span></>}
-          </button>
-        ))}
-      </nav>
+        </PanelSection>
 
-      <div id="folio-tab-panel" role="tabpanel" aria-labelledby={`folio-tab-${tab}`}>
-      {tab === 'play' && (
-        <div className="folio-extras">
-          <ClassResources sheet={sheet} onUpdate={mutate} />
-          <section className="sheet-panel folio-loadout"><PanelHead icon="spark" title="Active abilities" note={`${loadout.length} / ${maxLoadout(sheet)} CARDS`} /><input className="sheet-input folio-ability-search" aria-label="Find an active ability" placeholder="Find an ability…" value={abilitySearch} onChange={event => setAbilitySearch(event.target.value)} /><div className="folio-ability-list">{loadout.filter(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())).map(card => { const cost = leadingCardCost(card.text); return <AbilityCard compact key={card.id} name={card.name} text={card.text} domain={card.domain} category={`${DOMAIN_LABELS[card.domain] ?? card.domain} · Level ${card.level} · ${card.type}`} footer={cost ? <button type="button" className="sheet-ghost" onClick={() => payCardCost(card.name, cost)}>{cost.track === 'hope' ? `Spend ${cost.amount} Hope` : `Mark ${cost.amount} Stress`}</button> : undefined} />; })}{loadout.length === 0 && <p className="sheet-empty">Recall a domain card from your vault to use it here.</p>}{loadout.length > 0 && !loadout.some(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())) && <p className="sheet-empty">No active abilities match.</p>}</div><button className="folio-text-link" type="button" onClick={() => setTab('features')}>Manage cards & vault<Icon name="arrow" /></button></section>
-          <section className="sheet-panel">
-            <PanelHead icon="dice" title="Recent rolls" note={`${messages.length} logged`} />
-            <ol className="sheet-results">
-              {messages.length === 0 && <li className="sheet-empty">No actions recorded on this sheet yet.</li>}
-              {messages.map((message, index) => <li key={`${index}-${message}`}>{message}</li>)}
-            </ol>
-          </section>
-        </div>
-      )}
+        {hasClassResources && (
+          <PanelSection title="Class resources" storageKey="sheet.resources">
+            <ClassResources sheet={sheet} onUpdate={mutate} embedded />
+          </PanelSection>
+        )}
 
-      {tab === 'features' && (
-        <div className="sheet-features">
-          <section className="sheet-panel sheet-effects-panel">
-            <PanelHead icon="spark" title="Domain abilities" note={`${loadout.length}/${maxLoadout(sheet)} active`} />
+        <PanelSection title="Active abilities" storageKey="sheet.abilities" actions={<span className="sheet-panel-note">{loadout.length} / {maxLoadout(sheet)} cards</span>}>
+          <input className="sheet-input folio-ability-search" aria-label="Find an active ability" placeholder="Find an ability…" value={abilitySearch} onChange={event => setAbilitySearch(event.target.value)} />
+          <div className="folio-ability-list">{loadout.filter(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())).map(card => { const cost = leadingCardCost(card.text); return <AbilityCard compact key={card.id} name={card.name} text={card.text} domain={card.domain} category={`${DOMAIN_LABELS[card.domain] ?? card.domain} · Level ${card.level} · ${card.type}`} footer={cost ? <button type="button" className="sheet-ghost" onClick={() => payCardCost(card.name, cost)}>{cost.track === 'hope' ? `Spend ${cost.amount} Hope` : `Mark ${cost.amount} Stress`}</button> : undefined} />; })}{loadout.length === 0 && <p className="sheet-empty">Recall a domain card from your vault to use it here.</p>}{loadout.length > 0 && !loadout.some(card => `${card.name} ${card.text}`.toLowerCase().includes(abilitySearch.toLowerCase())) && <p className="sheet-empty">No active abilities match.</p>}</div>
+        </PanelSection>
+
+        <PanelSection className="sheet-effects-panel" title="Domain abilities" storageKey="sheet.domain" actions={<span className="sheet-panel-note">{loadout.length}/{maxLoadout(sheet)} active</span>}>
+          <div className="sheet-card-grid">
+            {loadout.map((card) => <DomainCardView key={card.id} id={card.id} name={card.name} domain={card.domain} level={card.level} type={card.type} recallCost={card.recallCost} text={card.text} action={{ label: 'Stash in vault', onClick: () => stashCard(card.id) }} />)}
+            {loadout.length === 0 && <p className="sheet-empty">No active effects. Open the vault to recall a card.</p>}
+          </div>
+          <Group id="sheet-vault" title="Vault" count={vault.length} storageKey="sheet.vault">
+            <div className="sheet-inline sheet-vault-filters">
+              <button type="button" onClick={() => setVaultDomain('all')} className={`sheet-chip ${vaultDomain === 'all' ? 'is-active' : ''}`}>All</button>
+              {vaultDomains.map((domain) => <button key={domain} type="button" onClick={() => setVaultDomain(domain)} className={`sheet-chip ${vaultDomain === domain ? 'is-active' : ''}`}>{DOMAIN_LABELS[domain] ?? domain}</button>)}
+            </div>
             <div className="sheet-card-grid">
-              {loadout.map((card) => <DomainCardView key={card.id} id={card.id} name={card.name} domain={card.domain} level={card.level} type={card.type} recallCost={card.recallCost} text={card.text} action={{ label: 'Stash in vault', onClick: () => stashCard(card.id) }} />)}
-              {loadout.length === 0 && <p className="sheet-empty">No active effects. Open the vault to recall a card.</p>}
+              {vaultFiltered.map((card) => <DomainCardView key={card.id} id={card.id} name={card.name} domain={card.domain} level={card.level} type={card.type} recallCost={card.recallCost} text={card.text} action={{ label: `Recall · ${card.recallCost} Stress`, onClick: () => recallCard(card.id) }} />)}
+              {vaultFiltered.length === 0 && <p className="sheet-empty">No effects in the vault.</p>}
             </div>
-            <details className="sheet-vault">
-              <summary>Vault <span>{vault.length}</span></summary>
-              <div className="sheet-inline sheet-vault-filters">
-                <button type="button" onClick={() => setVaultDomain('all')} className={`sheet-chip ${vaultDomain === 'all' ? 'is-active' : ''}`}>All</button>
-                {vaultDomains.map((domain) => <button key={domain} type="button" onClick={() => setVaultDomain(domain)} className={`sheet-chip ${vaultDomain === domain ? 'is-active' : ''}`}>{DOMAIN_LABELS[domain] ?? domain}</button>)}
-              </div>
-              <div className="sheet-card-grid">
-                {vaultFiltered.map((card) => <DomainCardView key={card.id} id={card.id} name={card.name} domain={card.domain} level={card.level} type={card.type} recallCost={card.recallCost} text={card.text} action={{ label: `Recall · ${card.recallCost} Stress`, onClick: () => recallCard(card.id) }} />)}
-                {vaultFiltered.length === 0 && <p className="sheet-empty">No effects in the vault.</p>}
-              </div>
-            </details>
-          </section>
-            <section className="sheet-panel">
-              <PanelHead icon="book" title="Class features" note={cls?.name ?? '—'} />
-              <FeatureList features={[...(cls?.hopeFeature ? [{ name: `Hope: ${cls.hopeFeature.name}`, text: cls.hopeFeature.text }] : []), ...(cls?.classFeatures ?? [])]} />
-              
-            </section>
+          </Group>
+        </PanelSection>
 
-            {subclass && (
-              <section className="sheet-panel">
-                <PanelHead icon="compass" title="Subclass" note={`${subclass.name} · ${sheet.subclassUpgraded === 0 ? 'Foundation' : sheet.subclassUpgraded === 1 ? 'Specialization' : 'Mastery'}`} />
-                <div className="sheet-feature-col">
-                  {([{ id: 'foundation', label: 'Foundation', features: subclass.foundation }, ...(sheet.subclassUpgraded >= 1 ? [{ id: 'specialization', label: 'Specialization', features: subclass.specialization }] : []), ...(sheet.subclassUpgraded >= 2 ? [{ id: 'mastery', label: 'Mastery', features: subclass.mastery }] : [])] as const).map((part) => (
-                    <div key={part.id}><p className="sheet-mini-label">{part.label}</p><FeatureList features={part.features} label={`${part.label} feature`} /></div>
-                  ))}
-                </div>
-                <p className="sheet-note mt-2">Spellcast trait: {subclass.spellcastTrait ?? 'none'}{sheet.multiclassId ? ' · Mastery locked after multiclassing' : ''}</p>
-              </section>
+        <PanelSection title="Class features" storageKey="sheet.class-features" actions={<span className="sheet-panel-note">{cls?.name ?? '—'}</span>}>
+          <FeatureList features={[...(cls?.hopeFeature ? [{ name: `Hope: ${cls.hopeFeature.name}`, text: cls.hopeFeature.text }] : []), ...(cls?.classFeatures ?? [])]} />
+        </PanelSection>
+
+        {subclass && (
+          <PanelSection title="Subclass" storageKey="sheet.subclass" actions={<span className="sheet-panel-note">{`${subclass.name} · ${sheet.subclassUpgraded === 0 ? 'Foundation' : sheet.subclassUpgraded === 1 ? 'Specialization' : 'Mastery'}`}</span>}>
+            <div className="sheet-feature-col">
+              {([{ id: 'foundation', label: 'Foundation', features: subclass.foundation }, ...(sheet.subclassUpgraded >= 1 ? [{ id: 'specialization', label: 'Specialization', features: subclass.specialization }] : []), ...(sheet.subclassUpgraded >= 2 ? [{ id: 'mastery', label: 'Mastery', features: subclass.mastery }] : [])] as const).map((part) => (
+                <div key={part.id}><p className="sheet-mini-label">{part.label}</p><FeatureList features={part.features} label={`${part.label} feature`} /></div>
+              ))}
+            </div>
+            <p className="sheet-note">Spellcast trait: {subclass.spellcastTrait ?? 'none'}{sheet.multiclassId ? ' · Mastery locked after multiclassing' : ''}</p>
+          </PanelSection>
+        )}
+
+        <PanelSection title="Heritage" storageKey="sheet.heritage" actions={<button type="button" onClick={() => setEditingHeritage((value) => !value)} className="sheet-ghost is-small">{editingHeritage ? 'Done' : 'Edit'}</button>}>
+          <p className="sheet-panel-note">{heritageDisplayName(sheet)}</p>
+          {editingHeritage ? (
+            <HeritageEditor sheet={sheet} onSave={(patch) => { mutate((current) => ({ ...current, ...patch })); setEditingHeritage(false); }} />
+          ) : (
+            <div className="sheet-feature-col">
+              {ancestry && <div><p className="sheet-mini-label">{mixedAncestry ? `${ancestry.name} / ${mixedAncestry.name}` : ancestry.name}</p><FeatureList features={mixedAncestry ? heritage.map((feature) => ({ name: `${feature.name} · ${feature.ancestryName}`, text: feature.text })) : ancestry.features} label="Ancestry feature" /></div>}
+              {community && <div><p className="sheet-mini-label">{community.name}</p><FeatureList features={community.features} label="Community feature" /><details className="sheet-context"><summary>About the community</summary><p>{community.description}</p></details></div>}
+            </div>
+          )}
+          {!mixedAncestry && bonuses.notes.length > 0 && <p className="sheet-note">{bonuses.notes.join(' · ')}</p>}
+        </PanelSection>
+
+        {multiclass && (
+          <PanelSection className="is-sky" title={`Multiclass · ${multiclass.name}`} storageKey="sheet.multiclass" actions={<span className="sheet-panel-note">{multiclassDomainId ? `${DOMAIN_LABELS[multiclassDomainId] ?? multiclassDomainId} · cards ≤ level ${multiclassCardCap(sheet)}` : 'All class domains'}</span>}>
+            <FeatureList features={[...(multiclass.hopeFeature ? [{ name: `Hope: ${multiclass.hopeFeature.name}`, text: multiclass.hopeFeature.text }] : []), ...(multiclass.classFeatures ?? [])]} />
+            {spellcastOptions.length > 1 && (
+              <div className="sheet-inline mt-2">
+                <span className="sheet-mini-label">Spellcast</span>
+                {spellcastOptions.map((trait) => <button key={trait} type="button" onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>{TRAIT_LABELS[trait]} ({traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)})</button>)}
+              </div>
             )}
+            {multiclassSubclass && <div className="mt-3"><p className="sheet-mini-label">{multiclassSubclass.name} · Foundation</p><FeatureList features={multiclassSubclass.foundation} label="Foundation feature" /><details className="sheet-context"><summary>About the subclass</summary><p>{multiclassSubclass.description}</p></details></div>}
+            <p className="sheet-note">Domain cards from the new domain are limited to half your level (rounded up, currently {multiclassCardCap(sheet)}). Attacks and spells use your current level. Mastery is locked after multiclassing.</p>
+          </PanelSection>
+        )}
+        {!multiclass && sheet.level >= 5 && (
+          <PanelSection title="Multiclassing" storageKey="sheet.multiclass">
+            <p className="sheet-callout">Multiclassing unlocks at level 5 (Tier 3) via Level Up. It uses both level-up slots, grants one new domain, the class feature, and a foundation subclass card.</p>
+          </PanelSection>
+        )}
 
-            <section className="sheet-panel">
+        <PanelSection title="Equipment" storageKey="sheet.equipment" actions={<span className="sheet-panel-note">{sheet.inventory.filter(entry=>entry.qty>0).length} items</span>}>
+          <div className="sheet-equip">
+            <div className="sheet-equip-col">
+              <p className="sheet-mini-label">Weapons</p>
+              {primary ? <WeaponCard weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} onUnequip={()=>mutate(current=>equipEquipment(current,'primary',null))} /> : <EmptyEquipment slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
+              {secondary ? <WeaponCard weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} onUnequip={()=>mutate(current=>equipEquipment(current,'secondary',null))} /> : <EmptyEquipment slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
+              <p className="sheet-mini-label mt-3">Armor</p>
+              <ArmorCard armor={equippedArmor} score={currentArmorScore} thresholds={thresholds} onChange={()=>setEquipmentSlot('armor')} onUnequip={()=>mutate(current=>equipEquipment(current,'armor',null))} />
+            </div>
+            <div className="sheet-equip-col">
               <div className="sheet-card-head">
-                <PanelHead icon="users" title="Heritage" note={heritageDisplayName(sheet)} />
-                <button type="button" onClick={() => setEditingHeritage((value) => !value)} className="sheet-ghost is-small">{editingHeritage ? 'Done' : 'Edit'}</button>
+                <p className="sheet-mini-label"><Icon name="backpack" />Inventory</p>
+                <div className="inventory-heading-actions"><label className="sheet-gold"><Icon name="coins" />Gold <input type="number" min={0} value={sheet.gold} onChange={(event) => mutate((current) => ({ ...current, gold: Math.max(0, Number.parseInt(event.target.value, 10) || 0) }))} /></label><button type="button" className="sheet-primary" onClick={()=>openInventoryAdder()}><Icon name="plus" />Add items</button></div>
               </div>
-              {editingHeritage ? (
-                <HeritageEditor sheet={sheet} onSave={(patch) => { mutate((current) => ({ ...current, ...patch })); setEditingHeritage(false); }} />
-              ) : (
-                <div className="sheet-feature-col">
-                  {ancestry && <div><p className="sheet-mini-label">{mixedAncestry ? `${ancestry.name} / ${mixedAncestry.name}` : ancestry.name}</p><FeatureList features={mixedAncestry ? heritage.map((feature) => ({ name: `${feature.name} · ${feature.ancestryName}`, text: feature.text })) : ancestry.features} label="Ancestry feature" /></div>}
-                  {community && <div><p className="sheet-mini-label">{community.name}</p><FeatureList features={community.features} label="Community feature" /><details className="sheet-context"><summary>About the community</summary><p>{community.description}</p></details></div>}
-                </div>
-              )}
-              {!mixedAncestry && bonuses.notes.length > 0 && <p className="sheet-note mt-2">{bonuses.notes.join(' · ')}</p>}
-            </section>
-
-            {multiclass && (
-              <section className="sheet-panel is-sky">
-                <PanelHead title={`Multiclass · ${multiclass.name}`} note={multiclassDomainId ? `${DOMAIN_LABELS[multiclassDomainId] ?? multiclassDomainId} · cards ≤ level ${multiclassCardCap(sheet)}` : 'All class domains'} />
-                <FeatureList features={[...(multiclass.hopeFeature ? [{ name: `Hope: ${multiclass.hopeFeature.name}`, text: multiclass.hopeFeature.text }] : []), ...(multiclass.classFeatures ?? [])]} />
-                {spellcastOptions.length > 1 && (
-                  <div className="sheet-inline mt-2">
-                    <span className="sheet-mini-label">Spellcast</span>
-                    {spellcastOptions.map((trait) => <button key={trait} type="button" onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>{TRAIT_LABELS[trait]} ({traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)})</button>)}
-                  </div>
-                )}
-                {multiclassSubclass && <div className="mt-3"><p className="sheet-mini-label">{multiclassSubclass.name} · Foundation</p><FeatureList features={multiclassSubclass.foundation} label="Foundation feature" /><details className="sheet-context"><summary>About the subclass</summary><p>{multiclassSubclass.description}</p></details></div>}
-                <p className="sheet-note mt-2">Domain cards from the new domain are limited to half your level (rounded up, currently {multiclassCardCap(sheet)}). Attacks and spells use your current level. Mastery is locked after multiclassing.</p>
-              </section>
-            )}
-            {!multiclass && sheet.level >= 5 && <p className="sheet-callout">Multiclassing unlocks at level 5 (Tier 3) via Level Up. It uses both level-up slots, grants one new domain, the class feature, and a foundation subclass card.</p>}
-        </div>
-      )}
-
-      {(tab === 'details' || tab === 'equipment') && (
-        <div className="sheet-details">
-          {tab === 'equipment' && <section className="sheet-panel">
-            <PanelHead icon="backpack" title="Equipment" note={`${sheet.inventory.filter(entry=>entry.qty>0).length} items`} />
-            <div className="sheet-equip">
-              <div className="sheet-equip-col">
-                <p className="sheet-mini-label">Weapons</p>
-                {primary ? <WeaponCard weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} onUnequip={()=>mutate(current=>equipEquipment(current,'primary',null))} /> : <EmptyEquipment slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
-                {secondary ? <WeaponCard weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} onUnequip={()=>mutate(current=>equipEquipment(current,'secondary',null))} /> : <EmptyEquipment slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
-                <p className="sheet-mini-label mt-3">Armor</p>
-                <ArmorCard armor={equippedArmor} score={currentArmorScore} thresholds={thresholds} onChange={()=>setEquipmentSlot('armor')} onUnequip={()=>mutate(current=>equipEquipment(current,'armor',null))} />
-              </div>
-              <div className="sheet-equip-col">
-                <div className="sheet-card-head">
-                  <p className="sheet-mini-label"><Icon name="backpack" />Inventory</p>
-                  <div className="inventory-heading-actions"><label className="sheet-gold"><Icon name="coins" />Gold <input type="number" min={0} value={sheet.gold} onChange={(event) => mutate((current) => ({ ...current, gold: Math.max(0, Number.parseInt(event.target.value, 10) || 0) }))} /></label><button type="button" className="sheet-primary" onClick={()=>openInventoryAdder()}><Icon name="plus" />Add items</button></div>
-                </div>
-                <div className="sheet-inventory-tools"><label className="equipment-search"><Icon name="search" /><input aria-label="Search inventory" placeholder="Find in inventory…" value={inventoryQuery} onChange={event=>setInventoryQuery(event.target.value)} /></label><select aria-label="Inventory category" value={inventoryFilter} onChange={event=>setInventoryFilter(event.target.value as InventoryKind|'all')}><option value="all">All items</option>{Object.entries(INVENTORY_KIND_LABELS).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></div>
-                {inventoryMessage&&<p className="inventory-added-message" role="status"><Icon name="check" />{inventoryMessage}</p>}
-                <ul className="sheet-inventory">
-                  {filteredInventory.map((entry) => (
-                    <li key={entry.id}>
-                      <ItemGlyph item={entry} className="sheet-item-emblem" /><span className="sheet-inv-name">{entry.name}<small className="sheet-item-kind">{INVENTORY_KIND_LABELS[entry.kind]}</small>{entry.kind==='armor'&&entry.equipmentId&&(entry.armorSlotsMarked??0)>0&&<small className="sheet-stowed-armor">{entry.armorSlotsMarked} Armor Slots used</small>}{inventoryEquipmentSlot(entry)&&<button type="button" className="sheet-ghost sheet-inventory-equip" aria-label={`Equip ${entry.name}`} disabled={entry.qty<=0||(inventoryEquipmentSlot(entry)==='secondary'&&secondaryBlocked(sheet))} title={inventoryEquipmentSlot(entry)==='secondary'&&secondaryBlocked(sheet)?'Requires a one-handed primary weapon':undefined} onClick={()=>mutate(current=>equipEquipment(current,inventoryEquipmentSlot(entry)!,inventoryEquipmentId(entry)!,entry.id))}>Equip</button>}{entry.description && <details className="sheet-item-description"><summary>Details</summary><p>{entry.description}</p></details>}</span>
-                      <span className="sheet-qty">
-                        <button type="button" onClick={() => changeQty(entry.id, -1)} aria-label={`Decrease ${entry.name}`}><Icon name="minus" /></button>
-                        <span>{entry.qty}</span>
-                        <button type="button" onClick={() => changeQty(entry.id, 1)} aria-label={`Increase ${entry.name}`}><Icon name="plus" /></button>
-                      </span>
-                      <button type="button" onClick={() => removeItem(entry.id)} className="sheet-remove" aria-label={`Remove ${entry.name}`}><Icon name="trash" /></button>
-                    </li>
-                  ))}
-                  {filteredInventory.length === 0 && <li className="sheet-empty">{sheet.inventory.some(entry=>entry.qty>0)?'No items match your search.':'No carried items yet. Use Add items to fill your inventory.'}</li>}
-                </ul>
-              </div>
-            </div>
-          </section>}
-
-          {tab === 'details' && <><section className="sheet-panel">
-            <PanelHead icon="book" title="Background & connections" />
-            <div className="sheet-two-col">
-              <BackgroundList title="Background questions" entries={sheet.background} onChange={(index, answer) => mutate((current) => ({ ...current, background: current.background.map((entry, position) => position === index ? { ...entry, answer } : entry) }))} />
-              <BackgroundList title="Connections" entries={sheet.connections} onChange={(index, answer) => mutate((current) => ({ ...current, connections: current.connections.map((entry, position) => position === index ? { ...entry, answer } : entry) }))} />
-            </div>
-          </section>
-
-          <section className="sheet-panel">
-            <PanelHead icon="spark" title="Progression" note={`Level ${sheet.level} · ${tierLabel(sheet.level)}`} />
-            <dl className="sheet-session-facts"><div><dt>Proficiency</dt><dd>{sheet.proficiency}</dd></div><div><dt>Subclass</dt><dd>{sheet.subclassUpgraded === 0 ? 'Foundation' : sheet.subclassUpgraded === 1 ? 'Specialization' : 'Mastery'}</dd></div></dl>{sheet.traitMarks.length > 0 && <p className="sheet-note">Trait marks: {sheet.traitMarks.map(trait => TRAIT_LABELS[trait]).join(', ')}</p>}
-            {(sheet.advancementHistory ?? []).length > 0 ? (
-              <ul className="sheet-history">
-                {(sheet.advancementHistory ?? []).map((entry, index) => <li key={`${entry.level}-${entry.advancement}-${index}`}><span>Level {entry.level}</span>{entry.advancement}</li>)}
+              <div className="sheet-inventory-tools"><label className="equipment-search"><Icon name="search" /><input aria-label="Search inventory" placeholder="Find in inventory…" value={inventoryQuery} onChange={event=>setInventoryQuery(event.target.value)} /></label><select aria-label="Inventory category" value={inventoryFilter} onChange={event=>setInventoryFilter(event.target.value as InventoryKind|'all')}><option value="all">All items</option>{Object.entries(INVENTORY_KIND_LABELS).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></div>
+              {inventoryMessage&&<p className="inventory-added-message" role="status"><Icon name="check" />{inventoryMessage}</p>}
+              <ul className="sheet-inventory">
+                {filteredInventory.map((entry) => (
+                  <li key={entry.id}>
+                    <ItemGlyph item={entry} className="sheet-item-emblem" /><span className="sheet-inv-name">{entry.name}<small className="sheet-item-kind">{INVENTORY_KIND_LABELS[entry.kind]}</small>{entry.kind==='armor'&&entry.equipmentId&&(entry.armorSlotsMarked??0)>0&&<small className="sheet-stowed-armor">{entry.armorSlotsMarked} Armor Slots used</small>}{inventoryEquipmentSlot(entry)&&<button type="button" className="sheet-ghost sheet-inventory-equip" aria-label={`Equip ${entry.name}`} disabled={entry.qty<=0||(inventoryEquipmentSlot(entry)==='secondary'&&secondaryBlocked(sheet))} title={inventoryEquipmentSlot(entry)==='secondary'&&secondaryBlocked(sheet)?'Requires a one-handed primary weapon':undefined} onClick={()=>mutate(current=>equipEquipment(current,inventoryEquipmentSlot(entry)!,inventoryEquipmentId(entry)!,entry.id))}>Equip</button>}{entry.description && <details className="sheet-item-description"><summary>Details</summary><p>{entry.description}</p></details>}</span>
+                    <span className="sheet-qty">
+                      <button type="button" onClick={() => changeQty(entry.id, -1)} aria-label={`Decrease ${entry.name}`}><Icon name="minus" /></button>
+                      <span>{entry.qty}</span>
+                      <button type="button" onClick={() => changeQty(entry.id, 1)} aria-label={`Increase ${entry.name}`}><Icon name="plus" /></button>
+                    </span>
+                    <button type="button" onClick={() => removeItem(entry.id)} className="sheet-remove" aria-label={`Remove ${entry.name}`}><Icon name="trash" /></button>
+                  </li>
+                ))}
+                {filteredInventory.length === 0 && <li className="sheet-empty">{sheet.inventory.some(entry=>entry.qty>0)?'No items match your search.':'No carried items yet. Use Add items to fill your inventory.'}</li>}
               </ul>
-            ) : <p className="sheet-note mt-2">No level-up history recorded yet.</p>}
-          </section>
+            </div>
+          </div>
+        </PanelSection>
 
-          <section className="sheet-panel">
-            <PanelHead icon="note" title="Session notes" />
-            <textarea aria-label="Session notes" rows={5} value={sheet.notes} onChange={(event) => mutate((current) => ({ ...current, notes: event.target.value }))} placeholder="Table notes, plans, reminders…" className="sheet-textarea" />
-          </section></>}
-        </div>
-      )}
+        <PanelSection title="Background & connections" storageKey="sheet.story">
+          <div className="sheet-two-col">
+            <BackgroundList title="Background questions" entries={sheet.background} onChange={(index, answer) => mutate((current) => ({ ...current, background: current.background.map((entry, position) => position === index ? { ...entry, answer } : entry) }))} />
+            <BackgroundList title="Connections" entries={sheet.connections} onChange={(index, answer) => mutate((current) => ({ ...current, connections: current.connections.map((entry, position) => position === index ? { ...entry, answer } : entry) }))} />
+          </div>
+        </PanelSection>
 
+        <PanelSection title="Progression" storageKey="sheet.progression" actions={<span className="sheet-panel-note">{`Level ${sheet.level} · ${tierLabel(sheet.level)}`}</span>}>
+          <dl className="sheet-session-facts"><div><dt>Proficiency</dt><dd>{sheet.proficiency}</dd></div><div><dt>Subclass</dt><dd>{sheet.subclassUpgraded === 0 ? 'Foundation' : sheet.subclassUpgraded === 1 ? 'Specialization' : 'Mastery'}</dd></div></dl>{sheet.traitMarks.length > 0 && <p className="sheet-note">Trait marks: {sheet.traitMarks.map(trait => TRAIT_LABELS[trait]).join(', ')}</p>}
+          {(sheet.advancementHistory ?? []).length > 0 ? (
+            <ul className="sheet-history">
+              {(sheet.advancementHistory ?? []).map((entry, index) => <li key={`${entry.level}-${entry.advancement}-${index}`}><span>Level {entry.level}</span>{entry.advancement}</li>)}
+            </ul>
+          ) : <p className="sheet-note">No level-up history recorded yet.</p>}
+        </PanelSection>
+
+        <PanelSection title="Recent rolls" storageKey="sheet.results" actions={<span className="sheet-panel-note">{messages.length} logged</span>}>
+          <ol className="sheet-results">
+            {messages.length === 0 && <li className="sheet-empty">No actions recorded on this sheet yet.</li>}
+            {messages.map((message, index) => <li key={`${index}-${message}`}>{message}</li>)}
+          </ol>
+        </PanelSection>
+
+        <PanelSection title="Session notes" storageKey="sheet.notes">
+          <textarea aria-label="Session notes" rows={5} value={sheet.notes} onChange={(event) => mutate((current) => ({ ...current, notes: event.target.value }))} placeholder="Table notes, plans, reminders…" className="sheet-textarea" />
+        </PanelSection>
       </div>
       {equipmentSlot && <EquipmentPicker key={equipmentSlot} slot={equipmentSlot} sheet={sheet} onAddItems={query=>openInventoryAdder(equipmentSlot,query)} onClose={()=>setEquipmentSlot(null)} onEquip={entryId=>{ mutate(current=>{const entry=current.inventory.find(item=>item.id===entryId);const id=entry&&inventoryEquipmentId(entry);if(!entry||!id)throw new Error('This item is no longer in your inventory.');return equipEquipment(current,equipmentSlot,id,entry.id);}); setEquipmentSlot(null); }} />}
       {inventoryAddOpen && <EquipmentPicker key="inventory-add" sheet={sheet} initialKind={inventoryAddKind} initialQuery={inventoryAddQuery} onClose={closeInventoryAdder} onAdd={addition=>{mutate(current=>addInventoryItem(current,addition));setInventoryQuery('');setInventoryFilter('all');setInventoryMessage(`Added ${addition.qty} × ${addition.kind==='custom'?addition.name.trim():catalogInventoryItem(addition.kind,addition.catalogId)?.name??'item'}.`);closeInventoryAdder();}} />}
@@ -869,15 +830,6 @@ function Threshold({ label, value, note }: { label: string; value: number; note:
       <span className="sheet-threshold-label">{label}</span>
       <span className="sheet-threshold-value">{value}</span>
       <span className="sheet-threshold-note">{note}</span>
-    </div>
-  );
-}
-
-function PanelHead({ title, note, icon }: { title: string; note?: string; icon?: IconName }) {
-  return (
-    <div className="sheet-panel-head">
-      <h3 className="sheet-section-title">{icon && <Icon name={icon} />}{title}</h3>
-      {note && <span className="sheet-panel-note">{note}</span>}
     </div>
   );
 }

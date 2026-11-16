@@ -1,0 +1,80 @@
+/* ============================================================ Daggery layout kit (see Accordion.tsx) */
+
+/* PanelSection: big uppercase foldable heading */
+.sg-section { scroll-margin-top: 0; }
+.sg-section-head { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; margin: 0; border-bottom: 1px solid var(--ds-border); background: color-mix(in srgb, var(--ds-surface) 94%, transparent); backdrop-filter: blur(10px); }
+.sg-section-head > button { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 0 18px; border: 0; background: transparent; color: var(--ds-ink); font: 700 19px/1 var(--font-display); text-transform: uppercase; letter-spacing: .04em; text-align: left; cursor: pointer; }
+.sg-section-head > button:hover { background: var(--ds-hover); }
+.sg-section-actions { display: flex; align-items: center; gap: 6px; padding-right: 12px; }
+.sg-section-body { display: grid; gap: 6px; padding: 12px 14px 20px; }
+
+/* Shared chevron: down when closed, up when open */
+:is(.sg-section-head > button, .sg-group-head button, .sg-card-summary) > .daggery-icon:last-child { flex: none; width: 15px; height: 15px; color: var(--ds-muted); transform: rotate(90deg); transition: transform .15s; }
+:is(.sg-section-head > button, .sg-group-head button, .sg-card-summary)[aria-expanded="true"] > .daggery-icon:last-child { transform: rotate(-90deg); }
+
+/* Group: boxed category */
+.sg-group { border: 1px solid var(--ds-border); border-radius: var(--radius-sm); background: var(--ds-raised); overflow: hidden; }
+.sg-group-head { margin: 0; }
+.sg-group-head button { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 42px; padding: 0 12px; border: 0; background: transparent; color: var(--ds-ink); font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; }
+.sg-group-head button:hover, .sg-group.is-open .sg-group-head button { background: var(--ds-hover); }
+.sg-group-head .daggery-icon:first-child:not(:last-child) { width: 15px; height: 15px; color: var(--ds-brand); }
+.sg-group-head span { flex: 1; min-width: 0; }
+.sg-group-head small { color: var(--ds-faint); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sg-group-body { display: grid; gap: 4px; padding: 8px 10px 6px; border-top: 1px solid var(--ds-border); }
+.sg-group-clear { justify-self: center; display: grid; place-items: center; width: 32px; height: 28px; border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--ds-muted); cursor: pointer; }
+.sg-group-clear:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-ink); }
+.sg-group-clear:disabled { opacity: .35; cursor: default; }
+.sg-group-clear .daggery-icon { width: 15px; height: 15px; }
+
+/* Row: a line with a label, its value and an action */
+.sg-row { display: grid; gap: 6px; padding: 3px 0; border-bottom: 1px solid var(--ds-border); }
+.sg-row:last-child { border-bottom: 0; }
+.sg-row.is-current { box-shadow: inset 2px 0 0 var(--ds-brand); padding-left: 8px; }
+.sg-row-line { display: flex; align-items: center; gap: 6px; min-height: 40px; }
+.sg-row-text { display: grid; flex: 1; min-width: 0; gap: 1px; }
+.sg-row-label { color: var(--ds-muted); font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
+.sg-row.has-value .sg-row-label { color: var(--ds-faint); font-size: 10.5px; font-weight: 600; }
+.sg-row-value { color: var(--ds-ink); font-size: 14px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+
+/* ItemCard: tinted card that opens in place */
+.sg-card { --sg-tone: var(--ds-brand); border: 1px solid var(--ds-border); border-radius: var(--radius-sm); background: var(--ds-raised); box-shadow: inset 3px 0 0 var(--sg-tone); overflow: hidden; scroll-margin-top: 60px; }
+.sg-card-head { display: flex; align-items: center; background: color-mix(in srgb, var(--sg-tone) 10%, transparent); }
+.sg-card-head:hover, .sg-card.is-open .sg-card-head { background: color-mix(in srgb, var(--sg-tone) 20%, transparent); }
+.sg-card-summary { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; min-height: 50px; padding: 6px 12px 6px 15px; border: 0; background: transparent; color: var(--ds-ink); text-align: left; cursor: pointer; }
+.sg-card-summary:disabled { cursor: default; opacity: 1; }
+.sg-card-text { display: grid; flex: 1; min-width: 0; gap: 2px; }
+.sg-card-text strong { font-size: 15px; font-weight: 650; line-height: 1.25; overflow-wrap: anywhere; }
+.sg-card-text small { display: flex; align-items: center; gap: 5px; color: var(--ds-muted); font-size: 11px; font-weight: 600; }
+.sg-card-text small .daggery-icon { width: 11px; height: 11px; color: var(--sg-tone); }
+.sg-card-actions { display: flex; align-items: center; gap: 4px; padding-right: 10px; }
+.sg-card-body { display: grid; gap: 10px; padding: 14px 14px 16px 16px; border-top: 1px solid var(--ds-border); font-size: 13.5px; line-height: 1.6; }
+
+/* SearchField */
+.sg-search { position: relative; display: flex; align-items: center; width: 100%; }
+.sg-search > .daggery-icon { position: absolute; left: 12px; width: 15px; height: 15px; color: var(--ds-faint); pointer-events: none; }
+.sg-search input { width: 100%; min-height: 40px; padding: 0 12px 0 35px; border: 1px solid var(--ds-control); border-radius: var(--radius-sm); background: var(--ds-inset); color: var(--ds-ink); font: inherit; font-size: 13.5px; }
+.sg-search input::placeholder { color: var(--ds-faint); }
+.sg-search input:focus { border-color: var(--ds-brand); outline: none; box-shadow: 0 0 0 3px var(--ds-brand-soft); }
+
+/* IconButton */
+.sg-icon-button { display: grid; place-items: center; flex: none; width: 32px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: var(--radius-xs); background: transparent; color: var(--ds-muted); cursor: pointer; }
+.sg-icon-button:hover:not(:disabled), .sg-icon-button[aria-pressed="true"] { color: var(--ds-ink); background: var(--ds-hover); }
+.sg-icon-button.is-action { border-color: var(--ds-brand-line); background: var(--ds-brand-soft); color: var(--ds-brand-strong); }
+.sg-icon-button.is-action:hover:not(:disabled) { border-color: var(--ds-brand); background: var(--ds-brand-soft); color: var(--ds-brand-strong); }
+.sg-icon-button.is-danger:hover:not(:disabled) { color: var(--ds-fear); background: var(--ds-fear-soft); }
+.sg-icon-button:active:not(:disabled) { transform: translateY(1px); }
+.sg-icon-button:disabled { opacity: .4; cursor: default; }
+.sg-icon-button .daggery-icon { width: 15px; height: 15px; }
+
+/* A page built from the kit: centred column of sections */
+.sg-page { display: grid; align-content: start; width: 100%; max-width: 1100px; margin: 0 auto; padding: 8px 0 48px; }
+.sg-page-intro { margin: 0; padding: 16px 18px 4px; color: var(--ds-muted); font-size: 13.5px; line-height: 1.6; }
+.sg-empty { padding: 26px; border: 1px dashed var(--ds-border); border-radius: var(--radius-sm); color: var(--ds-muted); text-align: center; font-size: 13.5px; }
+
+.sg-section :is(button, a, input, select, textarea):focus-visible, .sg-icon-button:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .sg-section *, .sg-card * { transition: none !important; } }
+@media (max-width: 767px) {
+  .sg-section-head > button { min-height: 48px; font-size: 17px; padding: 0 14px; }
+  .sg-section-body { padding: 10px 10px 16px; }
+  .sg-icon-button { width: 40px; height: 40px; }
+}

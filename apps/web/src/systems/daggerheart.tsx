@@ -2,14 +2,16 @@ import { lazy } from 'react';
 import { getRuleset, normalizeConfiguration, type CampaignConfiguration } from '@daggery/shared';
 import { DiceTray, DiceOverlay } from '../dice3d';
 import type { SystemUI } from './types';
-export const DAGGERHEART_UI: SystemUI = { optionsEditor: DaggerheartOptions, diceTray: DiceTray, diceOverlay: DiceOverlay, modules: [
+export const DAGGERHEART_UI: SystemUI = { optionsEditor: DaggerheartOptions, diceTray: DiceTray, diceOverlay: DiceOverlay,
+  // Oracles, moves and results beside the character sheet and every other page, not a page of their own.
+  companion: { feature: 'daggerheart.solo', label: 'Solo screen', icon: 'spark', gmOnly: true, component: lazy(() => import('../modules/solo')) },
+  modules: [
     { id: 'ai', feature: 'daggerheart.ai-gm', label: 'Adventure', icon: 'scroll', description: 'Play with your connected AI Game Master', controller: 'ai', primary: true, component: lazy(() => import('../modules/ai')) },
     { id: 'journal', feature: 'daggerheart.ai-gm', label: 'Journal', icon: 'book', description: 'Chapters, notes and events from your adventure', controller: 'ai', component: lazy(() => import('../modules/journal')) },
     { id: 'map', feature: 'daggerheart.table', label: 'Game table', icon: 'map', description: 'Maps, miniatures, and combat in one place', primaryRulesets: ['core'], component: lazy(() => import('../modules/map')) },
     { id: 'sheets', feature: 'daggerheart.sheets', label: 'Characters', icon: 'sheet', description: 'Create heroes and manage their sheets', primary: true, component: lazy(() => import('../modules/sheets')) },
     { id: 'compendium', feature: 'daggerheart.compendium', label: 'Compendium', icon: 'book', description: 'Find classes, cards, equipment, and rules', component: lazy(() => import('../modules/compendium')) },
     { id: 'gm', feature: 'daggerheart.gm-tools', label: 'GM tools', icon: 'compass', description: 'Loot tables, setting notes, and scenario preparation', gmOnly: true, component: lazy(() => import('../modules/gm')) },
-    { id: 'solo', feature: 'daggerheart.solo', label: 'Solo play', icon: 'spark', description: 'Duality GME tables, organized for play', gmOnly: true, primary: true, component: lazy(() => import('../modules/solo')) },
   ] };
 
 function DaggerheartOptions({ value, onChange }: { value: CampaignConfiguration; onChange: (value: CampaignConfiguration) => void }) {

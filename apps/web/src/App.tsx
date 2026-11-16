@@ -11,6 +11,7 @@ import { Notes, Library } from './CampaignSections';
 import { api } from './api';
 import { Icon, type IconName } from './components/Icon';
 import { Dialog } from './components/Dialog';
+import { IconButton, ItemCard, PanelSection, Row, TONES } from './components/Accordion';
 import { useMediaQuery } from './useMediaQuery';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -37,6 +38,8 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   const systemUI = getSystemUI(campaign.configuration);
   const DiceControls = systemUI?.diceTray;
   const DiceSurface = systemUI?.diceOverlay;
+  const companion = systemUI?.companion && ruleset?.features.includes(systemUI.companion.feature) && (!systemUI.companion.gmOnly || campaign.role === 'gm') ? systemUI.companion : undefined;
+  const Companion = companion?.component;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncError, setSyncError] = useState('');
   const [invite, setInvite] = useState('');
@@ -53,6 +56,22 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   const [diceOpen, setDiceOpen] = useState(false);
   const [diceDocked, setDiceDocked] = useState(true);
   const wide = useMediaQuery('(min-width: 1440px)');
+  const phone = useMediaQuery('(max-width: 767px)');
+  // The solo screen stays open beside every page on desktop; on a phone it opens over the page on demand.
+  const [companionDocked, setCompanionDocked] = useState(() => readPreference('daggery:companion') !== 'closed');
+  const [companionSheet, setCompanionSheet] = useState(false);
+  const companionOpen = !!Companion && (phone ? companionSheet : companionDocked);
+  const companionBeside = !!Companion && !phone && companionDocked;
+  function setCompanion(open: boolean) {
+    if (phone) { setCompanionSheet(open); return; }
+    setCompanionDocked(open);
+    savePreference('daggery:companion', open ? 'open' : 'closed');
+  }
+  useEffect(() => {
+    const open = () => setCompanion(true);
+    window.addEventListener('daggery:solo-screen', open);
+    return () => window.removeEventListener('daggery:solo-screen', open);
+  });
   const mainRef = useRef<HTMLElement>(null);
   const [theme, setTheme] = useState<Theme>(() =>
     readPreference('daggery:style-version') === 'owlbear' && readPreference('daggery:theme') === 'light' ? 'light' : 'dark',
@@ -104,7 +123,8 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   const Active = getModules(campaign.configuration).find((module) => module.id === page)?.component;
   const online = status === 'open' && syncStatus === 'open';
   const current = NAV.find((item) => item.id === page)!;
-  const dockVisible = !!DiceControls && wide && diceDocked && page !== 'map' && page !== 'ai';
+  // The solo screen takes the right-hand column; the dice then open over the page instead.
+  const dockVisible = !!DiceControls && wide && diceDocked && page !== 'map' && page !== 'ai' && !companionBeside;
   const diceVisible = dockVisible || diceOpen;
 
   function navigate(next: Page) {
@@ -114,6 +134,7 @@ export default function App({ onLeave }: { onLeave: () => void }) {
     setSearchOpen(false);
     setQuery('');
     setDiceOpen(false);
+    setCompanionSheet(false);
   }
   function updateAuthor(value: string) {
     setAuthor(value);
@@ -206,56 +227,19 @@ export default function App({ onLeave }: { onLeave: () => void }) {
       <a className="daggery-skip" href="#main-content">
         Skip to content
       </a>
-      <aside className="daggery-sidebar">
-        <div className="daggery-logo">
-          <span className="daggery-logo-mark" aria-hidden="true">
-            <Icon name="spark" />
-          </span>
-          <span className="daggery-logo-text">
-            daggery<span></span>
-          </span>
-        </div>
-        <button type="button" className="daggery-campaign-switch" onClick={onLeave} title="Switch campaign">
-          <span className="daggery-campaign-monogram">{campaign.name.slice(0, 1).toUpperCase()}</span>
-          <span className="daggery-campaign-info">
-            <strong>{campaign.name}</strong>
-            <small>{getGameSystem(campaign.configuration.systemId)?.name ?? 'Unknown system'} · {ruleset?.mode === 'solo' ? 'Solo' : 'Group'}</small>
-          </span>
-          <Icon name="chevron" />
-        </button>
-        <button type="button" className="daggery-search" onClick={() => setSearchOpen(true)} aria-label="Find a section">
-          <Icon name="search" />
-          <span>Quick navigation</span>
-          <kbd>Ctrl K</kbd>
-        </button>
-        {navigation()}
-        <div className="daggery-sidebar-footer">
-          <button type="button" className="daggery-avatar" onClick={() => setMobileMenu(true)} aria-label="Profile and campaign">
-            {author.trim().slice(0, 2).toUpperCase() || 'PL'}
-          </button>
-          <label className="daggery-profile">
-            <input aria-label="Your name" value={author} onChange={(event) => updateAuthor(event.target.value)} maxLength={60} />
-            <small>{getRuleset(campaign.configuration)?.mode === 'solo' ? 'Solo player' : campaign.role === 'gm' ? 'Game Master' : 'Player'}</small>
-          </label>
-          <button
-            type="button"
-            className="daggery-footer-switch"
-            onClick={onLeave}
-            title="Switch campaign"
-            aria-label="Switch campaign"
-          >
-            <Icon name="logout" />
-          </button>
-        </div>
-      </aside>
       <div className="daggery-workspace">
         <header className="daggery-topbar">
-          <div className="daggery-breadcrumb">
-            <span>{campaign.name}</span>
-            <span aria-hidden="true">/</span>
-            <strong>{current.label}</strong>
+          <div className="daggery-brand-bar">
+            <button type="button" className="daggery-menu-button" onClick={() => setMobileMenu(true)} aria-label="Menu: campaign, profile and every section" aria-expanded={mobileMenu}>
+              <Icon name="more" />
+            </button>
+            <span className="daggery-brand-name">daggery</span>
+            <span className="daggery-brand-divider" aria-hidden="true" />
+            <button type="button" className="daggery-brand-campaign" onClick={onLeave} title="Switch campaign">{campaign.name}</button>
+            <strong className="daggery-brand-page">{current.label}</strong>
           </div>
           <div className="daggery-top-actions">
+            <button type="button" className="daggery-theme" onClick={() => setSearchOpen(true)} aria-label="Quick navigation (Ctrl K)" title="Quick navigation (Ctrl K)"><Icon name="search" /></button>
             <span
               role="status"
               className={`daggery-connection ${online ? 'is-online' : ''}`}
@@ -277,10 +261,20 @@ export default function App({ onLeave }: { onLeave: () => void }) {
               </button>
             )}
             {campaign.role === 'gm' && <button type="button" className="daggery-theme" aria-label="Campaign settings" title="Campaign settings" onClick={() => { if (window.dispatchEvent(new Event('daggery:before-navigate', { cancelable: true }))) setSettingsOpen(true); }}><Icon name="settings" /></button>}
+            {companion && <button
+              type="button"
+              className={`daggery-roll-toggle daggery-companion-toggle ${companionOpen ? 'is-active' : ''}`}
+              onClick={() => setCompanion(!companionOpen)}
+              aria-label={companionOpen ? `Hide ${companion.label.toLowerCase()}` : `Show ${companion.label.toLowerCase()}`}
+              aria-expanded={companionOpen}
+            >
+              <Icon name={companion.icon} />
+              <span>Oracles</span>
+            </button>}
             <button
               type="button"
               className={`daggery-roll-toggle daggery-dice-toggle ${diceVisible ? 'is-active' : ''}`}
-              onClick={() => (wide && page !== 'map' && page !== 'ai' ? setDiceDocked((open) => !open) : setDiceOpen((open) => !open))}
+              onClick={() => (wide && page !== 'map' && page !== 'ai' && !companionBeside ? setDiceDocked((open) => !open) : setDiceOpen((open) => !open))}
               aria-label={diceVisible ? 'Hide dice' : 'Show dice'}
               aria-expanded={diceVisible}
             >
@@ -298,6 +292,11 @@ export default function App({ onLeave }: { onLeave: () => void }) {
             </button>
           </div>
         </header>
+        <nav className="daggery-tabs" aria-label="Main navigation">
+          {availableNav.map(item => <button key={item.id} type="button" onClick={() => navigate(item.id)} aria-current={page === item.id ? 'page' : undefined}>
+            {item.id === 'map' ? 'Game table' : item.label}
+          </button>)}
+        </nav>
         {settingsOpen && <CampaignSettings campaign={campaign} onClose={() => setSettingsOpen(false)} onSaved={() => window.location.reload()} />}
         {syncError && (
           <div role="alert" className="daggery-alert">
@@ -330,6 +329,9 @@ export default function App({ onLeave }: { onLeave: () => void }) {
               )
             )}
           </main>
+          {Companion && <ErrorBoundary name={companion.label} resetKey="companion" onBack={() => setCompanion(false)}><Suspense fallback={null}>
+            <Companion open={companionOpen} onClose={() => setCompanion(false)} />
+          </Suspense></ErrorBoundary>}
           {dockVisible && (
             <aside className="daggery-rolls" aria-label="Dice and roll history">
               {dice}
@@ -338,31 +340,35 @@ export default function App({ onLeave }: { onLeave: () => void }) {
         </div>
       </div>
       <nav className="daggery-bottom-nav" aria-label="Mobile navigation">
-        {NAV.slice(0, 4).map((item) => (
+        {NAV.slice(0, companion ? 3 : 4).map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => navigate(item.id)}
-            aria-current={page === item.id ? 'page' : undefined}
+            aria-current={page === item.id && !companionSheet ? 'page' : undefined}
           >
             <Icon name={item.icon} />
             <span>{item.id === 'map' ? 'Table' : item.label}</span>
           </button>
         ))}
+        {companion && <button type="button" onClick={() => setCompanion(!companionSheet)} aria-expanded={companionSheet} className={companionSheet ? 'is-active' : ''}>
+          <Icon name={companion.icon} />
+          <span>Tables</span>
+        </button>}
         <button
           type="button"
           onClick={() => setMobileMenu(true)}
           aria-expanded={mobileMenu}
           aria-label="More sections"
           className={
-            !NAV.slice(0, 4).some((item) => item.id === page) ? 'is-active' : ''
+            !companionSheet && !NAV.slice(0, companion ? 3 : 4).some((item) => item.id === page) ? 'is-active' : ''
           }
         >
           <Icon name="more" />
           <span>More</span>
         </button>
       </nav>
-      <Dialog open={mobileMenu} onClose={() => setMobileMenu(false)} title="Your campaign" className="daggery-menu-dialog">
+      <Dialog open={mobileMenu} onClose={() => setMobileMenu(false)} title="Menu" className="daggery-menu-dialog">
         <button type="button" className="daggery-campaign-switch" onClick={onLeave}>
           <span className="daggery-campaign-monogram">{campaign.name.slice(0, 1).toUpperCase()}</span>
           <span className="daggery-campaign-info">
@@ -450,90 +456,30 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   );
 }
 
+/** Overview, laid out like the rest of the app: foldable sections of rows and cards. */
 function Home({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const campaign = getActiveCampaign();
   const NAV = navigationFor(campaign);
-  const solo = getRuleset(campaign.configuration)?.mode === 'solo';
+  const ruleset = getRuleset(campaign.configuration);
+  const solo = ruleset?.mode === 'solo';
   const ai = campaign.configuration.gmController === 'ai';
-  const main = NAV.find(item => item.id === (campaign.configuration.gmController === 'ai' ? 'ai' : solo ? 'solo' : 'map')) ?? NAV.find(item => item.primary && item.id !== 'home');
+  const main = NAV.find(item => item.id === (ai ? 'ai' : solo ? 'sheets' : 'map')) ?? NAV.find(item => item.primary && item.id !== 'home');
+  const role = solo ? 'Solo player' : campaign.role === 'gm' ? 'Game Master' : 'Player';
+  const party = solo ? (campaign.configuration.options.partyMode === 'party' ? 'Small party' : campaign.configuration.options.partyMode === 'companion' ? 'Hero + companion' : 'Lone hero') : undefined;
+  const sections = NAV.filter(item => item.id !== 'home');
+  const tone = (id: string) => ({ sheets: TONES.gold, map: TONES.green, ai: TONES.violet, journal: TONES.violet, compendium: TONES.blue, notes: TONES.teal, library: TONES.pink, gm: TONES.red })[id] ?? TONES.brand;
+  const open = (id: string, label: string) => <IconButton icon="arrow" tone="action" label={`Open ${label.toLowerCase()}`} onClick={() => onNavigate(id)} />;
   return (
-    <div className="daggery-home daggery-overview">
-      <div className="daggery-overview-heading">
-        <div>
-          <p className="daggery-eyebrow">Your campaign workspace</p>
-          <h1>{campaign.name}</h1>
-          <p>Everything your next session needs.</p>
-        </div>
-        <span className="daggery-role-badge">
-          <span aria-hidden="true">✦</span>
-          {getRuleset(campaign.configuration)?.mode === 'solo' ? 'Solo player' : campaign.role === 'gm' ? 'Game Master' : 'Player'}
-        </span>
-      </div>
-      <section className="daggery-table-feature" aria-labelledby="table-title">
-        <div className="daggery-table-copy">
-          <span className="daggery-feature-eyebrow">
-            <Icon name="compass" /> The adventure awaits
-          </span>
-          <h2 id="table-title">
-            {ai ? 'Your next chapter' : solo ? 'Your solo adventure' : main?.id === 'map' ? <>Your world.<br />Your table.</> : main?.label ?? 'Your campaign'}
-          </h2>
-          <p>{ai ? 'A connected GM, your heroes, and a world shaped by your choices.' : solo ? 'Oracles, scene themes, and your campaign journal.' : main?.description ?? 'Your campaign notes and resources.'}</p>
-          <button type="button" className="daggery-primary" onClick={() => onNavigate(main?.id ?? 'notes')}>
-            <Icon name={main?.icon ?? 'note'} /> {ai ? 'Continue adventure' : solo ? 'Continue solo play' : `Open ${main?.label.toLowerCase() ?? 'notes'}`}
-            <Icon name="arrow" />
-          </button>
-        </div>
-        <div className="daggery-table-art daggery-table-preview" aria-hidden="true">
-          <img src="/maps/rocky-forest.png" alt="" />
-        </div>
-      </section>
-      <div className="daggery-section-title">
-        <h2>Ready for your next session</h2>
-        <span>Your essentials, all in one place</span>
-      </div>
-      <div className="daggery-shortcuts">
-        {NAV.filter((item) => ['sheets', solo ? 'solo' : 'compendium', 'notes'].includes(item.id)).map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={`daggery-shortcut daggery-essential essential-${item.id}`}
-            onClick={() => onNavigate(item.id)}
-          >
-            <span className="daggery-shortcut-top">
-              <span className="daggery-shortcut-icon">
-                <Icon name={item.icon} />
-              </span>
-              <Icon name="arrow" />
-            </span>
-            <strong>{item.label}</strong>
-            <small>{item.description}.</small>
-            <span className="daggery-shortcut-link">
-              {item.id === 'sheets' ? 'Meet your heroes' : item.id === 'notes' ? 'Session notes' : item.id === 'solo' ? 'Continue solo play' : 'Explore the compendium'}
-              <Icon name="chevron" />
-            </span>
-          </button>
-        ))}
-      </div>
-      <div className="daggery-section-title">
-        <h2>Keep the story together</h2>
-      </div>
-      <div className="daggery-story-links">
-        {NAV.filter((item) => ['notes', 'library'].includes(item.id) || (item.id === 'gm' && campaign.role === 'gm')).map((item) => (
-          <button key={item.id} type="button" className="daggery-shortcut" onClick={() => onNavigate(item.id)}>
-            <span className="daggery-shortcut-icon">
-              <Icon name={item.icon} />
-            </span>
-            <span>
-              <strong>{item.label}</strong>
-              <small>{item.description}.</small>
-            </span>
-            <Icon name="chevron" />
-          </button>
-        ))}
-      </div>
-      <footer className="daggery-home-footer">
-        <span aria-hidden="true">✦</span> Made for the stories you tell together.<span>DAGGERHEART</span>
-      </footer>
+    <div className="sg-page daggery-overview-page">
+      <PanelSection title={campaign.name} storageKey="overview.campaign">
+        <Row label="Game" value={`${getGameSystem(campaign.configuration.systemId)?.name ?? 'Unknown system'} · ${ruleset?.name ?? 'Unknown ruleset'}`} />
+        <Row label="Playing as" value={party ? `${role} · ${party}` : role} />
+        {main && <Row label={ai ? 'Your next chapter' : solo ? 'Your solo adventure' : 'Where you play'} value={main.label} action={<button type="button" className="daggery-primary" onClick={() => onNavigate(main.id)}><Icon name={main.icon} />{ai ? 'Continue adventure' : solo ? 'Continue with your hero' : `Open ${main.label.toLowerCase()}`}</button>} />}
+        {solo && <p className="sg-page-intro">Every oracle, move and result is in the solo screen on the right, beside every page. Hide or show it with <strong>Oracles</strong> in the top bar.</p>}
+      </PanelSection>
+      <PanelSection title="Sections" storageKey="overview.sections">
+        {sections.map(item => <ItemCard key={item.id} title={item.label} caption={item.description} icon={item.icon} tone={tone(item.id)} actions={open(item.id, item.label)} />)}
+      </PanelSection>
     </div>
   );
 }

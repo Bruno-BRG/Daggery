@@ -255,3 +255,36 @@ body { background-color: var(--ds-surface); }
 @media (prefers-reduced-motion: reduce) {
   :where(.daggery-shell, .daggery-dialog, .daggery-auth-shell) *, :where(.daggery-shell, .daggery-dialog, .daggery-auth-shell) *::before, :where(.daggery-shell, .daggery-dialog, .daggery-auth-shell) *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+/* ============================================================ Top bar + section tabs (Stargazer layout)
+   No left sidebar: a slim brand bar with the menu drawer, then the sections as centred tabs. */
+.daggery-brand-bar { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.daggery-menu-button { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ds-ink); cursor: pointer; }
+.daggery-menu-button:hover { background: var(--ds-hover); }
+.daggery-menu-button .daggery-icon { width: 20px; height: 20px; }
+.daggery-brand-name { font: 700 17px/1 var(--font-display); text-transform: uppercase; letter-spacing: .06em; color: var(--ds-ink); }
+.daggery-brand-divider { width: 1px; height: 20px; background: var(--ds-border); }
+.daggery-brand-campaign { min-width: 0; max-width: 28ch; overflow: hidden; padding: 4px 6px; border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--ds-muted); font: 650 14px/1.2 var(--font-display); text-transform: uppercase; letter-spacing: .05em; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.daggery-brand-campaign:hover { background: var(--ds-hover); color: var(--ds-ink); }
+.daggery-brand-page { display: none; }
+.daggery-topbar { min-height: 56px; padding-block: 8px; border-bottom: 0; }
+.daggery-tabs { display: flex; flex-shrink: 0; justify-content: center; gap: 2px; overflow-x: auto; padding: 0 16px; border-bottom: 1px solid var(--folio-frame, var(--ds-border)); background: var(--ds-raised); scrollbar-width: none; }
+.daggery-tabs::-webkit-scrollbar { display: none; }
+.daggery-tabs button { flex: none; min-height: 40px; padding: 0 16px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ds-muted); font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; cursor: pointer; }
+.daggery-tabs button:hover { color: var(--ds-ink); }
+.daggery-tabs button[aria-current="page"] { border-bottom-color: var(--ds-brand); color: var(--ds-ink); }
+.daggery-tabs button:focus-visible, .daggery-menu-button:focus-visible, .daggery-brand-campaign:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: -2px; }
+@media (max-width: 767px) {
+  /* Phones keep the bottom bar instead of tabs. */
+  .daggery-tabs, .daggery-brand-name, .daggery-brand-divider { display: none; }
+  .daggery-brand-bar { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 6px; row-gap: 0; }
+  .daggery-menu-button { grid-row: span 2; }
+  .daggery-brand-campaign { padding: 0; font-size: 11px; text-align: left; }
+  .daggery-brand-page { display: block; color: var(--ds-ink); font-size: 14px; }
+}
+@media (max-width: 767px) {
+  /* The bottom bar already has Tables and More; keep the phone top bar to the essentials. */
+  .daggery-top-actions .daggery-companion-toggle, .daggery-top-actions > .daggery-theme[aria-label^="Quick navigation"] { display: none; }
+  .daggery-connection > span { display: none; }
+  .daggery-brand-bar { flex: 1; }
+}

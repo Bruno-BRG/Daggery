@@ -1,0 +1,33 @@
+/* ============================================================ Campaign pages: Notes and Library (Stargazer-style) */
+
+.campaign-page { padding-bottom: 48px; }
+
+/* The edit form inside an open note card */
+.cs-form { display: grid; gap: 12px; }
+.cs-field { display: grid; gap: 6px; min-width: 0; color: var(--ds-faint); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.cs-field :is(input, select, textarea) { width: 100%; min-width: 0; min-height: 40px; padding: 9px 11px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-ink); font: inherit; font-size: 13.5px; font-weight: 400; line-height: 1.5; letter-spacing: normal; text-transform: none; }
+.cs-field textarea { min-height: 180px; resize: vertical; line-height: 1.6; }
+.cs-field :is(input, select, textarea):focus { border-color: var(--ds-brand); outline: none; box-shadow: 0 0 0 3px var(--ds-brand-soft); }
+.cs-field input::placeholder, .cs-field textarea::placeholder { color: var(--ds-faint); opacity: 1; }
+.cs-form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Page states */
+.cs-error { margin: 0; color: var(--color-rose-300); font-size: 13px; line-height: 1.5; }
+.cs-muted { margin: 0; padding: 4px 2px; color: var(--ds-muted); font-size: 13px; }
+
+/* A library file: icon, name and type/size, with an open link on the right */
+.cs-file-icon { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: var(--radius-xs); background: var(--ds-hover); color: var(--ds-muted); }
+.cs-file-icon .daggery-icon { width: 16px; height: 16px; }
+.cs-file-open { text-decoration: none; }
+
+/* Upload control in the section header, styled like an action IconButton with a label */
+.cs-upload { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--ds-brand-line); border-radius: var(--radius-xs); background: var(--ds-brand-soft); color: var(--ds-brand-strong); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.cs-upload .daggery-icon { width: 15px; height: 15px; }
+.cs-upload:hover { border-color: var(--ds-brand); }
+.cs-upload:has(input:disabled) { opacity: .55; cursor: default; }
+.cs-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+@media (max-width: 767px) {
+  .cs-upload { min-height: 40px; }
+  .cs-field textarea { min-height: 150px; }
+}

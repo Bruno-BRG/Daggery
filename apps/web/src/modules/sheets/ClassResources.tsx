@@ -3,16 +3,20 @@ import type { Sheet, ClassResourceValue } from './types';
 import { classResourceDefinitions, classResourceFacts, classResourceValue, getClass, resetClassResources, setClassResource, type ClassResourceDefinition } from './rules';
 import { Icon } from '../../components/Icon';
 
-type Props = { sheet: Sheet; onUpdate: (update: (current: Sheet) => Sheet) => void };
+type Props = {
+  sheet: Sheet;
+  onUpdate: (update: (current: Sheet) => Sheet) => void;
+  /** Rendered inside a shared `PanelSection`, which already supplies the heading. */
+  embedded?: boolean;
+};
 
 /** Manual rule trackers: recording an ability does not secretly pay a cost or resolve its effect. */
-export function ClassResources({ sheet, onUpdate }: Props) {
+export function ClassResources({ sheet, onUpdate, embedded = false }: Props) {
   const definitions = classResourceDefinitions(sheet);
   const facts = classResourceFacts(sheet);
   if (!definitions.length && !facts.length) return null;
   const classes = [...new Set(definitions.map(definition => definition.classId))];
-  return <section className="sheet-panel class-resources" aria-label="Class resources">
-    <header className="sheet-panel-head"><h2 className="sheet-section-title"><Icon name="spark" />Class resources</h2></header>
+  const body = <>
     <p className="sheet-note">Track your class features here. Adjusting a tracker does not spend Hope or Stress, roll dice, or apply an ability's effects.</p>
     {facts.length > 0 && <dl className="class-resource-facts">{facts.map(fact => <div key={fact.label}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>)}</dl>}
     {classes.map(classId => <div className="class-resource-group" key={classId}>
@@ -26,6 +30,11 @@ export function ClassResources({ sheet, onUpdate }: Props) {
         {definitions.some(definition => definition.reset === 'session') && <button type="button" className="sheet-ghost" onClick={() => onUpdate(current => resetClassResources(current, 'session'))}>Reset session trackers</button>}
       </div>
     </details>}
+  </>;
+  if (embedded) return <div className="class-resources" role="group" aria-label="Class resources">{body}</div>;
+  return <section className="sheet-panel class-resources" aria-label="Class resources">
+    <header className="sheet-panel-head"><h2 className="sheet-section-title"><Icon name="spark" />Class resources</h2></header>
+    {body}
   </section>;
 }
 

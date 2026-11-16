@@ -127,18 +127,6 @@
 .sheet-trait-value { font: 700 24px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
 .sheet-trait-actions { font-size: 12px; line-height: 1.35; text-align: center; color: var(--ds-muted); }
 
-/* Tabs ---------------------------------------------------------------- */
-.sheet-tabs {
-  display: flex; gap: 3px; overflow-x: auto; padding: 3px;
-  border: 1px solid var(--sheet-line); border-radius: var(--radius-md); background: var(--sheet-sunken);
-}
-.sheet-tab {
-  flex: 0 0 auto; padding: 9px 18px; border: 0; border-radius: var(--radius-sm); background: transparent;
-  color: var(--ds-muted); font-size: 13.5px; font-weight: 600; cursor: pointer;
-}
-.sheet-tab:hover { color: var(--ds-ink); background: color-mix(in srgb, var(--ds-brand) 8%, transparent); }
-.sheet-tab.is-active { background: var(--ds-brand); color: var(--ds-on-brand); }
-
 /* Panels -------------------------------------------------------------- */
 .sheet-play { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
 .sheet-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -146,7 +134,6 @@
   min-width: 0; padding: 16px 17px; border: 1px solid var(--sheet-line); border-radius: var(--radius-md);
   background: var(--sheet-panel);
 }
-.sheet-panel.is-sky { border-color: color-mix(in srgb, var(--color-sky-400) 35%, var(--sheet-line)); }
 .sheet-panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 9px; }
 .sheet-section-title {
   margin: 0; font: 700 12px/1.2 var(--font-sans); letter-spacing: .12em; text-transform: uppercase;
@@ -282,7 +269,6 @@
 .sheet-results li.sheet-empty { border-style: dashed; color: var(--ds-muted); }
 
 /* Features ------------------------------------------------------------ */
-.sheet-features { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; align-items: start; }
 .sheet-feature-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .sheet-card-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
 .sheet-card-grid.is-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -296,7 +282,6 @@
 .sheet-tag { display: inline-block; margin-right: 4px; padding: 0 5px; border-radius: var(--radius-xs); background: color-mix(in srgb, var(--ds-brand) 16%, transparent); color: var(--ds-brand); font-size: 12px; font-weight: 700; }
 
 /* Details ------------------------------------------------------------- */
-.sheet-details { display: flex; flex-direction: column; gap: 12px; }
 .sheet-equip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .sheet-equip-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .sheet-armor-card { padding: 8px 9px; border: 1px solid var(--sheet-line); border-radius: var(--radius-md); background: var(--sheet-sunken); }
@@ -323,7 +308,6 @@
 
 @container (max-width: 960px) {
   .sheet-play { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .sheet-features { grid-template-columns: minmax(0, 1fr); }
 }
 @container (max-width: 680px) {
   .sheet-page { padding: 12px 10px 40px; }
@@ -339,7 +323,6 @@
 }
 
 /* Readable, text-first lists for abilities and domain effects. */
-.sheet-features { grid-template-columns: minmax(0, 1fr); max-width: 900px; width: 100%; }
 .sheet-card-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .sheet-domain-card { display: block; padding: 0 16px 12px; border: 1px solid var(--sheet-line); border-radius: var(--radius-md); background: var(--sheet-sunken); }
 .sheet-domain-card summary, .sheet-feature-list summary, .sheet-context summary { cursor: pointer; color: var(--ds-ink); font-size: 14px; font-weight: 700; }
@@ -354,8 +337,6 @@
 .sheet-context { margin-top: 10px; }
 .sheet-context p { margin: 8px 0 0; }
 .sheet-feature-col .sheet-mini-label { margin: 4px 0 8px; }
-.sheet-tabs { gap: 6px; }
-.sheet-tab { min-height: 44px; }
 .sheet-qty button, .sheet-remove { min-width: 30px; min-height: 30px; }
 .sheet-disclosure > summary { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--ds-ink); }
 .sheet-disclosure[open] > summary { margin-bottom: 14px; }
@@ -450,11 +431,6 @@
 .character-folio .sheet-seg { margin-top: 5px; }
 .folio-result-banner { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border: 1px solid color-mix(in srgb, var(--ds-brand) 35%, var(--ds-border)); border-radius: var(--radius-md); background: color-mix(in srgb, var(--ds-brand) 7%, var(--ds-raised)); color: var(--ds-brand); font-size: 12px; line-height: 1.6; }
 .folio-result-banner > .daggery-icon { flex: none; width: 17px; }
-.character-folio .sheet-tabs { position: sticky; top: 0; z-index: 5; align-items: center; gap: 5px; padding: 6px; border: 1px solid var(--folio-line); border-radius: var(--radius-md); background: var(--ds-surface); }
-.character-folio .sheet-tab { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 1 0 auto; min-height: 40px; padding: 9px 16px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; }
-.character-folio .sheet-tab > .daggery-icon { width: 15px; height: 15px; }
-.character-folio .sheet-tab.is-active { background: var(--ds-raised); color: var(--ds-brand); box-shadow: 0 1px 6px #0000000c; }
-.folio-tab-count { padding: 1px 5px; border-radius: var(--radius-xs); background: color-mix(in srgb, var(--ds-brand) 10%, transparent); font-size: 12px; }
 .character-folio .sheet-play { gap: 16px; }
 .character-folio .sheet-col { gap: 14px; }
 .character-folio .sheet-panel { padding: 20px; border: 1px solid var(--folio-line); border-radius: var(--radius-lg); background: var(--ds-raised); }
@@ -478,7 +454,6 @@
 .character-folio .sheet-attack { display: flex; align-items: center; justify-content: center; min-height: 42px; margin-top: 14px; border-radius: var(--radius-sm); background: var(--ds-brand); color: var(--ds-on-brand); font-size: 12px; }
 .character-folio .sheet-prof { margin: -4px 0 14px; gap: 5px; }
 .character-folio .sheet-prof-pip { width: 8px; height: 8px; }
-.character-folio .sheet-features { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: none; }
 .character-folio .sheet-domain-card { margin-top: 10px; padding: 0; overflow: hidden; border-radius: var(--radius-md); border: 1px solid var(--folio-line); background: var(--ds-surface); }
 .character-folio .sheet-effect-title { display: grid; gap: 5px; padding: 16px; border-top: 3px solid var(--ds-brand); }
 .character-folio .sheet-effect-title strong { font-size: 13px; text-transform: capitalize; }
@@ -505,8 +480,8 @@
 .folio-recovery-dialog .sheet-input { width: 100%; min-width: 0; }
 .folio-recovery-dialog .sheet-inline-nowrap { display: flex; gap: 10px; }
 @container (max-width: 1050px) { .character-folio .sheet-play { grid-template-columns: repeat(2, minmax(0, 1fr)); } .character-folio .sheet-play > .sheet-col:last-child { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } .folio-resource-label > span { display: none; } }
-@container (max-width: 750px) { .folio-resources { grid-template-columns: repeat(2, minmax(0, 1fr)); } .character-folio .sheet-hero-top { flex-wrap: wrap; gap: 14px; } .character-folio .sheet-identity { flex: 1 1 160px; } .character-folio .sheet-shields { margin-left: 0; } .character-folio .sheet-shield, .character-folio .sheet-level { width: 64px; height: 65px; } .character-folio .sheet-shield-value, .character-folio .sheet-level > span { font-size: 25px; } .folio-toolbar-label { display: none; } .character-folio .sheet-trait-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } .character-folio .sheet-features { grid-template-columns: 1fr; } }
-@container (max-width: 520px) { .character-folio { padding: 16px 12px 32px; gap: 14px; } .character-folio .sheet-hero { padding: 20px; } .character-folio .sheet-hero-top { gap: 12px; } .character-folio .sheet-portrait { width: 58px; height: 68px; } .character-folio .sheet-identity { flex: 1 1 150px; } .character-folio .sheet-eyebrow { font-size: 12px; letter-spacing: 1px; } .character-folio .sheet-name { font-size: 28px; } .character-folio .sheet-shield, .character-folio .sheet-level { width: auto; height: auto; flex-direction: row; gap: 7px; padding: 6px 10px; border-radius: var(--radius-sm); } .character-folio .sheet-shield-value, .character-folio .sheet-level > span { font-size: 17px; } .character-folio .sheet-shield-label, .character-folio .sheet-level > small { font-size: 12px; } .character-folio .sheet-hero-top { min-height: 0; } .character-folio .sheet-badges { margin-top: 8px; } .folio-resources { gap: 8px; } .folio-resource { padding: 12px; } .folio-resource-label h2 { font-size: 12px; } .character-folio .sheet-trait { padding: 9px 4px; gap: 2px; } .character-folio .sheet-trait-actions { font-size: 12px; } .folio-traits-heading > span { display: none; } .character-folio .sheet-tabs { border-radius: var(--radius-md); } .character-folio .sheet-tab { padding: 9px 12px; font-size: 12px; } .character-folio .sheet-play { grid-template-columns: 1fr; } .character-folio .sheet-play > .sheet-col:last-child { display: flex; flex-direction: column; align-items: stretch; grid-column: auto; } .character-folio .sheet-panel { padding: 17px; } .folio-roll-settings > summary > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; } .folio-toolbar .sheet-ghost > span { display: none; } .character-folio .sheet-toolbar-actions { gap: 5px; } .character-folio .sheet-toolbar > .sheet-ghost { padding-inline: 9px; font-size: 12px; } }
+@container (max-width: 750px) { .folio-resources { grid-template-columns: repeat(2, minmax(0, 1fr)); } .character-folio .sheet-hero-top { flex-wrap: wrap; gap: 14px; } .character-folio .sheet-identity { flex: 1 1 160px; } .character-folio .sheet-shields { margin-left: 0; } .character-folio .sheet-shield, .character-folio .sheet-level { width: 64px; height: 65px; } .character-folio .sheet-shield-value, .character-folio .sheet-level > span { font-size: 25px; } .folio-toolbar-label { display: none; } .character-folio .sheet-trait-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (max-width: 520px) { .character-folio { padding: 16px 12px 32px; gap: 14px; } .character-folio .sheet-hero { padding: 20px; } .character-folio .sheet-hero-top { gap: 12px; } .character-folio .sheet-portrait { width: 58px; height: 68px; } .character-folio .sheet-identity { flex: 1 1 150px; } .character-folio .sheet-eyebrow { font-size: 12px; letter-spacing: 1px; } .character-folio .sheet-name { font-size: 28px; } .character-folio .sheet-shield, .character-folio .sheet-level { width: auto; height: auto; flex-direction: row; gap: 7px; padding: 6px 10px; border-radius: var(--radius-sm); } .character-folio .sheet-shield-value, .character-folio .sheet-level > span { font-size: 17px; } .character-folio .sheet-shield-label, .character-folio .sheet-level > small { font-size: 12px; } .character-folio .sheet-hero-top { min-height: 0; } .character-folio .sheet-badges { margin-top: 8px; } .folio-resources { gap: 8px; } .folio-resource { padding: 12px; } .folio-resource-label h2 { font-size: 12px; } .character-folio .sheet-trait { padding: 9px 4px; gap: 2px; } .character-folio .sheet-trait-actions { font-size: 12px; } .folio-traits-heading > span { display: none; } .character-folio .sheet-play { grid-template-columns: 1fr; } .character-folio .sheet-play > .sheet-col:last-child { display: flex; flex-direction: column; align-items: stretch; grid-column: auto; } .character-folio .sheet-panel { padding: 17px; } .folio-roll-settings > summary > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; } .folio-toolbar .sheet-ghost > span { display: none; } .character-folio .sheet-toolbar-actions { gap: 5px; } .character-folio .sheet-toolbar > .sheet-ghost { padding-inline: 9px; font-size: 12px; } }
 @container (max-width: 520px) {
   .character-folio .sheet-play > .sheet-col { width: 100%; align-items: stretch; }
   .character-folio .sheet-play > .sheet-col > .sheet-panel { width: 100%; }
@@ -524,3 +499,22 @@
 .sheet-toolbar-actions .sheet-primary { white-space: nowrap; }
 @container (max-width: 520px) { .character-folio .sheet-toolbar > .sheet-ghost .folio-back-label { display: none; } .character-folio .sheet-toolbar > .sheet-ghost { min-width: 40px; min-height: 40px; justify-content: center; } }
 @container (max-width: 520px) { .character-folio .sheet-name { font-size: clamp(22px, 6.2vw, 28px); } }
+
+/* Character pages on the shared layout kit (see components/Accordion.tsx). */
+.character-folio.sg-page { display: flex; flex-direction: column; max-width: 1100px; margin: 0 auto; padding: 24px clamp(12px, 2.5vw, 38px) 48px; gap: 14px; }
+.folio-sections { display: grid; gap: 6px; min-width: 0; }
+.folio-sections > .sg-section { min-width: 0; }
+.character-folio .folio-sections .sg-section-body { gap: 10px; }
+.character-folio .folio-sections .sg-section-body > * { min-width: 0; }
+.character-folio .folio-sections .sg-section-actions .sheet-panel-note { overflow-wrap: anywhere; }
+.character-folio .folio-sections .folio-difficulty { margin: 2px 0; }
+.character-folio .folio-sections .sheet-mini-label { margin-top: 2px; }
+.character-folio .folio-sections .folio-next-summary { margin-top: 2px; }
+.character-folio .sg-section.is-sky .sg-section-head { background: color-mix(in srgb, var(--color-sky-400) 7%, var(--ds-surface)); }
+
+/* Character library list (modules/sheets/index.tsx). */
+.sg-page .daggery-character-grid { gap: 14px; }
+.sg-page .daggery-character-cover { border-radius: var(--radius-sm); }
+.sg-page .sg-card-text small { overflow-wrap: anywhere; }
+.sg-page .sg-empty > p { margin: 0 0 8px; }
+.sg-page .sg-empty > .daggery-primary { margin-top: 6px; }
