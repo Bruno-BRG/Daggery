@@ -297,6 +297,68 @@ const T = {
    ]
   ]
  },
+ "iron-oracle": {
+  "h": [
+   "Likelihood",
+   "Yes on",
+   "Chance"
+  ],
+  "nonum": true,
+  "c": [
+   [
+    "Almost certain",
+    "Likely",
+    "50 / 50",
+    "Unlikely",
+    "Small chance"
+   ],
+   [
+    "7+",
+    "10+",
+    "13+",
+    "16+",
+    "19+"
+   ],
+   [
+    "90%",
+    "75%",
+    "54%",
+    "31%",
+    "15%"
+   ]
+  ]
+ },
+ "iron-ranks": {
+  "h": [
+   "Rank",
+   "Mark progress",
+   "Difficulty"
+  ],
+  "nonum": true,
+  "c": [
+   [
+    "Minor",
+    "Serious",
+    "Grave",
+    "Dire",
+    "Legendary"
+   ],
+   [
+    "3 boxes",
+    "2 boxes",
+    "1 box",
+    "2 ticks",
+    "1 tick"
+   ],
+   [
+    "10",
+    "13",
+    "15",
+    "18",
+    "20"
+   ]
+  ]
+ },
  "how-much": {
   "h": [
    "How Much? How Well?"
@@ -1186,6 +1248,132 @@ const T = {
    ]
   ]
  },
+ "iron-price": {
+  "h": [
+   "Pay the Price"
+  ],
+  "c": [
+   [
+    "Someone you trust acts against you",
+    "Something of value is lost or destroyed",
+    "The danger grows: tick a countdown",
+    "You are separated from someone or something",
+    "Mark a Stress",
+    "Take damage (by tier)",
+    "A new danger or foe appears",
+    "Lose progress: clear 1 box on a related track",
+    "The GM gains a Fear",
+    "An unwelcome truth comes out",
+    "Time is lost; the world moves without you",
+    "Two prices: roll twice, both happen"
+   ]
+  ]
+ },
+ "iron-vignette": {
+  "h": [
+   "Begin a Session: Vignette"
+  ],
+  "c": [
+   [
+    "A foe makes a move against you",
+    "A rival gains ground on your oath",
+    "Someone you care about is in trouble",
+    "A secret is uncovered far away",
+    "A faction changes its plans",
+    "A threat grows: tick a countdown",
+    "An omen appears to a stranger",
+    "An ally finds a lead for you",
+    "A place you know is changed",
+    "Something old wakes up",
+    "A messenger is on the way to you",
+    "The goal of your oath moves or changes"
+   ]
+  ]
+ },
+ "iron-waypoint": {
+  "h": [
+   "Waypoint"
+  ],
+  "c": [
+   [
+    "A ruined outpost",
+    "A river crossing",
+    "A hunter’s camp",
+    "A shrine to a forgotten god",
+    "A cave system",
+    "An old battlefield",
+    "An abandoned village",
+    "A lookout or tower",
+    "A strange monolith",
+    "A beast’s lair",
+    "A trading post",
+    "A crossroads"
+   ]
+  ]
+ },
+ "iron-opportunity": {
+  "h": [
+   "Find an Opportunity"
+  ],
+  "c": [
+   [
+    "The terrain favors you",
+    "A hidden path",
+    "Useful supplies",
+    "You learn a foe’s weakness",
+    "Shelter or safety",
+    "A distraction you can use",
+    "Someone offers help",
+    "A clue to your oath",
+    "Something left behind",
+    "High ground: advantage on your next roll",
+    "An enemy gives themselves away",
+    "Momentum: gain a Hope"
+   ]
+  ]
+ },
+ "iron-discovery": {
+  "h": [
+   "Make a Discovery"
+  ],
+  "c": [
+   [
+    "An untouched place of power",
+    "A lost settlement, still alive",
+    "A great beast at peace",
+    "Ruins of a vanished people",
+    "A gate to another realm",
+    "A trove of old knowledge",
+    "A sacred grove or spring",
+    "A relic fallen from the sky",
+    "A hidden valley",
+    "A sleeping titan",
+    "A living legend",
+    "Something new: roll Descriptor + Subject"
+   ]
+  ]
+ },
+ "iron-chaos": {
+  "h": [
+   "Confront Chaos"
+  ],
+  "c": [
+   [
+    "Distances lie: the way twists back",
+    "Time slips: hours vanish",
+    "A voice speaks your name",
+    "The dead walk",
+    "Shadows move wrong",
+    "Corruption spreads through the land",
+    "A creature not of this world",
+    "Magic runs wild",
+    "A sickness of the mind: mark a Stress",
+    "Echoes of a battle long past",
+    "A door where none should be",
+    "Something nameless: roll Action + Subject"
+   ]
+  ]
+ },
  "faction": {
   "h": [
    "Faction",
@@ -1271,6 +1459,275 @@ const T = {
     "Lighter or heavier than it looks",
     "Someone wants it back"
    ]
+  ]
+ }
+};
+const M = {
+ "session": {
+  "label": "Session moves",
+  "moves": [
+   {
+    "id": "begin-session",
+    "name": "Begin a Session",
+    "trigger": "When you begin a significant session.",
+    "text": "Set or review your flags, recap where you left off, and set the scene: where you are and what you intend. You may spotlight a danger, opportunity or insight elsewhere: roll a Vignette, envision it, and gain a Hope as you return to your character."
+   },
+   {
+    "id": "set-flag",
+    "name": "Set a Flag",
+    "trigger": "When you want to avoid or handle with care some content.",
+    "text": "Note it. When it comes up, use Change Your Fate."
+   },
+   {
+    "id": "change-fate",
+    "name": "Change Your Fate",
+    "trigger": "When flagged content comes up, or a result does not fit the story you want.",
+    "text": "Reframe or replace it: reroll the oracle, or choose another outcome that keeps the stakes."
+   },
+   {
+    "id": "take-break",
+    "name": "Take a Break",
+    "trigger": "When you pause during a session.",
+    "text": "Note what was happening and what you intend, so you can pick it up."
+   },
+   {
+    "id": "end-session",
+    "name": "End a Session",
+    "trigger": "When you end a session.",
+    "text": "If there is an oath, connection or situation you want to focus on next time, note it and gain a Hope."
+   }
+  ]
+ },
+ "quest": {
+  "label": "Quest moves",
+  "moves": [
+   {
+    "id": "swear-vow",
+    "name": "Take an Oath",
+    "trigger": "When you swear an oath to complete a quest.",
+    "roll": "Presence vs the rank’s Difficulty",
+    "strong": "You know what to do next. Gain a Hope.",
+    "weak": "The next step is unclear: ask the Oracle or Gather Information.",
+    "miss": "A significant obstacle stands in your way before you can begin: envision it, or Pay the Price."
+   },
+   {
+    "id": "milestone",
+    "name": "Reach a Milestone",
+    "trigger": "When you make significant progress on a vow: overcome an obstacle, learn a truth, reach a place.",
+    "text": "Mark progress on the oath at its rank."
+   },
+   {
+    "id": "fulfill-vow",
+    "name": "Keep Your Oath",
+    "trigger": "When you reach the end of a quest.",
+    "roll": "Progress roll",
+    "strong": "Your oath is kept. If Serious or higher, it is a milestone for levelling up.",
+    "weak": "It is done, but there is more to it: take a new oath to finish it, or accept a lesser outcome.",
+    "miss": "It is undone or you were deceived: take a new oath at a higher rank, or break this one."
+   },
+   {
+    "id": "forsake-vow",
+    "name": "Break Your Oath",
+    "trigger": "When you abandon an oath.",
+    "text": "Clear the track and mark 2 Stress. Someone may hold it against you."
+   }
+  ]
+ },
+ "adventure": {
+  "label": "Adventure moves",
+  "moves": [
+   {
+    "id": "face-danger",
+    "name": "Face Danger",
+    "trigger": "When you act despite a threat or under pressure.",
+    "roll": "The trait that fits",
+    "strong": "You do it.",
+    "weak": "You do it, but at a cost: mark a Stress, lose time, or something slips.",
+    "miss": "You fail or your progress is undermined: Pay the Price."
+   },
+   {
+    "id": "secure-advantage",
+    "name": "Secure an Advantage",
+    "trigger": "When you prepare, assess, or gain leverage.",
+    "roll": "The trait that fits",
+    "strong": "Take advantage on your next roll, or gain a Hope.",
+    "weak": "Take advantage on your next roll.",
+    "miss": "It goes wrong: Pay the Price."
+   },
+   {
+    "id": "gather-information",
+    "name": "Gather Information",
+    "trigger": "When you search, investigate, or ask questions.",
+    "roll": "Knowledge or Instinct",
+    "strong": "You learn something helpful and specific. If it advances an oath, Reach a Milestone.",
+    "weak": "You learn something, but it complicates things: ask the Oracle what.",
+    "miss": "Your search turns up a hard truth or a danger: Pay the Price."
+   },
+   {
+    "id": "compel",
+    "name": "Compel",
+    "trigger": "When you persuade, threaten, or bargain.",
+    "roll": "Presence",
+    "strong": "They do what you want.",
+    "weak": "They do it, but ask something in return.",
+    "miss": "They refuse or turn against you: Pay the Price."
+   },
+   {
+    "id": "make-camp",
+    "name": "Make Camp",
+    "trigger": "When you rest in the wild.",
+    "text": "Take a Daggerheart rest (the GM gains Fear as the rules say), then roll Rest and Camp for what happens."
+   }
+  ]
+ },
+ "exploration": {
+  "label": "Exploration moves",
+  "moves": [
+   {
+    "id": "undertake-expedition",
+    "name": "Undertake an Expedition",
+    "trigger": "When you travel through dangerous ground. Give it a rank and a track; roll for each segment.",
+    "roll": "Instinct, Agility or Knowledge vs the rank’s Difficulty",
+    "strong": "Mark progress and reach a waypoint.",
+    "weak": "Mark progress, but suffer a cost (supplies, a Stress, a delay) or Pay the Price.",
+    "miss": "You are waylaid: Pay the Price, no progress."
+   },
+   {
+    "id": "explore-waypoint",
+    "name": "Explore a Waypoint",
+    "trigger": "When you reach a waypoint and look around.",
+    "roll": "Instinct or Knowledge",
+    "strong": "Find an Opportunity. On a critical, Make a Discovery instead.",
+    "weak": "You find a detail and face a choice: a risk for a reward.",
+    "miss": "Peril: Pay the Price. On a failure with Fear, make a Fear Check: a pass spends 1 Fear and you Confront Chaos."
+   },
+   {
+    "id": "make-discovery",
+    "name": "Make a Discovery",
+    "trigger": "When you find something wondrous.",
+    "text": "Roll Make a Discovery and envision it. Gain a Hope, or Reach a Milestone if it bears on an oath."
+   },
+   {
+    "id": "confront-chaos",
+    "name": "Confront Chaos",
+    "trigger": "When you meet something strange and wrong.",
+    "text": "Roll Confront Chaos and envision it. Face Danger to endure or escape it."
+   },
+   {
+    "id": "finish-expedition",
+    "name": "Finish an Expedition",
+    "trigger": "When you reach the destination.",
+    "roll": "Progress roll",
+    "strong": "You arrive safely; the place is as you hoped.",
+    "weak": "You arrive, but at a cost, or the place is not what you expected.",
+    "miss": "You are lost or turned back: Pay the Price, then raise the rank and keep going, or abandon it."
+   }
+  ]
+ },
+ "connection": {
+  "label": "Connection moves",
+  "moves": [
+   {
+    "id": "make-connection",
+    "name": "Make a Connection",
+    "trigger": "When you build a relationship with someone.",
+    "roll": "Presence",
+    "strong": "They become a connection: give them a role and a rank, and a track.",
+    "weak": "They become a connection after you do something for them first.",
+    "miss": "They distrust you or want too much: Pay the Price."
+   },
+   {
+    "id": "develop-relationship",
+    "name": "Develop Your Relationship",
+    "trigger": "When you share a meaningful moment or help a connection.",
+    "text": "Mark progress on their track."
+   },
+   {
+    "id": "forge-bond",
+    "name": "Forge a Bond",
+    "trigger": "When your relationship is ready to become a bond.",
+    "roll": "Progress roll",
+    "strong": "The bond is forged. Once per session they can help you: an advantage die (d6).",
+    "weak": "They ask one more thing of you first.",
+    "miss": "Something comes between you: Pay the Price."
+   }
+  ]
+ },
+ "scene": {
+  "label": "Scene challenge",
+  "moves": [
+   {
+    "id": "begin-scene",
+    "name": "Begin the Scene",
+    "trigger": "When you face a tense, extended situation: a chase, an infiltration, a debate.",
+    "text": "Name the objective and give it a Grave track. Set a tension clock: 4 segments at a disadvantage, 6 on even footing, 8 with an advantage."
+   },
+   {
+    "id": "scene-action",
+    "name": "Face Danger or Secure an Advantage (in a scene)",
+    "trigger": "When you act within a scene challenge.",
+    "roll": "The trait that fits",
+    "strong": "Mark progress.",
+    "weak": "Mark progress and fill 1 clock segment.",
+    "miss": "Fill 1 segment (2 on a failure with Fear) and Pay the Price."
+   },
+   {
+    "id": "finish-scene",
+    "name": "Finish the Scene",
+    "trigger": "When the track or the clock is full, or the story ends it.",
+    "roll": "Progress roll",
+    "strong": "You achieve your objective.",
+    "weak": "You achieve it at a cost, or only in part.",
+    "miss": "You fail: Pay the Price."
+   }
+  ]
+ },
+ "combat": {
+  "label": "Combat moves",
+  "moves": [
+   {
+    "id": "enter-fray",
+    "name": "Join the Fray",
+    "trigger": "When a fight begins.",
+    "roll": "Instinct or Agility",
+    "strong": "You act first.",
+    "weak": "The GM takes the spotlight first.",
+    "miss": "The GM takes the spotlight first, and something goes wrong: Pay the Price."
+   },
+   {
+    "id": "battle",
+    "name": "Battle",
+    "trigger": "When you resolve a minor fight in one roll.",
+    "roll": "The trait that fits",
+    "strong": "You win.",
+    "weak": "You win, and Pay the Price.",
+    "miss": "You lose, and Pay the Price."
+   },
+   {
+    "id": "gm-turn",
+    "name": "The GM turn",
+    "trigger": "When the spotlight passes to the GM in a full fight.",
+    "text": "Make a Fear Check: a fail is a free action (Tactics); a pass spends Fear (Fear Spend). Chain until a check fails."
+   }
+  ]
+ },
+ "fate": {
+  "label": "Fate moves",
+  "moves": [
+   {
+    "id": "ask-oracle",
+    "name": "Ask the Oracle",
+    "trigger": "When you need an answer.",
+    "roll": "Duality Dice vs likelihood",
+    "text": "Pick a likelihood; doubles bring an extreme result or a twist. For open questions, roll Meaning."
+   },
+   {
+    "id": "pay-price",
+    "name": "Pay the Price",
+    "trigger": "When a move tells you to.",
+    "roll": "Pay the Price table",
+    "text": "Choose the most obvious negative outcome, or roll. A severe price (failure with Fear, the GM spends 1 Fear) rolls twice."
+   }
   ]
  }
 };

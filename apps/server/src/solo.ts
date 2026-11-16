@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type Database from 'better-sqlite3';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { DUALITY_MAX_FEAR, hasFeature, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_CLOCK_LIMIT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_TRACKER_LIMIT, SOLO_WORLD_MOVES, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone, type SoloTrackerItem } from '@daggery/shared';
+import { DUALITY_MAX_FEAR, hasFeature, IRON_CLOCK_SIZES, IRON_TRACK_TICKS, ironRank, isDualityVariant, SOLO_PROGRESS_LIMIT, type SoloProgressTrack, initialSoloState, resolveSoloOracle, resolveSoloScene, rollDie, soloPrompt, SOLO_ADVANCEMENT, SOLO_CLOCK_LIMIT, SOLO_EXTRA_TABLES, SOLO_RULES_VERSION, SOLO_THEMES, SOLO_TRACKER_LIMIT, SOLO_WORLD_MOVES, type Rng, type SoloActionOutcome, type SoloEntry, type SoloResult, type SoloSnapshot, type SoloState, type SoloTone, type SoloTrackerItem } from '@daggery/shared';
 import { openLines, rollDuality } from './solo-duality';
 import type { CampaignService } from './campaign-service';
 import { readSessionToken } from './campaign-routes';
@@ -18,6 +18,8 @@ const integer = (value: unknown, min: number, max: number) => {
   if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) throw new Error('Invalid solo number');
   return value;
 };
+/** Oracles whose Hope and Fear faces a player may roll at the table and report. */
+const DICE_ORACLES = ['duality-oracle', 'iron-oracle'];
 /** Player-reported oracle faces: two d12 results, 1 to 12. */
 function reportedDice(value: unknown): { hope: number; fear: number } {
   const input = object(value), hope = input.hope, fear = input.fear;
@@ -117,6 +119,27 @@ export class SoloService {
       }
       if (input.threads !== undefined) state.threads = list(input.threads);
       if (input.characters !== undefined) state.characters = list(input.characters);
+      if (input.variant !== undefined) {
+        if (!isDualityVariant(input.variant)) throw new Error('Invalid engine variant');
+        state.variant = input.variant;
+      }
+      if (input.tracks !== undefined) {
+        if (!Array.isArray(input.tracks) || input.tracks.length > SOLO_PROGRESS_LIMIT) throw new Error('Invalid progress tracks');
+        state.tracks = input.tracks.map(entry => {
+          const item = object(entry), id = string(item.id, 80), name = string(item.name, 120).trim();
+          const kind = string(item.kind, 20), rank = string(item.rank, 20);
+          if (!/^[a-zA-Z0-9-]{1,80}$/.test(id) || !name || typeof item.done !== 'boolean') throw new Error('Invalid progress track');
+          if (!['vow', 'expedition', 'connection', 'scene'].includes(kind)) throw new Error('Invalid progress track kind');
+          ironRank(rank);
+          const track: SoloProgressTrack = { id, name, kind: kind as SoloProgressTrack['kind'], rank: rank as SoloProgressTrack['rank'], ticks: integer(item.ticks, 0, IRON_TRACK_TICKS), done: item.done };
+          if (item.clock !== undefined) {
+            const clock = object(item.clock), size = integer(clock.size, 4, 8);
+            if (!(IRON_CLOCK_SIZES as readonly number[]).includes(size)) throw new Error('Invalid tension clock');
+            track.clock = { size, filled: integer(clock.filled, 0, size) };
+          }
+          return track;
+        });
+      }
       if (input.clocks !== undefined) {
         if (!Array.isArray(input.clocks) || input.clocks.length > SOLO_CLOCK_LIMIT) throw new Error('Invalid countdowns');
         state.clocks = input.clocks.map(entry => {
@@ -139,7 +162,7 @@ export class SoloService {
     if (previous) return previous;
     let question = string(input.question ?? '', 2000);
     const state = this.read<SoloState>(campaign, 'solo', 'state') ?? initialSoloState();
-    const reported = (kind === 'oracle' || kind === 'duality-oracle') && input.dice !== undefined ? reportedDice(input.dice) : undefined;
+    const reported = (kind === 'oracle' || DICE_ORACLES.includes(kind)) && input.dice !== undefined ? reportedDice(input.dice) : undefined;
     let result: SoloResult;
     let fearAfter: { kind: 'fear'; value: number } | undefined;
     if (kind === 'oracle') {
@@ -160,13 +183,13 @@ export class SoloService {
       if (!table) throw new Error('Invalid prompt table');
       const die = rollDie(12);
       result = { title: table.entries[die - 1]!, detail: `${table.name} · interpret in context. This prompt grants no new abilities, damage, or extra actions.`, total: die, tone: 'neutral' };
-    } else if (kind.startsWith('duality-')) {
+    } else if (/^(duality|iron)-/.test(kind)) {
       const pool = this.read<{ kind: string; value: number }>(campaign, 'combat', 'fear');
       const fear = Math.min(DUALITY_MAX_FEAR, Math.max(0, Math.trunc(Number(pool?.value) || 0)));
-      const scripted = reported && kind === 'duality-oracle' ? scriptedRng([reported.hope, reported.fear], this.rng) : this.rng;
+      const scripted = reported && DICE_ORACLES.includes(kind) ? scriptedRng([reported.hope, reported.fear], this.rng) : this.rng;
       const outcome = rollDuality(kind, { state, fear, rng: scripted, input, question });
       result = outcome.result;
-      if (reported && kind === 'duality-oracle') result = { ...result, detail: result.detail + ' (player-reported dice)' };
+      if (reported && DICE_ORACLES.includes(kind)) result = { ...result, detail: result.detail + ' (player-reported dice)' };
       question = outcome.question ?? question;
       if (outcome.fearSpent > 0) fearAfter = { kind: 'fear', value: fear - outcome.fearSpent };
     } else if (kind === 'journal') {

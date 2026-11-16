@@ -1,0 +1,2627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Duality GME: A Solo Manual for Daggerheart</title>
+<!-- Built by tools/build_duality_pdf.ts: the tables and moves between the markers come from
+     packages/shared/src/duality-engine.ts and duality-variants.ts. Everything else is written here. -->
+<style>
+  @page { size: Letter; margin: 0; }
+  :root {
+    --ink: #1b1b1d; --band: #2a2a2d; --grey: #e6e6e8; --rule: #b9b9be; --soft: #6a6a70;
+    --hope: #b07d12; --fear: #5b2a86;
+    --display: Bahnschrift, "Segoe UI", Arial, sans-serif; --serif: Cambria, Georgia, "Times New Roman", serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { width: 215.9mm; font-family: var(--serif); font-size: 9.9pt; line-height: 1.34; color: var(--ink); }
+  .page { position: relative; width: 215.9mm; height: 279.4mm; overflow: hidden; break-after: page; background: #fff; }
+  .page:last-child { break-after: auto; }
+
+  /* Title band: a dark strip with the chapter title sitting on its lower edge. */
+  .band { position: absolute; left: 0; right: 0; top: 0; height: 21mm; background: var(--band); }
+  .band h1 { position: absolute; left: 16mm; bottom: -1.2mm; margin: 0; font-family: var(--display); font-weight: 700;
+    font-size: 25pt; letter-spacing: .6px; color: #fff; text-transform: uppercase; line-height: 1; }
+  .band h1 small { font-size: 12pt; letter-spacing: 1px; color: #c9c9cf; margin-left: 3mm; }
+  .cols { position: absolute; top: 27mm; left: 16mm; right: 16mm; bottom: 19mm; column-count: 2; column-gap: 7mm; column-fill: auto; }
+  .cols.one { column-count: 1; }
+  .folio { position: absolute; bottom: 9mm; font-family: var(--display); font-weight: 700; font-size: 11pt; }
+  .folio.l { left: 16mm; } .folio.r { right: 16mm; }
+
+  h2 { font-family: var(--display); font-weight: 700; font-size: 12.5pt; text-transform: uppercase; letter-spacing: .3px;
+    margin: 0 0 1.2mm; line-height: 1.1; break-after: avoid; }
+  h3 { font-family: var(--display); font-weight: 700; font-size: 11pt; text-transform: uppercase; letter-spacing: .3px;
+    margin: 0 0 .8mm; line-height: 1.1; break-after: avoid; }
+  h4 { font-family: var(--serif); font-weight: 700; font-size: 10pt; text-transform: uppercase; letter-spacing: .4px; margin: 0 0 .8mm; break-after: avoid; }
+  p { margin: 0 0 1.6mm; text-align: justify; hyphens: auto; }
+  ul, ol { margin: 0 0 1.8mm; padding-left: 5mm; }
+  li { margin: 0 0 .5mm; }
+  .block { margin: 0 0 3.6mm; }
+  .keep { break-inside: avoid; }
+  .col { break-before: column; }
+  .wide { column-span: all; }
+  i.mv { font-style: italic; }
+
+  .callout { break-inside: avoid; background: #3a3a3e; color: #fff; padding: 3mm 3.4mm; margin: 0 0 3.6mm; font-weight: 700; }
+  .callout p { text-align: left; margin: 0 0 1.2mm; } .callout p:last-child { margin: 0; }
+  .callout h4 { color: #fff; }
+  .aside { break-inside: avoid; border-top: .5mm solid var(--ink); border-bottom: .5mm solid var(--ink); padding: 2mm 0 1mm; margin: 0 0 3.6mm; }
+  .aside h4 { margin-bottom: 1mm; }
+
+  /* Tables: light bars like a reference sheet. */
+  table { width: 100%; border-collapse: collapse; margin: .4mm 0 1.6mm; font-size: 9pt; line-height: 1.24; break-inside: avoid; }
+  th { font-family: var(--display); font-weight: 700; text-align: left; padding: .7mm 1.4mm; border-bottom: .45mm solid var(--ink); font-size: 8.5pt; }
+  td { padding: .55mm 1.4mm; vertical-align: top; border-bottom: .2mm solid #fff; }
+  tr:nth-child(even) td { background: var(--grey); }
+  td.n, th.n { width: 9mm; text-align: center; font-family: var(--display); font-weight: 700; white-space: nowrap; }
+  .block:has(> .tname) { break-inside: avoid; }
+  .tname { font-family: var(--display); font-weight: 700; text-transform: uppercase; font-size: 10.5pt; margin: 0 0 .4mm; letter-spacing: .3px; break-after: avoid; }
+  .tdesc { margin: 0 0 .8mm; font-size: 9.2pt; }
+
+  /* Moves. */
+  .move { margin: 0 0 3.8mm; }
+  .move > p { margin-bottom: 1.2mm; }
+  .move .trig b { font-weight: 700; }
+  .rollline { font-size: 8.6pt; margin: 0 0 1.2mm; }
+  .chip { display: inline-block; font-family: var(--display); font-weight: 700; font-size: 7.4pt; letter-spacing: .5px; color: #fff;
+    background: var(--ink); padding: .2mm 1.4mm; margin-right: 1.4mm; text-transform: uppercase; }
+  .out { display: grid; grid-template-columns: 9.6mm 1fr; column-gap: 1.6mm; align-items: start; margin: 0 0 1mm; break-inside: avoid; }
+  .out p { margin: 0; text-align: left; }
+  .ic { display: flex; gap: .5mm; padding-top: .2mm; }
+  .ic span { width: 4.4mm; height: 4.4mm; border: .35mm solid var(--ink); border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-family: "Segoe UI Symbol", var(--display); font-size: 7pt; font-weight: 700; line-height: 1; }
+  .note { font-size: 9.1pt; color: #333; border-left: .8mm solid var(--rule); padding: .6mm 0 .6mm 2.4mm; margin: 1.4mm 0 0; text-align: left; break-inside: avoid; }
+  .note b.lab { font-family: var(--display); font-size: 7.4pt; letter-spacing: .6px; text-transform: uppercase; margin-right: 1mm; }
+
+  /* Diagrams. */
+  .fig { break-inside: avoid; display: flex; align-items: center; justify-content: center; gap: 2mm; margin: 1mm 0 2mm; flex-wrap: wrap; }
+  .fig .lbl { font-family: var(--display); font-weight: 700; font-size: 7pt; text-transform: uppercase; text-align: center; letter-spacing: .3px; }
+  .fig .op { font-family: var(--display); font-weight: 700; font-size: 15pt; }
+  .stack { display: flex; flex-direction: column; align-items: center; gap: .6mm; }
+  .cap { font-size: 8pt; text-align: center; color: var(--soft); margin: -1mm 0 2.4mm; font-style: italic; }
+  svg { display: block; }
+
+  /* Contents and index. */
+  .toc h4 { border-bottom: .35mm solid var(--ink); margin: 2.4mm 0 .8mm; font-family: var(--display); font-size: 9pt; }
+  .toc h4:first-child { margin-top: 0; }
+  .toc table.tt { margin: 0 0 .4mm; font-size: 8pt; line-height: 1.3; break-inside: auto; }
+  .cols.toc table.tt { font-size: 7.6pt; line-height: 1.24; }
+  .toc table.tt td { padding: 0; background: none; border: 0; vertical-align: bottom; }
+  .toc table.tt td.l { white-space: nowrap; padding-right: 1mm; }
+  .toc table.tt td.d { width: 100%; border-bottom: .25mm dotted var(--soft); }
+  .toc table.tt td.p { white-space: nowrap; padding-left: 1mm; text-align: right; }
+  .cols.toc h4 { margin: 1.6mm 0 .5mm; font-size: 8.4pt; }
+  .toc h4 .pg { float: right; }
+
+  /* Cover. */
+  .cover { background: #1d1c21; color: #fff; }
+  .cover .frame { position: absolute; inset: 10mm; border: .5mm solid #6d6577; }
+  .cover .inner { position: absolute; left: 0; right: 0; top: 46mm; text-align: center; }
+  .cover p { text-align: center; margin: 0; }
+  .cover .pre { font-family: var(--display); font-weight: 700; letter-spacing: 9px; font-size: 20pt; color: var(--hope); margin: 0; }
+  .cover .title { font-family: var(--display); font-weight: 700; font-size: 92pt; letter-spacing: 6px; line-height: .95; margin: 4mm 0 0; }
+  .cover .rule { width: 120mm; height: .6mm; background: #6d6577; margin: 7mm auto; }
+  .cover .sub { font-family: var(--display); font-weight: 700; letter-spacing: 3px; font-size: 13pt; text-transform: uppercase; }
+  .cover .tag { font-family: var(--serif); font-style: italic; font-size: 13pt; color: #cfc8da; margin-top: 3mm; }
+  .cover .emblem { margin: 14mm auto 0; width: 92mm; }
+  .cover .foot { position: absolute; left: 0; right: 0; bottom: 20mm; text-align: center; font-family: var(--display); font-size: 9pt; letter-spacing: 1.5px; color: #aaa3b4; text-transform: uppercase; }
+
+  /* Tracker sheet. */
+  .sheet { position: absolute; top: 27mm; left: 14mm; right: 14mm; bottom: 17mm; display: flex; flex-direction: column; gap: 3mm; font-family: var(--display); }
+  .sheet .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .sheet .box { border: .45mm solid var(--ink); padding: 2mm 2.6mm; }
+  .sheet .box h4 { font-family: var(--display); font-size: 9.5pt; margin: 0 0 1.4mm; }
+  .sheet .line { border-bottom: .3mm solid var(--ink); height: 6mm; font-size: 7pt; color: var(--soft); text-transform: uppercase; letter-spacing: .4px; padding-top: .3mm; }
+  .sheet .trkrow { margin: 0 0 2.2mm; }
+  .sheet .trkrow .meta { display: flex; justify-content: space-between; font-size: 6.6pt; text-transform: uppercase; letter-spacing: .3px; margin: .6mm 0 .8mm; }
+  .sheet .ranks span { margin-left: 1.8mm; }
+  .sheet .ranks span::before { content: ""; display: inline-block; width: 2.2mm; height: 2.2mm; border: .3mm solid var(--ink); margin-right: .6mm; vertical-align: -.3mm; }
+  .sheet .pips { display: flex; gap: 1.2mm; align-items: center; font-size: 8pt; font-weight: 700; }
+  .sheet .pips i { width: 4.6mm; height: 4.6mm; border: .35mm solid var(--ink); border-radius: 50%; display: inline-block; }
+  .sheet .row2 .ranks { font-size: 5.4pt; letter-spacing: 0; } .sheet .row2 .ranks span { margin-left: 1mm; }
+  .sheet .notes { flex: 1; }
+  .sheet .clocks { display: flex; gap: 5mm; justify-content: space-around; }
+  .sheet small { font-family: var(--serif); font-size: 7.4pt; color: var(--soft); }
+</style>
+</head>
+<body>
+
+<!-- ================================================================ COVER -->
+<section class="page cover">
+  <div class="frame"></div>
+  <div class="inner">
+    <p class="pre">DUALITY</p>
+    <p class="title">GME</p>
+    <div class="rule"></div>
+    <div class="sub">A solo manual for Daggerheart</div>
+    <div class="tag">Take the oath. Make the move. Pay the price.</div>
+    <div class="emblem" data-emblem></div>
+  </div>
+  <div class="foot">Rules version 0.1 &middot; Unofficial fan-made rules for use with Daggerheart</div>
+</section>
+
+<!-- ============================================================= CONTENTS -->
+<section class="page" data-skip-toc>
+  <header class="band"><h1>Contents</h1></header>
+  <div class="cols toc" data-toc></div>
+</section>
+
+<!-- ========================================================= INTRODUCTION -->
+<section class="page" data-ch="Introduction">
+  <header class="band"><h1>Introduction</h1></header>
+  <div class="cols">
+    <div class="block">
+      <h2>What is Duality GME?</h2>
+      <p>Duality GME is an independent solo-play supplement for Daggerheart. Play without a Game Master using sworn oaths, moves with clear triggers, progress tracks, and oracle tables. Your character&rsquo;s Duality Dice drive the action; your imagination brings the world to life.</p>
+      <p>Your character is a normal Daggerheart character. Their traits, Experiences, Hope, Stress, Hit Points and Armor work as the core rules say, and every adversary comes from a Daggerheart stat block. What changes is <b>who decides what happens</b>. Instead of a GM, three things do: the <b>moves</b> in this book, the <b>Fear</b> your own rolls give the world, and a set of <b>oracle tables</b>.</p>
+      <p>You play by describing what your character does, making a move when the story calls for one, and interpreting the result. The dice tell you how well it went. You decide what that looks like.</p>
+    </div>
+    <div class="block">
+      <h2>What you need</h2>
+      <ul>
+        <li><b>The Daggerheart rules</b> for character creation, combat, damage and adversaries.</li>
+        <li><b>The Duality Dice:</b> two d12 in different colors, one for Hope and one for Fear.</li>
+        <li><b>Two d10:</b> the challenge dice for progress rolls.</li>
+        <li><b>A d6</b> for advantage dice, <b>a d20</b> for adversary attacks, and the damage dice your character uses.</li>
+        <li><b>A character sheet</b>, and the <b>tracker sheet</b> at the back of this book (or a notebook).</li>
+        <li>Tokens or a counter for <b>Hope</b> and <b>Fear</b>.</li>
+      </ul>
+      <p>Every table in this book is rolled on a d12, so the Duality Dice double as oracle dice. Play with paper and dice, a journal, a virtual tabletop, or any tools you prefer. No app or online service is required.</p>
+    </div>
+    <div class="block">
+      <h2>The core loop</h2>
+      <ol>
+        <li><b>Create your character</b> with the Daggerheart rules.</li>
+        <li><b>Take an Oath</b> on an inciting incident. This is your first quest.</li>
+        <li><b>Begin a Session</b> each time you sit down to play.</li>
+        <li><b>Envision, then make moves.</b> When you do something a move describes, make that move.</li>
+        <li><b>Read the outcome</b> as a strong hit, a weak hit or a miss. On a miss, <b>Pay the Price</b>.</li>
+        <li><b>Mark progress</b> on your oaths, expeditions, connections and scene challenges, and make a <b>progress roll</b> to finish them.</li>
+        <li><b>End a Session</b> when you stop.</li>
+      </ol>
+      <p>That is the whole game. Everything else in this book is a detail of one of those seven steps.</p>
+    </div>
+    <div class="block">
+      <h2>Fiction first</h2>
+      <p>Every move starts and ends in the story. Before you roll, <b>envision</b> what your character is doing and why it is risky. After you roll, envision what the result looks like. If nothing is at stake, do not roll: it simply happens. If you are not sure which move fits, choose the one closest to what your character wants. The outcome matters more than the label.</p>
+    </div>
+    <div class="block">
+      <h2>You are the GM, and you are not</h2>
+      <p>Playing solo, you sit in both chairs. Keep them apart. When you decide what your character does, be bold. When you decide what the world does, be fair: take the most obvious answer, and when you would rather not choose, let the dice choose. The Fear pool, the Fear Check and the oracles exist so the world can surprise you.</p>
+    </div>
+    <div class="block">
+      <h2>How this book is organized</h2>
+      <ul>
+        <li><b>Getting Started:</b> character, campaign and first oath.</li>
+        <li><b>Mechanics:</b> the action roll, progress, Fear and the oracle.</li>
+        <li><b>Moves:</b> every move, with notes on using it.</li>
+        <li><b>Oracles:</b> every table you roll during play.</li>
+        <li><b>Example of Play</b> and the <b>Tracker Sheet</b>.</li>
+      </ul>
+    </div>
+    <div class="aside">
+      <h4>Tips for solo play</h4>
+      <ul>
+        <li><b>Write short.</b> A line per scene is enough to remember it next week.</li>
+        <li><b>Play to find out.</b> Do not plan the plot. Plan the next scene, at most.</li>
+        <li><b>Say yes, or roll.</b> If a thing is plausible and nothing is at stake, it happens.</li>
+        <li><b>Let your character fail.</b> Misses make the best stories, and a price paid is a story told.</li>
+      </ul>
+    </div>
+    <div class="callout">
+      <p>The golden rule: when the rules and the story disagree, the story wins.</p>
+      <p>If a result breaks your fun, use <i>Change Your Fate</i> and keep playing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====================================================== GETTING STARTED -->
+<section class="page" data-ch="Getting Started">
+  <header class="band"><h1>Getting Started</h1></header>
+  <div class="cols">
+    <div class="block">
+      <h2>Character creation</h2>
+      <p>Make a level 1 character with the Daggerheart rules: class and subclass, heritage, traits, Experiences, equipment and connections. A few choices matter more when you play alone:</p>
+      <ul>
+        <li><b>Breadth beats depth.</b> No party covers your weak spots, so a character who can fight, talk and notice things will have an easier time.</li>
+        <li><b>Experiences carry the story.</b> Pick at least one that helps you find things out and one that helps you deal with people.</li>
+        <li><b>Hope</b> starts as the rules say. <b>Fear</b> starts as the rules say for one player character.</li>
+      </ul>
+    </div>
+    <div class="block">
+      <h2>Campaign setup</h2>
+      <ol>
+        <li><b>Choose a tone and a place.</b> Use a Daggerheart setting or your own. One sentence is enough: &ldquo;a cold frontier where the old roads are failing.&rdquo;</li>
+        <li><b>Set your flags.</b> Note anything you want to keep out of the story or handle with care (<i>Set a Flag</i>).</li>
+        <li><b>Sketch the land.</b> Roll <b>Wilds</b> for the country around you, a <b>Settlement</b> for where you start, and a few <b>Place Names</b>.</li>
+        <li><b>Name some people.</b> Roll <b>Names</b> and <b>NPC: Role and Motive</b> for two or three people your character knows. Any of them can become a connection.</li>
+        <li><b>Find the inciting incident.</b> Something has gone wrong and your character cannot ignore it. Invent it, or roll the <b>Plot Hook</b> tables: Objective and Opposition, then Reward and Twist.</li>
+        <li><b>Take an Oath</b> to set it right, and give it a rank.</li>
+        <li><b>Begin a Session</b> and play the first scene.</li>
+      </ol>
+    </div>
+    <div class="aside">
+      <h4>Option: a lifelong oath</h4>
+      <p>Before the inciting incident, give your character a long-term oath of <b>Dire</b> or <b>Legendary</b> rank: the thing they have wanted all their life. You will rarely mark progress on it, but it explains why they keep walking, and every other oath can feed it.</p>
+    </div>
+    <div class="block">
+      <h2>Choosing a rank</h2>
+      <p>Every oath, expedition, connection and scene challenge has a <b>rank</b>. The rank says how hard it is and how long it will take. A higher rank means a higher Difficulty and slower progress.</p>
+      <table>
+        <tr><th>Rank</th><th>An oath of this rank is&hellip;</th></tr>
+        <tr><td><b>Minor</b></td><td>An errand: a few scenes, a single session.</td></tr>
+        <tr><td><b>Serious</b></td><td>A real task: a session or two, a few obstacles.</td></tr>
+        <tr><td><b>Grave</b></td><td>A goal: several sessions and at least one setback.</td></tr>
+        <tr><td><b>Dire</b></td><td>A quest: a long arc of the campaign.</td></tr>
+        <tr><td><b>Legendary</b></td><td>A life&rsquo;s work: the campaign itself.</td></tr>
+      </table>
+      <p>When in doubt, choose <b>Serious</b> for a first oath. It is long enough to matter and short enough to finish.</p>
+    </div>
+    <div class="block">
+      <h2>Writing a good oath</h2>
+      <p>An oath is a promise your character makes out loud. Make it <b>personal</b> (why does it matter to them?), <b>concrete</b> (how will you know it is done?) and <b>urgent</b> (what happens if they fail?).</p>
+      <p><i>Weak:</i> &ldquo;Deal with the bandits.&rdquo;<br><i>Strong:</i> &ldquo;I will bring back the miller&rsquo;s daughter before the bandits cross the river.&rdquo;</p>
+    </div>
+    <div class="block">
+      <h2>Your first session</h2>
+      <p>Start in motion. Put your character close to the trouble of the inciting incident, already doing something. Make your first move within a few minutes of play. You will learn the rest of the world by playing through it.</p>
+    </div>
+    <div class="block">
+      <h2>Sample oaths</h2>
+      <table>
+        <tr><th>Rank</th><th>Oath</th></tr>
+        <tr><td>Minor</td><td>&ldquo;I will get the ferryman&rsquo;s boat back before dawn.&rdquo;</td></tr>
+        <tr><td>Serious</td><td>&ldquo;I will find who poisoned the well and bring them to the elders.&rdquo;</td></tr>
+        <tr><td>Grave</td><td>&ldquo;I will drive the wyrm from the old mine.&rdquo;</td></tr>
+        <tr><td>Dire</td><td>&ldquo;I will unite the river clans before the war comes.&rdquo;</td></tr>
+        <tr><td>Legendary</td><td>&ldquo;I will restore my fallen house to its seat.&rdquo;</td></tr>
+      </table>
+    </div>
+    <div class="callout">
+      <h4>Quick start</h4>
+      <p>1. Make a Daggerheart character.</p>
+      <p>2. Roll a Plot Hook, or invent trouble.</p>
+      <p>3. Take an Oath (Serious).</p>
+      <p>4. Begin a Session. Envision. Make moves.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= MECHANICS: THE ACTION ROLL -->
+<section class="page" data-ch="Mechanics Summary">
+  <header class="band"><h1>Mechanics Summary</h1></header>
+  <div class="cols">
+    <div class="block">
+      <h2>Moves</h2>
+      <p>A <b>move</b> is a rule for a moment of the story. Each one has a <b>trigger</b> (&ldquo;When you&hellip;&rdquo;), usually a <b>roll</b>, and <b>outcomes</b>. When your character does what a trigger describes, make the move and follow its instructions. When this book names a move, it is written in <i>italics</i>.</p>
+    </div>
+    <div class="block">
+      <h2>The action roll</h2>
+      <p>Most moves call for a Daggerheart <b>action roll</b>. Roll the Duality Dice, add both, then add the trait the move names and any modifiers (an Experience, an advantage die). Compare the total to the <b>Difficulty</b>. Equal or higher is a success.</p>
+      <p>Then look at the dice: if the Hope die is higher, you rolled <b>with Hope</b>; if the Fear die is higher, you rolled <b>with Fear</b>. If they match, it is a <b>critical success</b>.</p>
+      <div class="fig">
+        <div class="stack"><span data-die="hope:9"></span><span class="lbl">Hope die</span></div>
+        <span class="op">+</span>
+        <div class="stack"><span data-die="fear:4"></span><span class="lbl">Fear die</span></div>
+        <span class="op">+</span>
+        <div class="stack"><span data-die="trait:+1"></span><span class="lbl">Trait</span></div>
+        <span class="op">=</span>
+        <div class="stack"><span data-die="total:14"></span><span class="lbl">vs Difficulty 13</span></div>
+      </div>
+      <p class="cap">14 beats 13 and the Hope die is higher: a success with Hope.</p>
+    </div>
+    <div class="block">
+      <h2>Reading the outcome</h2>
+      <p>Every action roll becomes one of three move outcomes:</p>
+      <div class="out"><div class="ic"><span>&#10003;</span><span>&#10003;</span></div><p><b>Strong hit:</b> a success with Hope, or a critical success. You do it, cleanly.</p></div>
+      <div class="out"><div class="ic"><span>&#10003;</span><span>&#10007;</span></div><p><b>Weak hit:</b> a success with Fear. You do it, but at a cost or with less than you wanted.</p></div>
+      <div class="out"><div class="ic"><span>&#10007;</span><span>&#10007;</span></div><p><b>Miss:</b> a failure, with Hope or with Fear. You fail, or the situation gets worse. <i>Pay the Price</i>.</p></div>
+      <p>The dice still do what Daggerheart says: a roll with Hope gives you a Hope, a roll with Fear gives the world a Fear, and a critical success gives you a Hope and clears a Stress.</p>
+    </div>
+    <div class="callout">
+      <p>A failure with Fear is the worst result in the game. The world gains a Fear, and it may spend 1 Fear at once to make the price <u>severe</u>.</p>
+    </div>
+    <div class="block">
+      <h2>Difficulty</h2>
+      <p>When a move faces something with a rank, the rank sets the Difficulty:</p>
+      <table>
+        <tr><th>Rank</th><th>Difficulty</th><th>Rank</th><th>Difficulty</th></tr>
+        <tr><td>Minor</td><td>10</td><td>Dire</td><td>18</td></tr>
+        <tr><td>Serious</td><td>13</td><td>Legendary</td><td>20</td></tr>
+        <tr><td>Grave</td><td>15</td><td></td><td></td></tr>
+      </table>
+      <p>Use a Difficulty specified by the rule, move or opposing NPC first. If none applies, use <i>Set the Difficulty</i> (page <span data-ref="Set the Difficulty"></span>): start at 13 and count established obstacles.</p>
+    </div>
+    <div class="block">
+      <h2>Hope keeps you going</h2>
+      <p><b>Hope</b> gives your character the means to push forward. You gain it on rolls with Hope, on a critical success, and from moves such as <i>Take an Oath</i>, <i>Secure an Advantage</i> and <i>End a Session</i>. Spend it exactly as the Daggerheart rules allow: to add an Experience, to power your class&rsquo;s Hope feature, and so on. Hope keeps its usual maximum.</p>
+      <p>Hope is your answer to bad luck. A miss you can turn into a hit with an Experience is not a miss yet: decide before you read the outcome.</p>
+    </div>
+    <div class="block">
+      <h2>Fear is the world&rsquo;s</h2>
+      <p>There is no GM to hold Fear, but Fear still exists. It grows when you roll with Fear and when you rest, as the rules say, up to 12. The world never invents Fear: it only spends what your rolls give it. It spends Fear through the <b>Fear Check</b>, on <b>severe prices</b>, and in combat on the adversaries&rsquo; Fear features.</p>
+    </div>
+    <div class="block">
+      <h2>Advantage</h2>
+      <p>Some moves give you <b>advantage</b> on your next roll. As in Daggerheart, roll a d6 advantage die and add it to that roll.</p>
+    </div>
+    <div class="aside">
+      <h4>Three rolls, three outcomes</h4>
+      <p>Wren leaps a crevasse: <i>Face Danger</i>, Agility +2, Difficulty 13.</p>
+      <p><b>Hope 8, Fear 5:</b> 15, with Hope. A strong hit: she lands cleanly and gains a Hope.</p>
+      <p><b>Hope 4, Fear 9:</b> 15, with Fear. A weak hit: she makes it, but marks a Stress as the edge crumbles. The world gains a Fear.</p>
+      <p><b>Hope 3, Fear 6:</b> 11, a failure with Fear. A miss: she falls short and must <i>Pay the Price</i>. The world gains a Fear, and may spend it at once to make the price severe.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= SET THE DIFFICULTY -->
+<section class="page" data-ch="Set the Difficulty">
+  <header class="band"><h1>Set the Difficulty</h1></header>
+  <div class="cols"><p>When an action calls for a roll, set the Difficulty <b>before rolling</b>. Use facts already established in the scene, not the number you hope to beat.</p><div class="block"><h3>1. Use an existing value first</h3><ol><li>If the rule or move specifies a Difficulty, use it.</li><li>If you are overcoming an adversary or NPC with a defined Difficulty, use theirs.</li><li>If the move tells you to use a challenge's rank, use that rank's Difficulty.</li></ol><p>Do not add obstacle increases to these values. Only use the procedure below when none of these sources provides the Difficulty. A nearby progress track does not automatically set every action's Difficulty; the move must call for its rank.</p></div><div class="block"><h3>2. Otherwise, start at 13</h3><p><b>13 is the default for an uncertain action.</b> You do not need to justify why it is not harder. Check for three distinct obstacles:</p><table><tr><th>Obstacle</th><th>What must already be true?</th></tr><tr><td><b>Resistance</b></td><td>A relevant safeguard or committed opposition stands in your way: a reinforced lock, guards on alert, or someone under explicit orders to refuse.</td></tr><tr><td><b>Demand</b></td><td>The result requires unusual precision, reach or personal concession: a tiny mechanism, an exceptional gap, or a request that risks someone's position.</td></tr><tr><td><b>Conditions</b></td><td>Something concretely hinders the attempt: darkness without a light, unstable footing, or a crowd preventing conversation.</td></tr></table><table><tr><th>Distinct obstacles</th><th>Difficulty</th></tr><tr><td>None</td><td><b>13</b></td></tr><tr><td>One</td><td><b>15</b></td></tr><tr><td>Two</td><td><b>18</b></td></tr><tr><td>Three</td><td><b>20</b></td></tr></table><p>Count each category at most once. Count the same fact only once, even if it could fit two categories. Ordinary uncertainty is already part of 13: a normal lock is not automatically a Resistance obstacle. Do not invent obstacles to reach a preferred number. If no established fact supports an obstacle, do not count it.</p></div><div class="block col"><h3>3. Easy, certain or impossible?</h3><ul><li><b>Difficulty 10:</b> no obstacles, and a concrete fact makes the task especially simple, but uncertainty remains.</li><li><b>No roll:</b> success is evident, or failure would change nothing.</li><li><b>Impossible right now:</b> do not roll; first change the situation.</li></ul><p>Judge the task, not the hero. Traits and Experiences already modify the roll; do not count them again when setting Difficulty. Do not also use the same fact as an obstacle increase and as disadvantage, or as both the reason for Difficulty 10 and an advantage die. Separate facts may affect the roll separately.</p></div><div class="block"><h3>Example: convincing a guard</h3><p>If the guard has a defined Difficulty, use it. Otherwise:</p><ul><li>Asking a willing person for ordinary information may need <b>no roll</b>.</li><li>Convincing an undecided person to help with a reasonable task: <b>13</b>.</li><li>Convincing a guard explicitly ordered to deny entry: Resistance, <b>15</b>.</li><li>Asking that guard to abandon their post and risk their job: Resistance + Demand, <b>18</b>.</li><li>Making that request amid a crowd that prevents conversation: all three, <b>20</b>.</li></ul></div><div class="block"><h3>Lock it before rolling</h3><p>Say the number and the reason: <b>"Difficulty 15: the guard has orders to refuse."</b> Do not change it after seeing the dice. Reassess only when the situation changes.</p><p><b>Danger is not Difficulty.</b> A simple crossing can still have a deadly fall. Danger changes the consequence of failure; it does not automatically raise the number. This is a Duality GME procedure for consistent rulings, not a guarantee that every action has the same chance of success.</p></div></div>
+</section>
+
+<!-- ============================================= MECHANICS: PROGRESS -->
+<section class="page" data-ch="Progress and Clocks">
+  <header class="band"><h1>Progress and Clocks</h1></header>
+  <div class="cols">
+    <div class="block">
+      <h2>Progress tracks</h2>
+      <p>Your goals are measured on <b>progress tracks</b>. Oaths, expeditions, connections and scene challenges each get one. A track has <b>10 boxes</b>, and each box holds <b>4 ticks</b>, so a full track is 40 ticks. Draw the ticks as you earn them:</p>
+      <div class="fig" data-ticks></div>
+      <p class="cap">One to four ticks in a box. Four ticks make a full box.</p>
+    </div>
+    <div class="block">
+      <h2>Marking progress</h2>
+      <p>When a move tells you to <b>mark progress</b>, fill the track by an amount set by its rank:</p>
+      <div data-t="iron-ranks"></div>
+      <p>So a Minor track fills in 4 marks, a Serious one in 5, a Grave one in 10, a Dire one in 20 and a Legendary one in 40. You will rarely fill a Dire or Legendary track; you roll long before that.</p>
+      <div class="fig" data-track="20"></div>
+      <p class="cap">A track with 20 ticks: a progress score of 5.</p>
+    </div>
+    <div class="block">
+      <h2>The progress roll</h2>
+      <p>When a move asks for a <b>progress roll</b>, count the <b>full boxes</b> on the track: that is your <b>progress score</b>, from 0 to 10. Partly filled boxes do not count. Roll the two challenge dice (d10) and compare your score to each.</p>
+      <div class="fig">
+        <div class="stack"><span data-die="score:6"></span><span class="lbl">Progress score</span></div>
+        <span class="op">vs</span>
+        <div class="stack"><span data-die="d10:4"></span><span class="lbl">Beaten</span></div>
+        <div class="stack"><span data-die="d10:8"></span><span class="lbl">Not beaten</span></div>
+      </div>
+      <p class="cap">A score of 6 beats the 4 but not the 8: a weak hit.</p>
+      <div class="out"><div class="ic"><span>&#10003;</span><span>&#10003;</span></div><p><b>Strong hit:</b> your score beats both dice.</p></div>
+      <div class="out"><div class="ic"><span>&#10003;</span><span>&#10007;</span></div><p><b>Weak hit:</b> your score beats one die.</p></div>
+      <div class="out"><div class="ic"><span>&#10007;</span><span>&#10007;</span></div><p><b>Miss:</b> your score beats neither.</p></div>
+    </div>
+    <div class="callout">
+      <p>Ties go to the challenge dice. Your score has to beat a die, not equal it.</p>
+      <p>Progress rolls never give Hope or Fear, and no modifier, Experience or Hope can change them. Your progress is your bonus.</p>
+    </div>
+    <div class="block">
+      <h2>Matches</h2>
+      <p>When both challenge dice show the same number, it is a <b>match</b>. Something unexpected happens. On a hit, the twist is in your favor: a new opportunity, a revelation, an extra reward. On a miss, it is a dire turn: a new danger, a betrayal, a worse outcome than the move says. If you are unsure what the twist is, <i>Ask the Oracle</i>.</p>
+    </div>
+    <div class="block">
+      <h2>When to roll</h2>
+      <p>You decide when to make a progress roll, as long as the story allows it. A full track is not required. Rolling early is a gamble: a score of 4 beats a d10 less than half the time. Rolling late costs time and scenes, and the world keeps moving. That tension is the heart of the game.</p>
+    </div>
+    <div class="block">
+      <h2>Tension clocks</h2>
+      <p>A <b>clock</b> measures a danger that is coming: guards closing in, a storm, a ritual nearing completion. It has <b>4, 6 or 8 segments</b>. When something makes the danger worse, fill a segment. When the clock is full, the danger arrives.</p>
+      <div class="fig"><div class="stack"><span data-clock="4:3"></span><span class="lbl">4: at a disadvantage</span></div><div class="stack"><span data-clock="6:2"></span><span class="lbl">6: even footing</span></div><div class="stack"><span data-clock="8:2"></span><span class="lbl">8: with an advantage</span></div></div>
+      <p>Clocks appear in <b>scene challenges</b>, but you can start one whenever a threat should grow over time. The <i>Pay the Price</i> table can tick one, and so can the <b>Vignette</b> at the start of a session.</p>
+    </div>
+    <div class="block">
+      <h2>Progress roll odds</h2>
+      <p>How likely each outcome is for each progress score. Use it to decide whether to roll now or push for one more box.</p>
+      <div data-odds="progress"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= MECHANICS: THE WORLD'S VOICE -->
+<section class="page" data-ch="The World's Voice">
+  <header class="band"><h1>The World&rsquo;s Voice</h1></header>
+  <div class="cols">
+    <div class="block">
+      <p>Three tools replace the GM: the <b>Fear Check</b> decides when the world acts, <b>Pay the Price</b> decides what a miss costs, and the <b>oracle</b> answers your questions. Learn these three and you can run any situation.</p>
+    </div>
+    <div class="block">
+      <h2>The Fear Check</h2>
+      <p>Roll a d12. If the result is <b>equal to or under the current Fear</b>, the check <b>passes</b>: the world spends Fear and acts. Otherwise it fails. At 0 Fear it always fails.</p>
+      <p>The more Fear you have given the world, the more often it acts. A run of rolls with Fear makes everything more dangerous; resting, which adds Fear, is never free.</p>
+      <p>Make a Fear Check when a move or table tells you to:</p>
+      <ul>
+        <li>in a fight, each time the spotlight passes to the GM (<i>The GM Turn</i>);</li>
+        <li>on a failure with Fear while you <i>Explore a Waypoint</i>;</li>
+        <li>on each leg of a <b>Journey</b>;</li>
+        <li>and, if you want the dice to decide, on a failure with Fear, to see whether the world spends 1 Fear for a severe price.</li>
+      </ul>
+    </div>
+    <div class="block">
+      <h2>Pay the Price</h2>
+      <p>On a miss, something goes wrong. Choose one way to find out what:</p>
+      <ul>
+        <li><b>Make the most obvious negative outcome happen.</b> If one leaps to mind, use it.</li>
+        <li><b>Ask the Oracle</b> between two outcomes: rate one as Likely and roll.</li>
+        <li><b>Roll on the Pay the Price table</b> and fit the result to the scene.</li>
+      </ul>
+      <p>A <b>severe</b> price comes from a failure with Fear when the world spends 1 Fear: roll twice, and both happen. A 12 on the table also means two prices.</p>
+      <p>A price should change the situation, not just hurt. Take the damage, yes, but also lose the trail, break the rope, or let the guard see you.</p>
+    </div>
+    <div class="block">
+      <h2>Ask the Oracle</h2>
+      <p>When you have a question the story cannot answer, ask the oracle. Phrase it as a yes or no question, pick how likely a <b>yes</b> is, and roll the Duality Dice. Add them: a yes needs the total shown.</p>
+      <div data-t="iron-oracle"></div>
+      <p>If the dice match (doubles), the answer comes with an <b>extreme result or a twist</b>: &ldquo;yes, and more than you hoped&rdquo; or &ldquo;no, and worse.&rdquo; Oracle rolls never give Hope or Fear.</p>
+    </div>
+    <div class="block">
+      <h2>Meaning</h2>
+      <p>For questions a yes or no cannot answer (&ldquo;What does the stranger want?&rdquo;), roll <b>Meaning</b>. Roll both Duality Dice for each word: the <b>Hope die picks the row</b> and the <b>Fear die picks the column</b> (odd: A, even: B). Roll <b>Action + Subject</b> for events and intentions, <b>Descriptor + Subject</b> for things and places.</p>
+    </div>
+    <div class="block">
+      <h2>Interpreting results</h2>
+      <ul>
+        <li><b>Take the first reading</b> that makes sense in the scene. Do not hunt for the perfect one.</li>
+        <li><b>If it does not fit,</b> look at the row above or below, or roll again.</li>
+        <li><b>Keep it small.</b> A table result is a seed, not a plot. &ldquo;A new danger appears&rdquo; can be a dog barking.</li>
+        <li><b>Ask the next question.</b> One answer usually suggests the next question.</li>
+      </ul>
+    </div>
+    <div class="block">
+      <h2>Fear Check odds</h2>
+      <p>The chance that a Fear Check passes at each level of Fear:</p>
+      <div data-odds="fear"></div>
+    </div>
+    <div class="callout">
+      <p>When you do not know what happens next, ask the oracle. When you do not know what to ask, roll Meaning.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= MAKING MOVES -->
+<section class="page" data-ch="Making Moves">
+  <header class="band"><h1>Making Moves</h1></header>
+  <div class="cols">
+    <div class="block">
+      <h2>Move glossary</h2>
+      <p><b>Envision.</b> Picture what your character does, or what a result looks like, before you go on.</p>
+      <p><b>Roll + trait.</b> Make a Daggerheart action roll with that trait. &ldquo;The trait that fits&rdquo; means choose by how you act: <b>Agility</b> to move fast, <b>Strength</b> to force, <b>Finesse</b> to be precise or quiet, <b>Instinct</b> to sense and react, <b>Presence</b> to charm or command, <b>Knowledge</b> to recall or reason.</p>
+      <p><b>Strong hit, weak hit, miss.</b> The three move outcomes (page <span data-ref="Mechanics Summary"></span>).</p>
+      <p><b>Mark progress.</b> Fill a progress track by its rank.</p>
+      <p><b>Progress roll.</b> Your progress score against two challenge dice. No traits, no Hope.</p>
+      <p><b>Pay the Price.</b> Suffer the outcome of a miss.</p>
+      <p><b>Severe.</b> A price the world made worse with 1 Fear: roll it twice.</p>
+      <p><b>Gain a Hope.</b> Add 1 Hope, up to your maximum.</p>
+      <p><b>Mark a Stress.</b> As in Daggerheart. If you cannot, mark a Hit Point instead.</p>
+      <p><b>Advantage.</b> Add a d6 advantage die to the roll.</p>
+      <p><b>Twist.</b> A result that turns the story: from doubles on the oracle, or a match on the challenge dice.</p>
+      <p><b>Rank.</b> Minor, Serious, Grave, Dire or Legendary.</p>
+      <p><b>Fear Check.</b> A d12 equal to or under Fear passes (page <span data-ref="The World's Voice"></span>).</p>
+    </div>
+    <div class="block">
+      <h2>Using moves well</h2>
+      <p><b>Trigger, then roll.</b> Only make a move when its trigger happens in the story. If you want to know whether something is possible, ask the oracle first.</p>
+      <p><b>One roll, one outcome.</b> Do not reroll a move because you dislike the result. Use Hope, Experiences, or <i>Change Your Fate</i> instead.</p>
+      <p><b>Not every action is a move.</b> Opening a door, buying bread and walking a safe road just happen.</p>
+    </div>
+    <div class="block">
+      <h2>Index of moves</h2>
+      <div class="toc" data-index></div>
+    </div>
+    <div class="block">
+      <h2>Which move?</h2>
+      <table>
+        <tr><th>When you want to&hellip;</th><th>Make the move</th></tr>
+        <tr><td>Get past a threat</td><td><i>Face Danger</i></td></tr>
+        <tr><td>Set up your next action</td><td><i>Secure an Advantage</i></td></tr>
+        <tr><td>Find something out</td><td><i>Gather Information</i></td></tr>
+        <tr><td>Get someone to act</td><td><i>Compel</i></td></tr>
+        <tr><td>Cross dangerous ground</td><td><i>Undertake an Expedition</i></td></tr>
+        <tr><td>Win someone over</td><td><i>Make a Connection</i></td></tr>
+        <tr><td>Race a growing danger</td><td><i>Begin the Scene</i></td></tr>
+        <tr><td>Fight</td><td><i>Join the Fray</i> or <i>Battle</i></td></tr>
+        <tr><td>Know what the world does</td><td><i>Ask the Oracle</i></td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= SESSION AND QUEST MOVES -->
+<section class="page" data-ch="Session and Quest Moves">
+  <header class="band"><h1>Session Moves</h1></header>
+  <div class="cols">
+    <div class="block"><p>Session moves frame your time at the table. They keep the story coherent from one sitting to the next and let you steer away from content you do not want.</p></div>
+    <div data-moves="session"></div>
+    <div class="block"><h2 style="font-size:16pt">Quest moves</h2><p>Quests drive the story. Each oath is a promise with a progress track. You take it, reach milestones toward it, and at last fulfill it or let it go.</p></div>
+    <div data-moves="quest"></div>
+  </div>
+</section>
+
+<!-- ============================================= ADVENTURE MOVES -->
+<section class="page" data-ch="Adventure Moves">
+  <header class="band"><h1>Adventure Moves</h1></header>
+  <div class="cols">
+    <div class="block"><p>These are the moves you make most. When in doubt, <i>Face Danger</i> to get through something and <i>Secure an Advantage</i> to set up the next roll.</p></div>
+    <div data-moves="adventure"></div>
+    <div class="block">
+      <h2>Costs of a weak hit</h2>
+      <p>A weak hit is a success with strings attached. When a move says &ldquo;at a cost,&rdquo; pick the one that fits the scene, or the one that hurts the story most without stopping it:</p>
+      <ul>
+        <li><b>Stress:</b> mark a Stress. It is the default cost.</li>
+        <li><b>Time:</b> it takes longer; a clock fills or a rival gains ground.</li>
+        <li><b>Position:</b> you are exposed, separated or off balance.</li>
+        <li><b>Resources:</b> you use up a consumable, damage a tool, or spend coin.</li>
+        <li><b>Less:</b> you get only part of what you wanted.</li>
+      </ul>
+    </div>
+    <div class="block">
+      <h2>Rest and recovery</h2>
+      <p>Duality GME uses Daggerheart&rsquo;s rests unchanged. A <b>short rest</b> or a <b>long rest</b> lets you take downtime moves to clear Hit Points and Stress, repair armor and prepare, and gives the world Fear as the rules say. In the wild, rest with <i>Make Camp</i>. In a town or a safe house, simply rest, and roll <b>Rest and Camp</b> only if you want a surprise.</p>
+    </div>
+    <div class="aside">
+      <h4>Example: Gather Information</h4>
+      <p>Wren asks the ferryman about the missing healer. She rolls Instinct and gets a weak hit: he saw a boat leave at night, but the man at the oars wore the colors of Ashford&rsquo;s own guard. Wren learns something true and the story gets more complicated. That is what a weak hit should do.</p>
+    </div>
+    <div class="callout">
+      <p>No move fits? Ask yourself what is at stake. If something is, <i>Face Danger</i>. If nothing is, it just happens.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= EXPLORATION MOVES -->
+<section class="page" data-ch="Exploration Moves">
+  <header class="band"><h1>Exploration Moves</h1></header>
+  <div class="cols">
+    <div class="block">
+      <p>An <b>expedition</b> is a journey through dangerous ground: a haunted forest, a mountain pass, the ruined quarter of a city. It has a rank and a progress track. Travel happens in <b>segments</b>; each segment brings you closer, and some bring you to <b>waypoints</b> worth exploring.</p>
+      <div class="aside">
+        <h4>The shape of an expedition</h4>
+        <ol>
+          <li><i>Undertake an Expedition:</i> name it, rank it, and roll for the first segment.</li>
+          <li>On a hit, mark progress and reach a waypoint. <i>Explore a Waypoint</i> if it is worth a look.</li>
+          <li>Keep rolling segments, dealing with what you find, until you feel ready.</li>
+          <li><i>Finish an Expedition</i> with a progress roll.</li>
+        </ol>
+      </div>
+    </div>
+    <div data-moves="exploration"></div>
+    <div class="block">
+      <h2>Ranking an expedition</h2>
+      <table>
+        <tr><th>Rank</th><th>The journey is&hellip;</th></tr>
+        <tr><td>Minor</td><td>A day on a bad road, a short climb.</td></tr>
+        <tr><td>Serious</td><td>Several days through wild country.</td></tr>
+        <tr><td>Grave</td><td>Weeks across hostile land, or a deep ruin.</td></tr>
+        <tr><td>Dire</td><td>An unmapped wilderness, a cursed realm.</td></tr>
+        <tr><td>Legendary</td><td>The edge of the world.</td></tr>
+      </table>
+      <p>The rank sets the Difficulty of each segment roll and how fast you mark progress. A Minor trip takes about four good segments; a Grave one, ten.</p>
+    </div>
+    <div class="block">
+      <h2>Journeys and expeditions</h2>
+      <p>Not every trip is an expedition. For an ordinary road, use the <b>Journeys</b> table instead: a Fear Check for each leg, and a Danger or a Discovery. Save expeditions for travel that is a story in itself, where reaching the place is the challenge.</p>
+    </div>
+    <div class="aside">
+      <h4>Waypoints worth a stop</h4>
+      <p>Explore a waypoint when it could hold what you need: shelter, a clue, a way around. Skip it when you are in a hurry. A good waypoint has a <b>feature</b> (what you see), a <b>danger</b> (what could go wrong) and a <b>question</b> (why it is here).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= CONNECTIONS AND SCENE CHALLENGE -->
+<section class="page" data-ch="Connection Moves">
+  <header class="band"><h1>Connection Moves</h1></header>
+  <div class="cols">
+    <div class="block"><p>A <b>connection</b> is someone who matters to your character: a guide, a rival, a merchant, a friend. Each connection has a <b>role</b> (what they do for you), a <b>rank</b> (how hard they are to win over) and a progress track. When the track is ready, you can forge a lasting <b>bond</b>.</p></div>
+    <div data-moves="connection"></div>
+    <div class="block"><h2 style="font-size:16pt" data-toc-as="Scene Challenge">Scene challenge</h2>
+      <p>A <b>scene challenge</b> is for a tense situation that takes more than one roll: a chase through the market, sneaking into a keep, a debate before the council. You race a <b>grave</b> progress track (your objective) against a <b>tension clock</b> (the danger).</p></div>
+    <div data-moves="scene"></div>
+    <div class="aside">
+      <h4>Example: the chase</h4>
+      <p>A thief snatches the map. Your objective: <b>get the map back</b>. You are on foot in a crowd he knows, so the clock has <b>4 segments</b>. You <i>Face Danger</i> with Agility to vault a cart (strong hit: mark progress), then <i>Secure an Advantage</i> with Instinct to cut through an alley (weak hit: mark progress and fill a segment). With 2 boxes marked and a quarter of the clock gone, you decide to <i>Finish the Scene</i> now rather than risk losing him.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= COMBAT -->
+<section class="page" data-ch="Combat Moves">
+  <header class="band"><h1>Combat Moves</h1></header>
+  <div class="cols">
+    <div class="block">
+      <p>Duality GME keeps Daggerheart combat. Your attacks, damage, thresholds and armor work as the rules say, and adversaries use their stat blocks. What this chapter adds is a way to run the adversaries without a GM, and a way to settle small fights in a single roll.</p>
+    </div>
+    <div data-moves="combat"></div>
+    <div class="block">
+      <h2>Running a full fight</h2>
+      <ol>
+        <li><b>Choose your foes.</b> Use the adversaries the story calls for, or roll <b>Adversary: Creature and Situation</b> and <b>Adversary Type</b>, then pick a Daggerheart stat block of your tier. Build the encounter with the Daggerheart encounter rules for one player character.</li>
+        <li><b><i>Join the Fray</i></b> to see who acts first.</li>
+        <li><b>Your spotlight.</b> Act as the rules say. A success with Hope keeps the spotlight with you; a roll with Fear, or a failure, passes it to the GM.</li>
+        <li><b><i>The GM Turn.</i></b> Pick the adversary that makes the most sense, or the one that has acted least. Make a Fear Check: on a fail it acts for free (roll <b>Tactics</b>); on a pass, roll <b>Fear Spend</b> and pay the cost. Then check again after each GM action: a pass spends 1 Fear and brings in another adversary (Tactics); the first failed chain check ends the turn.</li>
+        <li><b>End the fight</b> when the foes fall, flee or yield, or when you do. If the fight mattered to an oath, <i>Reach a Milestone</i>.</li>
+      </ol>
+    </div>
+    <div class="block">
+      <h2>Playing the adversaries</h2>
+      <ul>
+        <li><b>Give them a goal.</b> Few foes fight to the death. Decide what each one wants: the loot, the door, your surrender.</li>
+        <li><b>Use their features.</b> When Fear Spend calls for a feature, pick the one that fits the moment best.</li>
+        <li><b>Let them break.</b> When a fight turns against them, <i>Ask the Oracle</i> whether they run (Likely for minions, Unlikely for solos).</li>
+      </ul>
+      <p>A <b>Hard Move</b> result on the Fear Spend table means the world strikes hard: treat it as a <b>severe</b> <i>Pay the Price</i>.</p>
+    </div>
+    <div class="block">
+      <h2>Fleeing and surrender</h2>
+      <p>You can always try to leave a fight. Breaking away under attack is <i>Face Danger</i>; a long pursuit is a <b>scene challenge</b> with your escape as the objective. If you are beaten, you are not always dead: <i>Ask the Oracle</i> whether they take you prisoner, and let a new oath begin there.</p>
+    </div>
+    <div class="aside">
+      <h4>Example: the GM turn</h4>
+      <p>Wren misses an attack on the bounty hunter, and the spotlight passes to the GM. Fear is 4. The Fear Check rolls a 2: it passes. Fear Spend rolls the hunter&rsquo;s Fear feature; the world pays 1 Fear (Fear 3) and the hunter lunges. The world checks again: a 3, another pass. It spends 1 Fear (Fear 2) and the hunter&rsquo;s hound joins in, rolling Tactics. The third check is a 9, which fails, and the GM turn ends. The spotlight returns to Wren.</p>
+    </div>
+    <div class="callout">
+      <p>Fight a full battle when the fight is the scene. <i>Battle</i> when it is in the way of the scene.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= FATE MOVES -->
+<section class="page" data-ch="Fate Moves">
+  <header class="band"><h1>Fate Moves</h1></header>
+  <div class="cols">
+    <div class="block"><p>Fate moves are how the world speaks. Other moves send you here: a miss tells you to <i>Pay the Price</i>, and any uncertainty is a reason to <i>Ask the Oracle</i>.</p></div>
+    <div data-moves="fate"></div>
+    <div class="block">
+      <div class="tname">Ask the Oracle</div>
+      <p class="tdesc">Roll the Duality Dice and add them. Doubles: an extreme result or a twist.</p>
+      <div data-t="iron-oracle"></div>
+    </div>
+    <div class="block">
+      <h2>Choosing the likelihood</h2>
+      <p>Pick the likelihood from what your character knows, not what you hope. If the answer would be strange, it is Unlikely. If the scene points toward it, it is Likely. If you truly have no idea, it is 50 / 50. Use the extremes for things that are nearly settled but could still surprise you.</p>
+    </div>
+    <div class="aside">
+      <h4>Questions worth asking</h4>
+      <p>Is anyone here? Is it guarded? Do they believe me? Is it what it seems? Does it get worse? Is there another way?</p>
+    </div>
+    <div class="block">
+      <div class="tname">Pay the Price</div>
+      <p class="tdesc">Roll a d12. Fit the result to the scene; if it makes no sense, take the next row.</p>
+      <div data-t="iron-price" data-plain></div>
+    </div>
+    <div class="aside">
+      <h4>Prices by situation</h4>
+      <p><b>In a fight:</b> damage, a lost weapon, a new foe, an ally down.<br>
+      <b>On the road:</b> lost time, lost supplies, a wrong turn, bad weather.<br>
+      <b>Among people:</b> a lost friend, a broken promise, a rumor about you.<br>
+      <b>On an oath:</b> lose progress, the goal moves, a rival gets there first.</p>
+    </div>
+    <div class="aside">
+      <h4>Example: a severe price</h4>
+      <p>Wren fails to cross a frozen river with Fear. The world spends 1 Fear and the price is severe: two rolls on the table. &ldquo;Something of value is lost&rdquo; and &ldquo;Time is lost.&rdquo; Her pack goes under the ice, and by the time she is warm again the trail is a day old.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= ORACLES: MEANING -->
+<section class="page" data-ch="Meaning Oracles">
+  <header class="band"><h1>Meaning Oracles</h1></header>
+  <div class="cols">
+    <div class="block">
+      <p>Roll both Duality Dice for each word. The <b>Hope die</b> picks the row; the <b>Fear die</b> picks the column: <b>odd for A, even for B</b>. Combine <b>Action + Subject</b> for what someone wants or what happens, and <b>Descriptor + Subject</b> for what something is.</p>
+      <p>Read the pair as loosely as you need. &ldquo;Betray + Home&rdquo; could be a traitor in your village, a house that is not what it seems, or an exile&rsquo;s longing.</p>
+    </div>
+    <div class="block"><div class="tname">Action</div><div data-t="action"></div></div>
+    <div class="block"><div class="tname">Subject</div><div data-t="subject"></div></div>
+    <div class="block"><div class="tname">Descriptor</div><div data-t="descriptor"></div></div>
+    <div class="block">
+      <div class="tname">How Much? How Well?</div>
+      <p class="tdesc">For a scale or a degree: how many guards, how good the blade, how bad the wound.</p>
+      <div data-t="how-much"></div>
+    </div>
+    <div class="aside">
+      <h4>Reading a pair</h4>
+      <p>The same roll can mean many things. Take the first reading that fits the scene:</p>
+      <p><b>Protect + Secret</b> (what does the stranger want?): to keep something hidden; to protect someone who knows too much.</p>
+      <p><b>Ancient + Path</b> (what is beyond the ridge?): an old road paved by a forgotten people; a pilgrims&rsquo; trail.</p>
+      <p><b>Reveal + Magic</b> (what happens next?): a rival shows their power; the relic wakes up.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= ORACLES: STORY -->
+<section class="page" data-ch="Story Oracles">
+  <header class="band"><h1>Story Oracles</h1></header>
+  <div class="cols">
+    <div class="block">
+      <div class="tname">Plot Hook: Objective and Opposition</div>
+      <p class="tdesc">For an inciting incident or a new oath: what must be done, and who stands in the way.</p>
+      <div data-t="plot-hook"></div>
+    </div>
+    <div class="block">
+      <div class="tname">Plot Hook: Reward and Twist</div>
+      <p class="tdesc">What it is worth, and what nobody has told you yet. Write the twist down and save it for later.</p>
+      <div data-t="plot-stakes"></div>
+    </div>
+    <div class="block">
+      <div class="tname">Begin a Session: Vignette</div>
+      <p class="tdesc">What happens somewhere else while you are away. Envision it, then gain a Hope as you return to your character.</p>
+      <div data-t="iron-vignette" data-plain></div>
+    </div>
+    <div class="block">
+      <div class="tname">Rumors and Leads</div>
+      <p class="tdesc">When the story needs a push: something heard in a tavern, or a sign on the road.</p>
+      <div data-t="rumor"></div>
+    </div>
+    <div class="aside">
+      <h4>From hook to oath</h4>
+      <p>A Plot Hook is raw material. Turn it into an oath by asking three questions: <b>Why does my character care?</b> <b>Who asked them, or who will suffer?</b> <b>How will they know it is done?</b> Then write the oath in your character&rsquo;s voice and give it a rank.</p>
+      <p>Keep the <b>Twist</b> secret, even from yourself if you can: write it on a slip of paper and read it when a match, a doubles or a <i>Keep Your Oath</i> calls for a turn.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= ORACLES: EXPLORATION -->
+<section class="page" data-ch="Exploration Oracles">
+  <header class="band"><h1>Exploration Oracles</h1></header>
+  <div class="cols">
+    <div class="block"><div class="tname">Waypoint</div><p class="tdesc">Roll when an expedition reaches a waypoint.</p><div data-t="iron-waypoint" data-plain></div></div>
+    <div class="block"><div class="tname">Find an Opportunity</div><p class="tdesc">A strong hit when you <i>Explore a Waypoint</i>.</p><div data-t="iron-opportunity" data-plain></div></div>
+    <div class="block"><div class="tname">Make a Discovery</div><p class="tdesc">A critical success when you <i>Explore a Waypoint</i>.</p><div data-t="iron-discovery" data-plain></div></div>
+    <div class="block"><div class="tname">Confront Chaos</div><p class="tdesc">When the world bends where it should not.</p><div data-t="iron-chaos" data-plain></div></div>
+    <div class="block"><div class="tname">Journeys</div><p class="tdesc">For each leg of ordinary travel, make a Fear Check. <b>Pass:</b> spend 1 Fear and roll Danger. <b>Fail:</b> roll Discovery.</p><div data-t="journey"></div></div>
+  </div>
+</section>
+
+<!-- ============================================= ORACLES: THE LAND -->
+<section class="page" data-ch="The Land">
+  <header class="band"><h1>The Land</h1></header>
+  <div class="cols">
+    <div class="block"><div class="tname">Wilds</div><p class="tdesc">For each new region or day of travel: the land, the weather, and a landmark to steer by.</p><div data-t="wilds"></div></div>
+    <div class="block"><div class="tname">Site Crawler</div><p class="tdesc">For ruins, dungeons and lairs. For each new area roll Area, Exits and Contents. The first time you roll Area 12, you have found the heart of the site.</p><div data-t="site"></div></div>
+    <div class="block"><div class="tname">Hazards and Traps</div><p class="tdesc">Make the reaction roll named. Set the Difficulty and damage by tier.</p><div data-t="hazard"></div></div>
+    <div class="block"><div class="tname">Rest and Camp</div><p class="tdesc">After you <i>Make Camp</i>. A Random Event result means: roll a Vignette.</p><div data-t="rest"></div></div>
+  </div>
+</section>
+
+<!-- ============================================= ORACLES: FOES -->
+<section class="page" data-ch="Foe Oracles">
+  <header class="band"><h1>Foe Oracles</h1></header>
+  <div class="cols">
+    <div class="block"><div class="tname">Adversary: Creature and Situation</div><p class="tdesc">What you face, and what it is doing when you find it.</p><div data-t="adversary-creature"></div></div>
+    <div class="block"><div class="tname">Adversary Type</div><p class="tdesc">The Daggerheart role to look for in the stat blocks of your tier.</p><div data-t="adversary-type"></div></div>
+    <div class="block"><div class="tname">Adversary Tactics (free)</div><p class="tdesc">A failed Fear Check on the GM turn: the adversary acts without spending Fear.</p><div data-t="tactics"></div></div>
+    <div class="block"><div class="tname">Fear Spend</div><p class="tdesc">A passed Fear Check: pay the cost and resolve it. A Fear feature costs what its stat block says; the rest cost 1 Fear. If the world cannot pay, roll Tactics instead. In Duality GME there is no Hard Move table: a Hard Move result is a severe <i>Pay the Price</i>.</p><div data-t="fear-spend"></div></div>
+    <div class="block">
+      <h2>Picking a stat block</h2>
+      <p>Use adversaries of your character&rsquo;s tier: tier 1 at level 1, tier 2 at levels 2 to 4, tier 3 at levels 5 to 7, tier 4 at levels 8 to 10. Read the type rolled above as a role:</p>
+      <ul>
+        <li><b>Minions and hordes</b> come in numbers and fall fast.</li>
+        <li><b>Standard</b> foes are the backbone of a fight.</li>
+        <li><b>Bruisers</b> hit hard; <b>ranged</b> foes keep their distance; <b>skulks</b> strike from hiding.</li>
+        <li><b>Leaders</b> and <b>supports</b> make the others more dangerous.</li>
+        <li><b>Social</b> adversaries fight with words.</li>
+        <li>A <b>solo</b> is a whole fight by itself.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= ORACLES: PEOPLE -->
+<section class="page" data-ch="People Oracles">
+  <header class="band"><h1>People Oracles</h1></header>
+  <div class="cols">
+    <div class="block"><div class="tname">Names</div><p class="tdesc">Hope die: the given name. Fear die: the column. Then roll a family name.</p><div data-t="names"></div></div>
+    <div class="block"><div class="tname">NPC: Role and Motive</div><p class="tdesc">Who they are and what they want.</p><div data-t="npc-identity"></div></div>
+    <div class="block"><div class="tname">NPC: Attitude, Quirk and Topic</div><p class="tdesc">How they meet you, what makes them memorable, and what they talk about.</p><div data-t="npc-manner"></div></div>
+    <div class="block"><div class="tname">Faction</div><p class="tdesc">Who they are, what they want, and how they get it.</p><div data-t="faction"></div></div>
+    <div class="aside">
+      <h4>An NPC in thirty seconds</h4>
+      <p>Roll a <b>Name</b>, a <b>Role and Motive</b>, and an <b>Attitude</b>. Give them one physical detail. Decide what they want from your character right now. That is enough: the rest you learn by playing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= ORACLES: PLACES -->
+<section class="page" data-ch="Place Oracles">
+  <header class="band"><h1>Place Oracles</h1></header>
+  <div class="cols">
+    <div class="block"><div class="tname">Settlement</div><p class="tdesc">Name it from First + Second (Ash + ford: Ashford), then roll its size, what it is known for, and its trouble.</p><div data-t="settlement"></div></div>
+    <div class="block"><div class="tname">Place Names</div><p class="tdesc">For rivers, hills, forests and ruins.</p><div data-t="place-name"></div></div>
+    <div class="block"><div class="tname">Loot and Treasure</div><p class="tdesc">Roll the loot and a detail that makes it a story.</p><div data-t="treasure"></div></div>
+    <div class="block">
+      <h2>When to roll loot</h2>
+      <p>Roll loot after a hard fight, at the heart of a site, or as the reward of a fulfilled oath. Do not roll for every corpse: an empty purse is fine. Weapons, armor and gold work as the Daggerheart rules say; the table tells you what it is and why it matters.</p>
+    </div>
+    <div class="aside">
+      <h4>Example: a settlement</h4>
+      <p>First <b>Ash</b>, second <b>ford</b>: Ashford. A village, known for its well, troubled by sickness. Two rolls and the inciting incident of a whole campaign is sitting on the page.</p>
+    </div>
+    <div class="block">
+      <h2>Naming the land</h2>
+      <p>Name a place when your character would: when someone tells them, or when they reach it. A name with a story (&ldquo;the Weeping Ford&rdquo;) is a question the oracle can answer later.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= EXAMPLE OF PLAY -->
+<section class="page" data-ch="Example of Play">
+  <header class="band"><h1>Example of Play</h1></header>
+  <div class="cols">
+    <div class="block">
+      <p>Wren is a level 1 ranger: Agility +2, Instinct +1, Presence +1, Finesse 0, Knowledge 0, Strength &minus;1. She starts with 2 Hope; the world starts with 1 Fear.</p>
+      <h3>The inciting incident</h3>
+      <p>The well at Ashford has been poisoned, and the only healer who could cure it, old Maro, has vanished. Wren grew up drinking from that well. She takes an oath: <b>&ldquo;I will find Maro and cure Ashford&rsquo;s well.&rdquo;</b> It is a real task, so the oath is <b>Serious</b> (Difficulty 13).</p>
+      <p><i>Take an Oath</i>, Presence: the Hope die shows 9, the Fear die 4. 9 + 4 + 1 = 14 against 13, and Hope is higher: a <b>strong hit</b>. Wren gains a Hope for rolling with Hope and another from the move. She knows what to do next: search Maro&rsquo;s house. Hope 4, Fear 1.</p>
+    </div>
+    <div class="block">
+      <h3>Begin a Session</h3>
+      <p>The next evening, Wren&rsquo;s player begins a session and rolls a <b>Vignette</b>: a 2, &ldquo;A rival gains ground on your oath.&rdquo; Far away, a bounty hunter is asking about Maro too. Wren does not know, but the player does. Wren gains a Hope as the story returns to her. Hope 5.</p>
+    </div>
+    <div class="block">
+      <h3>Gather Information</h3>
+      <p>At Maro&rsquo;s house, Wren searches with Instinct against Difficulty 12. Hope 3, Fear 8: 3 + 8 + 1 = 12, a success, but with Fear. A <b>weak hit</b>, and the world gains a Fear. Wren learns something, but it complicates things.</p>
+      <p>The player asks the oracle, &ldquo;Did Maro leave willingly?&rdquo; at 50 / 50 (13+). Hope 5, Fear 5: a total of 10, so <b>no</b>. The dice match, so there is a twist: Maro was taken by someone she trusted. A teacup sits across from hers, still full. Fear 2.</p>
+    </div>
+    <div class="block">
+      <h3>Into the Gloamwood</h3>
+      <p>The trail leads into the forest. Wren <i>Undertakes an Expedition</i>, Serious, with Instinct: Hope 10, Fear 6, total 17. A <b>strong hit</b>: she marks progress (2 boxes) and reaches a waypoint. Hope 6, the maximum.</p>
+      <p>The <b>Waypoint</b> roll is a 9: a strange monolith. Wren looks closer with Knowledge: Hope 4, Fear 7, total 11. A failure with Fear: a <b>miss</b>, and Fear rises to 3.</p>
+      <p>A miss on <i>Explore a Waypoint</i> is a peril, so Wren must <i>Pay the Price</i>. The failure with Fear also calls for a Fear Check: the d12 shows 3, equal to the Fear. It passes. The world spends 1 Fear (Fear 2) and Wren must <i>Confront Chaos</i>: a 3, &ldquo;A voice speaks your name.&rdquo; The stone whispers &ldquo;Wren&rdquo; in Maro&rsquo;s voice. For the price, the player rolls a 5: <b>Mark a Stress</b>.</p>
+      <p>Wren tries to tear herself away: <i>Face Danger</i> with Agility. Hope 7, Fear 7: <b>doubles, a critical success</b>. She is free, and the critical clears a Stress. Hope is already at 6, so the Hope it would give is lost.</p>
+    </div>
+    <div class="block">
+      <h3>The end of the oath</h3>
+      <p>Over the next sessions Wren follows the voice, reaches three milestones and fills <b>6 boxes</b> on her oath. In a hidden glade she finds Maro, alive, and the bounty hunter standing over her. After the fight, Wren makes the progress roll for <i>Keep Your Oath</i>: the challenge dice show 4 and 8. A score of 6 beats one: a <b>weak hit</b>. Maro is saved and the well can be cured, but whoever betrayed her is still out there. Wren takes a new oath.</p>
+    </div>
+    <div class="block">
+      <h3>A closer look: the fight in the glade</h3>
+      <p>The bounty hunter is the scene, so Wren fights a full battle. The player picks a tier 1 standard adversary for the hunter and a minion for his hound. Fear is 4.</p>
+      <p><i>Join the Fray</i>, Instinct: Hope 6, Fear 9, total 16 against the hunter&rsquo;s Difficulty. A success with Fear: a <b>weak hit</b>. The world gains a Fear (Fear 5) and the GM takes the spotlight first.</p>
+      <p><b>The GM turn.</b> The Fear Check rolls a 7: more than 5, so it fails. The hunter acts for free: <b>Tactics</b>. He circles to put Maro between himself and Wren&rsquo;s bow. After that action the world checks again to chain: a 10, another fail, so the GM turn ends and the spotlight goes to Wren.</p>
+      <p><b>Wren&rsquo;s spotlight.</b> She spends a Hope to add her Experience and shoots past Maro: a success with Hope. She rolls damage, the hunter marks Hit Points, and Wren keeps the spotlight. She shoots again and misses with Fear (Fear 6): the spotlight passes back to the GM.</p>
+      <p>The fight goes on like this until the hunter yields. Wren asks the oracle, &ldquo;Does he know who hired him?&rdquo; Likely: yes. That answer is her next oath.</p>
+    </div>
+    <div class="aside">
+      <h4>What the example shows</h4>
+      <ul>
+        <li>Every roll is read twice: as a success or failure, and as a strong hit, weak hit or miss.</li>
+        <li>Fear builds from your own rolls, and the Fear Check spends it.</li>
+        <li>Progress comes from milestones, and the oath ends with a progress roll.</li>
+        <li>The oracle fills every gap a GM would.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================= TRACKER SHEET -->
+<section class="page" data-ch="Tracker Sheet">
+  <header class="band"><h1>Tracker Sheet</h1></header>
+  <div class="sheet" data-sheet>
+    <div class="row2">
+      <div class="box"><div class="line">Character</div><div class="line">Lifelong oath</div></div>
+      <div class="box">
+        <div class="pips" style="margin-bottom:2mm">HOPE <i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="pips">FEAR <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
+    </div>
+    <div class="box"><h4>Oaths</h4><div data-tracks="4"></div></div>
+    <div class="row2">
+      <div class="box"><h4>Expeditions</h4><div data-tracks="2"></div></div>
+      <div class="box"><h4>Connections</h4><div data-tracks="2"></div></div>
+    </div>
+    <div class="row2">
+      <div class="box"><h4>Scene challenge</h4><div data-tracks="1"></div><div class="clocks"><span data-clock="4:0"></span><span data-clock="6:0"></span><span data-clock="8:0"></span></div></div>
+      <div class="box"><h4>Bonds and flags</h4><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div></div>
+    </div>
+    <div class="box notes"><h4>Notes</h4></div>
+    <small>Mark progress: Minor 3 boxes, Serious 2 boxes, Grave 1 box, Dire 2 ticks, Legendary 1 tick. Progress score: full boxes only.</small>
+  </div>
+</section>
+
+<!-- ============================================= CREDITS -->
+<section class="page" data-ch="Quick Reference">
+  <header class="band"><h1>Quick Reference</h1></header>
+  <div class="cols">
+    <div class="block">
+      <h2>The action roll</h2>
+      <table>
+        <tr><th>Daggerheart result</th><th>Outcome</th></tr>
+        <tr><td>Critical success</td><td><b>Strong hit</b> (+ Hope, clear a Stress)</td></tr>
+        <tr><td>Success with Hope</td><td><b>Strong hit</b></td></tr>
+        <tr><td>Success with Fear</td><td><b>Weak hit</b></td></tr>
+        <tr><td>Failure with Hope</td><td><b>Miss:</b> Pay the Price</td></tr>
+        <tr><td>Failure with Fear</td><td><b>Miss:</b> Pay the Price; 1 Fear makes it severe</td></tr>
+      </table>
+    </div>
+    <div class="block">
+      <h2>Ranks</h2>
+      <div data-t="iron-ranks"></div>
+      <p><b>No specified Difficulty?</b> Start at 13. Count Resistance, Demand and Conditions once each: 0 / 1 / 2 / 3 obstacles gives 13 / 15 / 18 / 20. No obstacles and especially simple: 10. Lock it before rolling. See page <span data-ref="Set the Difficulty"></span>.</p>
+    </div>
+    <div class="block">
+      <h2>Progress roll</h2>
+      <p>Full boxes vs two d10. Beat both: strong hit. Beat one: weak hit. Beat neither: miss. Ties go to the dice. A match is a twist. No Hope, no Fear, no modifiers.</p>
+    </div>
+    <div class="block">
+      <h2>Fear Check</h2>
+      <p>d12 equal to or under Fear: passes, the world spends Fear and acts. At 0 Fear it always fails.</p>
+    </div>
+    <div class="block">
+      <h2>Ask the Oracle</h2>
+      <div data-t="iron-oracle"></div>
+      <p>Doubles: an extreme result or a twist. Open questions: roll Meaning.</p>
+    </div>
+    <div class="block">
+      <h2>Pay the Price</h2>
+      <p>The obvious outcome, the oracle between two, or the table. Severe: roll twice.</p>
+    </div>
+    <div class="block">
+      <h2>Tension clock</h2>
+      <p>4 segments at a disadvantage, 6 on even footing, 8 with an advantage.</p>
+    </div>
+    <div class="block">
+      <div class="callout">
+      <h4>A session at a glance</h4>
+      <p>Begin a Session: flags, recap, scene, Vignette.</p>
+      <p>Envision. Make moves. Read the outcome.</p>
+      <p>Miss: Pay the Price. Unsure: Ask the Oracle.</p>
+      <p>Milestone: mark progress. Ready: progress roll.</p>
+      <p>End a Session: note what comes next.</p>
+    </div>
+    </div>
+    <div class="block">
+      <h2>About Duality GME</h2>
+      <p>Duality GME gives you the tools to explore a Daggerheart world on your own: moves to resolve uncertainty, tracks to follow lasting goals, and oracles to discover what happens next.</p>
+      <p>This book contains the solo procedures, moves, tables and trackers you need. Use it alongside the Daggerheart core rules, with whatever dice, notes and play aids suit you.</p>
+    </div>
+    <div class="block">
+      <h2>Acknowledgments</h2>
+      <p>Duality GME draws inspiration from <b>Ironsworn</b> and <b>Ironsworn: Starforged</b> by Shawn Tomkin, including their approach to moves, progress tracks and solo storytelling. Those works are available under the Creative Commons Attribution 4.0 license. Thank you for the foundations they offer to solo play.</p>
+      <p><b>Daggerheart</b> is a game by Darrington Press. This is unofficial fan-made content, not approved by or affiliated with Darrington Press. You need the Daggerheart rules to play.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+// BEGIN TABLES
+const T = {
+ "oracle": {
+  "h": [
+   "Likelihood",
+   "Yes on",
+   "Chance"
+  ],
+  "nonum": true,
+  "c": [
+   [
+    "Near certain",
+    "Likely",
+    "50 / 50",
+    "Unlikely",
+    "Long shot"
+   ],
+   [
+    "7+",
+    "10+",
+    "13+",
+    "16+",
+    "19+"
+   ],
+   [
+    "90%",
+    "75%",
+    "54%",
+    "31%",
+    "15%"
+   ]
+  ]
+ },
+ "iron-oracle": {
+  "h": [
+   "Likelihood",
+   "Yes on",
+   "Chance"
+  ],
+  "nonum": true,
+  "c": [
+   [
+    "Almost certain",
+    "Likely",
+    "50 / 50",
+    "Unlikely",
+    "Small chance"
+   ],
+   [
+    "7+",
+    "10+",
+    "13+",
+    "16+",
+    "19+"
+   ],
+   [
+    "90%",
+    "75%",
+    "54%",
+    "31%",
+    "15%"
+   ]
+  ]
+ },
+ "iron-ranks": {
+  "h": [
+   "Rank",
+   "Mark progress",
+   "Difficulty"
+  ],
+  "nonum": true,
+  "c": [
+   [
+    "Minor",
+    "Serious",
+    "Grave",
+    "Dire",
+    "Legendary"
+   ],
+   [
+    "3 boxes",
+    "2 boxes",
+    "1 box",
+    "2 ticks",
+    "1 tick"
+   ],
+   [
+    "10",
+    "13",
+    "15",
+    "18",
+    "20"
+   ]
+  ]
+ },
+ "how-much": {
+  "h": [
+   "How Much? How Well?"
+  ],
+  "c": [
+   [
+    "Far less than expected: scarce, weak, tiny",
+    "Somewhat less than expected",
+    "About what you would expect",
+    "Somewhat more than expected",
+    "Far more than expected: abundant, mighty, vast"
+   ]
+  ],
+  "n": [
+   "1-2",
+   "3-5",
+   "6-7",
+   "8-10",
+   "11-12"
+  ]
+ },
+ "scene-complication": {
+  "h": [
+   "Scene Complication"
+  ],
+  "c": [
+   [
+    "Hostile forces oppose you",
+    "An obstacle blocks your way",
+    "Wouldn’t it be bad if…",
+    "An NPC acts suddenly",
+    "All is not as it seems",
+    "Things actually go as planned",
+    "Time is shorter than you thought",
+    "Innocents are caught in it",
+    "A rival wants the same thing",
+    "Your gear or magic misbehaves",
+    "The environment turns dangerous",
+    "A debt or the past comes due"
+   ]
+  ]
+ },
+ "altered-scene": {
+  "h": [
+   "Altered Scene"
+  ],
+  "c": [
+   [
+    "The place is not as described",
+    "An expected NPC is absent",
+    "An unexpected NPC is present",
+    "Someone got here first",
+    "The danger is greater than expected",
+    "The danger is elsewhere, for now",
+    "Weather, light, or terrain turns",
+    "Something valuable is missing",
+    "A countdown is already running",
+    "An old Thread intrudes",
+    "Remove one element of the scene",
+    "Add a Scene Complication"
+   ]
+  ]
+ },
+ "soft-move": {
+  "h": [
+   "Soft Move"
+  ],
+  "c": [
+   [
+    "Show how the world reacts",
+    "Reveal an unwelcome truth",
+    "Signal a threat approaching off-screen",
+    "Offer what you want, at a cost",
+    "Mark a Stress",
+    "Shift the environment against you",
+    "An NPC acts on their Motive",
+    "Tick a countdown",
+    "Put an item or resource at risk",
+    "Close off the easy path",
+    "Your background or a past choice catches up",
+    "Add a Scene Complication"
+   ]
+  ]
+ },
+ "hard-move": {
+  "h": [
+   "Hard Move (costs 1 Fear)"
+  ],
+  "c": [
+   [
+    "An adversary strikes: take damage",
+    "A new danger arrives",
+    "Separate you from an ally or your gear",
+    "You are captured, pinned, or cornered",
+    "An opportunity is lost for good",
+    "Enemy reinforcements arrive",
+    "Force a choice between two losses",
+    "A countdown ticks twice",
+    "Someone or something you care about is harmed",
+    "Your success is turned against you",
+    "The environment erupts: collapse, fire, flood",
+    "Spend 1 more Fear if able: roll twice, both happen"
+   ]
+  ]
+ },
+ "action": {
+  "h": [
+   "Action A",
+   "Action B"
+  ],
+  "c": [
+   [
+    "Seek",
+    "Oppose",
+    "Communicate",
+    "Move",
+    "Harm",
+    "Create",
+    "Reveal",
+    "Command",
+    "Take",
+    "Protect",
+    "Assist",
+    "Transform"
+   ],
+   [
+    "Deceive",
+    "Abandon",
+    "Betray",
+    "Pursue",
+    "Trap",
+    "Destroy",
+    "Hide",
+    "Bargain",
+    "Release",
+    "Delay",
+    "Summon",
+    "Sacrifice"
+   ]
+  ]
+ },
+ "subject": {
+  "h": [
+   "Subject A",
+   "Subject B"
+  ],
+  "c": [
+   [
+    "Enemy",
+    "Ally",
+    "Community",
+    "Home",
+    "Wealth",
+    "Knowledge",
+    "Magic",
+    "Path",
+    "Secret",
+    "Oath",
+    "Authority",
+    "Nature"
+   ],
+   [
+    "Monster",
+    "Stranger",
+    "Family",
+    "Ruin",
+    "Weapon",
+    "Relic",
+    "The gods",
+    "Border",
+    "Rumor",
+    "Debt",
+    "Rebellion",
+    "Death"
+   ]
+  ]
+ },
+ "descriptor": {
+  "h": [
+   "Descriptor A",
+   "Descriptor B"
+  ],
+  "c": [
+   [
+    "Ancient",
+    "Broken",
+    "Hidden",
+    "Sacred",
+    "Cursed",
+    "Wild",
+    "Gilded",
+    "Humble",
+    "Strange",
+    "Dangerous",
+    "Beautiful",
+    "Forgotten"
+   ],
+   [
+    "Fresh",
+    "Massive",
+    "Tiny",
+    "Stolen",
+    "False",
+    "Burning",
+    "Frozen",
+    "Haunted",
+    "Guarded",
+    "Fragile",
+    "Powerful",
+    "Familiar"
+   ]
+  ]
+ },
+ "adversary-creature": {
+  "h": [
+   "Creature",
+   "Situation"
+  ],
+  "c": [
+   [
+    "Beast or predator",
+    "Swarm or vermin",
+    "Outlaws, raiders, or soldiers",
+    "Cultists or zealots",
+    "Undead: skeletons, zombies, ghouls",
+    "Ghost or restless spirit",
+    "Construct or golem",
+    "Elemental or living storm",
+    "Fae or wild spirit",
+    "Demon or fiend",
+    "Giant, troll, or dragon-kin",
+    "Aberration: roll Descriptor + Subject"
+   ],
+   [
+    "Patrolling or on watch",
+    "Lying in ambush",
+    "Guarding something or someone",
+    "Feeding, resting, or camped",
+    "Hunting you",
+    "Already fighting something else",
+    "Fleeing from something worse",
+    "Performing a ritual or a task",
+    "Wounded, lost, or starving",
+    "Demanding a toll or a parley",
+    "Asleep or unaware",
+    "Holding captives"
+   ]
+  ]
+ },
+ "adversary-type": {
+  "h": [
+   "Adversary Type"
+  ],
+  "c": [
+   [
+    "Minion: falls to any damage; comes in numbers",
+    "Horde: a crowd that fights as one",
+    "Standard: the rank and file",
+    "Skulk: strikes from hiding, then slips away",
+    "Ranged: fights from Far range",
+    "Bruiser: tough and hits hard",
+    "Support: aids allies, hinders you",
+    "Social: a threat of words, leverage, and status",
+    "Leader: commands others and calls reinforcements",
+    "Solo: a whole fight on its own"
+   ]
+  ],
+  "n": [
+   "1-2",
+   "3",
+   "4-5",
+   "6",
+   "7",
+   "8",
+   "9",
+   "10",
+   "11",
+   "12"
+  ]
+ },
+ "tactics": {
+  "h": [
+   "Adversary Tactics (free)"
+  ],
+  "c": [
+   [
+    "Attack the nearest PC",
+    "Attack the most wounded PC",
+    "Attack whoever hurt it last",
+    "Move to a better position; attack if able",
+    "Use a feature that costs no Fear (else attack)",
+    "Protect or aid an ally: the leader or the wounded",
+    "Pursue its own objective and ignore you",
+    "Hinder: grab, disarm, or impose a condition",
+    "Act by nature. Below half HP: ask the Oracle if it flees or parleys"
+   ]
+  ],
+  "n": [
+   "1-3",
+   "4-5",
+   "6",
+   "7",
+   "8",
+   "9",
+   "10",
+   "11",
+   "12"
+  ]
+ },
+ "fear-spend": {
+  "h": [
+   "Fear Spend"
+  ],
+  "c": [
+   [
+    "Use a Fear feature, paying its cost (none? attack, then spotlight a second adversary for 1 Fear)",
+    "Attack, then spotlight a second adversary (1 Fear)",
+    "The environment acts: use its Fear feature or a hazard (1 Fear)",
+    "Hard Move: roll on the Hard Move table (1 Fear)"
+   ]
+  ],
+  "n": [
+   "1-5",
+   "6-8",
+   "9-10",
+   "11-12"
+  ]
+ },
+ "npc-identity": {
+  "h": [
+   "Role",
+   "Motive"
+  ],
+  "c": [
+   [
+    "Farmer or laborer",
+    "Merchant",
+    "Soldier or guard",
+    "Outlaw",
+    "Priest or devotee",
+    "Scholar or sage",
+    "Noble or official",
+    "Artisan",
+    "Wanderer or scout",
+    "Spellcaster",
+    "Entertainer or trickster",
+    "Leader or elder"
+   ],
+   [
+    "Survival",
+    "Wealth",
+    "Protecting loved ones",
+    "Revenge",
+    "Knowledge",
+    "Power",
+    "Duty",
+    "Freedom",
+    "Redemption",
+    "Faith",
+    "Love",
+    "Glory"
+   ]
+  ]
+ },
+ "npc-manner": {
+  "h": [
+   "Attitude",
+   "Quirk",
+   "Topic"
+  ],
+  "c": [
+   [
+    "Hostile",
+    "Suspicious",
+    "Suspicious",
+    "Wary",
+    "Wary",
+    "Indifferent",
+    "Indifferent",
+    "Curious",
+    "Curious",
+    "Friendly",
+    "Friendly",
+    "Eager to help"
+   ],
+   [
+    "Scarred",
+    "Soft-spoken",
+    "Boastful",
+    "Superstitious",
+    "Always eating",
+    "Nervous laugh",
+    "Well dressed",
+    "Hums or sings",
+    "Blunt",
+    "Forgetful",
+    "Collects oddities",
+    "Hides a secret"
+   ],
+   [
+    "A rumor",
+    "Their trouble",
+    "Local rulers",
+    "Recent event",
+    "The past",
+    "A warning",
+    "A job offer",
+    "NPC gossip",
+    "The road ahead",
+    "Magic or gods",
+    "You",
+    "A Thread"
+   ]
+  ]
+ },
+ "plot-hook": {
+  "h": [
+   "Objective",
+   "Opposition"
+  ],
+  "c": [
+   [
+    "Rescue someone",
+    "Recover an item",
+    "Escort or deliver",
+    "Defend a place",
+    "Hunt a creature",
+    "Explore the unknown",
+    "Uncover a truth",
+    "Stop a ritual or plan",
+    "Broker a peace",
+    "Steal or infiltrate",
+    "Escape or survive",
+    "Destroy a threat at its source"
+   ],
+   [
+    "Bandits or raiders",
+    "A cult",
+    "A corrupt authority",
+    "A beast or monster",
+    "Undead or restless spirits",
+    "A rival party",
+    "A mage or witch",
+    "The wilds themselves",
+    "A fallen hero",
+    "A faction at war",
+    "Something from another realm",
+    "Someone you trust"
+   ]
+  ]
+ },
+ "plot-stakes": {
+  "h": [
+   "Reward",
+   "Twist"
+  ],
+  "c": [
+   [
+    "Gold",
+    "Rare gear",
+    "A magic relic",
+    "A secret or lore",
+    "An ally or favor",
+    "A safe haven",
+    "Title or standing",
+    "A debt cleared",
+    "A lead on a personal Thread",
+    "Healing or a cure",
+    "Passage or access",
+    "Only doing what is right"
+   ],
+   [
+    "The patron is lying",
+    "The victim is willing or guilty",
+    "A third party interferes",
+    "The clock is shorter",
+    "The target has moved",
+    "The enemy is sympathetic",
+    "It is a trap",
+    "The reward is false or cursed",
+    "An old ally stands on the other side",
+    "The real threat is far bigger",
+    "Success has a moral cost",
+    "It ties to your past"
+   ]
+  ]
+ },
+ "event-focus": {
+  "h": [
+   "Event Focus"
+  ],
+  "c": [
+   [
+    "Something far away changes",
+    "A strange omen or mystery",
+    "A new NPC enters",
+    "A known NPC acts",
+    "Bad for an NPC",
+    "Good for an NPC",
+    "A Thread advances",
+    "A Thread is set back",
+    "A Thread closes or transforms",
+    "Bad for you",
+    "Good for you",
+    "The environment acts"
+   ]
+  ]
+ },
+ "rumor": {
+  "h": [
+   "Rumors and Leads"
+  ],
+  "c": [
+   [
+    "Lights where no one lives",
+    "A stranger asks about you",
+    "Travelers stop coming back",
+    "A reward for someone missing",
+    "A storm uncovered old ruins",
+    "A merchant needs an escort",
+    "Animals flee one place",
+    "A friend sends for you",
+    "Coins of a fallen kingdom",
+    "A festival hides a secret",
+    "A rival is on the move",
+    "A dream points the way"
+   ]
+  ]
+ },
+ "site": {
+  "h": [
+   "Area",
+   "Exits",
+   "Contents"
+  ],
+  "c": [
+   [
+    "Narrow passage",
+    "Narrow passage",
+    "Open chamber",
+    "Open chamber",
+    "Crossing or junction",
+    "Stairs, drop, or climb",
+    "Collapsed or flooded section",
+    "Living or work quarters",
+    "Vault or storage",
+    "Shrine or sanctum",
+    "Cavern or overgrowth",
+    "Heart of the site"
+   ],
+   [
+    "None",
+    "None",
+    "None",
+    "One",
+    "One",
+    "One",
+    "One",
+    "Two",
+    "Two",
+    "Two",
+    "Three",
+    "Three"
+   ],
+   [
+    "Empty; traces only",
+    "Empty; traces only",
+    "Empty; traces only",
+    "Hazard or trap",
+    "Hazard or trap",
+    "Adversaries",
+    "Adversaries",
+    "Adversaries guarding treasure",
+    "Treasure",
+    "An NPC",
+    "A clue to a Thread",
+    "Something strange (roll Meaning)"
+   ]
+  ]
+ },
+ "hazard": {
+  "h": [
+   "Hazard (reaction roll)",
+   "On a failure"
+  ],
+  "c": [
+   [
+    "Pit or collapsing floor (Agility)",
+    "Poison darts or needles (Agility)",
+    "Rockfall (Agility)",
+    "Slick or crumbling footing (Finesse)",
+    "Rising water (Strength)",
+    "Fire or choking smoke (Instinct)",
+    "Grasping thorns or vines (Strength)",
+    "Arcane ward (Knowledge)",
+    "Snare or net (Instinct)",
+    "Swinging blade (Agility)",
+    "Spores or foul air (Instinct)",
+    "Illusion or false path (Knowledge)"
+   ],
+   [
+    "Fall: take physical damage",
+    "Mark a Stress; become Vulnerable",
+    "Take physical damage",
+    "Separated from an ally or your gear",
+    "Lose or ruin an item",
+    "Mark a Stress",
+    "Become Restrained",
+    "Take magic damage",
+    "Become Restrained",
+    "Take physical damage",
+    "Mark a Stress; disadvantage on your next roll",
+    "Lost: the way back is gone"
+   ]
+  ]
+ },
+ "rest": {
+  "h": [
+   "Rest and Camp"
+  ],
+  "c": [
+   [
+    "A quiet rest; nothing stirs",
+    "A traveler asks to share the fire",
+    "Sounds in the dark: ask the Oracle",
+    "A dream about an open Thread",
+    "The weather turns on the camp",
+    "Something is missing at dawn",
+    "A memory surfaces: tell it",
+    "Fresh tracks around the camp",
+    "A message or omen arrives",
+    "An NPC seeks you out",
+    "Interrupted: roll a Random Event"
+   ]
+  ],
+  "n": [
+   "1-2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "8",
+   "9",
+   "10",
+   "11",
+   "12"
+  ]
+ },
+ "journey": {
+  "h": [
+   "Danger (1 Fear)",
+   "Discovery"
+  ],
+  "c": [
+   [
+    "Ambush",
+    "A predator stalks you",
+    "Storm or harsh weather",
+    "The path is lost",
+    "Hazardous crossing",
+    "Supplies spoiled or lost",
+    "Hostile patrol",
+    "Sickness or exhaustion: mark a Stress",
+    "Pursuers catch up",
+    "Cursed or haunted ground",
+    "Natural disaster",
+    "The lair of something big"
+   ],
+   [
+    "A quiet road; nothing",
+    "Fellow travelers",
+    "Shelter or a good campsite",
+    "A ruin",
+    "A settlement or homestead",
+    "A shrine or landmark",
+    "A useful resource",
+    "Tracks or signs",
+    "A trader",
+    "Someone in need",
+    "A hidden cache",
+    "A wondrous sight: gain a Hope"
+   ]
+  ]
+ },
+ "wilds": {
+  "h": [
+   "Terrain",
+   "Weather",
+   "Landmark"
+  ],
+  "c": [
+   [
+    "Open plains",
+    "Rolling hills",
+    "Dense forest",
+    "Old, quiet forest",
+    "Marsh or bog",
+    "Mountains or crags",
+    "Highland moor",
+    "River valley",
+    "Coast or cliffs",
+    "Desert or badlands",
+    "Snowfields or tundra",
+    "Strange land (roll Descriptor)"
+   ],
+   [
+    "Clear and calm",
+    "Clear and calm",
+    "Overcast",
+    "Strong wind",
+    "Light rain",
+    "Heavy rain",
+    "Thick fog",
+    "Heat",
+    "Bitter cold",
+    "Storm",
+    "Snow or hail",
+    "Unnatural weather"
+   ],
+   [
+    "A lone great tree",
+    "Standing stones",
+    "A ruined tower",
+    "An old bridge",
+    "An old battlefield",
+    "A wayside shrine",
+    "A cave mouth",
+    "Bones of something huge",
+    "A crossroads marker",
+    "A waterfall",
+    "An abandoned camp",
+    "A crater or scar"
+   ]
+  ]
+ },
+ "place-name": {
+  "h": [
+   "First",
+   "Second"
+  ],
+  "c": [
+   [
+    "Ash",
+    "Bright",
+    "Cold",
+    "Crow",
+    "Elder",
+    "Fair",
+    "Gold",
+    "Hollow",
+    "Iron",
+    "Mist",
+    "Raven",
+    "Thorn"
+   ],
+   [
+    "-barrow",
+    "-brook",
+    "-crest",
+    "-fall",
+    "-ford",
+    "-gate",
+    "-hold",
+    "-mere",
+    "-moor",
+    "-reach",
+    "-stead",
+    "-wick"
+   ]
+  ]
+ },
+ "settlement": {
+  "h": [
+   "Size",
+   "Known for",
+   "Trouble"
+  ],
+  "c": [
+   [
+    "Hamlet or homestead",
+    "Hamlet or homestead",
+    "Hamlet or homestead",
+    "Village",
+    "Village",
+    "Village",
+    "Town",
+    "Town",
+    "Town",
+    "Walled city",
+    "Walled city",
+    "Great city"
+   ],
+   [
+    "Fine craft",
+    "Strong drink",
+    "A sacred site",
+    "Its market",
+    "A famous family",
+    "Horses or beasts",
+    "Mines or quarries",
+    "The river or the sea",
+    "Ruins nearby",
+    "Scholars or a library",
+    "Mercenaries",
+    "Strange customs"
+   ],
+   [
+    "Raiders on the roads",
+    "A sickness spreads",
+    "A feud between families",
+    "Someone is missing",
+    "Monster sightings",
+    "A corrupt leader",
+    "A failing harvest",
+    "A cult in hiding",
+    "A debt to a powerful patron",
+    "Haunted nights",
+    "Flood, fire, or drought",
+    "Strangers arrived recently"
+   ]
+  ]
+ },
+ "names": {
+  "h": [
+   "Given A",
+   "Given B",
+   "Family",
+   "Epithet"
+  ],
+  "c": [
+   [
+    "Aster",
+    "Bram",
+    "Cass",
+    "Dain",
+    "Elowen",
+    "Fenn",
+    "Gwen",
+    "Hollis",
+    "Isra",
+    "Jory",
+    "Kestrel",
+    "Lio"
+   ],
+   [
+    "Mara",
+    "Nim",
+    "Orrin",
+    "Pell",
+    "Quill",
+    "Rhea",
+    "Sorrel",
+    "Tamsin",
+    "Ulric",
+    "Vesper",
+    "Wren",
+    "Yara"
+   ],
+   [
+    "Ashdown",
+    "Blackbriar",
+    "Coldwater",
+    "Dunmore",
+    "Emberly",
+    "Fallowmere",
+    "Greyhallow",
+    "Hartwick",
+    "Ironwood",
+    "Larkspur",
+    "Mossgrave",
+    "Thorne"
+   ],
+   [
+    "the Quiet",
+    "the Lucky",
+    "Half-Hand",
+    "the Elder",
+    "Two-Coins",
+    "of the Ford",
+    "the Grey",
+    "Oathbound",
+    "the Unbowed",
+    "Lantern",
+    "the Wanderer",
+    "Saltblood"
+   ]
+  ]
+ },
+ "iron-price": {
+  "h": [
+   "Pay the Price"
+  ],
+  "c": [
+   [
+    "Someone you trust acts against you",
+    "Something of value is lost or destroyed",
+    "The danger grows: tick a countdown",
+    "You are separated from someone or something",
+    "Mark a Stress",
+    "Take damage (by tier)",
+    "A new danger or foe appears",
+    "Lose progress: clear 1 box on a related track",
+    "The GM gains a Fear",
+    "An unwelcome truth comes out",
+    "Time is lost; the world moves without you",
+    "Two prices: roll twice, both happen"
+   ]
+  ]
+ },
+ "iron-vignette": {
+  "h": [
+   "Begin a Session: Vignette"
+  ],
+  "c": [
+   [
+    "A foe makes a move against you",
+    "A rival gains ground on your oath",
+    "Someone you care about is in trouble",
+    "A secret is uncovered far away",
+    "A faction changes its plans",
+    "A threat grows: tick a countdown",
+    "An omen appears to a stranger",
+    "An ally finds a lead for you",
+    "A place you know is changed",
+    "Something old wakes up",
+    "A messenger is on the way to you",
+    "The goal of your oath moves or changes"
+   ]
+  ]
+ },
+ "iron-waypoint": {
+  "h": [
+   "Waypoint"
+  ],
+  "c": [
+   [
+    "A ruined outpost",
+    "A river crossing",
+    "A hunter’s camp",
+    "A shrine to a forgotten god",
+    "A cave system",
+    "An old battlefield",
+    "An abandoned village",
+    "A lookout or tower",
+    "A strange monolith",
+    "A beast’s lair",
+    "A trading post",
+    "A crossroads"
+   ]
+  ]
+ },
+ "iron-opportunity": {
+  "h": [
+   "Find an Opportunity"
+  ],
+  "c": [
+   [
+    "The terrain favors you",
+    "A hidden path",
+    "Useful supplies",
+    "You learn a foe’s weakness",
+    "Shelter or safety",
+    "A distraction you can use",
+    "Someone offers help",
+    "A clue to your oath",
+    "Something left behind",
+    "High ground: advantage on your next roll",
+    "An enemy gives themselves away",
+    "Momentum: gain a Hope"
+   ]
+  ]
+ },
+ "iron-discovery": {
+  "h": [
+   "Make a Discovery"
+  ],
+  "c": [
+   [
+    "An untouched place of power",
+    "A lost settlement, still alive",
+    "A great beast at peace",
+    "Ruins of a vanished people",
+    "A gate to another realm",
+    "A trove of old knowledge",
+    "A sacred grove or spring",
+    "A relic fallen from the sky",
+    "A hidden valley",
+    "A sleeping titan",
+    "A living legend",
+    "Something new: roll Descriptor + Subject"
+   ]
+  ]
+ },
+ "iron-chaos": {
+  "h": [
+   "Confront Chaos"
+  ],
+  "c": [
+   [
+    "Distances lie: the way twists back",
+    "Time slips: hours vanish",
+    "A voice speaks your name",
+    "The dead walk",
+    "Shadows move wrong",
+    "Corruption spreads through the land",
+    "A creature not of this world",
+    "Magic runs wild",
+    "A sickness of the mind: mark a Stress",
+    "Echoes of a battle long past",
+    "A door where none should be",
+    "Something nameless: roll Action + Subject"
+   ]
+  ]
+ },
+ "faction": {
+  "h": [
+   "Faction",
+   "Wants",
+   "Method"
+  ],
+  "c": [
+   [
+    "Merchant guild",
+    "Noble house",
+    "Temple or holy order",
+    "Thieves’ guild",
+    "Mercenary company",
+    "Circle of mages",
+    "Rebels",
+    "Druidic circle",
+    "Secret society",
+    "Knightly order",
+    "Outlaw band",
+    "An ancient bloodline"
+   ],
+   [
+    "Wealth",
+    "Control of a place",
+    "Revenge",
+    "A lost relic",
+    "To protect its own",
+    "To spread its faith",
+    "To topple a ruler",
+    "To bury a secret",
+    "Forbidden knowledge",
+    "Survival",
+    "New territory",
+    "To wake something old"
+   ],
+   [
+    "Bribery",
+    "Open force",
+    "Blackmail",
+    "Diplomacy",
+    "Spies",
+    "Trade",
+    "Rituals",
+    "Rumors and lies",
+    "Assassins",
+    "Alliances",
+    "Hiring heroes (you)",
+    "Patience"
+   ]
+  ]
+ },
+ "treasure": {
+  "h": [
+   "Loot",
+   "Detail"
+  ],
+  "c": [
+   [
+    "A handful of gold",
+    "A handful of gold",
+    "A handful of gold",
+    "Supplies: rations, rope, torches",
+    "Supplies: rations, rope, torches",
+    "A health or stamina potion",
+    "A tool or trade good",
+    "A fine weapon",
+    "Armor or a shield",
+    "Jewelry or art",
+    "A map, a key, or a letter",
+    "A magic item (roll Descriptor + Subject)"
+   ],
+   [
+    "Engraved with a name",
+    "Stained with old blood",
+    "Smells of smoke",
+    "Older than it should be",
+    "Belonged to someone you know",
+    "Warm to the touch",
+    "Hums faintly",
+    "Wrapped in a note",
+    "Marked by a faction",
+    "Cracked but whole",
+    "Lighter or heavier than it looks",
+    "Someone wants it back"
+   ]
+  ]
+ }
+};
+const M = {
+ "session": {
+  "label": "Session moves",
+  "moves": [
+   {
+    "id": "begin-session",
+    "name": "Begin a Session",
+    "trigger": "When you begin a significant session.",
+    "text": "Set or review your flags, recap where you left off, and set the scene: where you are and what you intend. You may spotlight a danger, opportunity or insight elsewhere: roll a Vignette, envision it, and gain a Hope as you return to your character."
+   },
+   {
+    "id": "set-flag",
+    "name": "Set a Flag",
+    "trigger": "When you want to avoid or handle with care some content.",
+    "text": "Note it. When it comes up, use Change Your Fate."
+   },
+   {
+    "id": "change-fate",
+    "name": "Change Your Fate",
+    "trigger": "When flagged content comes up, or a result does not fit the story you want.",
+    "text": "Reframe or replace it: reroll the oracle, or choose another outcome that keeps the stakes."
+   },
+   {
+    "id": "take-break",
+    "name": "Take a Break",
+    "trigger": "When you pause during a session.",
+    "text": "Note what was happening and what you intend, so you can pick it up."
+   },
+   {
+    "id": "end-session",
+    "name": "End a Session",
+    "trigger": "When you end a session.",
+    "text": "If there is an oath, connection or situation you want to focus on next time, note it and gain a Hope."
+   }
+  ]
+ },
+ "quest": {
+  "label": "Quest moves",
+  "moves": [
+   {
+    "id": "swear-vow",
+    "name": "Take an Oath",
+    "trigger": "When you swear an oath to complete a quest.",
+    "roll": "Presence vs the rank’s Difficulty",
+    "strong": "You know what to do next. Gain a Hope.",
+    "weak": "The next step is unclear: ask the Oracle or Gather Information.",
+    "miss": "A significant obstacle stands in your way before you can begin: envision it, or Pay the Price."
+   },
+   {
+    "id": "milestone",
+    "name": "Reach a Milestone",
+    "trigger": "When you make significant progress on an oath: overcome an obstacle, learn a truth, reach a place.",
+    "text": "Mark progress on the oath at its rank."
+   },
+   {
+    "id": "fulfill-vow",
+    "name": "Keep Your Oath",
+    "trigger": "When you reach the end of a quest.",
+    "roll": "Progress roll",
+    "strong": "Your oath is kept. If Serious or higher, it is a milestone for levelling up.",
+    "weak": "It is done, but there is more to it: take a new oath to finish it, or accept a lesser outcome.",
+    "miss": "It is undone or you were deceived: take a new oath at a higher rank, or break this one."
+   },
+   {
+    "id": "forsake-vow",
+    "name": "Break Your Oath",
+    "trigger": "When you abandon an oath.",
+    "text": "Clear the track and mark 2 Stress. Someone may hold it against you."
+   }
+  ]
+ },
+ "adventure": {
+  "label": "Adventure moves",
+  "moves": [
+   {
+    "id": "face-danger",
+    "name": "Face Danger",
+    "trigger": "When you act despite a threat or under pressure.",
+    "roll": "The trait that fits",
+    "strong": "You do it.",
+    "weak": "You do it, but at a cost: mark a Stress, lose time, or something slips.",
+    "miss": "You fail or your progress is undermined: Pay the Price."
+   },
+   {
+    "id": "secure-advantage",
+    "name": "Secure an Advantage",
+    "trigger": "When you prepare, assess, or gain leverage.",
+    "roll": "The trait that fits",
+    "strong": "Take advantage on your next roll, or gain a Hope.",
+    "weak": "Take advantage on your next roll.",
+    "miss": "It goes wrong: Pay the Price."
+   },
+   {
+    "id": "gather-information",
+    "name": "Gather Information",
+    "trigger": "When you search, investigate, or ask questions.",
+    "roll": "Knowledge or Instinct",
+    "strong": "You learn something helpful and specific. If it advances an oath, Reach a Milestone.",
+    "weak": "You learn something, but it complicates things: ask the Oracle what.",
+    "miss": "Your search turns up a hard truth or a danger: Pay the Price."
+   },
+   {
+    "id": "compel",
+    "name": "Compel",
+    "trigger": "When you persuade, threaten, or bargain.",
+    "roll": "Presence",
+    "strong": "They do what you want.",
+    "weak": "They do it, but ask something in return.",
+    "miss": "They refuse or turn against you: Pay the Price."
+   },
+   {
+    "id": "make-camp",
+    "name": "Make Camp",
+    "trigger": "When you rest in the wild.",
+    "text": "Take a Daggerheart rest (the GM gains Fear as the rules say), then roll Rest and Camp for what happens."
+   }
+  ]
+ },
+ "exploration": {
+  "label": "Exploration moves",
+  "moves": [
+   {
+    "id": "undertake-expedition",
+    "name": "Undertake an Expedition",
+    "trigger": "When you travel through dangerous ground. Give it a rank and a track; roll for each segment.",
+    "roll": "Instinct, Agility or Knowledge vs the rank’s Difficulty",
+    "strong": "Mark progress and reach a waypoint.",
+    "weak": "Mark progress, but suffer a cost (supplies, a Stress, a delay) or Pay the Price.",
+    "miss": "You are waylaid: Pay the Price, no progress."
+   },
+   {
+    "id": "explore-waypoint",
+    "name": "Explore a Waypoint",
+    "trigger": "When you reach a waypoint and look around.",
+    "roll": "Instinct or Knowledge",
+    "strong": "Find an Opportunity. On a critical, Make a Discovery instead.",
+    "weak": "You find a detail and face a choice: a risk for a reward.",
+    "miss": "Peril: Pay the Price. On a failure with Fear, make a Fear Check: a pass spends 1 Fear and you Confront Chaos."
+   },
+   {
+    "id": "make-discovery",
+    "name": "Make a Discovery",
+    "trigger": "When you find something wondrous.",
+    "text": "Roll Make a Discovery and envision it. Gain a Hope, or Reach a Milestone if it bears on an oath."
+   },
+   {
+    "id": "confront-chaos",
+    "name": "Confront Chaos",
+    "trigger": "When you meet something strange and wrong.",
+    "text": "Roll Confront Chaos and envision it. Face Danger to endure or escape it."
+   },
+   {
+    "id": "finish-expedition",
+    "name": "Finish an Expedition",
+    "trigger": "When you reach the destination.",
+    "roll": "Progress roll",
+    "strong": "You arrive safely; the place is as you hoped.",
+    "weak": "You arrive, but at a cost, or the place is not what you expected.",
+    "miss": "You are lost or turned back: Pay the Price, then raise the rank and keep going, or abandon it."
+   }
+  ]
+ },
+ "connection": {
+  "label": "Connection moves",
+  "moves": [
+   {
+    "id": "make-connection",
+    "name": "Make a Connection",
+    "trigger": "When you build a relationship with someone.",
+    "roll": "Presence",
+    "strong": "They become a connection: give them a role and a rank, and a track.",
+    "weak": "They become a connection after you do something for them first.",
+    "miss": "They distrust you or want too much: Pay the Price."
+   },
+   {
+    "id": "develop-relationship",
+    "name": "Develop Your Relationship",
+    "trigger": "When you share a meaningful moment or help a connection.",
+    "text": "Mark progress on their track."
+   },
+   {
+    "id": "forge-bond",
+    "name": "Forge a Bond",
+    "trigger": "When your relationship is ready to become a bond.",
+    "roll": "Progress roll",
+    "strong": "The bond is forged. Once per session they can help you: an advantage die (d6).",
+    "weak": "They ask one more thing of you first.",
+    "miss": "Something comes between you: Pay the Price."
+   }
+  ]
+ },
+ "scene": {
+  "label": "Scene challenge",
+  "moves": [
+   {
+    "id": "begin-scene",
+    "name": "Begin the Scene",
+    "trigger": "When you face a tense, extended situation: a chase, an infiltration, a debate.",
+    "text": "Name the objective and give it a Grave track. Set a tension clock: 4 segments at a disadvantage, 6 on even footing, 8 with an advantage."
+   },
+   {
+    "id": "scene-action",
+    "name": "Face Danger or Secure an Advantage (in a scene)",
+    "trigger": "When you act within a scene challenge.",
+    "roll": "The trait that fits",
+    "strong": "Mark progress.",
+    "weak": "Mark progress and fill 1 clock segment.",
+    "miss": "Fill 1 segment (2 on a failure with Fear) and Pay the Price."
+   },
+   {
+    "id": "finish-scene",
+    "name": "Finish the Scene",
+    "trigger": "When the track or the clock is full, or the story ends it.",
+    "roll": "Progress roll",
+    "strong": "You achieve your objective.",
+    "weak": "You achieve it at a cost, or only in part.",
+    "miss": "You fail: Pay the Price."
+   }
+  ]
+ },
+ "combat": {
+  "label": "Combat moves",
+  "moves": [
+   {
+    "id": "enter-fray",
+    "name": "Join the Fray",
+    "trigger": "When a fight begins.",
+    "roll": "Instinct or Agility",
+    "strong": "You act first.",
+    "weak": "The GM takes the spotlight first.",
+    "miss": "The GM takes the spotlight first, and something goes wrong: Pay the Price."
+   },
+   {
+    "id": "battle",
+    "name": "Battle",
+    "trigger": "When you resolve a minor fight in one roll.",
+    "roll": "The trait that fits",
+    "strong": "You win.",
+    "weak": "You win, and Pay the Price.",
+    "miss": "You lose, and Pay the Price."
+   },
+   {
+    "id": "gm-turn",
+    "name": "The GM turn",
+    "trigger": "When the spotlight passes to the GM in a full fight.",
+    "text": "Make a Fear Check: a fail is a free action (Tactics); a pass spends Fear (Fear Spend). Chain until a check fails."
+   }
+  ]
+ },
+ "fate": {
+  "label": "Fate moves",
+  "moves": [
+   {
+    "id": "ask-oracle",
+    "name": "Ask the Oracle",
+    "trigger": "When you need an answer.",
+    "roll": "Duality Dice vs likelihood",
+    "text": "Pick a likelihood; doubles bring an extreme result or a twist. For open questions, roll Meaning."
+   },
+   {
+    "id": "pay-price",
+    "name": "Pay the Price",
+    "trigger": "When a move tells you to.",
+    "roll": "Pay the Price table",
+    "text": "Choose the most obvious negative outcome, or roll. A severe price (failure with Fear, the GM spends 1 Fear) rolls twice."
+   }
+  ]
+ }
+};
+// END TABLES
+
+/** Notes printed under each move, by move id. */
+const NOTES = {
+  'begin-session': 'Use it every time you sit down, even for half an hour. The recap is for you: one or two sentences in your notebook is enough. The Vignette lets you see the world move without your character. They do not know what you saw, but you can play toward it.',
+  'set-flag': 'Flags are for you alone: things you do not want in your story, or want only off-screen. Write them on your tracker sheet and review them at the start of each session.',
+  'change-fate': 'This is not cheating. Keep the stakes and change the shape: a death becomes a capture, a gruesome wound becomes a lost weapon. If an oracle answer kills your interest, reroll it.',
+  'take-break': 'A line of notes now saves ten minutes of rereading later.',
+  'end-session': 'End on a question. Write the next thing your character wants to do; it is where you start next time.',
+  'swear-vow': 'Take oaths out loud, in the story, to someone or something: a person, a grave, a sword. Give the oath a rank before you roll. On a weak hit, your first step is usually to Gather Information.',
+  'milestone': 'Mark progress when the story moves forward, not for every roll. A good milestone changes what your character knows or where they stand: a key witness found, a gate opened, a rival defeated.',
+  'fulfill-vow': 'Make this move when you believe you have done it, even with a partial track. A weak hit is not a failure: it means the story is not finished, and a new oath carries it on.',
+  'forsake-vow': 'Sometimes the right story is giving up. Mark the Stress and let the consequences follow you.',
+  'face-danger': 'The most common move in the game. Use it whenever you act under pressure and no other move fits: climbing in a storm, slipping past a guard, holding a door. Choose the trait by how you act.',
+  'secure-advantage': 'Use it to set up a risky action: study the lock, find the high ground, wait for the guard to turn. Advantage is a d6 added to your next roll.',
+  'gather-information': 'When the answer matters and finding it is not trivial. If you learn something that moves an oath forward, it is a milestone.',
+  'compel': 'Compel is for people who would not do it otherwise. If they have no reason to refuse, they simply agree. Decide what they want in return before you roll, or roll Meaning.',
+  'make-camp': 'Resting is never free: it gives the world Fear. Camp when you need to, not by habit.',
+  'undertake-expedition': 'Roll once for each meaningful stretch of the journey: a day, a valley, a level of a ruin. On a weak hit, the cost should be felt: a lost consumable, a Stress, or hours gone.',
+  'explore-waypoint': 'You do not have to explore every waypoint. Do it when the place is interesting or you need what it might hold.',
+  'make-discovery': 'Discoveries are rare and wondrous. Make them big: they are the stories your character will tell.',
+  'confront-chaos': 'Chaos is strange, not just dangerous. Envision something that makes the world feel larger and less safe.',
+  'finish-expedition': 'Roll when you are close enough to try. A miss means you are lost or turned back: raise the rank and continue, or give up the journey.',
+  'make-connection': 'Give the connection a role (guide, healer, smuggler) and a rank: Minor for someone easy to win over, Grave or higher for the proud and the powerful.',
+  'develop-relationship': 'Mark progress when you help them, share a hardship, or keep a promise. One mark per meaningful scene.',
+  'forge-bond': 'A bond is permanent. If they become a companion, they travel with you; if not, they still answer when you call.',
+  'begin-scene': 'The clock size is your position: 4 when you are at a disadvantage, 6 on even footing, 8 when you have the edge.',
+  'scene-action': 'Within a scene challenge, Face Danger to push toward the objective and Secure an Advantage to set up the next roll. Every miss feeds the clock.',
+  'finish-scene': 'When the clock is full, you must finish the scene now, whatever your progress.',
+  'enter-fray': 'Use it only when it is unclear who acts first. If you ambush them, you act first; if they ambush you, they do.',
+  'battle': 'Battle is for fights that are not the point of the scene: a band of thugs in the way, a skirmish at the gate.',
+  'gm-turn': 'Pick the adversary that makes the most sense, or the one that has acted least. A chain of passed checks can bring several foes into play at once: that is a bad moment, and it should feel like one.',
+  'ask-oracle': 'Ask about the world, not about your character&rsquo;s choices: you decide what your character does. Pick the likelihood honestly, from what you know of the scene.',
+  'pay-price': 'The price should make the story more interesting, not just harder. If the result makes no sense, take the most obvious outcome instead.',
+};
+
+// --------------------------------------------------------------- rendering
+const $ = (sel, root = document) => [...root.querySelectorAll(sel)];
+const svg = (w, h, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${w}mm" height="${h}mm" viewBox="0 0 ${w * 10} ${h * 10}">${body}</svg>`;
+const poly = (cx, cy, r, n, rot = -90) => Array.from({ length: n }, (_, i) => {
+  const a = (rot + i * 360 / n) * Math.PI / 180; return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`;
+}).join(' ');
+const num = (x, y, text, color = '#fff', size = 52) =>
+  `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-family="Bahnschrift, Arial" font-weight="700" font-size="${size}" fill="${color}">${text}</text>`;
+
+/** Dice and number badges for the diagrams: hope/fear are d12 faces, d10 a kite, the rest boxes. */
+function die(kind, value) {
+  if (kind === 'hope' || kind === 'fear') {
+    const fill = kind === 'hope' ? '#b07d12' : '#5b2a86';
+    return svg(15, 15, `<polygon points="${poly(75, 78, 70, 5)}" fill="${fill}"/><polygon points="${poly(75, 80, 38, 5, 90)}" fill="none" stroke="#ffffff66" stroke-width="3"/>${num(75, 82, value)}`);
+  }
+  if (kind === 'd10') return svg(13, 15, `<polygon points="65,5 125,70 65,145 5,70" fill="#3a3a3e"/><polygon points="65,5 125,70 65,95 5,70" fill="#55555b"/>${num(65, 68, value)}`);
+  const dark = kind === 'total' || kind === 'score';
+  return svg(13, 13, `<rect x="6" y="6" width="118" height="118" rx="${dark ? 60 : 14}" fill="${dark ? '#1b1b1d' : '#fff'}" stroke="#1b1b1d" stroke-width="7"/>${num(65, 67, value, dark ? '#fff' : '#1b1b1d')}`);
+}
+/** One progress box with 0 to 4 ticks: \, X, X|, X+ (a slash, a cross, then the upright and the bar). */
+function box(ticks, x, size) {
+  const s = size, m = s * .18, lines = [];
+  if (ticks >= 1) lines.push([x + m, m, x + s - m, s - m]);
+  if (ticks >= 2) lines.push([x + s - m, m, x + m, s - m]);
+  if (ticks >= 3) lines.push([x + s / 2, m * .7, x + s / 2, s - m * .7]);
+  if (ticks >= 4) lines.push([x + m * .7, s / 2, x + s - m * .7, s / 2]);
+  return `<rect x="${x + 2}" y="2" width="${s - 4}" height="${s - 4}" fill="#fff" stroke="#1b1b1d" stroke-width="4"/>` +
+    lines.map(([a, b, c, d]) => `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="#1b1b1d" stroke-width="5" stroke-linecap="round"/>`).join('');
+}
+function track(ticks, widthMm = 84) {
+  const size = widthMm * 10 / 10;
+  let body = '';
+  for (let i = 0; i < 10; i++) body += box(Math.max(0, Math.min(4, ticks - i * 4)), i * size, size);
+  return svg(widthMm, widthMm / 10, body);
+}
+function clock(segments, filled, mm = 15) {
+  const r = mm * 5 - 6, c = mm * 5;
+  let body = `<circle cx="${c}" cy="${c}" r="${r}" fill="#fff" stroke="#1b1b1d" stroke-width="5"/>`;
+  for (let i = 0; i < segments; i++) {
+    const a1 = (-90 + i * 360 / segments) * Math.PI / 180, a2 = (-90 + (i + 1) * 360 / segments) * Math.PI / 180;
+    if (i < filled) body += `<path d="M${c},${c} L${c + r * Math.cos(a1)},${c + r * Math.sin(a1)} A${r},${r} 0 0 1 ${c + r * Math.cos(a2)},${c + r * Math.sin(a2)} Z" fill="#8a8a92"/>`;
+    body += `<line x1="${c}" y1="${c}" x2="${c + r * Math.cos(a1)}" y2="${c + r * Math.sin(a1)}" stroke="#1b1b1d" stroke-width="4"/>`;
+  }
+  return svg(mm, mm, body + `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="#1b1b1d" stroke-width="5"/>`);
+}
+
+for (const el of $('[data-die]')) { const [kind, value] = el.dataset.die.split(':'); el.innerHTML = die(kind, value); }
+for (const el of $('[data-clock]')) { const [size, filled] = el.dataset.clock.split(':').map(Number); el.innerHTML = clock(size, filled, el.closest('.sheet') ? 19 : 15); }
+for (const el of $('[data-track]')) el.innerHTML = track(Number(el.dataset.track));
+for (const el of $('[data-ticks]')) el.innerHTML = [1, 2, 3, 4].map(t => `<div class="stack">${svg(9, 9, box(t, 0, 90))}<span class="lbl">${t} tick${t > 1 ? 's' : ''}</span></div>`).join('');
+for (const el of $('[data-tracks]')) el.innerHTML = Array.from({ length: Number(el.dataset.tracks) }, () =>
+  `<div class="trkrow"><div class="meta"><span>Name</span><span class="ranks"><span>Minor</span><span>Serious</span><span>Grave</span><span>Dire</span><span>Legendary</span></span></div>${track(0, el.closest('.row2') ? 84 : 180)}</div>`).join('');
+for (const el of $('[data-emblem]')) el.innerHTML = svg(92, 56,
+  `<circle cx="460" cy="280" r="250" fill="none" stroke="#6d6577" stroke-width="10"/><circle cx="460" cy="280" r="226" fill="none" stroke="#6d6577" stroke-width="3"/>` +
+  `<polygon points="${poly(370, 290, 150, 5)}" fill="#b07d12"/><polygon points="${poly(370, 296, 80, 5, 90)}" fill="none" stroke="#ffffff55" stroke-width="6"/>` +
+  `<polygon points="${poly(550, 290, 150, 5)}" fill="#5b2a86" opacity=".93"/><polygon points="${poly(550, 296, 80, 5, 90)}" fill="none" stroke="#ffffff55" stroke-width="6"/>` +
+  num(370, 300, '12', '#fff', 110) + num(550, 300, '12', '#fff', 110));
+
+for (const el of $('[data-t]')) {
+  const t = T[el.dataset.t];
+  if (!t) { el.textContent = 'Missing table ' + el.dataset.t; continue; }
+  const rows = t.c[0].length, nums = t.n || Array.from({ length: rows }, (_, i) => String(i + 1));
+  // A one-column table under its own title (or marked data-plain) would only repeat that title as a header.
+  const plain = el.hasAttribute('data-plain') || (t.h.length === 1 && el.closest('.block')?.querySelector('.tname'));
+  const head = plain ? '' : '<tr>' + (t.nonum ? '' : '<th class="n">d12</th>') + t.h.map(x => `<th>${x}</th>`).join('') + '</tr>';
+  let h = '<table>' + head;
+  for (let r = 0; r < rows; r++) h += '<tr>' + (t.nonum ? '' : `<td class="n">${nums[r].replace('-', '–')}</td>`) + t.c.map(col => `<td>${col[r]}</td>`).join('') + '</tr>';
+  el.innerHTML = h + '</table>';
+}
+
+// Exact odds: a score beats a d10 on (score - 1) of its 10 faces; a Fear Check passes on Fear of 12 faces.
+const pct = x => `${Math.round(x * 100)}%`;
+for (const el of $('[data-odds="progress"]')) {
+  let h = '<table><tr><th class="n">Score</th><th>Strong</th><th>Weak</th><th>Miss</th><th class="n">Score</th><th>Strong</th><th>Weak</th><th>Miss</th></tr>';
+  const line = s => { const p = Math.max(0, s - 1) / 10; return `<td class="n">${s}</td><td>${pct(p * p)}</td><td>${pct(2 * p * (1 - p))}</td><td>${pct((1 - p) ** 2)}</td>`; };
+  for (let s = 0; s <= 5; s++) h += `<tr>${line(s)}${s + 6 <= 10 ? line(s + 6) : '<td></td><td></td><td></td><td></td>'}</tr>`;
+  el.innerHTML = h + '</table>';
+}
+for (const el of $('[data-odds="fear"]')) {
+  let h = '<table><tr>' + '<th class="n">Fear</th><th>Passes</th>'.repeat(4) + '</tr>';
+  for (let r = 0; r < 3; r++) h += '<tr>' + [0, 1, 2, 3].map(c => { const f = c * 3 + r + 1; return `<td class="n">${f}</td><td>${pct(f / 12)}</td>`; }).join('') + '</tr>';
+  el.innerHTML = h + '</table>';
+}
+
+const OUTCOME = { strong: ['✓', '✓', 'Strong hit'], weak: ['✓', '✗', 'Weak hit'], miss: ['✗', '✗', 'Miss'] };
+for (const el of $('[data-moves]')) {
+  const group = M[el.dataset.moves];
+  if (!group) { el.textContent = 'Missing moves ' + el.dataset.moves; continue; }
+  el.innerHTML = group.moves.map(move => {
+    // Bold the trigger's first sentence, as a reference card does.
+    const [first, ...rest] = move.trigger.split(/(?<=\.)\s+/);
+    const parts = [`<h3>${move.name}</h3>`, `<p class="trig"><b>${first.replace(/\.$/, '')}</b>.${rest.length ? ' ' + rest.join(' ') : ''}</p>`];
+    if (move.roll) parts.push(`<p class="rollline"><span class="chip">Roll</span>${move.roll}</p>`);
+    if (move.text) parts.push(`<p>${move.text}</p>`);
+    for (const key of ['strong', 'weak', 'miss']) if (move[key]) {
+      const [a, b, label] = OUTCOME[key];
+      parts.push(`<div class="out"><div class="ic"><span>${a}</span><span>${b}</span></div><p><b>${label}:</b> ${move[key]}</p></div>`);
+    }
+    if (NOTES[move.id]) parts.push(`<p class="note"><b class="lab">In play</b>${NOTES[move.id]}</p>`);
+    return `<div class="block move" data-move="${move.name}">${parts.join('')}</div>`;
+  }).join('');
+}
+
+// Folios, then contents and the move index (page numbers counted from the cover).
+const pages = $('.page');
+pages.forEach((page, index) => {
+  if (index === 0) return;
+  page.insertAdjacentHTML('beforeend', `<div class="folio ${index % 2 ? 'r' : 'l'}">${index + 1}</div>`);
+});
+const pageOf = el => pages.indexOf(el.closest('.page')) + 1;
+const row = (label, page) => `<tr><td class="l">${label}</td><td class="d"></td><td class="p">${page}</td></tr>`;
+const rows = list => list.length ? `<table class="tt">${list.join("")}</table>` : "";
+for (const el of $('[data-ref]')) { const page = pages.find(p => p.dataset.ch === el.dataset.ref); el.textContent = page ? pageOf(page) : '?'; }
+for (const el of $('[data-toc]')) {
+  el.innerHTML = pages.filter(page => page.dataset.ch).map(page => {
+    // Moves are listed in the Index of Moves, so the contents name only the sections.
+    const items = $('h2', page).map(h => row(h.dataset.tocAs || h.textContent, pageOf(h)));
+    const tables = $('.tname', page).map(h => row(h.textContent, pageOf(h)));
+    return `<div class="keep"><h4>${page.dataset.ch}<span class="pg">${pageOf(page)}</span></h4>${rows(items.concat(tables))}</div>`;
+  }).join('');
+}
+for (const el of $('[data-index]')) {
+  el.innerHTML = Object.values(M).map(group => `<div class="keep"><h4>${group.label}</h4>` +
+    rows(group.moves.map(move => row(move.name, pageOf(document.querySelector(`[data-move="${CSS.escape(move.name)}"]`))))) + '</div>').join('');
+}
+
+// A block pushed past the second column (or below the page) is clipped in print: name it, so the build fails.
+document.body.dataset.overflow = pages.flatMap((page, index) => $('.cols', page).flatMap(cols => {
+  const box = cols.getBoundingClientRect();
+  return $('.block, .callout, .aside, .keep', cols).filter(block => {
+    const r = block.getBoundingClientRect();
+    return r.width > 0 && (r.left >= box.right - 1 || r.bottom > box.bottom + 1);
+  }).map(block => `page ${index + 1}: ${block.querySelector('h2, h3, h4, .tname')?.textContent ?? block.textContent.slice(0, 40)}`);
+})).join('; ');
+</script>
+</body>
+</html>

@@ -200,3 +200,32 @@ test('a hazard reads one row, so the failure fits the hazard', () => {
   assert.equal(hazard.result.title, 'Pit or collapsing floor (Agility) · Fall: take physical damage');
   assert.deepEqual(hazard.result.cells, [{ table: 'hazard', column: 0, roll: 1 }, { table: 'hazard', column: 1, roll: 1 }]);
 });
+
+test('Duality GME: progress rolls beat the challenge dice, and a severe price spends Fear for a second price', () => {
+  const d10 = (...values: number[]) => { let i = 0; return () => (values[i++]! - 0.5) / 10; };
+  const state = initialSoloState();
+  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d10(3, 5), input: { score: 6, name: 'Find the caravan' }, question: '' }).result.title, 'Strong hit');
+  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d10(3, 6), input: { score: 6 }, question: '' }).result.title, 'Weak hit');
+  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d10(7, 7), input: { score: 6 }, question: '' }).result.title, 'Miss (match)');
+  const severe = rollDuality('iron-price', { state, fear: 2, rng: queue(5, 6), input: { severe: true }, question: '' });
+  assert.equal(severe.result.title, 'Mark a Stress + Take damage (by tier)');
+  assert.equal(severe.fearSpent, 1);
+  const oracle = rollDuality('iron-oracle', { state, fear: 0, rng: queue(5, 5), input: { likelihood: 'likely' }, question: '' });
+  assert.equal(oracle.result.title, 'Yes, with a twist');
+});
+
+test('the tracker saves the engine variant and progress tracks', async () => {
+  const fixture = await context(0);
+  try {
+    const state = fixture.solo.current(fixture.user.id, fixture.campaign);
+    const saved = fixture.solo.track(fixture.user.id, fixture.campaign, { revision: state.revision, variant: 'iron',
+      tracks: [{ id: 'v1', name: 'Find the caravan', kind: 'scene', rank: 'formidable', ticks: 8, done: false, clock: { size: 6, filled: 2 } }] });
+    assert.equal(saved.variant, 'iron');
+    assert.deepEqual(saved.tracks?.[0]?.clock, { size: 6, filled: 2 });
+    const track = (patch: Record<string, unknown>) => fixture.solo.track(fixture.user.id, fixture.campaign, { revision: fixture.solo.current(fixture.user.id, fixture.campaign).revision, ...patch });
+    assert.throws(() => track({ variant: 'fate' }), /Invalid engine variant/);
+    assert.throws(() => track({ variant: 'mythic' }), /Invalid engine variant/);
+    assert.throws(() => track({ tracks: [{ id: 'v1', name: 'X', kind: 'vow', rank: 'legendary', ticks: 0, done: false }] }), /Invalid rank/);
+    assert.throws(() => track({ tracks: [{ id: 'v1', name: 'X', kind: 'scene', rank: 'formidable', ticks: 0, done: false, clock: { size: 5, filled: 0 } }] }), /Invalid tension clock/);
+  } finally { fixture.close(); }
+});

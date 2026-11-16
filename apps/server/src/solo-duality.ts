@@ -1,6 +1,7 @@
 import { adversaries } from '@daggery/content';
 import {
-  adversaryTypeName, DUALITY_LIKELIHOODS, DUALITY_MEANING_CHOICES, dualityAnswerLabel, dualityTable, eventFocusList, fearCheck, readDualityMeaning,
+  adversaryTypeName, DUALITY_LIKELIHOODS, IRON_LIKELIHOODS, IRON_OUTCOME_LABELS,
+  resolveIronProgress, DUALITY_MEANING_CHOICES, dualityAnswerLabel, dualityTable, eventFocusList, fearCheck, readDualityMeaning,
   readDualityTable, resolveDualityMove, resolveDualityOracle, resolveDualityScene, resolveFearSpend, rollDie,
   type DualityList, type DualityMeaningTable, type Rng, type SoloResult, type SoloState, type SoloTone, type SoloTrackerItem,
 } from '@daggery/shared';
@@ -147,6 +148,45 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
     if (answer.randomEvent) { t.lines.push('Doubles: a Random Event occurs as well.'); t.randomEvent(); }
     const tone: SoloTone = answer.randomEvent ? 'revelation' : answer.twist === 'against' ? 'fear' : answer.twist === 'favor' ? 'hope' : 'neutral';
     return t.done(dualityAnswerLabel(answer), tone, { hope, fear, total: answer.total, target: answer.target }, question || 'Oracle');
+  }
+
+  // ------------------------------------------------------------------- Duality GME
+  if (kind === 'iron-oracle') {
+    if (!question && roll.advisory) throw new Error('Invalid question');
+    const hope = t.d12(), fear = t.d12(), likelihood = text(input.likelihood, 30, 'even');
+    const band = IRON_LIKELIHOODS.find(item => item.id === likelihood);
+    if (!band) throw new Error('Invalid likelihood');
+    const total = hope + fear, yes = total >= band.target, match = hope === fear;
+    t.lines.push(`Hope ${hope} + Fear ${fear} = ${total} · ${band.label} needs ${band.target}+`);
+    if (match) t.lines.push('The dice match: an extreme result or a twist.');
+    return t.done(`${yes ? 'Yes' : 'No'}${match ? ', with a twist' : ''}`, match ? 'revelation' : 'neutral', { hope, fear, total, target: band.target }, question || 'Ask the Oracle');
+  }
+
+  if (kind === 'iron-progress') {
+    const score = typeof input.score === 'number' ? input.score : Number(input.score);
+    const name = text(input.name ?? '', 120, '').trim();
+    const c1 = rollDie(10, roll.rng), c2 = rollDie(10, roll.rng), result = resolveIronProgress(score, c1, c2);
+    t.lines.push(`Progress ${score} vs challenge dice ${c1} and ${c2}`);
+    if (result.match) t.lines.push('The challenge dice match: a twist or an extreme result.');
+    const tone: SoloTone = result.outcome === 'strong' ? 'hope' : result.outcome === 'miss' ? 'fear' : 'neutral';
+    return t.done(`${IRON_OUTCOME_LABELS[result.outcome]}${result.match ? ' (match)' : ''}`, result.match ? 'revelation' : tone, { total: score }, question || name || 'Progress roll');
+  }
+
+  if (kind === 'iron-price') {
+    const severe = input.severe === true;
+    const prices: string[] = [];
+    const one = () => {
+      let price = t.row('iron-price');
+      if (price.roll !== 12) { prices.push(price.value); return; }
+      t.lines.push('Two prices: both happen.');
+      for (let found = 0; found < 2;) { price = t.row('iron-price'); if (price.roll !== 12) { prices.push(price.value); found++; } }
+    };
+    one();
+    if (severe) {
+      if (t.spend()) { t.lines.push('Severe: the GM spends 1 Fear and a second price lands.'); one(); }
+      else t.lines.push('Severe, but the GM has no Fear to spend: one price.');
+    }
+    return t.done(prices.join(' + '), 'fear', {}, question || (severe ? 'Pay the Price (severe)' : 'Pay the Price'));
   }
 
   if (kind === 'duality-fear-check') {
@@ -338,4 +378,4 @@ export function suggestAdversaries(type: string, creatureRoll: number, tier: num
 }
 
 /** Tables that `duality-generate` rolls whole: one d12 per column. */
-export const GENERATED_TABLES = ['names', 'place-name', 'settlement', 'wilds', 'faction', 'treasure', 'rumor', 'hazard', 'rest'];
+export const GENERATED_TABLES = ['names', 'place-name', 'settlement', 'wilds', 'faction', 'treasure', 'rumor', 'hazard', 'rest', 'iron-vignette', 'iron-waypoint', 'iron-opportunity', 'iron-discovery', 'iron-chaos'];

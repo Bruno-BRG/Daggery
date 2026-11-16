@@ -98,7 +98,7 @@ export function resolveDualityMove(trigger: string, roll: number | undefined, fe
 // ----------------------------------------------------------------------- tables
 
 /** Table groups, in the order you reach for them during play. */
-export type DualityTableGroup = 'start' | 'scene' | 'oracle' | 'moves' | 'meaning' | 'combat' | 'npc' | 'explore' | 'world';
+export type DualityTableGroup = 'start' | 'scene' | 'oracle' | 'moves' | 'meaning' | 'combat' | 'npc' | 'explore' | 'world' | 'iron';
 export interface DualityTable {
   id: string;
   title: string;
@@ -247,6 +247,34 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
       'Larkspur', 'Mossgrave', 'Thorne'],
     Epithet: ['the Quiet', 'the Lucky', 'Half-Hand', 'the Elder', 'Two-Coins', 'of the Ford', 'the Grey', 'Oathbound',
       'the Unbowed', 'Lantern', 'the Wanderer', 'Saltblood'] }),
+  // ------------------------------------------------------------------- Duality GME
+  table('iron-price', 'Pay the Price', 'iron', { Price: [
+    'Someone you trust acts against you', 'Something of value is lost or destroyed', 'The danger grows: tick a countdown',
+    'You are separated from someone or something', 'Mark a Stress', 'Take damage (by tier)', 'A new danger or foe appears',
+    'Lose progress: clear 1 box on a related track', 'The GM gains a Fear', 'An unwelcome truth comes out',
+    'Time is lost; the world moves without you', 'Two prices: roll twice, both happen'] }),
+  table('iron-vignette', 'Begin a Session: Vignette', 'iron', { 'Elsewhere…': [
+    'A foe makes a move against you', 'A rival gains ground on your oath', 'Someone you care about is in trouble',
+    'A secret is uncovered far away', 'A faction changes its plans', 'A threat grows: tick a countdown',
+    'An omen appears to a stranger', 'An ally finds a lead for you', 'A place you know is changed',
+    'Something old wakes up', 'A messenger is on the way to you', 'The goal of your oath moves or changes'] }),
+  table('iron-waypoint', 'Waypoint', 'iron', { 'You reach…': [
+    'A ruined outpost', 'A river crossing', 'A hunter’s camp', 'A shrine to a forgotten god', 'A cave system',
+    'An old battlefield', 'An abandoned village', 'A lookout or tower', 'A strange monolith', 'A beast’s lair',
+    'A trading post', 'A crossroads'] }),
+  table('iron-opportunity', 'Find an Opportunity', 'iron', { Opportunity: [
+    'The terrain favors you', 'A hidden path', 'Useful supplies', 'You learn a foe’s weakness', 'Shelter or safety',
+    'A distraction you can use', 'Someone offers help', 'A clue to your oath', 'Something left behind',
+    'High ground: advantage on your next roll', 'An enemy gives themselves away', 'Momentum: gain a Hope'] }),
+  table('iron-discovery', 'Make a Discovery', 'iron', { Discovery: [
+    'An untouched place of power', 'A lost settlement, still alive', 'A great beast at peace', 'Ruins of a vanished people',
+    'A gate to another realm', 'A trove of old knowledge', 'A sacred grove or spring', 'A relic fallen from the sky',
+    'A hidden valley', 'A sleeping titan', 'A living legend', 'Something new: roll Descriptor + Subject'] }),
+  table('iron-chaos', 'Confront Chaos', 'iron', { Chaos: [
+    'Distances lie: the way twists back', 'Time slips: hours vanish', 'A voice speaks your name', 'The dead walk',
+    'Shadows move wrong', 'Corruption spreads through the land', 'A creature not of this world', 'Magic runs wild',
+    'A sickness of the mind: mark a Stress', 'Echoes of a battle long past', 'A door where none should be',
+    'Something nameless: roll Action + Subject'] }),
   table('faction', 'Faction', 'world', {
     Faction: ['Merchant guild', 'Noble house', 'Temple or holy order', 'Thieves’ guild', 'Mercenary company', 'Circle of mages',
       'Rebels', 'Druidic circle', 'Secret society', 'Knightly order', 'Outlaw band', 'An ancient bloodline'],
@@ -263,11 +291,16 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
       'Cracked but whole', 'Lighter or heavier than it looks', 'Someone wants it back'] }),
 ];
 
-export const DUALITY_TABLE_GROUPS: { id: DualityTableGroup; label: string }[] = [
+/** Engine variants. `duality` is the base engine (One Page Solo Engine loop). */
+/** `iron` is Duality GME (an old id, kept because saved campaigns store it). */
+export type DualityVariant = 'duality' | 'iron';
+/** Groups with `variant` only belong to that variant's screen and PDF. */
+export const DUALITY_TABLE_GROUPS: { id: DualityTableGroup; label: string; variant?: DualityVariant }[] = [
   { id: 'start', label: '1. Plot hook and Random Event' }, { id: 'scene', label: '2. Set the scene' },
   { id: 'oracle', label: '3. Oracle' }, { id: 'moves', label: '4. GM Moves' }, { id: 'meaning', label: 'Meaning' },
   { id: 'combat', label: 'Adversaries' }, { id: 'npc', label: 'NPCs and names' }, { id: 'explore', label: 'Exploration and places' },
   { id: 'world', label: 'Factions and loot' },
+  { id: 'iron', label: 'Duality GME', variant: 'iron' },
 ];
 
 export function dualityTable(id: string): DualityTable {

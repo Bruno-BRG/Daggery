@@ -100,8 +100,21 @@ export const SOLO_TRACKER_LIMIT = 12;
 /** A looming threat or goal counting down. GM Moves tick it; at zero it happens. */
 export interface SoloClock { id: string; name: string; start: number; current: number }
 export const SOLO_CLOCK_LIMIT = 12;
+/** A Duality GME progress track: 10 boxes of 4 ticks. Kind `vow` is an oath (old id). A scene challenge also has a tension clock. */
+export interface SoloProgressTrack {
+  id: string; name: string;
+  kind: 'vow' | 'expedition' | 'connection' | 'scene';
+  rank: 'troublesome' | 'dangerous' | 'formidable' | 'extreme' | 'epic';
+  ticks: number; done: boolean;
+  clock?: { size: number; filled: number };
+}
+export const SOLO_PROGRESS_LIMIT = 24;
 export interface SoloState {
   revision: number;
+  /** Which engine the screen plays: the base Duality loop, or Duality GME (id `iron`). */
+  variant?: 'duality' | 'iron';
+  /** Duality GME's progress tracks. */
+  tracks?: SoloProgressTrack[];
   threads?: SoloTrackerItem[];
   characters?: SoloTrackerItem[];
   /** Scenes ended so far in this adventure. */

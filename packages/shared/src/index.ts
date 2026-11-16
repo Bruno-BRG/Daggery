@@ -4,3 +4,4 @@ export * from './systems/registry';
 export * from './systems/daggerheart/solo';
 export * from './ai';
 export * from './duality-engine';
+export * from './duality-variants';

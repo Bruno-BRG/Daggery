@@ -284,3 +284,46 @@
 .solo-step-tables .solo-lookup-table td.is-answer { background: var(--ds-brand-soft); color: var(--ds-ink); font-weight: 650; box-shadow: inset 0 0 0 1px var(--ds-brand); }
 .solo-jump li + li::before { display: none; }
 .solo-jump button { font-weight: 550; }
+
+/* Engine variants */
+.solo-variant { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 16px; }
+.solo-variant .solo-muted { margin: 0; font-size: 12px; }
+.solo-variant .solo-dice-mode button { min-height: 40px; padding: 0 14px; font-size: 13px; }
+
+/* Duality GME */
+.solo-results { grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 4px; }
+.solo-tracks { display: grid; gap: 14px; margin: 0 0 16px; padding: 0; list-style: none; }
+.solo-tracks > li { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--ds-border); border-radius: var(--radius-xs); background: var(--ds-inset); }
+.solo-tracks > li.is-done { opacity: .6; }
+.solo-tracks > li.is-done strong { text-decoration: line-through; }
+.solo-track-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.solo-track-head strong { margin-right: auto; font-size: 14px; overflow-wrap: anywhere; }
+.solo-boxes { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; max-width: 420px; }
+.solo-box { aspect-ratio: 1; border: 1px solid var(--ds-control); border-radius: 3px; background: var(--ds-raised); }
+.solo-box.ticks-1 { background: linear-gradient(to top, var(--ds-brand) 25%, var(--ds-raised) 25%); }
+.solo-box.ticks-2 { background: linear-gradient(to top, var(--ds-brand) 50%, var(--ds-raised) 50%); }
+.solo-box.ticks-3 { background: linear-gradient(to top, var(--ds-brand) 75%, var(--ds-raised) 75%); }
+.solo-box.ticks-4 { background: var(--ds-brand); border-color: var(--ds-brand); }
+.solo-clock-row { align-items: center; }
+.solo-clock { display: flex; gap: 3px; }
+.solo-clock span { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--ds-control); background: var(--ds-raised); }
+.solo-clock span.is-filled { background: var(--ds-fear); border-color: var(--ds-fear); }
+.solo-clock-row .solo-fear-stepper button { height: 32px; }
+.solo-clock-full { color: var(--ds-fear); font-size: 13px; }
+.solo-moves { display: grid; gap: 10px; margin: 14px 0 0; }
+.solo-move { padding: 10px 12px; border-left: 3px solid var(--ds-brand-line); background: var(--ds-inset); border-radius: var(--radius-xs); }
+.solo-move dt { font-size: 13px; font-weight: 650; }
+.solo-move dt small { color: var(--ds-muted); font-weight: 500; }
+.solo-move dd { margin: 4px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ds-ink); }
+.solo-move dd i { color: var(--ds-muted); }
+.solo-move .is-strong { color: var(--ds-brand-strong); }
+.solo-move .is-weak { color: var(--ds-brand); }
+.solo-move .is-miss { color: var(--ds-fear); }
+.solo-move-reference { padding: 12px 14px 14px; }
+.solo-move-reference h4 { margin: 14px 0 0; font-size: 13px; color: var(--ds-muted); text-transform: uppercase; letter-spacing: .06em; }
+.solo-move-reference h4:first-child { margin-top: 0; }
+@media (max-width: 700px) {
+  .solo-results { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .solo-results button { border-left: 0 !important; border-top: 1px solid var(--ds-control); }
+  .solo-odds { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

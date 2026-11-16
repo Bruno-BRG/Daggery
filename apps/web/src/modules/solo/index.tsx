@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  DUALITY_ENGINE_VERSION, DUALITY_LIKELIHOODS, DUALITY_MAX_FEAR, DUALITY_MEANING_CHOICES, DUALITY_MOVE_TRIGGERS, DUALITY_TABLE_GROUPS,
+  DUALITY_ENGINE_VERSION, DUALITY_VARIANTS, isDualityVariant, DUALITY_LIKELIHOODS, DUALITY_MAX_FEAR, DUALITY_MEANING_CHOICES, DUALITY_MOVE_TRIGGERS, DUALITY_TABLE_GROUPS,
   DUALITY_TABLES, dualityTable, getRuleset, hasFeature, rollDice, SOLO_CLOCK_LIMIT, SOLO_TRACKER_LIMIT,
   type DiceRoll, type DualityList, type DualityTable, type SoloClock, type SoloEntry, type SoloEntryPage, type SoloSnapshot,
   type SoloState, type SoloTrackerItem,
@@ -15,30 +15,15 @@ import { Icon } from '../../components/Icon';
 import { useDiceTray } from '../../dice3d';
 import { diceModeFor, setDiceMode, type DiceMode } from './diceMode';
 import './solo.css';
+import './folio.css';
+import { IronPlay } from './IronPlay';
+import { Rulebook } from './Rulebook';
+import { CombatStep, Journey, KIND_LABELS, landed, LookupTable, ResultCard, Step, useRolled, validDie, type Play } from './parts';
 
-type Tab = 'play' | 'tables' | 'generators' | 'tracker' | 'dice' | 'notes';
-type Track = (patch: Record<string, unknown>) => Promise<boolean>;
-type Roll = (kind: string, values: Record<string, unknown>) => Promise<SoloEntry | null>;
-/** What every tab needs to roll on the server and keep a result. */
-interface Play {
-  entries: SoloEntry[]; busy: boolean; roll: Roll; accept: (id: string, interpretation: string) => Promise<boolean>;
-  state: SoloState | null; track: Track;
-  /** The campaign Fear pool: the engine spends it; action rolls with Fear and the stepper add to it. */
-  fear: number;
-  /** Runs a bookkeeping step on the server, such as ending the scene. */
-  command: (values: Record<string, unknown>) => Promise<boolean>;
-}
+type Tab = 'play' | 'tables' | 'generators' | 'tracker' | 'dice' | 'notes' | 'guide';
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Could not complete the action.';
-const validDie = (value: string, sides: number) => /^\d+$/.test(value.trim()) && Number(value) >= 1 && Number(value) <= sides;
 const root = () => `/api/campaigns/${encodeURIComponent(getActiveCampaign().id)}/solo`;
-const KIND_LABELS: Record<string, string> = {
-  'duality-scene': 'Set the scene', 'duality-oracle': 'Oracle', 'duality-meaning': 'Meaning', 'duality-table': 'Table', 'duality-event': 'Random Event',
-  'duality-move': 'GM Move', 'duality-list': 'List roll', 'duality-fear-check': 'Fear Check', 'duality-adversary': 'Adversary', 'duality-npc': 'NPC',
-  'duality-plot': 'Plot hook', 'duality-site': 'Site', 'duality-journey': 'Journey', 'duality-encounter': 'Encounter', 'duality-generate': 'Generator', journal: 'Note', procedure: 'Procedure',
-};
 const EVENT_FOCUS = dualityTable('event-focus').columns[0]!.entries;
-/** Daggerheart tiers by level: 1, 2–4, 5–7, 8–10. */
-const tierFor = (level: number) => level <= 1 ? 1 : level <= 4 ? 2 : level <= 7 ? 3 : 4;
 
 export default function SoloPlay({ author: _author }: { author: string }) {
   if (!hasFeature(getActiveCampaign().configuration, 'daggerheart.solo') || getActiveCampaign().role !== 'gm') return <p>Solo play is not enabled for this campaign.</p>;
@@ -48,7 +33,11 @@ export default function SoloPlay({ author: _author }: { author: string }) {
 function Workspace() {
   const campaign = getActiveCampaign();
   const [tab, setTab] = useState<Tab>('play');
-  const [state, setState] = useState<SoloState | null>(null);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [state, setStateValue] = useState<SoloState | null>(null);
+  // Saves that follow each other (save a track, then end the scene) must use the newest revision.
+  const latest = useRef<SoloState | null>(null);
+  const setState = (next: SoloState) => { latest.current = next; setStateValue(next); };
   const [entries, setEntries] = useState<SoloEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -119,10 +108,11 @@ function Workspace() {
 
   /** Saves part of the tracked state: the scene, the lists or the countdowns. */
   async function track(patch: Record<string, unknown>): Promise<boolean> {
-    if (!state) return false;
+    const current = latest.current;
+    if (!current) return false;
     setBusy(true); setError(''); setNotice('');
     try {
-      const { state: next } = await api<{ state: SoloState }>(`${root()}/tracker`, 'PUT', { revision: state.revision, ...patch });
+      const { state: next } = await api<{ state: SoloState }>(`${root()}/tracker`, 'PUT', { revision: current.revision, ...patch });
       setState(next);
       return true;
     } catch (value) {
@@ -134,10 +124,11 @@ function Workspace() {
   }
 
   async function command(values: Record<string, unknown>): Promise<boolean> {
-    if (!state) return false;
+    const current = latest.current;
+    if (!current) return false;
     setBusy(true); setError(''); setNotice('');
     try {
-      const done = await api<{ state: SoloState; detail: string }>(`${root()}/command`, 'POST', { revision: state.revision, ...values });
+      const done = await api<{ state: SoloState; detail: string }>(`${root()}/command`, 'POST', { revision: current.revision, ...values });
       setState(done.state);
       setNotice(done.detail);
       // The step is also written to the notes: reload them so it shows there.
@@ -154,31 +145,50 @@ function Workspace() {
   }
 
   const play: Play = { entries, busy, roll, accept, state, track, command, fear };
+  const variant = isDualityVariant(state?.variant) ? state.variant : 'duality';
   const openSheet = () => window.dispatchEvent(new CustomEvent('daggery:navigate', { detail: 'sheets' }));
   const tabs: [Tab, string][] = [['play', 'Play'], ['tables', 'All tables'], ['generators', 'Generators'], ['tracker', 'Threads & NPCs'], ['dice', 'Dice'], ['notes', 'Notes']];
 
   return <div className="solo-workspace">
     <header className="solo-heading">
-      <div>
-        <p className="solo-kicker">{getRuleset(campaign.configuration)?.name} · Duality Solo Engine {DUALITY_ENGINE_VERSION}</p>
-        <h1><Icon name="spark" />Solo play</h1>
+      <div className="solo-heading-copy">
+        <span className="solo-emblem" aria-hidden="true"><Icon name="dice" /><Icon name="spark" /></span>
+        <p className="solo-kicker">{getRuleset(campaign.configuration)?.name} · {variant === 'duality' ? `Duality Solo Engine ${DUALITY_ENGINE_VERSION}` : `${DUALITY_VARIANTS.find(item => item.id === variant)!.label} 0.1`}</p>
+        <h1>Solo play</h1>
+        <p className="solo-heading-description">A world to discover. A story only you can tell.</p>
       </div>
-      <button type="button" className="daggery-roll-toggle solo-sheet-link" onClick={openSheet}><Icon name="sheet" />Character sheet</button>
+      <div className="solo-heading-actions">
+        <button type="button" className="solo-guide-link" aria-pressed={tab === 'guide'} onClick={() => setTab(tab === 'guide' ? 'play' : 'guide')}><Icon name="book" />Play guide</button>
+        <button type="button" className="daggery-roll-toggle solo-sheet-link" onClick={openSheet}><Icon name="sheet" />Character sheet</button>
+      </div>
     </header>
-    <HeroStrip />
-    <FearPanel play={play} />
+    <VariantSwitch play={play} variant={variant} />
+    <button type="button" className="solo-resource-toggle" aria-expanded={resourcesOpen} aria-controls="solo-resources" onClick={() => setResourcesOpen(value => !value)}><Icon name="heart" /><span>Character resources</span><span className="solo-resource-fear">Fear {fear} / {DUALITY_MAX_FEAR}</span><Icon name={resourcesOpen ? 'minus' : 'plus'} /></button>
+    <div id="solo-resources" className={`solo-resources${resourcesOpen ? ' is-expanded' : ''}`}><HeroStrip /><FearPanel play={play} /></div>
     <nav className="solo-tabs" aria-label="Solo sections">
-      {tabs.map(([id, label]) => <button key={id} type="button" aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>{label}</button>)}
+      {tabs.map(([id, label]) => <button key={id} type="button" aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}><Icon name={id === 'play' ? 'compass' : id === 'tables' ? 'book' : id === 'generators' ? 'spark' : id === 'tracker' ? 'users' : id === 'dice' ? 'dice' : 'note'} /><span>{label}</span></button>)}
     </nav>
     {error && <p role="alert" className="solo-alert">{error}</p>}
     {notice && <p role="status" className="solo-notice"><Icon name="check" />{notice}</p>}
-    {tab === 'play' && <PlayTab play={play} />}
+    <div className="solo-play-surface" hidden={tab !== 'play'}>{variant === 'iron' ? <IronPlay play={play} /> : <PlayTab play={play} />}</div>
+    {tab === 'guide' && <Rulebook variant={variant} onReturn={() => setTab('play')} />}
     {tab === 'tables' && <TablesTab play={play} />}
     {tab === 'generators' && <GeneratorsTab play={play} />}
     {tab === 'tracker' && (state ? <TrackerTab play={play} /> : !error && <p className="solo-empty">Loading your lists…</p>)}
     {tab === 'dice' && <DiceTab play={play} />}
     {tab === 'notes' && <NotesTab play={play} nextCursor={nextCursor} older={older} />}
   </div>;
+}
+
+/** Chooses which engine the Play tab runs. Saved with the campaign, so it survives reloads. */
+function VariantSwitch({ play, variant }: { play: Play; variant: string }) {
+  const current = DUALITY_VARIANTS.find(item => item.id === variant) ?? DUALITY_VARIANTS[0]!;
+  return <section className="solo-variant" aria-label="Engine">
+    <div className="solo-dice-mode" role="radiogroup" aria-label="Engine">
+      {DUALITY_VARIANTS.map(item => <button key={item.id} type="button" role="radio" aria-checked={item.id === variant} disabled={play.busy || !play.state} onClick={() => void play.track({ variant: item.id })}>{item.label}</button>)}
+    </div>
+    <p className="solo-muted">{current.tagline}</p>
+  </section>;
 }
 
 /** The hero's resources, so marking HP or spending Hope does not mean leaving the oracle. */
@@ -219,18 +229,6 @@ function HeroStrip() {
       })}
     </div>
   </section>;
-}
-
-/** Remembers the last result a panel rolled, so it can show it under its button. */
-function useRolled(play: Play) {
-  const [id, setId] = useState<string | null>(null);
-  const entry = id ? play.entries.find(item => item.id === id) : undefined;
-  const run = async (kind: string, values: Record<string, unknown> = {}) => {
-    const rolled = await play.roll(kind, values);
-    if (rolled) setId(rolled.id);
-    return rolled;
-  };
-  return [entry, run] as const;
 }
 
 /** The Fear pool and the one check the whole engine runs on. */
@@ -348,74 +346,6 @@ function ClocksPanel({ play }: { play: Play }) {
   </section>;
 }
 
-/** One rolled result. Keeping it in the app's notes is optional: many players write in their own notebook. */
-function ResultCard({ entry, play }: { entry: SoloEntry; play: Play }) {
-  const [writing, setWriting] = useState(false);
-  const [text, setText] = useState('');
-  const label = KIND_LABELS[entry.kind] ?? entry.kind;
-  const asked = entry.question && entry.question !== entry.result.title && entry.question !== label ? entry.question : '';
-  const suggestions = entry.result.suggestions ?? [];
-  return <div className={`solo-result solo-tone-${entry.result.tone ?? 'neutral'}`}>
-    <p className="solo-result-kind">{label}{asked ? ` · ${asked}` : ''}</p>
-    <strong className="solo-result-title">{entry.result.title}</strong>
-    {entry.result.detail && <p className="solo-result-detail">{entry.result.detail}</p>}
-    {suggestions.length > 0 && <p className="solo-suggestions">Catalog: {suggestions.map(item => <span className="solo-chip" key={item.id}>{item.name}</span>)}</p>}
-    {entry.accepted
-      ? <p className="solo-interpretation"><Icon name="check" />{entry.interpretation}</p>
-      : writing
-        ? <form className="solo-result-keep" onSubmit={async event => { event.preventDefault(); if (await play.accept(entry.id, text.trim() || entry.result.title)) setWriting(false); }}>
-          <label className="solo-field">What becomes true? (optional)
-            <textarea rows={2} maxLength={6000} value={text} autoFocus onChange={event => setText(event.target.value)} placeholder={entry.result.title} />
-          </label>
-          <div className="solo-actions">
-            <button className="daggery-roll-toggle" disabled={play.busy}><Icon name="check" />Save to notes</button>
-            <button type="button" className="daggery-roll-toggle" onClick={() => setWriting(false)}>Cancel</button>
-          </div>
-        </form>
-        : <button type="button" className="solo-link-button" onClick={() => setWriting(true)}><Icon name="plus" />Keep in notes</button>}
-  </div>;
-}
-
-/** The rows a roll landed on, by table: `{ 'plot-hook': [[column, row]] }`. */
-function landed(entries: (SoloEntry | undefined)[]): Map<string, [number, number][]> {
-  const found = new Map<string, [number, number][]>();
-  for (const entry of entries) for (const cell of entry?.result.cells ?? []) found.set(cell.table, [...(found.get(cell.table) ?? []), [cell.column, cell.roll]]);
-  return found;
-}
-
-/** A printed d12 table, open by default, with the rows the last roll landed on marked. */
-function LookupTable({ id, hits, open = true }: { id: string; hits: Map<string, [number, number][]>; open?: boolean }) {
-  const table = dualityTable(id);
-  const marks = hits.get(id) ?? [];
-  // With several columns, only the cells a roll used are marked, not the whole row.
-  const isRow = (row: number) => table.columns.length === 1 && marks.some(([, roll]) => roll === row);
-  const isCell = (column: number, row: number) => marks.some(([col, roll]) => col === column && roll === row);
-  return <details className="solo-table" open={open}>
-    <summary><span className="solo-table-title">{table.title}</span><span className="solo-chip">d12</span></summary>
-    <div className="solo-reference-table solo-table-scroll">
-      <table className="solo-lookup-table">
-        <thead><tr><th scope="col">d12</th>{table.columns.map(item => <th scope="col" key={item.label}>{item.label}</th>)}</tr></thead>
-        <tbody>{Array.from({ length: 12 }, (_, row) => <tr key={row} className={isRow(row + 1) ? 'is-rolled' : undefined}>
-          <td className="solo-range">{row + 1}</td>
-          {table.columns.map((item, column) => <td key={item.label} className={isCell(column, row + 1) ? 'is-answer' : undefined}>{item.entries[row]}</td>)}
-        </tr>)}</tbody>
-      </table>
-    </div>
-  </details>;
-}
-
-/** One step of the play loop: what to do, the button, the result, and the tables it uses. */
-function Step({ n, id, title, hint, children, tables }: { n: string; id: string; title: string; hint: React.ReactNode; children: React.ReactNode; tables?: React.ReactNode }) {
-  return <section className="solo-panel solo-step" id={id} aria-labelledby={`${id}-title`}>
-    <div className="solo-step-main">
-      <h2 id={`${id}-title`}><span className="solo-step-number">{n}</span>{title}</h2>
-      <p className="solo-muted">{hint}</p>
-      {children}
-    </div>
-    {tables && <div className="solo-step-tables">{tables}</div>}
-  </section>;
-}
-
 const LOOP: [string, string][] = [
   ['step-hook', 'Plot hook'], ['step-event', 'Random Event'], ['step-scene', 'Set the scene'], ['step-oracle', 'Oracle'],
   ['step-moves', 'GM Moves'], ['step-combat', 'Combat'], ['step-next', 'Next scene'],
@@ -426,20 +356,15 @@ const LOOP: [string, string][] = [
  * Random Event, set the scene, ask the oracle, play, make GM Moves, then set the next scene.
  */
 function PlayTab({ play }: { play: Play }) {
-  const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  return <div className="solo-stack">
-    <nav className="solo-loop" aria-label="Play loop">
-      <ol>{LOOP.map(([id, label], index) => <li key={id}><button type="button" onClick={() => jump(id)}><b>{index + 1}</b>{label}</button></li>)}</ol>
-      <p className="solo-muted">Create your character first. Then roll a plot hook and a Random Event, set the scene, and play: ask the oracle, roll as normal, and let GM Moves push back. When the scene ends, set the next one.</p>
-    </nav>
+  return <Journey steps={LOOP} title="Follow the story" hint="Start with a hook. Set the scene, ask questions, and let the world answer.">
     <HookStep play={play} />
     <EventStep play={play} />
     <SceneStep play={play} />
     <OracleStep play={play} />
     <MovesStep play={play} />
     <CombatStep play={play} />
-    <NextStep play={play} jump={jump} />
-  </div>;
+    <NextStep play={play} jump={id => window.dispatchEvent(new CustomEvent('solo:step', { detail: id }))} />
+  </Journey>;
 }
 
 function NextStep({ play, jump }: { play: Play; jump: (id: string) => void }) {
@@ -587,44 +512,6 @@ function MovesStep({ play }: { play: Play }) {
   </Step>;
 }
 
-function CombatStep({ play }: { play: Play }) {
-  const { items } = useDocs<Sheet>('sheets');
-  const level = Object.values(items)[0]?.level;
-  const [tier, setTier] = useState('');
-  const [found, encounter] = useRolled(play);
-  const [acted, spotlight] = useRolled(play);
-  const [loot, rollLoot] = useRolled(play);
-  const chosenTier = tier || (level ? String(tierFor(level)) : '');
-  return <Step n="6" id="step-combat" title="Adversaries and combat" hint="When trouble is a fight, roll who you face: what the creature is, what it is doing, and its Daggerheart type. Then, each time the spotlight passes to the GM, roll the spotlight; after each GM action, roll the chain."
-    tables={<>
-      <LookupTable id="adversary-creature" hits={landed([found])} />
-      <LookupTable id="adversary-type" hits={landed([found])} />
-      <LookupTable id="tactics" hits={landed([acted])} open={false} />
-      <LookupTable id="fear-spend" hits={landed([acted])} open={false} />
-      <LookupTable id="treasure" hits={landed([loot])} open={false} />
-    </>}>
-    <form className="solo-ask" onSubmit={event => { event.preventDefault(); void encounter('duality-encounter', { tier: chosenTier ? Number(chosenTier) : undefined }); }}>
-      <label className="solo-field">Tier for catalog picks<select value={chosenTier} onChange={change => setTier(change.target.value)}>
-        <option value="">Any tier</option>
-        {[1, 2, 3, 4].map(value => <option key={value} value={value}>Tier {value}</option>)}
-      </select></label>
-      <button className="daggery-primary" disabled={play.busy}><Icon name="dice" />Roll an encounter</button>
-    </form>
-    <div aria-live="polite">{found && <ResultCard key={found.id} entry={found} play={play} />}</div>
-    <h3 className="solo-subhead">GM turn</h3>
-    <p className="solo-muted">Pick the adversary that makes most sense. A failed Fear Check means it acts for free (Tactics); a pass spends Fear (Fear Spend). The chain ends the GM turn on the first failed check.</p>
-    <div className="solo-actions">
-      <button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void spotlight('duality-adversary')}><Icon name="dice" />GM spotlight</button>
-      <button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void spotlight('duality-adversary', { chain: true })}><Icon name="dice" />Chain: next adversary</button>
-    </div>
-    <div aria-live="polite">{acted && <ResultCard key={acted.id} entry={acted} play={play} />}</div>
-    <h3 className="solo-subhead">After the fight</h3>
-    <p className="solo-muted">What the fallen carry, and the detail that makes it a story.</p>
-    <div className="solo-actions"><button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void rollLoot('duality-generate', { tableId: 'treasure' })}><Icon name="dice" />Roll loot</button></div>
-    <div aria-live="polite">{loot && <ResultCard key={loot.id} entry={loot} play={play} />}</div>
-  </Step>;
-}
-
 type GeneratorItem = { id: string; title: string; hint: string; tables: string[]; actions: { label: string; kind: string; values?: Record<string, unknown> }[] };
 const generate = (tableId: string) => ({ kind: 'duality-generate', values: { tableId } });
 const GENERATORS: GeneratorItem[] = [
@@ -681,7 +568,9 @@ function Generator({ item, play }: { item: GeneratorItem; play: Play }) {
 function TablesTab({ play }: { play: Play }) {
   const [filter, setFilter] = useState('');
   const needle = filter.trim().toLowerCase();
+  const variant = isDualityVariant(play.state?.variant) ? play.state.variant : 'duality';
   const shown = DUALITY_TABLE_GROUPS
+    .filter(group => !group.variant || group.variant === variant)
     .map(group => ({ ...group, tables: DUALITY_TABLES.filter(table => table.group === group.id && table.title.toLowerCase().includes(needle)) }))
     .filter(group => group.tables.length > 0);
 

@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from 'react';
 import rules from '../../../../../docs/solo-rules.md?raw';
 import themes from '../../../../../docs/solo-themes.md?raw';
+import gme from '../../../../../docs/solo-rules-gme.md?raw';
 
 function inline(text: string): ReactNode[] {
   return text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g).map((part, index) => {
@@ -41,6 +42,24 @@ function Markdown({ source }: { source: string }) {
   }
   return <>{blocks.map((block, index) => <Fragment key={index}>{block}</Fragment>)}</>;
 }
-export function Rulebook() {
-  return <section className="solo-rulebook"><p className="solo-muted">Duality Solo Engine · v1.0. Daggerheart resolves the characters; the Fear pool plays the GM.</p><details open><summary>Core solo rules</summary><Markdown source={rules.split('## Daggery integration notes')[0]!} /></details><details><summary>Thematic scene pools (legacy homebrew)</summary><Markdown source={themes.split('## Daggery interface notes')[0]!} /></details></section>;
+const difficulty = '## Set the Difficulty\n' + gme.split('## Set the Difficulty\n')[1]!.split('\n## Progress tracks')[0]!;
+
+export function Rulebook({ variant = 'duality', onReturn }: { variant?: string; onReturn?: () => void }) {
+  const isGme = variant === 'iron';
+  return <section className="solo-panel solo-rulebook solo-guide" aria-labelledby="solo-guide-title">
+    <header className="solo-guide-heading">
+      <div><h2 id="solo-guide-title">Solo Play guide</h2><p className="solo-muted">A reference to visit when you need it. Your play loop stays in Play.</p></div>
+      {onReturn && <button type="button" className="daggery-roll-toggle" onClick={onReturn}>Back to play</button>}
+    </header>
+    <details><summary>How to use Solo Play</summary>
+      <h3>Start with your character</h3><p>Create a Daggerheart character in Characters, then choose your engine. Character resources stay close at hand; on a phone, expand Character resources to mark HP, Stress or Armor, spend Hope, or adjust Fear.</p>
+      <h3>Follow the play loop</h3><p>{isGme ? 'Take an oath, begin a session, and describe what your character does. Make a move when its trigger fits, read the outcome, and mark progress toward your goals.' : 'Roll a plot hook and a Random Event, set the scene, then ask the Oracle and make GM Moves as the story develops.'} Choose an entry in the left rail on a computer, or use What happens next? on a phone. Previous and Next step move between panels; you can revisit any step without completing the others.</p>
+      <h3>Roll, interpret, continue</h3><p>Use the panel's roll button, then interpret the result in the current scene. Reference tables start folded away and open to show the rows a roll used. Keep in notes saves your interpretation; you can also write in your own notebook.</p>
+      <h3>Use the other sections when needed</h3><ul><li><strong>All tables:</strong> browse and roll reference tables.</li><li><strong>Generators:</strong> create people, places and other story details.</li><li><strong>Threads &amp; NPCs:</strong> keep goals, characters, scene notes and countdowns.</li><li><strong>Dice:</strong> roll additional dice, or use physical dice where a panel offers that option.</li><li><strong>Notes:</strong> revisit results and the interpretations you kept.</li></ul>
+      <p>Changing steps or opening this guide keeps drafts and recent panel results in place. Save anything you want to keep before reloading the page or changing engines.</p>
+    </details>
+    {isGme && <details className="solo-guide-difficulty"><summary>Set the Difficulty</summary><p className="solo-muted">Duality GME · Use an existing value first. Otherwise, start at 13 and count established obstacles.</p><Markdown source={difficulty.replace('## Set the Difficulty\n', '')} /></details>}
+    <details><summary>{isGme ? 'Duality GME rules' : 'Duality Solo Engine rules'}</summary><Markdown source={isGme ? gme : rules.split('## Daggery integration notes')[0]!} /></details>
+    <details><summary>Optional thematic scene pools</summary><Markdown source={themes.split('## Daggery interface notes')[0]!} /></details>
+  </section>;
 }
