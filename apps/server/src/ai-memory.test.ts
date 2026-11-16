@@ -423,6 +423,28 @@ test('a resolved choice writes one journal event whose body does not repeat the 
   }
 });
 
+test('a choices card follows the narration of its turn, and a typed reply closes it', async () => {
+  let gmCalls = 0;
+  const f = await fixture(request => {
+    if (!request.tools) return summaryReply();
+    gmCalls++;
+    return gmCalls === 1
+      ? completion(null, [call('choice-call', 'offer_choices', { prompt: 'Which way?', choices: ['North', 'South'] })])
+      : completion('Wind tears at the cliff path.');
+  });
+  try {
+    const { ai, user, campaign } = f;
+    await runTurn(f, 'Set out along the coast.');
+    const first = ai.session(user.id, campaign).messages.filter(message => message.role === 'gm');
+    assert.deepEqual(first.map(message => message.text), ['Wind tears at the cliff path.', 'Which way?'], 'the card comes after the narration');
+    await runTurn(f, 'I climb down to the beach instead.');
+    const card = ai.session(user.id, campaign).messages.find(message => message.interaction?.kind === 'choices')!;
+    assert.equal(card.interaction!.resolved, true, 'typing a reply resolves the open choices card');
+  } finally {
+    await f.close();
+  }
+});
+
 test('journal_add refuses a fourth note in one turn, stores three, and keeps notes GM-only unless shared', async () => {
   let gmCalls = 0;
   const f = await fixture(request => {
@@ -2039,12 +2061,12 @@ test('the GM system prompt frames the players as a party and carries the current
     assert.ok(system.content!.includes('give each hero the spotlight in turn'));
     assert.ok(system.content!.includes('Call get_character before resolving or describing a hero’s class feature'));
     assert.ok(!system.content!.includes('The player controls one hero'), 'the single-hero framing is gone');
-    assert.ok(system.content!.includes('gm-prompt-8'), 'the prompt version is current');
+    assert.ok(system.content!.includes('gm-prompt-9'), 'the prompt version is current');
     assert.ok(system.content!.includes('Oracles and randomness'), 'the oracle guidance is present');
     assert.ok(system.content!.includes('Fronts (GM only)'), 'the fronts guidance is present');
     assert.ok(system.content!.includes('rolls and oracle answers the players made outside your cards'), 'the outside-activity guidance is present');
     const stored = f.db.prepare('SELECT prompt_version FROM ai_turns ORDER BY rowid DESC LIMIT 1').get() as { prompt_version: string };
-    assert.equal(stored.prompt_version, 'gm-prompt-8', 'the turn records the current prompt version');
+    assert.equal(stored.prompt_version, 'gm-prompt-9', 'the turn records the current prompt version');
   } finally {
     await f.close();
   }

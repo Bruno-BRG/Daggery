@@ -602,7 +602,11 @@ export class AiService {
     const at = new Date().toISOString();
     this.db.transaction(() => {
       this.db.prepare("INSERT INTO ai_turns(id,campaign_id,user_id,chat_id,kind,request_id,status,prompt_version,created,updated) VALUES (?,?,?,?,?,?,'running',?,?,?)").run(id, campaign, user, chat, kind, requestId, GM_PROMPT_VERSION, at, at);
-      if (message !== null) this.actions.message(campaign, chat, id, 'player', message);
+      if (message !== null) {
+        // A typed reply answers any open choices card; leaving it open makes the GM keep re-offering it.
+        if (kind === 'turn') this.db.prepare("UPDATE ai_messages SET interaction = json_set(interaction, '$.resolved', json('true')) WHERE chat_id = ? AND interaction IS NOT NULL AND json_extract(interaction, '$.kind') = 'choices' AND json_extract(interaction, '$.resolved') = 0").run(chat);
+        this.actions.message(campaign, chat, id, 'player', message);
+      }
     })();
     this.launch(id, campaign);
     return { id, status: 'running' };
@@ -807,7 +811,14 @@ export class AiService {
       const at = new Date().toISOString();
       this.db.transaction(() => {
         rt.assertActive();
-        this.actions.message(rt.campaign, rt.chat, rt.turn, 'gm', narration.slice(0, 18000));
+        const cards = this.db.prepare('SELECT id, campaign_id, turn_id, chat_id, role, text, interaction FROM ai_messages WHERE turn_id = ? AND chat_id = ? AND interaction IS NOT NULL ORDER BY rowid').all(rt.turn, rt.chat) as { id: string; campaign_id: string; turn_id: string; chat_id: string; role: string; text: string; interaction: string }[];
+        const narrated = this.actions.message(rt.campaign, rt.chat, rt.turn, 'gm', narration.slice(0, 18000));
+        // Cards raised by this turn's tools were saved before the narration; move them after it so the prompt follows the scene.
+        const after = Date.parse((this.db.prepare('SELECT created FROM ai_messages WHERE id = ?').get(narrated) as { created: string }).created);
+        cards.forEach((card, index) => {
+          this.db.prepare('DELETE FROM ai_messages WHERE id = ?').run(card.id);
+          this.db.prepare('INSERT INTO ai_messages(id,campaign_id,turn_id,chat_id,role,text,interaction,created) VALUES (?,?,?,?,?,?,?,?)').run(card.id, card.campaign_id, card.turn_id, card.chat_id, card.role, card.text, card.interaction, new Date(after + 1 + index).toISOString());
+        });
         this.chats.setWorldTime(rt.chat, this.actions.readState(rt.campaign).timeOfDay);
         this.db.prepare("UPDATE ai_turns SET status = 'complete', error = '', checkpoint = '[]', updated = ? WHERE id = ?").run(at, rt.turn);
       })();
