@@ -43,11 +43,24 @@ export function effectiveContextWindow(model: string, contextWindow: number): nu
   return contextWindow;
 }
 
+/** The smallest context window a user may set. Below this the GM prompt and tools do not fit. */
+export const MIN_CONTEXT_LIMIT = 16000;
+/** The window memory is budgeted against: the model's window, capped by the user's own limit when one is set. */
+export function credentialWindow(model: string, catalogWindow: number, limit: number): number {
+  const window = effectiveContextWindow(model, catalogWindow);
+  if (!(limit > 0)) return window;
+  return window > 0 ? Math.min(window, limit) : limit;
+}
+
+/** A model request fails if the provider sends nothing for this long, or runs past the total cap. */
+export const REQUEST_IDLE_MS = 120000;
+export const REQUEST_TOTAL_MS = 600000;
+
 function isOpenCode(provider: AiProvider): boolean { return provider === 'opencode' || provider === 'opencode-go'; }
 function positiveNumber(value: unknown): number { const parsed = Number(value); return Number.isFinite(parsed) && parsed > 0 ? parsed : 0; }
 
 export class ModelProvider {
-  constructor(private fetcher: typeof fetch = fetch) {}
+  constructor(private fetcher: typeof fetch = fetch, private idleMs = REQUEST_IDLE_MS, private totalMs = REQUEST_TOTAL_MS) {}
   async models(provider: AiProvider): Promise<AiModel[]> {
     const response = await this.fetcher(PROVIDERS[provider].models, { signal: AbortSignal.timeout(15000), redirect: 'error' });
     if (!response.ok) throw new ProviderError('Could not load the provider’s model catalog. Try again shortly.');
@@ -84,6 +97,28 @@ export class ModelProvider {
     } catch (error) { if (signal.aborted) throw error; throw new ProviderError('Could not reach your AI provider. Check the server connection and try again.'); }
   }
 
+  /** Runs one request with a watchdog: any activity calls touch(); silence past idleMs, or the total cap, aborts with a clear error. */
+  private async guarded<T>(outer: AbortSignal, work: (signal: AbortSignal, touch: () => void) => Promise<T>): Promise<T> {
+    const controller = new AbortController();
+    let stalled = false;
+    const abort = () => controller.abort();
+    if (outer.aborted) abort(); else outer.addEventListener('abort', abort, { once: true });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const stall = () => { stalled = true; controller.abort(); };
+    const touch = () => { clearTimeout(timer); timer = setTimeout(stall, this.idleMs); };
+    const total = setTimeout(stall, this.totalMs);
+    touch();
+    try {
+      return await work(controller.signal, touch);
+    } catch (error) {
+      if (stalled && !outer.aborted) throw new ProviderError('The model stopped responding. Retry the turn, or pick a faster model in GM connection.');
+      throw error;
+    } finally {
+      clearTimeout(timer); clearTimeout(total);
+      outer.removeEventListener('abort', abort);
+    }
+  }
+
   private assertOk(provider: AiProvider, response: Response): void {
     if (response.ok) return;
     if (response.status === 401) throw new ProviderError('The provider rejected this API key. Replace it in GM connection.');
@@ -114,7 +149,7 @@ export class ModelProvider {
    * handed to onDelta, because tool arguments can carry GM-only secrets. Malformed data lines are
    * skipped so one bad frame does not lose the rest of the reply.
    */
-  private async readStream(response: Response, onDelta: (delta: string) => void): Promise<Completion> {
+  private async readStream(response: Response, onDelta: (delta: string) => void, touch: () => void = () => {}): Promise<Completion> {
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     const calls = new Map<number, StreamedCall>();
@@ -148,6 +183,7 @@ export class ModelProvider {
       while (!finished) {
         const chunk = await reader.read();
         if (chunk.done) break;
+        touch();
         size += chunk.value.byteLength;
         if (size > MAX_RESPONSE_CHARS) throw new ProviderError('The provider response was too large. Choose another model.');
         buffer += decoder.decode(chunk.value, { stream: true });
@@ -169,6 +205,10 @@ export class ModelProvider {
   }
 
   async complete(provider: AiProvider, key: string, model: string, messages: ModelMessage[], tools: ToolDefinition[], signal: AbortSignal, session: string, options: CompletionOptions = {}): Promise<Completion> {
+    return this.guarded(signal, (guard, touch) => this.request(provider, key, model, messages, tools, guard, session, options, touch));
+  }
+
+  private async request(provider: AiProvider, key: string, model: string, messages: ModelMessage[], tools: ToolDefinition[], signal: AbortSignal, session: string, options: CompletionOptions, touch: () => void): Promise<Completion> {
     if (!options.onDelta) {
       const response = await this.send(provider, key, this.requestBody(model, messages, tools, options, false), signal, session);
       return this.readJson(provider, response);
@@ -176,7 +216,7 @@ export class ModelProvider {
     const response = await this.send(provider, key, this.requestBody(model, messages, tools, options, true), signal, session);
     if (response.ok) {
       const type = response.headers.get('content-type') ?? '';
-      if (type.includes('text/event-stream') && response.body) return this.readStream(response, options.onDelta);
+      if (type.includes('text/event-stream') && response.body) return this.readStream(response, options.onDelta, touch);
       // The provider ignored the stream flag and answered with JSON, which is still a valid reply.
       return this.readJson(provider, response);
     }

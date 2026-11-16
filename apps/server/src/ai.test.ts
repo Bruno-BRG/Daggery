@@ -195,3 +195,17 @@ test('adversary attacks use source dice and Armor damage cards resolve once agai
     assert.equal(ai.actions.read(campaign, 'combat', enemy.adversaryId)?.conditions.vulnerable, true);
   } finally { t.mock.restoreAll(); await f.close(); }
 });
+
+test('the GM connection stores a custom context window and budgets memory against it', async () => {
+  const f = await fixture(() => completion('Ready.'));
+  try {
+    const full = f.ai.connection(f.user.id)!;
+    await f.ai.saveConnection(f.user.id, { provider: 'opencode', model: 'test-gm', apiKey: '', contextLimit: 32000 });
+    const capped = f.ai.connection(f.user.id)!;
+    assert.equal(capped.contextLimit, 32000);
+    assert.equal(capped.contextWindow, full.contextWindow > 0 ? Math.min(full.contextWindow, 32000) : 32000);
+    await assert.rejects(f.ai.saveConnection(f.user.id, { provider: 'opencode', model: 'test-gm', apiKey: '', contextLimit: 1000 }), /at least/);
+    await f.ai.saveConnection(f.user.id, { provider: 'opencode', model: 'test-gm', apiKey: '', contextLimit: 0 });
+    assert.equal(f.ai.connection(f.user.id)!.contextWindow, full.contextWindow);
+  } finally { await f.close(); }
+});

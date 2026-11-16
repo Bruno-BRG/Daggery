@@ -23,7 +23,14 @@ const timeOf = (value: string) => new Date(value).toLocaleTimeString([], { hour:
 const stampOf = (value: string) => new Date(value).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
 const KIND_LABEL: Record<AiJournalEntry['kind'], string> = { event: 'Event', note: 'Note', chapter: 'Chapter' };
 const RUN_TEXT: Record<AiTurnKind, string> = { turn: 'Your GM is taking a turn…', compact: 'Your GM is saving the story so far…', end: 'Your GM is writing the final chapter…', pause: 'Your GM is saving where play stopped…' };
-const THINKING_TEXT: Record<AiTurnKind, string> = { turn: 'The GM is preparing the next moment', compact: 'The GM is saving the story so far', end: 'The GM is writing the final chapter', pause: 'The GM is saving where play stopped' };
+/** Rotating lines while the GM works, so a long reasoning request never looks frozen. */
+const THINKING_LINES: Record<AiTurnKind, string[]> = {
+  turn: ['Reading the table', 'Consulting the oracles', 'Weighing your choices', 'Checking the fronts', 'Whispering to the NPCs', 'Rolling behind the screen', 'Counting the Fear', 'Sketching the scene', 'Tracing old clues', 'Lighting the lanterns', 'Listening to the dark', 'Finding the right words'],
+  compact: ['Gathering the story so far', 'Binding the pages', 'Underlining what matters', 'Filing the loose threads'],
+  end: ['Writing the final chapter', 'Closing the book', 'Remembering the heroes', 'Setting down the quill'],
+  pause: ['Marking the page', 'Saving where play stopped', 'Banking the fire'],
+};
+const THINKING_ROTATE_MS = 2800;
 const BUDGETS: AiBudget[] = ['lean', 'balanced', 'rich', 'maximum'];
 const BUDGET_LABEL: Record<AiBudget, string> = { lean: 'Lean', balanced: 'Balanced', rich: 'Rich', maximum: 'Maximum' };
 const PACINGS: AiPacing[] = ['fast', 'balanced', 'slow'];
@@ -350,7 +357,7 @@ export default function Adventure({ author: _author }: { author: string }) {
             <header><strong>Game Master</strong></header>
             <Narration text={partial.text} />
           </article>}
-          {runHere?.status === 'running' && <div className="ai-thinking" role="status"><span />{THINKING_TEXT[runHere.kind]}<small>{runHere.steps} model {runHere.steps === 1 ? 'request' : 'requests'}</small><button type="button" disabled={busy} onClick={() => void perform('/stop')}>Stop</button></div>}
+          {runHere?.status === 'running' && <Thinking key={runHere.id} kind={runHere.kind} steps={runHere.steps} streaming={!!partial} busy={busy} onStop={() => void perform('/stop')} />}
           {runHere?.status === 'failed' && <div className="ai-error" role="alert"><p>{runHere.error}</p><button type="button" className="daggery-roll-toggle" disabled={busy || !canWrite} onClick={() => void perform('/retry', { turnId: runHere.id })}>Retry saved turn</button><small>Completed game actions are retained.</small></div>}
           {runHere?.status === 'cancelled' && <p className="ai-muted">GM turn stopped. Completed actions are saved. Send a message to continue.</p>}
           <div ref={end} />
@@ -410,6 +417,22 @@ export default function Adventure({ author: _author }: { author: string }) {
 function Meter({ label, value, max, tone }: { label: string; value: number; max: number; tone: string }) {
   const ratio = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
   return <div className={`ai-meter ai-meter-${tone}`}><dt>{label}</dt><dd>{value}/{max}</dd><span aria-hidden="true"><i style={{ width: `${ratio * 100}%` }} /></span></div>;
+}
+
+function Thinking({ kind, steps, streaming, busy, onStop }: { kind: AiTurnKind; steps: number; streaming: boolean; busy: boolean; onStop: () => void }) {
+  const lines = THINKING_LINES[kind];
+  const [start] = useState(() => Date.now()), [now, setNow] = useState(() => Date.now());
+  const [offset] = useState(() => Math.floor(Math.random() * lines.length));
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer); }, []);
+  const elapsed = Math.max(0, Math.floor((now - start) / 1000));
+  const line = streaming ? 'Narrating' : lines[(offset + Math.floor((now - start) / THINKING_ROTATE_MS)) % lines.length];
+  const clock = elapsed >= 60 ? `${Math.floor(elapsed / 60)}m ${String(elapsed % 60).padStart(2, '0')}s` : `${elapsed}s`;
+  return <div className="ai-thinking" role="status" aria-live="off">
+    <span aria-hidden="true" />
+    <em key={line} className="ai-thinking-line">{line}…</em>
+    <small>{clock} · {steps} model {steps === 1 ? 'request' : 'requests'}{elapsed >= 90 && !streaming ? ' · reasoning models can take a minute or two' : ''}</small>
+    <button type="button" disabled={busy} onClick={onStop}>Stop</button>
+  </div>;
 }
 
 interface SessionPanelProps {
@@ -680,8 +703,10 @@ function Connection({ connection, onClose, onSaved }: { connection: AiConnection
   const reuseKey = !!connection && (connection.provider === provider ||
     [connection.provider, provider].every(value => value === 'opencode' || value === 'opencode-go'));
   const [models, setModels] = useState<AiModel[]>([]), [busy, setBusy] = useState(false), [loading, setLoading] = useState(false), [error, setError] = useState(''), [reload, setReload] = useState(0);
+  const [limit, setLimit] = useState(connection?.contextLimit ? String(connection.contextLimit) : '');
+  const modelWindow = models.find(item => item.id === model)?.contextWindow ?? 0;
   useEffect(() => { let active = true; setLoading(true); setError(''); void api<{ models: AiModel[] }>(`/api/ai/models?provider=${provider}`).then(result => { if (active) { setModels(result.models); setModel(current => result.models.some(item => item.id === current) ? current : result.models[0]?.id ?? ''); } }).catch(error => { if (active) setError(errorText(error)); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, [provider, reload]);
-  async function save(event: FormEvent) { event.preventDefault(); setBusy(true); setError(''); try { await api('/api/ai/connection', 'PUT', { provider, model, apiKey: key }); setKey(''); await onSaved(); } catch (error) { setError(errorText(error)); } finally { setBusy(false); } }
+  async function save(event: FormEvent) { event.preventDefault(); setBusy(true); setError(''); try { await api('/api/ai/connection', 'PUT', { provider, model, apiKey: key, contextLimit: limit.trim() ? Number(limit.replace(/[^\d]/g, '')) : 0 }); setKey(''); await onSaved(); } catch (error) { setError(errorText(error)); } finally { setBusy(false); } }
   return <Dialog open onClose={onClose} title="GM connection"><form className="ai-form" onSubmit={save}>
     <p>Choose the OpenCode plan you use. Go subscription and pay-as-you-go credits use separate connections.</p>
     <label>Provider<select aria-label="Provider" value={provider} onChange={event => { setProvider(event.target.value as AiProvider); setModels([]); setKey(''); }}>
@@ -694,6 +719,8 @@ function Connection({ connection, onClose, onSaved }: { connection: AiConnection
     {provider === 'opencode-go' && <p className="ai-muted">OpenCode describes Go as intended for coding agents. GM requests may be restricted by the provider.</p>}
     <label>Model<select aria-label="Model" value={model} disabled={loading || !models.length} onChange={event => setModel(event.target.value)}>{loading ? <option>Loading available models…</option> : models.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
     <small>Only models with tool calling from the selected provider are listed.</small>
+    <label>Context window (tokens)<input aria-label="Context window" inputMode="numeric" value={limit} onChange={event => setLimit(event.target.value)} placeholder={modelWindow ? `Model maximum: ${modelWindow.toLocaleString()}` : 'Model maximum'} /></label>
+    <small>Leave blank to use the whole model window{modelWindow ? ` (${modelWindow.toLocaleString()} tokens)` : ''}. A smaller window keeps turns faster and cheaper; the Memory size in Adventure setup is measured against it. Minimum 16,000.</small>
     {error && <p className="ai-error" role="alert">{error}</p>}
     <div className="ai-toolbar"><button className="daggery-primary" disabled={busy || loading || !models.length}>{busy ? 'Saving…' : 'Save connection'}</button><button type="button" className="daggery-roll-toggle" disabled={busy || loading} onClick={() => setReload(value => value + 1)}>Reload models</button>{connection && <button type="button" className="ai-link" disabled={busy} onClick={async () => { setBusy(true); try { await api('/api/ai/connection', 'DELETE'); await onSaved(); } catch (error) { setError(errorText(error)); } finally { setBusy(false); } }}>Remove key</button>}</div>
   </form></Dialog>;

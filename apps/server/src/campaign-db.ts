@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
  * the old tables and never exposes these new ones.
  */
 export const LEGACY_CAMPAIGN_ID = 'legacy-unclaimed';
-export const CURRENT_VERSION = 13;
+export const CURRENT_VERSION = 14;
 
 /** Schema 6 adds AI sessions and the adventure journal. It only adds tables and columns, then backfills Session 1 for each AI campaign. Every step is idempotent. */
 function migrateAiSessions(db: Database.Database): void {
@@ -374,6 +374,8 @@ export function migrateCampaignDatabase(db: Database.Database): void {
         CREATE INDEX IF NOT EXISTS ai_profiles_campaign ON ai_profiles(campaign_id);
       `);
     }
+    // Version 14 lets a user cap the context window memory is budgeted against (0 = the model window).
+    if (version < 14) addColumn(db, 'ai_credentials', 'context_limit INTEGER NOT NULL DEFAULT 0');
   })();
   // Changing a CHECK constraint needs a table rebuild, which only works with foreign_keys OFF
   // outside a transaction, so it runs after the main migration has committed.

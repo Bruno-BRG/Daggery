@@ -165,6 +165,8 @@
 .ai-thinking{display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:22px 0;font-size:13px;color:var(--ai-muted)}
 .ai-thinking>span{width:7px;height:7px;border-radius:50%;background:var(--ai-accent);animation:ai-pulse 1.5s ease-in-out infinite}
 .ai-thinking small{font-size:11px}
+.ai-thinking-line{font-style:normal;color:var(--ds-ink);animation:ai-line-in .45s ease-out}
+@keyframes ai-line-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .ai-thinking button{text-decoration:underline;margin-left:auto}
 .ai-loading{padding:40px;color:var(--ds-muted)}
 .ai-adventure button:disabled{opacity:.45;cursor:not-allowed}
@@ -214,4 +216,4 @@
 .ai-transcript{max-height:50dvh}
 .daggery-page-ai{padding:20px 16px!important}
 }
-@media(prefers-reduced-motion:reduce){.ai-thinking>span{animation:none}.ai-streaming .ai-prose p:last-child::after{animation:none}}
+@media(prefers-reduced-motion:reduce){.ai-thinking-line{animation:none}.ai-thinking>span{animation:none}.ai-streaming .ai-prose p:last-child::after{animation:none}}

@@ -51,6 +51,18 @@ count toward the limit; compaction keeps its own smaller budget. If the catalog 
 the context window or reports less than 1,000,000 for a DeepSeek V4 model, memory
 budgeting uses 1,000,000 tokens, so Maximum has room for a long campaign in view.
 
+The GM connection dialog has a **Context window** field. Leave it blank to budget against
+the model's whole window, or enter a token count (at least 16,000, at most the model's
+window) to cap it. The memory sizes in Adventure setup, including Maximum, are then measured
+against that cap, which keeps turns faster and cheaper. It is stored per user in
+`ai_credentials.context_limit` (schema version 14).
+
+Each model request has a watchdog. A request fails with "The model stopped responding" when
+the provider sends nothing for 2 minutes, or when a single request runs past 10 minutes.
+Streamed reasoning counts as activity, so a long but live reasoning pass is not cut off. A
+whole turn may run up to 15 minutes. While the GM works, the Adventure page rotates short
+status lines and shows the elapsed time and the number of completed model requests.
+
 ## Sourcebooks and campaign frames
 
 The GM can search the printed books, read a page, and cite it as “Title, p. N” with

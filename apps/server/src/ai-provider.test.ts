@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { DEEPSEEK_CONTEXT_WINDOW, DEEPSEEK_MAX_TOKENS, DEEPSEEK_REASONING_EFFORT, ModelProvider, effectiveContextWindow } from './ai/provider';
+import { DEEPSEEK_CONTEXT_WINDOW, DEEPSEEK_MAX_TOKENS, DEEPSEEK_REASONING_EFFORT, ModelProvider, credentialWindow, effectiveContextWindow } from './ai/provider';
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
 
@@ -128,4 +128,32 @@ test('a provider that rejects the streaming request retries once without it', as
   const response = await provider.complete('opencode-go', 'key', 'gpt-6.1-sol', [{ role: 'user', content: 'Go' }], [], new AbortController().signal, 'campaign', { onDelta: () => {} });
   assert.equal(response.message.content, 'Fell back.');
   assert.deepEqual(bodies.map(body => body.stream), [true, false]);
+});
+
+test('a provider that goes silent fails the request with a clear error instead of hanging', async () => {
+  const provider = new ModelProvider((async (_url, init) => {
+    const signal = init?.signal as AbortSignal;
+    return new Promise<Response>((_resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason), { once: true }));
+  }) as typeof fetch, 20, 1000);
+  await assert.rejects(provider.complete('opencode-go', 'key', 'test-gm', [{ role: 'user', content: 'Hi' }], [], new AbortController().signal, 'session'), /stopped responding/);
+});
+
+test('a stream that keeps sending reasoning stays alive past the idle limit', async () => {
+  const encoder = new TextEncoder();
+  const provider = new ModelProvider((async () => new Response(new ReadableStream({
+    async start(controller) {
+      for (let n = 0; n < 6; n++) { controller.enqueue(encoder.encode(frame({ choices: [{ delta: { reasoning_content: 'hm' } }] }))); await new Promise(resolve => setTimeout(resolve, 10)); }
+      controller.enqueue(encoder.encode(frame({ choices: [{ delta: { content: 'Done.' } }] }) + 'data: [DONE]\n\n'));
+      controller.close();
+    },
+  }), { status: 200, headers: { 'content-type': 'text/event-stream' } })) as typeof fetch, 30, 5000);
+  const result = await provider.complete('opencode-go', 'key', 'test-gm', [{ role: 'user', content: 'Hi' }], [], new AbortController().signal, 'session', { onDelta: () => {} });
+  assert.equal(result.message.content, 'Done.');
+});
+
+test('a user context limit caps the budgeted window but never raises it', () => {
+  assert.equal(credentialWindow('deepseek-v4.1-flash', 1000000, 0), 1000000);
+  assert.equal(credentialWindow('deepseek-v4.1-flash', 1000000, 128000), 128000);
+  assert.equal(credentialWindow('kimi-k2', 256000, 400000), 256000);
+  assert.equal(credentialWindow('unknown', 0, 64000), 64000);
 });

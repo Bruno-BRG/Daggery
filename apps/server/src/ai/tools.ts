@@ -7,7 +7,7 @@ import type { Sheet } from '@daggery/shared/daggerheart/types';
 import type { CampaignService } from '../campaign-service';
 import { SoloService } from '../solo';
 import { rollDuality } from '../solo-duality';
-import { effectiveContextWindow, type ToolDefinition } from './provider';
+import { credentialWindow, type ToolDefinition } from './provider';
 import { AiCanon, CANON_KINDS, canonKind } from './canon';
 import { catalogSemantic } from './catalog-index';
 import { AiChats } from './chats';
@@ -260,8 +260,8 @@ export class GmActions {
   private snippetChars(campaign: string): number {
     const settings = this.db.prepare('SELECT owner_id, context_budget FROM campaign_ai WHERE campaign_id = ?').get(campaign) as { owner_id: string; context_budget: string } | undefined;
     if (!settings) return 600;
-    const credential = this.db.prepare('SELECT model, context_window FROM ai_credentials WHERE user_id = ?').get(settings.owner_id) as { model: string; context_window: number } | undefined;
-    const contextWindow = credential ? effectiveContextWindow(credential.model, credential.context_window) : 0;
+    const credential = this.db.prepare('SELECT model, context_window, context_limit FROM ai_credentials WHERE user_id = ?').get(settings.owner_id) as { model: string; context_window: number; context_limit: number } | undefined;
+    const contextWindow = credential ? credentialWindow(credential.model, credential.context_window, credential.context_limit) : 0;
     const budget: AiBudget = ['lean', 'balanced', 'rich', 'maximum'].includes(settings.context_budget) ? settings.context_budget as AiBudget : 'balanced';
     return limitsFor(budget, contextWindow).snippetChars;
   }

@@ -12,7 +12,7 @@ import type { AiChats, ChatRow } from './chats';
 import { EmbeddingIndex, type Embedder } from './embeddings';
 import type { AiJournal } from './journal';
 import { GmActions, GM_TOOLS } from './tools';
-import { ModelProvider, PROVIDERS, ProviderError, effectiveContextWindow, type ModelMessage, type ToolCall } from './provider';
+import { ModelProvider, PROVIDERS, ProviderError, effectiveContextWindow, credentialWindow, MIN_CONTEXT_LIMIT, type ModelMessage, type ToolCall } from './provider';
 import { CAMPAIGN_FRAMES, findCampaignFrame, framePrompt } from './frames';
 import { COMPACT_TAIL, COMPACT_TRIGGER, MESSAGE_CHARS, SECRETS_LIMIT, TOOL_RESULT_CHARS, budgetTable, budgetTokens, emptyState, estimateTokens, fitJson, fitMemory, limitsFor, renderProfile, renderState, shorten, snapshotText, type MemoryPart } from './memory';
 import { COMPACTION_PROMPT, GM_PROMPT, GM_PROMPT_VERSION, OPENING_INSTRUCTION } from './prompts';
@@ -27,6 +27,14 @@ import { record, text } from './validation';
 export class AiConflict extends Error {}
 
 const NL = String.fromCharCode(10);
+/** A user context limit: 0 or blank keeps the model's window; otherwise a whole number between the minimum and the model's window. */
+function contextLimitOf(value: unknown, modelWindow: number): number {
+  if (value === undefined || value === null || value === '' || value === 0) return 0;
+  const limit = Number(value);
+  if (!Number.isInteger(limit) || limit < MIN_CONTEXT_LIMIT) throw new Error('Invalid context window: use at least ' + MIN_CONTEXT_LIMIT.toLocaleString('en-US') + ' tokens');
+  if (modelWindow > 0 && limit > modelWindow) throw new Error('Invalid context window: this model supports up to ' + modelWindow.toLocaleString('en-US') + ' tokens');
+  return limit;
+}
 const BUDGET_NAMES = ['lean', 'balanced', 'rich', 'maximum'];
 const BEGIN_MESSAGE = 'Begin our adventure. Introduce the opening scene and give me a meaningful decision.';
 const DEFAULT_SETUP: AiSetup = { premise: '', tone: 'Adventurous mystery', heroId: '', persona: '', frame: '' };
@@ -48,7 +56,8 @@ const SEMANTIC_TOOLS = new Set(['search_journal', 'canon_search', 'search_source
 /** Canon reads return a whole source record, so they get room for a full body plus its metadata. */
 const TOOL_RESULT_OVERRIDES: Record<string, number> = { canon_read: 9000, canon_write: 9000, search_sourcebook: 12000, read_sourcebook_page: 9000, load_campaign_frame: 9000, npc_read: 12000, npc_create: 12000, npc_update: 12000 };
 /** The whole turn, including its compaction rounds, must finish within this time. */
-const TURN_TIMEOUT_MS = 300000;
+/** A whole turn may run several reasoning requests and tool rounds; each request also has its own idle watchdog. */
+const TURN_TIMEOUT_MS = 900000;
 const TRANSCRIPT_PAGE = 60;
 const SUMMARIZED_NOTICE = 'Earlier messages were summarized for the GM.';
 const ENDED_NOTICE = 'This session has ended. Its transcript is read only. Start a new session to keep playing.';
@@ -66,7 +75,7 @@ function fieldLines(fields: unknown, keys: string[]): string[] {
 
 
 interface Settings { campaign_id: string; owner_id: string; enabled: number; setup: string; memory: string; state: string; digest: string; context_budget: string; updated: string }
-interface Credential { user_id: string; provider: AiProvider; encrypted_key: string; model: string; key_hint: string; context_window: number; temperature: number }
+interface Credential { user_id: string; provider: AiProvider; encrypted_key: string; model: string; key_hint: string; context_window: number; context_limit: number; temperature: number }
 interface TurnRow { id: string; campaign_id: string; user_id: string; chat_id: string | null; kind: AiTurnKind; request_id: string; status: AiRun['status']; error: string; checkpoint: string; steps: number; cost: number; prompt_version: string; created: string; updated: string }
 interface MessageRow { seq: number; id: string; role: string; text: string; interaction: string | null; at: string }
 interface RunRow { id: string; kind: AiTurnKind; chat_id: string | null; status: AiRun['status']; error: string; steps: number; cost: number; at: string }
@@ -267,7 +276,7 @@ export class AiService {
 
   connection(user: string): AiConnection | null {
     const row = this.credential(user);
-    return row ? { provider: row.provider, model: row.model, keyHint: row.key_hint, contextWindow: effectiveContextWindow(row.model, row.context_window) } : null;
+    return row ? { provider: row.provider, model: row.model, keyHint: row.key_hint, contextWindow: credentialWindow(row.model, row.context_window, row.context_limit), modelContextWindow: effectiveContextWindow(row.model, row.context_window), contextLimit: row.context_limit } : null;
   }
 
   async models(provider: unknown) {
@@ -291,8 +300,9 @@ export class AiService {
     if (!key && (!previous || !canReuseAiKey(previous.provider, provider))) throw new Error('Invalid API key: enter a key for this provider');
     const encrypted = key ? this.vault.seal(key, user) : previous!.encrypted_key;
     const hint = key ? '••••' + key.slice(-4) : previous!.key_hint;
-    this.db.prepare('INSERT INTO ai_credentials(user_id,provider,encrypted_key,model,key_hint,updated,context_window,temperature) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET provider=excluded.provider,encrypted_key=excluded.encrypted_key,model=excluded.model,key_hint=excluded.key_hint,updated=excluded.updated,context_window=excluded.context_window,temperature=excluded.temperature')
-      .run(user, provider, encrypted, model, hint, new Date().toISOString(), selected.contextWindow ?? 0, selected.temperature ? 1 : 0);
+    const limit = contextLimitOf(input.contextLimit, effectiveContextWindow(model, selected.contextWindow ?? 0));
+    this.db.prepare('INSERT INTO ai_credentials(user_id,provider,encrypted_key,model,key_hint,updated,context_window,temperature,context_limit) VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET provider=excluded.provider,encrypted_key=excluded.encrypted_key,model=excluded.model,key_hint=excluded.key_hint,updated=excluded.updated,context_window=excluded.context_window,temperature=excluded.temperature,context_limit=excluded.context_limit')
+      .run(user, provider, encrypted, model, hint, new Date().toISOString(), selected.contextWindow ?? 0, selected.temperature ? 1 : 0, limit);
     return this.connection(user);
   }
 
@@ -325,7 +335,7 @@ export class AiService {
     const earlierCursor = rows.length > TRANSCRIPT_PAGE && page[0] ? String(page[0].seq) : null;
     const credential = settings ? this.credential(settings.owner_id) : undefined;
     const budget = budgetOf(settings);
-    const contextWindow = credential ? effectiveContextWindow(credential.model, credential.context_window) : 0;
+    const contextWindow = credential ? credentialWindow(credential.model, credential.context_window, credential.context_limit) : 0;
     const tokens = budgetTokens(budget, contextWindow);
     const budgets = budgetTable(contextWindow);
     const usage = settings && active ? this.assemble(campaign, settings, active, tokens, false, user) : null;
@@ -649,7 +659,7 @@ export class AiService {
       key: this.vault.open(credential.encrypted_key, owner), temperature: credential.temperature === 1, signal, assertActive,
     };
     if (row.kind === 'turn') return this.takeTurn(rt, row, settings, credential);
-    return this.housekeeping(rt, settings, budgetTokens(budgetOf(settings), effectiveContextWindow(credential.model, credential.context_window)), row.kind);
+    return this.housekeeping(rt, settings, budgetTokens(budgetOf(settings), credentialWindow(credential.model, credential.context_window, credential.context_limit)), row.kind);
   }
 
   /** Compact now, end a session, or pause it. None counts toward the turn's model-response limit. */
@@ -740,7 +750,7 @@ export class AiService {
   }
 
   private async takeTurn(rt: Runtime, row: TurnRow, settings: Settings, credential: Credential) {
-    const tokens = budgetTokens(budgetOf(settings), effectiveContextWindow(credential.model, credential.context_window));
+    const tokens = budgetTokens(budgetOf(settings), credentialWindow(credential.model, credential.context_window, credential.context_limit));
     // World turn: a new session or an in-fiction time jump invites the GM to advance a front.
     // world_time remembers the time of day when the last turn finished, so a change made between
     // turns is noticed on the next one. It is written only on success, so a failed turn retries it.
@@ -889,7 +899,7 @@ export class AiService {
   private contextWindowFor(campaign: string): number {
     const settings = this.settings(campaign);
     const credential = settings ? this.credential(settings.owner_id) : undefined;
-    return credential ? effectiveContextWindow(credential.model, credential.context_window) : 0;
+    return credential ? credentialWindow(credential.model, credential.context_window, credential.context_limit) : 0;
   }
 
   /** Memory parts in prompt order. They are rebuilt for every request, so edits take effect at once. */

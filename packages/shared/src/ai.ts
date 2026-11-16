@@ -3,7 +3,15 @@ export const isOpenCodeProvider = (provider: AiProvider): boolean => provider ==
 export const canReuseAiKey = (from: AiProvider, to: AiProvider): boolean => from === to || isOpenCodeProvider(from) && isOpenCodeProvider(to);
 export interface AiModel { id: string; name: string; contextWindow?: number; temperature?: boolean }
 /** contextWindow is the model's context window from the catalog, or 0 when unknown. */
-export interface AiConnection { provider: AiProvider; model: string; keyHint: string; contextWindow: number }
+export interface AiConnection {
+  provider: AiProvider; model: string; keyHint: string;
+  /** The window memory is budgeted against: the model's window, capped by contextLimit when set. */
+  contextWindow: number;
+  /** The model's own window from the catalog, or 0 when unknown. */
+  modelContextWindow?: number;
+  /** The user's cap in tokens, or 0 to use the whole model window. */
+  contextLimit?: number;
+}
 export type AiBudget = 'lean' | 'balanced' | 'rich' | 'maximum';
 /** Estimated tokens for memory plus recent messages in the fixed tiers. Maximum depends on the model's context window. The static prompt and tool schemas are counted separately. */
 export const AI_BUDGET_TOKENS: Record<Exclude<AiBudget, 'maximum'>, number> = { lean: 12000, balanced: 24000, rich: 48000 };
