@@ -45,6 +45,10 @@ if (!process.argv.includes('--html')) {
     'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/chromium', '/usr/bin/google-chrome']
     .find(path => path && existsSync(path));
   if (!browser) throw new Error('No Chromium browser found; set DAGGERY_BROWSER');
+  const dom = execFileSync(browser, ['--headless=new', '--disable-gpu', '--dump-dom', pathToFileURL(html).href], { encoding: 'utf8' });
+  const overflow = /data-overflow="([^"]*)"/.exec(dom)?.[1];
+  if (overflow === undefined) throw new Error('The overflow check did not run');
+  if (overflow) throw new Error(`These blocks do not fit their page and would be cut off: ${overflow}`);
   execFileSync(browser, ['--headless=new', '--disable-gpu', '--no-pdf-header-footer', `--print-to-pdf=${pdf}`, pathToFileURL(html).href], { stdio: 'inherit' });
   console.log(`Wrote ${pdf}`);
 }

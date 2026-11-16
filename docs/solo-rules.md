@@ -126,6 +126,22 @@ sense and make a Fear Check.
 - **Generic:** Descriptor + Subject for what it is, Action for what it does, How
   Much for its size or strength.
 
+## World tables
+
+Rolled whole (one d12 per column) on the Generators tab, and printed in the PDF:
+
+- **Names:** Given name (Hope die picks the row, Fear die the column: odd A,
+  even B), Family name, Epithet. The NPC generator rolls a name too.
+- **Settlements:** a name from a First and a Second part (Ash + ford: Ashford),
+  then Size, Known for and Trouble.
+- **Wilds:** Terrain, Weather and a Landmark for each region or day of travel.
+- **Hazards and traps:** the hazard with its reaction roll, and what happens on
+  a failure. Difficulty and damage follow the tier, as for an environment.
+- **Rest and camp:** what happens while you rest. Rests still add Fear.
+- **Rumors and leads:** where the next scene could come from.
+- **Factions:** who they are, what they want, and how they get it.
+- **Loot and treasure:** Loot and a Detail that makes it a story.
+
 ## Countdowns
 
 Give every looming threat a countdown. Soft and Hard Moves tick it; at zero it

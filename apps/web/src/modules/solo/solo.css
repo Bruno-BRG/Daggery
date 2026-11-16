@@ -282,3 +282,5 @@
   .solo-oracle-form .solo-row > button { width: 100%; margin-left: 0; }
 }
 .solo-step-tables .solo-lookup-table td.is-answer { background: var(--ds-brand-soft); color: var(--ds-ink); font-weight: 650; box-shadow: inset 0 0 0 1px var(--ds-brand); }
+.solo-jump li + li::before { display: none; }
+.solo-jump button { font-weight: 550; }

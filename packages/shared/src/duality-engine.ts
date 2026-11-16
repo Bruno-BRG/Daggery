@@ -98,7 +98,7 @@ export function resolveDualityMove(trigger: string, roll: number | undefined, fe
 // ----------------------------------------------------------------------- tables
 
 /** Table groups, in the order you reach for them during play. */
-export type DualityTableGroup = 'start' | 'scene' | 'oracle' | 'moves' | 'meaning' | 'combat' | 'npc' | 'explore';
+export type DualityTableGroup = 'start' | 'scene' | 'oracle' | 'moves' | 'meaning' | 'combat' | 'npc' | 'explore' | 'world';
 export interface DualityTable {
   id: string;
   title: string;
@@ -194,12 +194,28 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
     'Something far away changes', 'A strange omen or mystery', 'A new NPC enters', 'A known NPC acts', 'Bad for an NPC',
     'Good for an NPC', 'A Thread advances', 'A Thread is set back', 'A Thread closes or transforms', 'Bad for you',
     'Good for you', 'The environment acts'] }),
+  table('rumor', 'Rumors and Leads', 'start', { 'Next scene: a rumor or lead': [
+    'Lights where no one lives', 'A stranger asks about you', 'Travelers stop coming back', 'A reward for someone missing',
+    'A storm uncovered old ruins', 'A merchant needs an escort', 'Animals flee one place', 'A friend sends for you',
+    'Coins of a fallen kingdom', 'A festival hides a secret', 'A rival is on the move', 'A dream points the way'] }),
   table('site', 'Site Crawler', 'explore', {
     Area: ['Narrow passage', 'Narrow passage', 'Open chamber', 'Open chamber', 'Crossing or junction', 'Stairs, drop, or climb',
       'Collapsed or flooded section', 'Living or work quarters', 'Vault or storage', 'Shrine or sanctum', 'Cavern or overgrowth', 'Heart of the site'],
     Exits: spread([3, 'None'], [4, 'One'], [3, 'Two'], [2, 'Three']),
     Contents: spread([3, 'Empty; traces only'], [2, 'Hazard or trap'], [2, 'Adversaries'], [1, 'Adversaries guarding treasure'], [1, 'Treasure'],
       [1, 'An NPC'], [1, 'A clue to a Thread'], [1, 'Something strange (roll Meaning)']) }),
+  table('hazard', 'Hazards and Traps', 'explore', {
+    'Hazard (reaction roll)': ['Pit or collapsing floor (Agility)', 'Poison darts or needles (Agility)', 'Rockfall (Agility)',
+      'Slick or crumbling footing (Finesse)', 'Rising water (Strength)', 'Fire or choking smoke (Instinct)',
+      'Grasping thorns or vines (Strength)', 'Arcane ward (Knowledge)', 'Snare or net (Instinct)', 'Swinging blade (Agility)',
+      'Spores or foul air (Instinct)', 'Illusion or false path (Knowledge)'],
+    'On a failure': ['Fall: take physical damage', 'Mark a Stress; become Vulnerable', 'Take physical damage',
+      'Separated from an ally or your gear', 'Lose or ruin an item', 'Mark a Stress', 'Become Restrained', 'Take magic damage',
+      'Become Restrained', 'Take physical damage', 'Mark a Stress; disadvantage on your next roll', 'Lost: the way back is gone'] }),
+  table('rest', 'Rest and Camp', 'explore', { 'While you rest': [
+    'A quiet rest; nothing stirs', 'A quiet rest; nothing stirs', 'A traveler asks to share the fire', 'Sounds in the dark: ask the Oracle',
+    'A dream about an open Thread', 'The weather turns on the camp', 'Something is missing at dawn', 'A memory surfaces: tell it',
+    'Fresh tracks around the camp', 'A message or omen arrives', 'An NPC seeks you out', 'Interrupted: roll a Random Event'] }),
   table('journey', 'Journeys', 'explore', {
     'Danger (1 Fear)': ['Ambush', 'A predator stalks you', 'Storm or harsh weather', 'The path is lost', 'Hazardous crossing',
       'Supplies spoiled or lost', 'Hostile patrol', 'Sickness or exhaustion: mark a Stress', 'Pursuers catch up',
@@ -207,12 +223,51 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
     Discovery: ['A quiet road; nothing', 'Fellow travelers', 'Shelter or a good campsite', 'A ruin', 'A settlement or homestead',
       'A shrine or landmark', 'A useful resource', 'Tracks or signs', 'A trader', 'Someone in need', 'A hidden cache',
       'A wondrous sight: gain a Hope'] }),
+  table('wilds', 'Wilds: Terrain, Weather and Landmark', 'explore', {
+    Terrain: ['Open plains', 'Rolling hills', 'Dense forest', 'Old, quiet forest', 'Marsh or bog', 'Mountains or crags',
+      'Highland moor', 'River valley', 'Coast or cliffs', 'Desert or badlands', 'Snowfields or tundra', 'Strange land (roll Descriptor)'],
+    Weather: ['Clear and calm', 'Clear and calm', 'Overcast', 'Strong wind', 'Light rain', 'Heavy rain', 'Thick fog', 'Heat',
+      'Bitter cold', 'Storm', 'Snow or hail', 'Unnatural weather'],
+    Landmark: ['A lone great tree', 'Standing stones', 'A ruined tower', 'An old bridge', 'An old battlefield', 'A wayside shrine',
+      'A cave mouth', 'Bones of something huge', 'A crossroads marker', 'A waterfall', 'An abandoned camp', 'A crater or scar'] }),
+  table('place-name', 'Place Names', 'explore', {
+    First: ['Ash', 'Bright', 'Cold', 'Crow', 'Elder', 'Fair', 'Gold', 'Hollow', 'Iron', 'Mist', 'Raven', 'Thorn'],
+    Second: ['-barrow', '-brook', '-crest', '-fall', '-ford', '-gate', '-hold', '-mere', '-moor', '-reach', '-stead', '-wick'] }),
+  table('settlement', 'Settlement', 'explore', {
+    Size: spread([3, 'Hamlet or homestead'], [3, 'Village'], [3, 'Town'], [2, 'Walled city'], [1, 'Great city']),
+    'Known for': ['Fine craft', 'Strong drink', 'A sacred site', 'Its market', 'A famous family', 'Horses or beasts',
+      'Mines or quarries', 'The river or the sea', 'Ruins nearby', 'Scholars or a library', 'Mercenaries', 'Strange customs'],
+    Trouble: ['Raiders on the roads', 'A sickness spreads', 'A feud between families', 'Someone is missing', 'Monster sightings',
+      'A corrupt leader', 'A failing harvest', 'A cult in hiding', 'A debt to a powerful patron', 'Haunted nights',
+      'Flood, fire, or drought', 'Strangers arrived recently'] }),
+  table('names', 'Names', 'npc', {
+    'Given A': ['Aster', 'Bram', 'Cass', 'Dain', 'Elowen', 'Fenn', 'Gwen', 'Hollis', 'Isra', 'Jory', 'Kestrel', 'Lio'],
+    'Given B': ['Mara', 'Nim', 'Orrin', 'Pell', 'Quill', 'Rhea', 'Sorrel', 'Tamsin', 'Ulric', 'Vesper', 'Wren', 'Yara'],
+    Family: ['Ashdown', 'Blackbriar', 'Coldwater', 'Dunmore', 'Emberly', 'Fallowmere', 'Greyhallow', 'Hartwick', 'Ironwood',
+      'Larkspur', 'Mossgrave', 'Thorne'],
+    Epithet: ['the Quiet', 'the Lucky', 'Half-Hand', 'the Elder', 'Two-Coins', 'of the Ford', 'the Grey', 'Oathbound',
+      'the Unbowed', 'Lantern', 'the Wanderer', 'Saltblood'] }),
+  table('faction', 'Faction', 'world', {
+    Faction: ['Merchant guild', 'Noble house', 'Temple or holy order', 'Thieves’ guild', 'Mercenary company', 'Circle of mages',
+      'Rebels', 'Druidic circle', 'Secret society', 'Knightly order', 'Outlaw band', 'An ancient bloodline'],
+    Wants: ['Wealth', 'Control of a place', 'Revenge', 'A lost relic', 'To protect its own', 'To spread its faith',
+      'To topple a ruler', 'To bury a secret', 'Forbidden knowledge', 'Survival', 'New territory', 'To wake something old'],
+    Method: ['Bribery', 'Open force', 'Blackmail', 'Diplomacy', 'Spies', 'Trade', 'Rituals', 'Rumors and lies',
+      'Assassins', 'Alliances', 'Hiring heroes (you)', 'Patience'] }),
+  table('treasure', 'Loot and Treasure', 'world', {
+    Loot: spread([3, 'A handful of gold'], [2, 'Supplies: rations, rope, torches'], [1, 'A health or stamina potion'],
+      [1, 'A tool or trade good'], [1, 'A fine weapon'], [1, 'Armor or a shield'], [1, 'Jewelry or art'],
+      [1, 'A map, a key, or a letter'], [1, 'A magic item (roll Descriptor + Subject)']),
+    Detail: ['Engraved with a name', 'Stained with old blood', 'Smells of smoke', 'Older than it should be',
+      'Belonged to someone you know', 'Warm to the touch', 'Hums faintly', 'Wrapped in a note', 'Marked by a faction',
+      'Cracked but whole', 'Lighter or heavier than it looks', 'Someone wants it back'] }),
 ];
 
 export const DUALITY_TABLE_GROUPS: { id: DualityTableGroup; label: string }[] = [
   { id: 'start', label: '1. Plot hook and Random Event' }, { id: 'scene', label: '2. Set the scene' },
   { id: 'oracle', label: '3. Oracle' }, { id: 'moves', label: '4. GM Moves' }, { id: 'meaning', label: 'Meaning' },
-  { id: 'combat', label: 'Adversaries' }, { id: 'npc', label: 'NPCs' }, { id: 'explore', label: 'Exploration' },
+  { id: 'combat', label: 'Adversaries' }, { id: 'npc', label: 'NPCs and names' }, { id: 'explore', label: 'Exploration and places' },
+  { id: 'world', label: 'Factions and loot' },
 ];
 
 export function dualityTable(id: string): DualityTable {

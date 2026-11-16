@@ -120,9 +120,10 @@ test('adversaries act for free on a failed check, spend on a pass, and chain unt
 });
 
 test('generators, journeys, tables and lists roll d12s', async () => {
-  const fixture = await context(4, 1, 2, 3, 4, 5, 1, 1, 9, 2, 12, 3, 2, 5, 6);
+  // NPC: five table rolls, then a name (Hope 6, Fear 6, Family 6, Epithet 6).
+  const fixture = await context(4, 1, 2, 3, 4, 5, 6, 6, 6, 6, 1, 1, 9, 2, 12, 3, 2, 5, 6);
   try {
-    assert.equal(fixture.roll('duality-npc').result.title, 'Suspicious farmer or laborer who wants wealth');
+    assert.match(fixture.roll('duality-npc').result.title, /^Rhea Fallowmere, of the Ford: suspicious farmer or laborer who wants wealth$/);
     assert.equal(fixture.roll('duality-journey').result.title, 'Danger: Ambush');
     assert.equal(fixture.pool(), 3);
     assert.equal(fixture.roll('duality-journey').result.title, 'Discovery: Fellow travelers');
@@ -178,4 +179,24 @@ test('an encounter rolls creature, situation and type, and suggests fitting cata
   assert.ok((outcome.result.suggestions ?? []).length > 0, 'tier 1 has Solo adversaries');
   assert.equal(outcome.fearSpent, 0);
   assert.throws(() => rollDuality('duality-encounter', { state: initialSoloState(), fear: 0, rng: queue(1), input: { tier: 7 }, question: '' }), /Invalid tier/);
+});
+
+test('generators roll whole tables: names, place names, settlements and the rest', () => {
+  const state = initialSoloState();
+  const run = (tableId: string, ...dice: number[]) => rollDuality('duality-generate', { state, fear: 0, rng: queue(...dice), input: { tableId }, question: '' });
+  // Hope 1 / Fear 2 picks Given B row 1; Family 12, Epithet 3.
+  assert.equal(run('names', 1, 2, 12, 3).result.title, 'Mara Thorne, Half-Hand');
+  assert.equal(run('place-name', 1, 5).result.title, 'Ashford');
+  const town = run('settlement', 12, 12, 7, 3, 4);
+  assert.equal(town.result.title, 'Thornwick: town known for a sacred site');
+  assert.match(town.result.detail, /Trouble d12 4: Someone is missing/);
+  assert.equal(run('wilds', 3, 7, 1).result.title, 'Dense forest · Thick fog · A lone great tree');
+  assert.equal(run('treasure', 12, 6).result.cells?.length, 2);
+  assert.throws(() => run('soft-move', 1), /Invalid table/);
+});
+
+test('a hazard reads one row, so the failure fits the hazard', () => {
+  const hazard = rollDuality('duality-generate', { state: initialSoloState(), fear: 0, rng: queue(1, 8), input: { tableId: 'hazard' }, question: '' });
+  assert.equal(hazard.result.title, 'Pit or collapsing floor (Agility) · Fall: take physical damage');
+  assert.deepEqual(hazard.result.cells, [{ table: 'hazard', column: 0, roll: 1 }, { table: 'hazard', column: 1, roll: 1 }]);
 });

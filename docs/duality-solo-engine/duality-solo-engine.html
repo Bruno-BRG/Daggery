@@ -6,6 +6,8 @@
 <!-- Built by tools/build_duality_pdf.ts: the tables between the markers come from packages/shared/src/duality-engine.ts. -->
 <style>
   @page { size: A4 landscape; margin: 8mm; }
+  /* On screen, lay pages out at the printed width so the build can check for overflow. */
+  @media screen { body { width: 281mm; } }
   :root { --hope: #a8780a; --fear: #5b2a86; --ink: #1c1a22; --rule: #cfc8da; --tint: #f3eff8; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
@@ -69,15 +71,20 @@
 
 <div class="block">
   <h2 class="hope"><span class="step">1</span>Plot Hook</h2>
-  <p>Why is your character here? Roll once per column. Keep the <b>Twist</b> hidden until a Random Event or Hard Move gives it an opening.</p>
+  <p>Why are you here? Roll once per column. Keep the <b>Twist</b> hidden until a Random Event or Hard Move reveals it.</p>
   <div data-t="plot-hook"></div>
 </div>
 <div class="block"><div data-t="plot-stakes"></div></div>
 
 <div class="block">
   <h2 class="hope"><span class="step">2</span>Random Event</h2>
-  <p>Roll the <b>Event Focus</b>, then <b>Action + Subject</b> for what happens. Also triggered by Oracle doubles and Interrupted scenes. Focus 4–6: roll your NPC list; 7–9: roll your Thread list (reroll blanks, or choose).</p>
+  <p>Roll the <b>Event Focus</b>, then <b>Action + Subject</b>. Also on Oracle doubles and Interrupted scenes. Focus 4–6: roll your NPC list; 7–9: your Thread list.</p>
   <div data-t="event-focus"></div>
+</div>
+
+<div class="block">
+  <h2 class="hope">Rumors &amp; Leads</h2>
+  <div data-t="rumor"></div>
 </div>
 
 <div class="block">
@@ -140,6 +147,11 @@
 </div>
 
 <div class="block">
+  <h2 class="hope">Countdowns</h2>
+  <p>Give every looming threat a countdown. Soft and Hard Moves tick it; at zero it happens, with no Fear needed.</p>
+</div>
+
+<div class="block">
   <h2>Encounters</h2>
   <p>When trouble turns to a fight, roll <b>Creature</b> and <b>Situation</b>, then the <b>Adversary Type</b>: the Daggerheart role it plays. Pick a stat block of that type and your tier (reskin one to fit the creature) and build the fight with Battle Points. Ask the Oracle whether they notice you first.</p>
   <div data-t="adversary-creature"></div>
@@ -161,10 +173,26 @@
   <p style="margin-top:.8mm">A Fear feature costs what its stat block says; the other results cost 1 Fear. If the engine cannot pay, it rolls Tactics instead.</p>
 </div>
 
+
 <div class="block">
-  <h2 class="hope">Countdowns</h2>
-  <p>Give every looming threat a countdown. Soft and Hard Moves tick it; at zero it happens, with no Fear needed.</p>
+  <h2 class="hope">Names</h2>
+  <p>For a new NPC: the <b class="h">Hope die</b> picks the given name, the <b class="f">Fear die</b> the column (odd A, even B). Add a Family name, an Epithet, or both.</p>
+  <div data-t="names"></div>
 </div>
+
+<div class="block">
+  <h2>Hazards &amp; Traps</h2>
+  <p>Make the reaction roll named. Difficulty and damage by tier.</p>
+  <div data-t="hazard"></div>
+</div>
+
+<div class="block">
+  <h2 class="hope">Loot &amp; Treasure</h2>
+  <p>After a fight or in a vault, roll <b>Loot</b> and a <b>Detail</b> that makes it a story.</p>
+  <div data-t="treasure"></div>
+</div>
+
+
 
 </section>
 
@@ -181,17 +209,17 @@
   <div data-t="npc-manner"></div>
 </div>
 
-<div class="block col">
+<div class="block">
+  <h2 class="hope">Rest &amp; Camp</h2>
+  <div data-t="rest"></div>
+</div>
+
+<div class="block">
   <h2>Site Crawler</h2>
   <p>For dungeons, ruins, and lairs. For each new area roll <b>Area</b>, <b>Exits</b>, and <b>Contents</b>. The first time you roll Area 12, you have found the heart of the site.</p>
   <div data-t="site"></div>
 </div>
 
-<div class="block col">
-  <h2>Journeys</h2>
-  <p>For each leg of travel make a <b class="f">Fear Check</b>. <b>Pass:</b> spend 1 Fear and roll <b>Danger</b>. <b>Fail:</b> roll <b>Discovery</b>.</p>
-  <div data-t="journey"></div>
-</div>
 
 <div class="block">
   <h2 class="hope">Tips</h2>
@@ -202,6 +230,32 @@
     <li>Write what you need where you like: the tables are the engine.</li>
   </ul>
 </div>
+
+<div class="block">
+  <h2 class="hope">Settlements</h2>
+  <p>Name it with one <b>First</b> and one <b>Second</b> part (Ash + ford: Ashford), then roll <b>Size</b>, <b>Known for</b>, and its <b>Trouble</b>: a ready hook.</p>
+  <div data-t="place-name"></div>
+</div>
+<div class="block"><div data-t="settlement"></div></div>
+
+<div class="block">
+  <h2>Journeys</h2>
+  <p>For each leg of travel make a <b class="f">Fear Check</b>. <b>Pass:</b> spend 1 Fear and roll <b>Danger</b>. <b>Fail:</b> roll <b>Discovery</b>.</p>
+  <div data-t="journey"></div>
+</div>
+
+<div class="block">
+  <h2 class="hope">Wilds</h2>
+  <p>For each new region or day of travel: the land, the weather, and a landmark to steer by.</p>
+  <div data-t="wilds"></div>
+</div>
+
+<div class="block">
+  <h2>Factions</h2>
+  <p>Who they are, what they want, and how they get it. Add the ones that matter to your NPCs or Threads.</p>
+  <div data-t="faction"></div>
+</div>
+
 
 <div class="foot pagefoot">
   Duality Solo Engine v2.0. Unofficial fan-made play aid for use with Daggerheart; not affiliated with or endorsed by Darrington Press or Critical Role. Play loop after One Page Solo Engine (Karl Hendricks, CC-BY-SA 4.0); also inspired by the Mythic Game Master Emulator (Tana Pigeon).
@@ -751,6 +805,27 @@ const T = {
    ]
   ]
  },
+ "rumor": {
+  "h": [
+   "Rumors and Leads"
+  ],
+  "c": [
+   [
+    "Lights where no one lives",
+    "A stranger asks about you",
+    "Travelers stop coming back",
+    "A reward for someone missing",
+    "A storm uncovered old ruins",
+    "A merchant needs an escort",
+    "Animals flee one place",
+    "A friend sends for you",
+    "Coins of a fallen kingdom",
+    "A festival hides a secret",
+    "A rival is on the move",
+    "A dream points the way"
+   ]
+  ]
+ },
  "site": {
   "h": [
    "Area",
@@ -802,6 +877,75 @@ const T = {
    ]
   ]
  },
+ "hazard": {
+  "h": [
+   "Hazard (reaction roll)",
+   "On a failure"
+  ],
+  "c": [
+   [
+    "Pit or collapsing floor (Agility)",
+    "Poison darts or needles (Agility)",
+    "Rockfall (Agility)",
+    "Slick or crumbling footing (Finesse)",
+    "Rising water (Strength)",
+    "Fire or choking smoke (Instinct)",
+    "Grasping thorns or vines (Strength)",
+    "Arcane ward (Knowledge)",
+    "Snare or net (Instinct)",
+    "Swinging blade (Agility)",
+    "Spores or foul air (Instinct)",
+    "Illusion or false path (Knowledge)"
+   ],
+   [
+    "Fall: take physical damage",
+    "Mark a Stress; become Vulnerable",
+    "Take physical damage",
+    "Separated from an ally or your gear",
+    "Lose or ruin an item",
+    "Mark a Stress",
+    "Become Restrained",
+    "Take magic damage",
+    "Become Restrained",
+    "Take physical damage",
+    "Mark a Stress; disadvantage on your next roll",
+    "Lost: the way back is gone"
+   ]
+  ]
+ },
+ "rest": {
+  "h": [
+   "Rest and Camp"
+  ],
+  "c": [
+   [
+    "A quiet rest; nothing stirs",
+    "A traveler asks to share the fire",
+    "Sounds in the dark: ask the Oracle",
+    "A dream about an open Thread",
+    "The weather turns on the camp",
+    "Something is missing at dawn",
+    "A memory surfaces: tell it",
+    "Fresh tracks around the camp",
+    "A message or omen arrives",
+    "An NPC seeks you out",
+    "Interrupted: roll a Random Event"
+   ]
+  ],
+  "n": [
+   "1-2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "8",
+   "9",
+   "10",
+   "11",
+   "12"
+  ]
+ },
  "journey": {
   "h": [
    "Danger (1 Fear)",
@@ -837,6 +981,297 @@ const T = {
     "A wondrous sight: gain a Hope"
    ]
   ]
+ },
+ "wilds": {
+  "h": [
+   "Terrain",
+   "Weather",
+   "Landmark"
+  ],
+  "c": [
+   [
+    "Open plains",
+    "Rolling hills",
+    "Dense forest",
+    "Old, quiet forest",
+    "Marsh or bog",
+    "Mountains or crags",
+    "Highland moor",
+    "River valley",
+    "Coast or cliffs",
+    "Desert or badlands",
+    "Snowfields or tundra",
+    "Strange land (roll Descriptor)"
+   ],
+   [
+    "Clear and calm",
+    "Clear and calm",
+    "Overcast",
+    "Strong wind",
+    "Light rain",
+    "Heavy rain",
+    "Thick fog",
+    "Heat",
+    "Bitter cold",
+    "Storm",
+    "Snow or hail",
+    "Unnatural weather"
+   ],
+   [
+    "A lone great tree",
+    "Standing stones",
+    "A ruined tower",
+    "An old bridge",
+    "An old battlefield",
+    "A wayside shrine",
+    "A cave mouth",
+    "Bones of something huge",
+    "A crossroads marker",
+    "A waterfall",
+    "An abandoned camp",
+    "A crater or scar"
+   ]
+  ]
+ },
+ "place-name": {
+  "h": [
+   "First",
+   "Second"
+  ],
+  "c": [
+   [
+    "Ash",
+    "Bright",
+    "Cold",
+    "Crow",
+    "Elder",
+    "Fair",
+    "Gold",
+    "Hollow",
+    "Iron",
+    "Mist",
+    "Raven",
+    "Thorn"
+   ],
+   [
+    "-barrow",
+    "-brook",
+    "-crest",
+    "-fall",
+    "-ford",
+    "-gate",
+    "-hold",
+    "-mere",
+    "-moor",
+    "-reach",
+    "-stead",
+    "-wick"
+   ]
+  ]
+ },
+ "settlement": {
+  "h": [
+   "Size",
+   "Known for",
+   "Trouble"
+  ],
+  "c": [
+   [
+    "Hamlet or homestead",
+    "Hamlet or homestead",
+    "Hamlet or homestead",
+    "Village",
+    "Village",
+    "Village",
+    "Town",
+    "Town",
+    "Town",
+    "Walled city",
+    "Walled city",
+    "Great city"
+   ],
+   [
+    "Fine craft",
+    "Strong drink",
+    "A sacred site",
+    "Its market",
+    "A famous family",
+    "Horses or beasts",
+    "Mines or quarries",
+    "The river or the sea",
+    "Ruins nearby",
+    "Scholars or a library",
+    "Mercenaries",
+    "Strange customs"
+   ],
+   [
+    "Raiders on the roads",
+    "A sickness spreads",
+    "A feud between families",
+    "Someone is missing",
+    "Monster sightings",
+    "A corrupt leader",
+    "A failing harvest",
+    "A cult in hiding",
+    "A debt to a powerful patron",
+    "Haunted nights",
+    "Flood, fire, or drought",
+    "Strangers arrived recently"
+   ]
+  ]
+ },
+ "names": {
+  "h": [
+   "Given A",
+   "Given B",
+   "Family",
+   "Epithet"
+  ],
+  "c": [
+   [
+    "Aster",
+    "Bram",
+    "Cass",
+    "Dain",
+    "Elowen",
+    "Fenn",
+    "Gwen",
+    "Hollis",
+    "Isra",
+    "Jory",
+    "Kestrel",
+    "Lio"
+   ],
+   [
+    "Mara",
+    "Nim",
+    "Orrin",
+    "Pell",
+    "Quill",
+    "Rhea",
+    "Sorrel",
+    "Tamsin",
+    "Ulric",
+    "Vesper",
+    "Wren",
+    "Yara"
+   ],
+   [
+    "Ashdown",
+    "Blackbriar",
+    "Coldwater",
+    "Dunmore",
+    "Emberly",
+    "Fallowmere",
+    "Greyhallow",
+    "Hartwick",
+    "Ironwood",
+    "Larkspur",
+    "Mossgrave",
+    "Thorne"
+   ],
+   [
+    "the Quiet",
+    "the Lucky",
+    "Half-Hand",
+    "the Elder",
+    "Two-Coins",
+    "of the Ford",
+    "the Grey",
+    "Oathbound",
+    "the Unbowed",
+    "Lantern",
+    "the Wanderer",
+    "Saltblood"
+   ]
+  ]
+ },
+ "faction": {
+  "h": [
+   "Faction",
+   "Wants",
+   "Method"
+  ],
+  "c": [
+   [
+    "Merchant guild",
+    "Noble house",
+    "Temple or holy order",
+    "Thieves’ guild",
+    "Mercenary company",
+    "Circle of mages",
+    "Rebels",
+    "Druidic circle",
+    "Secret society",
+    "Knightly order",
+    "Outlaw band",
+    "An ancient bloodline"
+   ],
+   [
+    "Wealth",
+    "Control of a place",
+    "Revenge",
+    "A lost relic",
+    "To protect its own",
+    "To spread its faith",
+    "To topple a ruler",
+    "To bury a secret",
+    "Forbidden knowledge",
+    "Survival",
+    "New territory",
+    "To wake something old"
+   ],
+   [
+    "Bribery",
+    "Open force",
+    "Blackmail",
+    "Diplomacy",
+    "Spies",
+    "Trade",
+    "Rituals",
+    "Rumors and lies",
+    "Assassins",
+    "Alliances",
+    "Hiring heroes (you)",
+    "Patience"
+   ]
+  ]
+ },
+ "treasure": {
+  "h": [
+   "Loot",
+   "Detail"
+  ],
+  "c": [
+   [
+    "A handful of gold",
+    "A handful of gold",
+    "A handful of gold",
+    "Supplies: rations, rope, torches",
+    "Supplies: rations, rope, torches",
+    "A health or stamina potion",
+    "A tool or trade good",
+    "A fine weapon",
+    "Armor or a shield",
+    "Jewelry or art",
+    "A map, a key, or a letter",
+    "A magic item (roll Descriptor + Subject)"
+   ],
+   [
+    "Engraved with a name",
+    "Stained with old blood",
+    "Smells of smoke",
+    "Older than it should be",
+    "Belonged to someone you know",
+    "Warm to the touch",
+    "Hums faintly",
+    "Wrapped in a note",
+    "Marked by a faction",
+    "Cracked but whole",
+    "Lighter or heavier than it looks",
+    "Someone wants it back"
+   ]
+  ]
  }
 };
 // END TABLES
@@ -851,6 +1286,12 @@ for (const el of document.querySelectorAll("[data-t]")) {
   }
   el.innerHTML = h + "</table>";
 }
+// A block pushed past the last column is clipped in print: name it, so the build fails.
+document.body.dataset.overflow = [...document.querySelectorAll(".page")].flatMap((page, index) => {
+  const edge = page.getBoundingClientRect().right - 1;
+  return [...page.querySelectorAll(".block")].filter(block => block.getBoundingClientRect().left >= edge)
+    .map(block => `page ${index + 1}: ${block.querySelector("h2")?.textContent ?? block.querySelector("[data-t]")?.dataset.t}`);
+}).join("; ");
 </script>
 </body>
 </html>

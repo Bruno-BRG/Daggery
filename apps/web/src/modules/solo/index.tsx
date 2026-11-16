@@ -34,7 +34,7 @@ const root = () => `/api/campaigns/${encodeURIComponent(getActiveCampaign().id)}
 const KIND_LABELS: Record<string, string> = {
   'duality-scene': 'Set the scene', 'duality-oracle': 'Oracle', 'duality-meaning': 'Meaning', 'duality-table': 'Table', 'duality-event': 'Random Event',
   'duality-move': 'GM Move', 'duality-list': 'List roll', 'duality-fear-check': 'Fear Check', 'duality-adversary': 'Adversary', 'duality-npc': 'NPC',
-  'duality-plot': 'Plot hook', 'duality-site': 'Site', 'duality-journey': 'Journey', 'duality-encounter': 'Encounter', journal: 'Note', procedure: 'Procedure',
+  'duality-plot': 'Plot hook', 'duality-site': 'Site', 'duality-journey': 'Journey', 'duality-encounter': 'Encounter', 'duality-generate': 'Generator', journal: 'Note', procedure: 'Procedure',
 };
 const EVENT_FOCUS = dualityTable('event-focus').columns[0]!.entries;
 /** Daggerheart tiers by level: 1, 2–4, 5–7, 8–10. */
@@ -438,13 +438,24 @@ function PlayTab({ play }: { play: Play }) {
     <OracleStep play={play} />
     <MovesStep play={play} />
     <CombatStep play={play} />
-    <Step n="7" id="step-next" title="Set the next scene" hint="Decide what your character does next, update your Threads and NPCs if you track them, and set the scene again. Rest and downtime add Fear as the rules say.">
-      <div className="solo-actions">
-        <button type="button" className="daggery-primary" onClick={() => jump('step-scene')}><Icon name="dice" />Set the next scene</button>
-        <button type="button" className="daggery-roll-toggle" disabled={play.busy || !play.state} onClick={() => void play.command({ command: 'end-scene' })}>Log the end of this scene</button>
-      </div>
-    </Step>
+    <NextStep play={play} jump={jump} />
   </div>;
+}
+
+function NextStep({ play, jump }: { play: Play; jump: (id: string) => void }) {
+  const [lead, rollLead] = useRolled(play);
+  const [rest, rollRest] = useRolled(play);
+  return <Step n="7" id="step-next" title="Set the next scene" hint="Decide what your character does next, update your Threads and NPCs if you track them, and set the scene again. Stuck? Roll a lead. Resting? Roll what happens; rests add Fear as the rules say."
+    tables={<><LookupTable id="rumor" hits={landed([lead])} /><LookupTable id="rest" hits={landed([rest])} /></>}>
+    <div className="solo-actions">
+      <button type="button" className="daggery-primary" onClick={() => jump('step-scene')}><Icon name="dice" />Set the next scene</button>
+      <button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void rollLead('duality-generate', { tableId: 'rumor' })}><Icon name="dice" />Roll a lead</button>
+      <button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void rollRest('duality-generate', { tableId: 'rest' })}><Icon name="dice" />Roll the rest</button>
+      <button type="button" className="daggery-roll-toggle" disabled={play.busy || !play.state} onClick={() => void play.command({ command: 'end-scene' })}>Log the end of this scene</button>
+    </div>
+    <div aria-live="polite">{lead && <ResultCard key={lead.id} entry={lead} play={play} />}</div>
+    <div aria-live="polite">{rest && <ResultCard key={rest.id} entry={rest} play={play} />}</div>
+  </Step>;
 }
 
 function HookStep({ play }: { play: Play }) {
@@ -582,6 +593,7 @@ function CombatStep({ play }: { play: Play }) {
   const [tier, setTier] = useState('');
   const [found, encounter] = useRolled(play);
   const [acted, spotlight] = useRolled(play);
+  const [loot, rollLoot] = useRolled(play);
   const chosenTier = tier || (level ? String(tierFor(level)) : '');
   return <Step n="6" id="step-combat" title="Adversaries and combat" hint="When trouble is a fight, roll who you face: what the creature is, what it is doing, and its Daggerheart type. Then, each time the spotlight passes to the GM, roll the spotlight; after each GM action, roll the chain."
     tables={<>
@@ -589,6 +601,7 @@ function CombatStep({ play }: { play: Play }) {
       <LookupTable id="adversary-type" hits={landed([found])} />
       <LookupTable id="tactics" hits={landed([acted])} open={false} />
       <LookupTable id="fear-spend" hits={landed([acted])} open={false} />
+      <LookupTable id="treasure" hits={landed([loot])} open={false} />
     </>}>
     <form className="solo-ask" onSubmit={event => { event.preventDefault(); void encounter('duality-encounter', { tier: chosenTier ? Number(chosenTier) : undefined }); }}>
       <label className="solo-field">Tier for catalog picks<select value={chosenTier} onChange={change => setTier(change.target.value)}>
@@ -605,36 +618,63 @@ function CombatStep({ play }: { play: Play }) {
       <button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void spotlight('duality-adversary', { chain: true })}><Icon name="dice" />Chain: next adversary</button>
     </div>
     <div aria-live="polite">{acted && <ResultCard key={acted.id} entry={acted} play={play} />}</div>
+    <h3 className="solo-subhead">After the fight</h3>
+    <p className="solo-muted">What the fallen carry, and the detail that makes it a story.</p>
+    <div className="solo-actions"><button type="button" className="daggery-roll-toggle" disabled={play.busy} onClick={() => void rollLoot('duality-generate', { tableId: 'treasure' })}><Icon name="dice" />Roll loot</button></div>
+    <div aria-live="polite">{loot && <ResultCard key={loot.id} entry={loot} play={play} />}</div>
   </Step>;
 }
 
-const GENERATORS: { id: string; title: string; hint: string; actions: { label: string; kind: string; values?: Record<string, unknown> }[] }[] = [
-  { id: 'npc', title: 'NPC', hint: 'Role, Motive, Attitude, Quirk and a Topic of conversation. Attitude is the first reaction; after that the NPC follows their Motive.',
-    actions: [{ label: 'Generate an NPC', kind: 'duality-npc' }] },
-  { id: 'encounter', title: 'Encounter', hint: 'Creature, what it is doing, its Daggerheart adversary type, and up to three fitting stat blocks from the catalog.',
-    actions: [{ label: 'Roll an encounter', kind: 'duality-encounter' }] },
-  { id: 'plot', title: 'Plot hook', hint: 'Objective, Opposition, Reward and a Twist to keep hidden until a Random Event or Hard Move gives it an opening.',
-    actions: [{ label: 'Generate a plot hook', kind: 'duality-plot' }] },
-  { id: 'site', title: 'Site crawler', hint: 'For dungeons, ruins and lairs. Roll each new area. The first time the Area is the Heart of the site, you have found it.',
-    actions: [{ label: 'Next area', kind: 'duality-site' }] },
+type GeneratorItem = { id: string; title: string; hint: string; tables: string[]; actions: { label: string; kind: string; values?: Record<string, unknown> }[] };
+const generate = (tableId: string) => ({ kind: 'duality-generate', values: { tableId } });
+const GENERATORS: GeneratorItem[] = [
+  { id: 'npc', title: 'NPC', hint: 'Name, Role, Motive, Attitude, Quirk and a Topic of conversation. Attitude is the first reaction; after that the NPC follows their Motive.',
+    tables: ['names', 'npc-identity', 'npc-manner'], actions: [{ label: 'Generate an NPC', kind: 'duality-npc' }, { label: 'Just a name', ...generate('names') }] },
+  { id: 'settlement', title: 'Settlement', hint: 'A name, how big it is, what it is known for, and its trouble: a ready hook for your next scene.',
+    tables: ['place-name', 'settlement'], actions: [{ label: 'Generate a settlement', ...generate('settlement') }, { label: 'Just a place name', ...generate('place-name') }] },
+  { id: 'wilds', title: 'Wilds', hint: 'The land, the weather and a landmark for each new region or day of travel.',
+    tables: ['wilds'], actions: [{ label: 'Roll the wilds', ...generate('wilds') }] },
   { id: 'journey', title: 'Journey', hint: 'For each leg of travel, a Fear Check: a pass spends 1 Fear and rolls a Danger, a fail rolls a Discovery.',
-    actions: [{ label: 'Travel a leg', kind: 'duality-journey' }] },
+    tables: ['journey'], actions: [{ label: 'Travel a leg', kind: 'duality-journey' }] },
+  { id: 'site', title: 'Site crawler', hint: 'For dungeons, ruins and lairs. Roll each new area. The first time the Area is the Heart of the site, you have found it.',
+    tables: ['site', 'hazard'], actions: [{ label: 'Next area', kind: 'duality-site' }, { label: 'Roll a hazard', ...generate('hazard') }] },
+  { id: 'rest', title: 'Rest and camp', hint: 'What happens while you rest. Rests still add Fear as the rules say.',
+    tables: ['rest'], actions: [{ label: 'Roll the rest', ...generate('rest') }] },
+  { id: 'rumor', title: 'Rumors and leads', hint: 'Where the next scene could come from, or what people are whispering.',
+    tables: ['rumor'], actions: [{ label: 'Roll a lead', ...generate('rumor') }] },
+  { id: 'encounter', title: 'Encounter', hint: 'Creature, what it is doing, its Daggerheart adversary type, and up to three fitting stat blocks from the catalog.',
+    tables: ['adversary-creature', 'adversary-type'], actions: [{ label: 'Roll an encounter', kind: 'duality-encounter' }] },
+  { id: 'treasure', title: 'Loot and treasure', hint: 'What the fallen carry, what the vault holds, and the detail that makes it a story.',
+    tables: ['treasure'], actions: [{ label: 'Roll loot', ...generate('treasure') }] },
+  { id: 'faction', title: 'Faction', hint: 'Who they are, what they want, and how they get it. Add them to your NPCs or Threads if they matter.',
+    tables: ['faction'], actions: [{ label: 'Generate a faction', ...generate('faction') }] },
+  { id: 'plot', title: 'Plot hook', hint: 'Objective, Opposition, Reward and a Twist to keep hidden until a Random Event or Hard Move gives it an opening.',
+    tables: ['plot-hook', 'plot-stakes'], actions: [{ label: 'Generate a plot hook', kind: 'duality-plot' }] },
   { id: 'generic', title: 'Generic generator', hint: 'For anything else: a room, a relic, a rumor, a town. What it is, what it does, and how big or strong it is.',
-    actions: [{ label: 'Generate', kind: 'duality-meaning', values: { choice: 'generic' } }] },
+    tables: ['descriptor', 'subject', 'action', 'how-much'], actions: [{ label: 'Generate', kind: 'duality-meaning', values: { choice: 'generic' } }] },
 ];
 
 function GeneratorsTab({ play }: { play: Play }) {
-  return <div className="solo-stack">{GENERATORS.map(item => <Generator key={item.id} item={item} play={play} />)}</div>;
+  return <div className="solo-stack">
+    <nav className="solo-loop" aria-label="Generators">
+      <ol className="solo-jump">{GENERATORS.map(item => <li key={item.id}><button type="button" onClick={() => document.getElementById(`gen-${item.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>{item.title}</button></li>)}</ol>
+    </nav>
+    {GENERATORS.map(item => <Generator key={item.id} item={item} play={play} />)}
+  </div>;
 }
-function Generator({ item, play }: { item: (typeof GENERATORS)[number]; play: Play }) {
+function Generator({ item, play }: { item: GeneratorItem; play: Play }) {
   const [rolled, run] = useRolled(play);
-  return <section className="solo-panel">
-    <h2>{item.title}</h2>
-    <p className="solo-muted">{item.hint}</p>
-    <div className="solo-actions">{item.actions.map((action, index) =>
-      <button key={action.label} type="button" className={index === 0 ? 'daggery-primary' : 'daggery-roll-toggle'} disabled={play.busy} onClick={() => void run(action.kind, action.values)}><Icon name="dice" />{action.label}</button>)}
+  const hits = landed([rolled]);
+  return <section className="solo-panel solo-step" id={`gen-${item.id}`} aria-labelledby={`gen-${item.id}-title`}>
+    <div className="solo-step-main">
+      <h2 id={`gen-${item.id}-title`}>{item.title}</h2>
+      <p className="solo-muted">{item.hint}</p>
+      <div className="solo-actions">{item.actions.map((action, index) =>
+        <button key={action.label} type="button" className={index === 0 ? 'daggery-primary' : 'daggery-roll-toggle'} disabled={play.busy} onClick={() => void run(action.kind, action.values)}><Icon name="dice" />{action.label}</button>)}
+      </div>
+      <div aria-live="polite">{rolled && <ResultCard key={rolled.id} entry={rolled} play={play} />}</div>
     </div>
-    <div aria-live="polite">{rolled && <ResultCard key={rolled.id} entry={rolled} play={play} />}</div>
+    <div className="solo-step-tables">{item.tables.map((id, index) => <LookupTable key={id} id={id} hits={hits} open={index < 2} />)}</div>
   </section>;
 }
 

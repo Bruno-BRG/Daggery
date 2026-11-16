@@ -65,6 +65,20 @@ class Table {
     this.lines.push(`Meaning (Hope/Fear ${words.map(item => item.dice).join(', ')}): ${phrase}`);
     return phrase;
   }
+  /** A full name: the Hope die picks the given-name row, the Fear die its column (odd A, even B). */
+  name(): string {
+    const hope = this.d12(), fear = this.d12(), column = fear % 2 === 1 ? 0 : 1;
+    const given = readDualityTable('names', hope, column);
+    this.cells.push({ table: 'names', column, roll: hope });
+    this.lines.push(`Given name (Hope/Fear ${hope}/${fear}): ${given}`);
+    const family = this.row('names', 2), epithet = this.row('names', 3);
+    return `${given} ${family.value}, ${epithet.value}`;
+  }
+  /** A place name from one First and one Second part, such as Ashford. */
+  placeName(): string {
+    const first = this.row('place-name', 0), second = this.row('place-name', 1);
+    return `${first.value}${second.value.replace(/^-/, '')}`;
+  }
   /** Picks an open line of a List with a d12, rerolling blanks. */
   list(list: DualityList): string | null {
     const lines = openLines(this.roll.state, list);
@@ -227,8 +241,32 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
   if (kind === 'duality-npc') {
     const role = t.row('npc-identity', 0), motive = t.row('npc-identity', 1), attitude = t.row('npc-manner', 0);
     t.row('npc-manner', 1); t.row('npc-manner', 2);
+    const name = t.name();
     t.lines.push('Choose ancestry and community to fit the place.');
-    return t.done(`${attitude.value} ${role.value.toLowerCase()} who wants ${motive.value.toLowerCase()}`, 'neutral', {}, question || 'NPC');
+    return t.done(`${name}: ${attitude.value.toLowerCase()} ${role.value.toLowerCase()} who wants ${motive.value.toLowerCase()}`, 'neutral', {}, question || 'NPC');
+  }
+
+  if (kind === 'duality-generate') {
+    const found = dualityTable(text(input.tableId, 60));
+    if (!GENERATED_TABLES.includes(found.id)) throw new Error('Invalid table');
+    if (found.id === 'names') return t.done(t.name(), 'neutral', {}, question || 'Name');
+    if (found.id === 'place-name') return t.done(t.placeName(), 'neutral', {}, question || 'Place name');
+    if (found.id === 'settlement') {
+      // Size, Known for and Trouble are all rolled; the title names the first two.
+      const name = t.placeName(), [size, known] = found.columns.map((_, column) => t.row(found.id, column).value);
+      return t.done(`${name}: ${size!.toLowerCase()} known for ${known!.toLowerCase()}`, 'neutral', {}, question || 'Settlement');
+    }
+    if (found.id === 'hazard') {
+      // A hazard's failure belongs to that hazard: one d12 reads the whole row.
+      const roll = t.d12(), [hazard, failure] = found.columns.map((column, index) => {
+        t.cells.push({ table: found.id, column: index, roll });
+        return column.entries[roll - 1]!;
+      });
+      t.lines.push(`Hazard d12 ${roll}: ${hazard}. On a failure: ${failure}`);
+      return t.done(`${hazard} · ${failure}`, 'fear', { total: roll }, question || 'Hazard');
+    }
+    const values = found.columns.map((_, column) => t.row(found.id, column).value);
+    return t.done(values.join(' · '), 'neutral', {}, question || found.title);
   }
 
   if (kind === 'duality-plot') {
@@ -298,3 +336,6 @@ export function suggestAdversaries(type: string, creatureRoll: number, tier: num
   }
   return picked;
 }
+
+/** Tables that `duality-generate` rolls whole: one d12 per column. */
+export const GENERATED_TABLES = ['names', 'place-name', 'settlement', 'wilds', 'faction', 'treasure', 'rumor', 'hazard', 'rest'];
