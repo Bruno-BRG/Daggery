@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DUALITY_LIKELIHOODS, DUALITY_TABLES, dualityAnswerLabel, eventFocusList, fearCheck, readDualityMeaning, readDualityTable,
+  adversaryTypeName, DUALITY_LIKELIHOODS, DUALITY_TABLE_GROUPS, DUALITY_TABLES, dualityAnswerLabel, eventFocusList, fearCheck, readDualityMeaning, readDualityTable,
   resolveDualityMove, resolveDualityOracle, resolveDualityScene, resolveFearSpend,
 } from './duality-engine';
 
@@ -81,5 +81,17 @@ describe('Tables', () => {
     expect(resolveFearSpend(5)).toMatchObject({ cost: 0, featureCost: true, hardMove: false });
     expect(resolveFearSpend(6)).toMatchObject({ cost: 1, featureCost: false, hardMove: false });
     expect(resolveFearSpend(11)).toMatchObject({ cost: 1, hardMove: true });
+  });
+});
+
+describe('Adversary tables', () => {
+  it('name a Daggerheart adversary type on every row', () => {
+    const types = ['Bruiser', 'Horde', 'Leader', 'Minion', 'Ranged', 'Skulk', 'Social', 'Solo', 'Standard', 'Support'];
+    expect(new Set(faces.map(adversaryTypeName))).toEqual(new Set(types));
+    expect(adversaryTypeName(12)).toBe('Solo');
+  });
+  it('keep the loop groups in play order', () => {
+    expect(DUALITY_TABLE_GROUPS.slice(0, 4).map(group => group.id)).toEqual(['start', 'scene', 'oracle', 'moves']);
+    expect(DUALITY_TABLES.every(item => DUALITY_TABLE_GROUPS.some(group => group.id === item.group))).toBe(true);
   });
 });

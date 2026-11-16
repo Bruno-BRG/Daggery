@@ -1,5 +1,6 @@
+import { adversaries } from '@daggery/content';
 import {
-  DUALITY_LIKELIHOODS, DUALITY_MEANING_CHOICES, dualityAnswerLabel, dualityTable, eventFocusList, fearCheck, readDualityMeaning,
+  adversaryTypeName, DUALITY_LIKELIHOODS, DUALITY_MEANING_CHOICES, dualityAnswerLabel, dualityTable, eventFocusList, fearCheck, readDualityMeaning,
   readDualityTable, resolveDualityMove, resolveDualityOracle, resolveDualityScene, resolveFearSpend, rollDie,
   type DualityList, type DualityMeaningTable, type Rng, type SoloResult, type SoloState, type SoloTone, type SoloTrackerItem,
 } from '@daggery/shared';
@@ -29,6 +30,8 @@ export const openLines = (state: SoloState, list: DualityList): SoloTrackerItem[
 /** Rolls, remembers how much Fear is left, and collects the lines of one result. */
 class Table {
   lines: string[] = [];
+  /** Cells the roll landed on, so the screen can mark the rows. */
+  cells: NonNullable<SoloResult['cells']> = [];
   spent = 0;
   constructor(private roll: DualityRoll) {}
   get fear() { return this.roll.fear - this.spent; }
@@ -48,12 +51,14 @@ class Table {
   /** One d12 on one column of a table, written to the lines. */
   row(tableId: string, column = 0): { roll: number; value: string } {
     const roll = this.d12(), value = readDualityTable(tableId, roll, column);
+    this.cells.push({ table: tableId, column, roll });
     this.lines.push(`${dualityTable(tableId).columns[column]!.label} d12 ${roll}: ${value}`);
     return { roll, value };
   }
   meaning(tables: readonly DualityMeaningTable[]): string {
     const words = tables.map(id => {
       const hope = this.d12(), fear = this.d12();
+      this.cells.push({ table: id, column: fear % 2 === 1 ? 0 : 1, roll: hope });
       return { word: readDualityMeaning(id, hope, fear), dice: `${hope}/${fear}` };
     });
     const phrase = words.map(item => item.word).join(' / ');
@@ -74,6 +79,7 @@ class Table {
   randomEvent(focusRoll?: number): string {
     const roll = focusRoll ?? this.d12();
     const focus = readDualityTable('event-focus', roll);
+    this.cells.push({ table: 'event-focus', column: 0, roll });
     this.lines.push(`Event Focus ${focusRoll ? '(chosen)' : `d12 ${roll}`}: ${focus}`);
     const list = eventFocusList(roll);
     if (list) this.list(list);
@@ -92,6 +98,7 @@ class Table {
     let roll = this.d12();
     for (let tries = 0; roll === 12 && tries < 200; tries++) roll = this.d12();
     const value = readDualityTable('hard-move', Math.min(roll, 11));
+    this.cells.push({ table: 'hard-move', column: 0, roll: Math.min(roll, 11) });
     this.lines.push(`Hard Move d12 ${roll}: ${value}`);
     return value;
   }
@@ -104,7 +111,8 @@ class Table {
     if (this.spent) this.lines.push(this.roll.advisory
       ? `Suggested Fear cost: ${this.spent} (Fear pool ${this.roll.fear}). Pay it with spend_fear only if you use this move.`
       : `Fear spent: ${this.spent} (${this.fear} left).`);
-    return { result: { title, detail: this.lines.join('\n'), tone, ...extra }, question, fearSpent: this.spent };
+    const cells = this.cells.length ? { cells: this.cells } : {};
+    return { result: { title, detail: this.lines.join('\n'), tone, ...cells, ...extra }, question, fearSpent: this.spent };
   }
 }
 
@@ -114,7 +122,8 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
   const t = new Table(roll);
 
   if (kind === 'duality-oracle') {
-    if (!question) throw new Error('Invalid question');
+    // The table's own oracle may go unspoken (the player keeps it in a notebook); the AI GM must say what it asks.
+    if (!question && roll.advisory) throw new Error('Invalid question');
     const hope = t.d12(), fear = t.d12();
     const answer = resolveDualityOracle(hope, fear, text(input.likelihood, 30));
     const band = DUALITY_LIKELIHOODS.find(item => item.target === answer.target)!;
@@ -123,7 +132,7 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
     if (answer.twist === 'against') t.lines.push('Twist (Fear higher by 4 or more): it bends against you.');
     if (answer.randomEvent) { t.lines.push('Doubles: a Random Event occurs as well.'); t.randomEvent(); }
     const tone: SoloTone = answer.randomEvent ? 'revelation' : answer.twist === 'against' ? 'fear' : answer.twist === 'favor' ? 'hope' : 'neutral';
-    return t.done(dualityAnswerLabel(answer), tone, { hope, fear, total: answer.total, target: answer.target });
+    return t.done(dualityAnswerLabel(answer), tone, { hope, fear, total: answer.total, target: answer.target }, question || 'Oracle');
   }
 
   if (kind === 'duality-fear-check') {
@@ -133,19 +142,21 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
   }
 
   if (kind === 'duality-scene') {
+    const asked = question || state.scene.title || 'Set the scene';
+    // Every scene gets a complication; the Fear Check then decides whether the scene changes outright.
+    const complication = t.row('scene-complication');
     const available = t.fear;
     const check = t.check();
     const outcome = resolveDualityScene(check.roll, available);
-    const asked = question || state.scene.title || 'Scene setup';
-    if (outcome === 'expected') { t.lines.push('The scene starts as you expected.'); return t.done('Expected scene', 'neutral', { total: check.roll }, asked); }
+    if (outcome === 'expected') { t.lines.push('The scene starts as you described, with this complication.'); return t.done(`Complication: ${complication.value}`, 'neutral', { total: check.roll }, asked); }
     t.spend();
     if (outcome === 'altered') {
       t.lines.push('Odd roll: the scene is Altered.');
       const altered = t.row('altered-scene');
-      const title = altered.roll === 12 ? t.row('scene-complication').value : altered.value;
+      const title = altered.roll === 12 ? `${complication.value} + ${t.row('scene-complication').value}` : `${altered.value} · ${complication.value}`;
       return t.done(`Altered scene: ${title}`, 'fear', { total: check.roll }, asked);
     }
-    t.lines.push('Even roll: the scene is Interrupted. This Random Event replaces it.');
+    t.lines.push('Even roll: the scene is Interrupted. This Random Event replaces it (drop the complication).');
     return t.done(`Interrupted scene: ${t.randomEvent()}`, 'revelation', { total: check.roll }, asked);
   }
 
@@ -200,6 +211,19 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
     return t.done(title, 'fear', { total: check.roll }, asked);
   }
 
+  if (kind === 'duality-encounter') {
+    const tier = input.tier === undefined || input.tier === null || input.tier === '' ? undefined : Number(input.tier);
+    if (tier !== undefined && (!Number.isInteger(tier) || tier < 1 || tier > 4)) throw new Error('Invalid tier');
+    const creature = t.row('adversary-creature', 0), situation = t.row('adversary-creature', 1), type = t.row('adversary-type');
+    if (creature.roll === 12) t.meaning(['descriptor', 'subject']);
+    const typeName = adversaryTypeName(type.roll);
+    const suggestions = suggestAdversaries(typeName, creature.roll, tier, () => t.d12());
+    if (suggestions.length) t.lines.push(`From the catalog${tier ? ` (tier ${tier})` : ''}: ${suggestions.map(item => item.name).join(', ')}. Reskin to fit if needed.`);
+    t.lines.push('Build the fight with Battle Points as normal. Ask the Oracle whether they notice you first.');
+    const creatureName = creature.value.split(':')[0]!;
+    return t.done(`${typeName} · ${creatureName} · ${situation.value.toLowerCase()}`, typeName === 'Solo' || typeName === 'Leader' ? 'fear' : 'neutral', { suggestions }, question || 'Encounter');
+  }
+
   if (kind === 'duality-npc') {
     const role = t.row('npc-identity', 0), motive = t.row('npc-identity', 1), attitude = t.row('npc-manner', 0);
     t.row('npc-manner', 1); t.row('npc-manner', 2);
@@ -241,4 +265,36 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
   }
 
   throw new Error('Invalid solo roll type');
+}
+
+/** Words in a catalog adversary's name or description that fit each Creature row. */
+const CREATURE_WORDS: RegExp[] = [
+  /beast|wolf|bear|boar|hound|predator|serpent|snake|spider|burrower|stag|eagle|hawk/i,
+  /swarm|rats?\b|vermin|insect|bats?\b|crows?\b/i,
+  /bandit|outlaw|raider|soldier|guard|knight|archer|brigand|mercenar|sellsword|thug/i,
+  /cult|zealot|acolyte|fanatic|priest|devotee/i,
+  /undead|skeleton|zombie|ghoul|corpse|lich|bones?\b|rotted/i,
+  /ghost|spirit|spectr|wraith|phantom|haunt/i,
+  /construct|golem|automaton|clockwork|animated/i,
+  /elemental|storm|flame|living stone|earth|wind/i,
+  /fae|fey|dryad|sprite|pixie|treant|sylvan/i,
+  /demon|fiend|devil|infernal/i,
+  /giant|troll|dragon|wyrm|drake|ogre/i,
+  /aberra|horror|eldritch|tentacle|ooze|void/i,
+];
+/**
+ * Up to three catalog adversaries of the rolled type (and tier, when given), preferring ones whose
+ * name or description fits the creature. Picks with the roll's own d12s so a seeded roll repeats.
+ */
+export function suggestAdversaries(type: string, creatureRoll: number, tier: number | undefined, d12: () => number): { id: string; name: string }[] {
+  const pool = adversaries.filter(item => item.type === type && (tier === undefined || item.tier === tier));
+  const words = CREATURE_WORDS[creatureRoll - 1];
+  const fitting = words ? pool.filter(item => words.test(`${item.name} ${item.description ?? ''}`)) : [];
+  const source = [...(fitting.length ? fitting : pool)];
+  const picked: { id: string; name: string }[] = [];
+  while (source.length && picked.length < 3) {
+    const [item] = source.splice(Math.floor((d12() - 1) / 12 * source.length), 1);
+    picked.push({ id: item!.id, name: item!.name });
+  }
+  return picked;
 }

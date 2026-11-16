@@ -31,6 +31,7 @@ const ORACLE_KINDS = {
   'yes-no': 'duality-oracle', 'fear-check': 'duality-fear-check', scene: 'duality-scene', 'gm-move': 'duality-move',
   'random-event': 'duality-event', meaning: 'duality-meaning', adversary: 'duality-adversary', npc: 'duality-npc',
   plot: 'duality-plot', site: 'duality-site', journey: 'duality-journey', table: 'duality-table', list: 'duality-list',
+  encounter: 'duality-encounter',
 } as const;
 
 /** Horde (X): at half or more HP marked, the standard attack deals X instead (Core Rulebook p. 199). */

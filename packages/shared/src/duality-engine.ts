@@ -14,6 +14,8 @@ const assertFear = (fear: number) => {
 };
 
 export const DUALITY_MAX_FEAR = 12;
+/** Printed rules version. 2.0 follows the One Page Solo Engine loop: hook, event, scene, oracle, moves. */
+export const DUALITY_ENGINE_VERSION = '2.0';
 
 /** Passes when the d12 is equal to or under current Fear. At 0 Fear it always fails. */
 export function fearCheck(roll: number, fear: number): boolean {
@@ -95,10 +97,12 @@ export function resolveDualityMove(trigger: string, roll: number | undefined, fe
 
 // ----------------------------------------------------------------------- tables
 
+/** Table groups, in the order you reach for them during play. */
+export type DualityTableGroup = 'start' | 'scene' | 'oracle' | 'moves' | 'meaning' | 'combat' | 'npc' | 'explore';
 export interface DualityTable {
   id: string;
   title: string;
-  group: 'core' | 'meaning' | 'combat' | 'npc' | 'plot' | 'explore';
+  group: DualityTableGroup;
   /** One or more columns, each with exactly twelve entries (index 0 is a roll of 1). */
   columns: { label: string; entries: readonly string[] }[];
 }
@@ -111,32 +115,28 @@ const table = (id: string, title: string, group: DualityTable['group'], columns:
 };
 
 export const DUALITY_TABLES: readonly DualityTable[] = [
-  table('how-much', 'How Much? How Well?', 'core', { Result: spread(
+  table('how-much', 'How Much? How Well?', 'oracle', { Result: spread(
     [2, 'Far less than expected: scarce, weak, tiny'], [3, 'Somewhat less than expected'], [2, 'About what you would expect'],
     [3, 'Somewhat more than expected'], [2, 'Far more than expected: abundant, mighty, vast']) }),
-  table('altered-scene', 'Altered Scene', 'core', { 'Altered Scene': [
+  table('scene-complication', 'Scene Complication', 'scene', { 'Scene Complication': [
+    'Hostile forces oppose you', 'An obstacle blocks your way', 'Wouldn’t it be bad if…', 'An NPC acts suddenly',
+    'All is not as it seems', 'Things actually go as planned', 'Time is shorter than you thought', 'Innocents are caught in it',
+    'A rival wants the same thing', 'Your gear or magic misbehaves', 'The environment turns dangerous', 'A debt or the past comes due'] }),
+  table('altered-scene', 'Altered Scene', 'scene', { 'Altered Scene': [
     'The place is not as described', 'An expected NPC is absent', 'An unexpected NPC is present', 'Someone got here first',
     'The danger is greater than expected', 'The danger is elsewhere, for now', 'Weather, light, or terrain turns',
     'Something valuable is missing', 'A countdown is already running', 'An old Thread intrudes',
     'Remove one element of the scene', 'Add a Scene Complication'] }),
-  table('scene-complication', 'Scene Complication', 'core', { 'Scene Complication': [
-    'Hostile forces oppose you', 'An obstacle blocks your way', 'Wouldn’t it be bad if…', 'An NPC acts suddenly',
-    'All is not as it seems', 'Things actually go as planned', 'Time is shorter than you thought', 'Innocents are caught in it',
-    'A rival wants the same thing', 'Your gear or magic misbehaves', 'The environment turns dangerous', 'A debt or the past comes due'] }),
-  table('soft-move', 'Soft Move', 'core', { 'Soft Move': [
+  table('soft-move', 'Soft Move', 'moves', { 'Soft Move': [
     'Show how the world reacts', 'Reveal an unwelcome truth', 'Signal a threat approaching off-screen', 'Offer what you want, at a cost',
     'Mark a Stress', 'Shift the environment against you', 'An NPC acts on their Motive', 'Tick a countdown',
     'Put an item or resource at risk', 'Close off the easy path', 'Your background or a past choice catches up', 'Add a Scene Complication'] }),
-  table('hard-move', 'Hard Move (costs 1 Fear)', 'core', { 'Hard Move': [
+  table('hard-move', 'Hard Move (costs 1 Fear)', 'moves', { 'Hard Move': [
     'An adversary strikes: take damage', 'A new danger arrives', 'Separate you from an ally or your gear',
     'You are captured, pinned, or cornered', 'An opportunity is lost for good', 'Enemy reinforcements arrive',
     'Force a choice between two losses', 'A countdown ticks twice', 'Someone or something you care about is harmed',
     'Your success is turned against you', 'The environment erupts: collapse, fire, flood',
     'Spend 1 more Fear if able: roll twice, both happen'] }),
-  table('event-focus', 'Event Focus', 'core', { 'Event Focus': [
-    'Something far away changes', 'A strange omen or mystery', 'A new NPC enters', 'A known NPC acts', 'Bad for an NPC',
-    'Good for an NPC', 'A Thread advances', 'A Thread is set back', 'A Thread closes or transforms', 'Bad for you',
-    'Good for you', 'The environment acts'] }),
   table('action', 'Action', 'meaning', {
     'Action A': ['Seek', 'Oppose', 'Communicate', 'Move', 'Harm', 'Create', 'Reveal', 'Command', 'Take', 'Protect', 'Assist', 'Transform'],
     'Action B': ['Deceive', 'Abandon', 'Betray', 'Pursue', 'Trap', 'Destroy', 'Hide', 'Bargain', 'Release', 'Delay', 'Summon', 'Sacrifice'] }),
@@ -146,6 +146,19 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
   table('descriptor', 'Descriptor', 'meaning', {
     'Descriptor A': ['Ancient', 'Broken', 'Hidden', 'Sacred', 'Cursed', 'Wild', 'Gilded', 'Humble', 'Strange', 'Dangerous', 'Beautiful', 'Forgotten'],
     'Descriptor B': ['Fresh', 'Massive', 'Tiny', 'Stolen', 'False', 'Burning', 'Frozen', 'Haunted', 'Guarded', 'Fragile', 'Powerful', 'Familiar'] }),
+  table('adversary-creature', 'Adversary: Creature and Situation', 'combat', {
+    Creature: ['Beast or predator', 'Swarm or vermin', 'Outlaws, raiders, or soldiers', 'Cultists or zealots',
+      'Undead: skeletons, zombies, ghouls', 'Ghost or restless spirit', 'Construct or golem', 'Elemental or living storm',
+      'Fae or wild spirit', 'Demon or fiend', 'Giant, troll, or dragon-kin', 'Aberration: roll Descriptor + Subject'],
+    Situation: ['Patrolling or on watch', 'Lying in ambush', 'Guarding something or someone', 'Feeding, resting, or camped',
+      'Hunting you', 'Already fighting something else', 'Fleeing from something worse', 'Performing a ritual or a task',
+      'Wounded, lost, or starving', 'Demanding a toll or a parley', 'Asleep or unaware', 'Holding captives'] }),
+  table('adversary-type', 'Adversary Type', 'combat', { Type: [
+    'Minion: falls to any damage; comes in numbers', 'Minion: falls to any damage; comes in numbers',
+    'Horde: a crowd that fights as one', 'Standard: the rank and file', 'Standard: the rank and file',
+    'Skulk: strikes from hiding, then slips away', 'Ranged: fights from Far range', 'Bruiser: tough and hits hard',
+    'Support: aids allies, hinders you', 'Social: a threat of words, leverage, and status',
+    'Leader: commands others and calls reinforcements', 'Solo: a whole fight on its own'] }),
   table('tactics', 'Adversary Tactics (free)', 'combat', { Tactics: spread(
     [3, 'Attack the nearest PC'], [2, 'Attack the most wounded PC'], [1, 'Attack whoever hurt it last'],
     [1, 'Move to a better position; attack if able'], [1, 'Use a feature that costs no Fear (else attack)'],
@@ -166,17 +179,21 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
       'Blunt', 'Forgetful', 'Collects oddities', 'Hides a secret'],
     Topic: ['A rumor', 'Their trouble', 'Local rulers', 'Recent event', 'The past', 'A warning', 'A job offer', 'NPC gossip',
       'The road ahead', 'Magic or gods', 'You', 'A Thread'] }),
-  table('plot-hook', 'Plot Hook: Objective and Opposition', 'plot', {
+  table('plot-hook', 'Plot Hook: Objective and Opposition', 'start', {
     Objective: ['Rescue someone', 'Recover an item', 'Escort or deliver', 'Defend a place', 'Hunt a creature', 'Explore the unknown',
       'Uncover a truth', 'Stop a ritual or plan', 'Broker a peace', 'Steal or infiltrate', 'Escape or survive', 'Destroy a threat at its source'],
     Opposition: ['Bandits or raiders', 'A cult', 'A corrupt authority', 'A beast or monster', 'Undead or restless spirits', 'A rival party',
       'A mage or witch', 'The wilds themselves', 'A fallen hero', 'A faction at war', 'Something from another realm', 'Someone you trust'] }),
-  table('plot-stakes', 'Plot Hook: Reward and Twist', 'plot', {
+  table('plot-stakes', 'Plot Hook: Reward and Twist', 'start', {
     Reward: ['Gold', 'Rare gear', 'A magic relic', 'A secret or lore', 'An ally or favor', 'A safe haven', 'Title or standing', 'A debt cleared',
       'A lead on a personal Thread', 'Healing or a cure', 'Passage or access', 'Only doing what is right'],
     Twist: ['The patron is lying', 'The victim is willing or guilty', 'A third party interferes', 'The clock is shorter', 'The target has moved',
       'The enemy is sympathetic', 'It is a trap', 'The reward is false or cursed', 'An old ally stands on the other side',
       'The real threat is far bigger', 'Success has a moral cost', 'It ties to your past'] }),
+  table('event-focus', 'Event Focus', 'start', { 'Event Focus': [
+    'Something far away changes', 'A strange omen or mystery', 'A new NPC enters', 'A known NPC acts', 'Bad for an NPC',
+    'Good for an NPC', 'A Thread advances', 'A Thread is set back', 'A Thread closes or transforms', 'Bad for you',
+    'Good for you', 'The environment acts'] }),
   table('site', 'Site Crawler', 'explore', {
     Area: ['Narrow passage', 'Narrow passage', 'Open chamber', 'Open chamber', 'Crossing or junction', 'Stairs, drop, or climb',
       'Collapsed or flooded section', 'Living or work quarters', 'Vault or storage', 'Shrine or sanctum', 'Cavern or overgrowth', 'Heart of the site'],
@@ -192,9 +209,10 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
       'A wondrous sight: gain a Hope'] }),
 ];
 
-export const DUALITY_TABLE_GROUPS: { id: DualityTable['group']; label: string }[] = [
-  { id: 'core', label: 'Scenes, moves and events' }, { id: 'meaning', label: 'Meaning' }, { id: 'combat', label: 'Adversaries in combat' },
-  { id: 'npc', label: 'NPCs' }, { id: 'plot', label: 'Plot hooks' }, { id: 'explore', label: 'Exploration' },
+export const DUALITY_TABLE_GROUPS: { id: DualityTableGroup; label: string }[] = [
+  { id: 'start', label: '1. Plot hook and Random Event' }, { id: 'scene', label: '2. Set the scene' },
+  { id: 'oracle', label: '3. Oracle' }, { id: 'moves', label: '4. GM Moves' }, { id: 'meaning', label: 'Meaning' },
+  { id: 'combat', label: 'Adversaries' }, { id: 'npc', label: 'NPCs' }, { id: 'explore', label: 'Exploration' },
 ];
 
 export function dualityTable(id: string): DualityTable {
@@ -208,6 +226,11 @@ export function readDualityTable(id: string, roll: number, column = 0): string {
   const entries = dualityTable(id).columns[column]?.entries;
   if (!entries) throw new Error('Invalid table column');
   return entries[roll - 1]!;
+}
+
+/** The Daggerheart adversary type a row of the Adversary Type table names, such as `Solo`. */
+export function adversaryTypeName(roll: number): string {
+  return readDualityTable('adversary-type', roll).split(':')[0]!;
 }
 
 // ---------------------------------------------------------------------- meaning

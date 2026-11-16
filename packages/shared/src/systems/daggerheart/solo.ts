@@ -47,6 +47,10 @@ export type SoloTone = 'hope' | 'fear' | 'revelation' | 'neutral';
 export interface SoloResult {
   title: string; detail: string; hope?: number; fear?: number; total?: number; target?: number;
   tone: SoloTone; anchor?: string; theme?: string; secondaryTheme?: string; anchorDie?: number;
+  /** Table cells the roll landed on, so the screen can mark them. `roll` is the d12 face (row). */
+  cells?: { table: string; column: number; roll: number }[];
+  /** Catalog adversaries that fit an encounter, by id and name. */
+  suggestions?: { id: string; name: string }[];
 }
 export function resolveSoloOracle(hope: number, fear: number, likelihood: string): SoloResult {
   const band = SOLO_LIKELIHOODS.find(item => item.id === likelihood);

@@ -235,3 +235,50 @@
 .solo-clock-list li > span:first-child { flex: 1 1 180px; min-width: 0; }
 .solo-clock-list li.is-done > span:first-child { color: var(--ds-muted); }
 .solo-lookup-table td.is-answer { color: var(--ds-brand-strong); font-weight: 700; }
+
+/* Play loop: a rail of the steps, then one card per step with its tables beside it */
+.solo-loop { display: grid; gap: 10px; }
+.solo-loop ol { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.solo-loop li { display: flex; align-items: center; }
+.solo-loop li + li::before { content: "→"; margin-right: 8px; color: var(--ds-faint); }
+.solo-loop li:last-child button { border-style: dashed; }
+.solo-loop button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.solo-loop button:hover { border-color: var(--ds-brand); color: var(--ds-brand); }
+.solo-loop button b, .solo-step-number { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--ds-brand-soft); color: var(--ds-brand-strong); font-size: 12px; font-weight: 700; flex: none; }
+.solo-loop .solo-muted { margin: 0; }
+.solo-step { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 24px; align-items: start; scroll-margin-top: 16px; }
+.solo-step h2 { display: flex; align-items: center; gap: 10px; }
+.solo-step-number { width: 28px; height: 28px; font-size: 14px; }
+.solo-step-main > .solo-muted { margin-bottom: 16px; }
+.solo-step-tables { display: grid; gap: 8px; min-width: 0; }
+.solo-step-tables .solo-reference-table { margin: 0; }
+.solo-step-tables .solo-oracle-chart { min-width: 0; }
+.solo-step-tables .solo-shift-note { margin: 0 0 4px; }
+.solo-step .solo-subhead { margin: 28px 0 4px; }
+.solo-oracle-form { display: grid; gap: 14px; }
+.solo-oracle-form > .solo-field { margin-bottom: 0; }
+.solo-oracle-form .solo-row > button { min-height: 44px; margin-left: auto; }
+.solo-likelihoods { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--ds-control); border-radius: var(--radius-xs); overflow: hidden; }
+.solo-likelihoods button { display: grid; gap: 2px; min-height: 48px; padding: 6px 4px; border: 0; background: var(--ds-inset); color: var(--ds-muted); font: inherit; font-size: 12px; font-weight: 600; line-height: 1.25; cursor: pointer; }
+.solo-likelihoods button + button { border-left: 1px solid var(--ds-control); }
+.solo-likelihoods button small { font-size: 11px; font-weight: 400; color: var(--ds-faint); }
+.solo-likelihoods button[aria-checked="true"] { background: var(--ds-brand-soft); color: var(--ds-brand-strong); }
+.solo-move-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.solo-move-grid > button { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 52px; text-align: left; }
+.solo-move-grid small { flex-basis: 100%; padding-left: 26px; color: var(--ds-muted); font-size: 11px; font-weight: 400; }
+.solo-link-button { justify-self: start; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0; border: 0; background: transparent; color: var(--ds-muted); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.solo-link-button:hover { color: var(--ds-brand); }
+.solo-link-button .daggery-icon { width: 14px; height: 14px; }
+.solo-suggestions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--ds-muted); }
+.solo-sheet-link { white-space: nowrap; }
+@media (max-width: 980px) { .solo-step { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+  .solo-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .solo-likelihoods { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .solo-likelihoods button:nth-child(4) { border-left: 0; }
+  .solo-likelihoods button:nth-child(n+4) { border-top: 1px solid var(--ds-control); }
+  .solo-move-grid { grid-template-columns: 1fr; }
+  .solo-loop li + li::before { display: none; }
+  .solo-oracle-form .solo-row > button { width: 100%; margin-left: 0; }
+}
+.solo-step-tables .solo-lookup-table td.is-answer { background: var(--ds-brand-soft); color: var(--ds-ink); font-weight: 650; box-shadow: inset 0 0 0 1px var(--ds-brand); }

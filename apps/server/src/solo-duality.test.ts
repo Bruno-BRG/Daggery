@@ -38,7 +38,7 @@ test('the oracle adds the Duality Dice, twists on a wide gap, and never touches 
     assert.match(entry.result.detail, /Hope 9 \+ Fear 3 = 12 · Likely needs 10\+/);
     assert.equal(fixture.pool(), 5);
     assert.equal(fixture.published.length, 0);
-    assert.throws(() => fixture.roll('duality-oracle', { question: ' ', likelihood: 'likely' }), /Invalid question/);
+    assert.equal(fixture.roll('duality-oracle', { question: ' ', likelihood: 'likely' }).question, 'Oracle', 'the question is optional at the table');
     assert.throws(() => fixture.roll('duality-oracle', { question: 'Why?', likelihood: 'certain' }), /Invalid likelihood/);
   } finally { fixture.close(); }
 });
@@ -59,24 +59,26 @@ test('oracle doubles bring a Random Event that invokes a list', async () => {
   } finally { fixture.close(); }
 });
 
-test('scene setup spends 1 Fear when the Fear Check passes', async () => {
-  const altered = await context(6, 3, 2);
+test('setting the scene rolls a complication, then spends 1 Fear when the Fear Check passes', async () => {
+  // Complication 1, Fear Check 3 (odd pass), Altered Scene 2.
+  const altered = await context(6, 1, 3, 2);
   try {
     const entry = altered.roll('duality-scene');
-    assert.equal(entry.result.title, 'Altered scene: An expected NPC is absent');
+    assert.equal(entry.result.title, 'Altered scene: An expected NPC is absent · Hostile forces oppose you');
+    assert.deepEqual(entry.result.cells, [{ table: 'scene-complication', column: 0, roll: 1 }, { table: 'altered-scene', column: 0, roll: 2 }]);
     assert.match(entry.result.detail, /Fear Check d12 3 vs Fear 6: passes/);
     assert.match(entry.result.detail, /Fear spent: 1 \(5 left\)\./);
     assert.equal(altered.pool(), 5);
     assert.deepEqual(altered.published.at(-1), { ns: 'combat', id: 'fear', value: { kind: 'fear', value: 5 } });
   } finally { altered.close(); }
-  const interrupted = await context(6, 4, 2);
+  const interrupted = await context(6, 1, 4, 2);
   try {
     assert.match(interrupted.roll('duality-scene').result.title, /^Interrupted scene: A strange omen or mystery/);
     assert.equal(interrupted.pool(), 5);
   } finally { interrupted.close(); }
-  const expected = await context(6, 9);
+  const expected = await context(6, 2, 9);
   try {
-    assert.equal(expected.roll('duality-scene').result.title, 'Expected scene');
+    assert.equal(expected.roll('duality-scene').result.title, 'Complication: An obstacle blocks your way');
     assert.equal(expected.pool(), 6);
     assert.equal(expected.published.length, 0);
   } finally { expected.close(); }
@@ -136,8 +138,8 @@ test('generators, journeys, tables and lists roll d12s', async () => {
 
 test('advisory rolls suggest the Fear cost instead of spending it, and only the Fear line differs', () => {
   const state = initialSoloState();
-  const normal = rollDuality('duality-scene', { state, fear: 6, rng: queue(3, 2), input: {}, question: '' });
-  const advisory = rollDuality('duality-scene', { state, fear: 6, rng: queue(3, 2), input: {}, question: '', advisory: true });
+  const normal = rollDuality('duality-scene', { state, fear: 6, rng: queue(1, 3, 2), input: {}, question: '' });
+  const advisory = rollDuality('duality-scene', { state, fear: 6, rng: queue(1, 3, 2), input: {}, question: '', advisory: true });
   assert.equal(normal.fearSpent, 1);
   assert.equal(advisory.fearSpent, 1, 'the engine still reports what the move would cost');
   assert.match(normal.result.detail, /Fear spent: 1 \(5 left\)\./);
@@ -165,4 +167,15 @@ test('the tracker keeps lists to twelve open lines and saves countdowns', async 
     const ended = fixture.solo.command(fixture.user.id, fixture.campaign, { revision: saved.revision, command: 'end-scene' });
     assert.equal(ended.state.sceneNumber, 1);
   } finally { fixture.close(); }
+});
+
+test('an encounter rolls creature, situation and type, and suggests fitting catalog adversaries', () => {
+  // Creature 5 (undead), Situation 3 (guarding), Type 12 (Solo), then picks.
+  const outcome = rollDuality('duality-encounter', { state: initialSoloState(), fear: 0, rng: queue(5, 3, 12, 1, 1, 1), input: { tier: 1 }, question: '' });
+  assert.equal(outcome.result.title, 'Solo · Undead · guarding something or someone');
+  assert.equal(outcome.result.tone, 'fear');
+  assert.deepEqual(outcome.result.cells?.map(cell => cell.table), ['adversary-creature', 'adversary-creature', 'adversary-type']);
+  assert.ok((outcome.result.suggestions ?? []).length > 0, 'tier 1 has Solo adversaries');
+  assert.equal(outcome.fearSpent, 0);
+  assert.throws(() => rollDuality('duality-encounter', { state: initialSoloState(), fear: 0, rng: queue(1), input: { tier: 7 }, question: '' }), /Invalid tier/);
 });

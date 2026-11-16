@@ -1,25 +1,31 @@
 # Duality Solo Engine
 
-Rules version 1.0. A d12 game master emulator for solo and GM-less Daggerheart.
+Rules version 2.0. A d12 game master emulator for solo and GM-less Daggerheart.
 Daggerheart resolves the characters; the Fear pool plays the GM.
 
-The printable two-page version, with every table, is
+The printable three-page version, with every table, is
 `docs/duality-solo-engine/duality-solo-engine.pdf`. The tables themselves live
-in `packages/shared/src/duality-engine.ts` and are shown on the Tables tab.
+in `packages/shared/src/duality-engine.ts`; `npx tsx tools/build_duality_pdf.ts`
+rebuilds the HTML and the PDF from them. The solo screen's **Play** tab follows
+the loop below, step by step, with each step's tables beside it.
 
 ## How to play
 
-1. **Frame the scene** you expect, then test it (Scene setup).
-2. **Play your character** with the normal rules. Whenever you would ask a GM
-   something, ask the Oracle.
-3. When you fail or roll with Fear, the engine makes a **GM Move**.
-4. When an answer needs inspiration, roll on the **Meaning** tables and
-   interpret the words in context.
-5. **End the scene:** update your Threads (open goals) and NPCs. Each list holds
-   at most 12 open lines, so a d12 can pick from it.
+Version 2.0 follows the play loop of the One Page Solo Engine:
+
+1. **Create your character** with the Daggerheart rules.
+2. Roll a starting **Plot Hook** and a **Random Event**, then **Set the Scene**.
+3. Ask the **Oracle** whenever you would ask a GM something. Interpret answers
+   in context.
+4. **Play the game** to overcome the scene. When trouble turns to a fight, roll
+   an **Encounter**.
+5. Use **GM Moves** to move the action when you roll with Fear, fail, or stall.
+6. **Set the Scene** for the next thing your character wants to do.
 
 Always take the first interpretation that makes sense. If nothing fits, the
-obvious thing happens.
+obvious thing happens. Threads (open goals) and NPCs are optional lists of at
+most 12 open lines each, so a d12 can pick from them; keep them in the app or in
+your own notebook.
 
 ## Fear and the Fear Check
 
@@ -34,7 +40,9 @@ fails.
 ## The Oracle
 
 Ask a yes or no question, pick a likelihood, roll the Hope and Fear dice and add
-them. Oracle rolls never generate Hope or Fear. If you roll your own dice, switch the
+them. Oracle rolls never generate Hope or Fear. On the solo screen the question
+is optional, for players who write it in their notebook (the AI GM must still
+state its question). If you roll your own dice, switch the
 form to **My physical dice** and type the two d12 faces; the app resolves them as
 player-reported dice and remembers the choice for this campaign.
 
@@ -51,13 +59,14 @@ player-reported dice and remembers the choice for this campaign.
   No, and…).
 - **Doubles:** answer as normal, then a Random Event occurs.
 
-## Scene setup
+## Set the scene
 
-Describe the scene you expect, then make a Fear Check.
+Describe where your character is and what they are trying to accomplish, then
+roll a **Scene Complication**. Then make a Fear Check.
 
-- **Fails:** the scene starts as expected.
+- **Fails:** the scene plays with its complication.
 - **Passes on an odd roll:** spend 1 Fear. The scene is Altered: roll the
-  Altered Scene table.
+  Altered Scene table as well.
 - **Passes on an even roll:** spend 1 Fear. The scene is Interrupted: a Random
   Event replaces it.
 
@@ -84,6 +93,16 @@ Action, Subject and Descriptor each have two columns of twelve words. Roll both
 Duality Dice for each word: the Hope die picks the row, the Fear die picks the
 column (odd A, even B). Combine Action + Subject for events and Descriptor +
 Subject for things and places.
+
+## Encounters
+
+When trouble turns to a fight, roll **Creature** and **Situation** (what it is
+doing when you meet it), then the **Adversary Type**: Minion, Horde, Standard,
+Skulk, Ranged, Bruiser, Support, Social, Leader or Solo. Pick a stat block of
+that type and your tier, reskinning one to fit the creature, and build the fight
+with Battle Points. The app suggests up to three catalog adversaries of that
+type and tier, preferring ones that match the creature. Ask the Oracle whether
+they notice you first.
 
 ## Adversaries in combat
 
@@ -124,5 +143,6 @@ happens, with no Fear needed.
   kinds) is still accepted by the server for old campaigns, but the solo screen
   no longer uses it.
 
-Unofficial fan-made rules for use with Daggerheart. Inspired by One Page Solo
-Engine (Karl Hendricks) and the Mythic Game Master Emulator (Tana Pigeon).
+Unofficial fan-made rules for use with Daggerheart. Play loop after One Page
+Solo Engine (Karl Hendricks, CC-BY-SA 4.0); also inspired by the Mythic Game
+Master Emulator (Tana Pigeon).
