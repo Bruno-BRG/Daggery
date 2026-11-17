@@ -17,9 +17,8 @@ function DaggerheartOptions({ value, onChange }: { value: CampaignConfiguration;
   if (getRuleset(value)?.mode !== 'solo') return null;
   const update = (options: Record<string, unknown>) => onChange(normalizeConfiguration({ ...value, options: { ...value.options, ...options } }));
   return <>
-    <label>Solo party<select aria-label="Solo party" value={String(value.options.partyMode)} onChange={event => update({ partyMode: event.target.value })}><option value="lone">One hero alone</option><option value="companion">Hero + lightweight companion</option><option value="party">Small party</option></select></label>
+    <label>Who you play<select aria-label="Who you play" value={String(value.options.partyMode)} onChange={event => update({ partyMode: event.target.value })}><option value="lone">One hero alone</option><option value="companion">Hero + lightweight companion</option><option value="party">Small party</option></select></label>
     {value.options.partyMode === 'party' && <label>Party size<select aria-label="Party size" value={Number(value.options.partySize)} onChange={event => update({ partySize: Number(event.target.value) })}><option value={2}>2 characters</option><option value={3}>3 characters</option></select></label>}
     <label>Fear pacing<select aria-label="Fear pacing" value={Number(value.options.fearThreshold)} onChange={event => update({ fearThreshold: Number(event.target.value) })}><option value={3}>Standard · activate at 3 Fear</option><option value={5}>Gentler · activate at 5 Fear</option></select></label>
-    <p>Private campaign. You control the hero and use oracles to discover the world.</p>
   </>;
 }

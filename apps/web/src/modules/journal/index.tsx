@@ -137,7 +137,6 @@ export default function Journal({ author: _author }: { author: string }) {
       <form className="journal-form" onSubmit={addNote}>
         <label>Title<input required maxLength={200} value={note.title} onChange={event => setNote({ ...note, title: event.target.value })} /></label>
         <label>Text<textarea rows={4} maxLength={6000} value={note.body} onChange={event => setNote({ ...note, body: event.target.value })} /></label>
-        <label className="journal-check"><input type="checkbox" checked={note.shared} onChange={event => setNote({ ...note, shared: event.target.checked })} /><span>Shared with players</span></label>
         <div className="journal-form-actions"><button className="daggery-primary" disabled={saving || !note.title.trim()}>{saving ? 'Saving…' : 'Save note'}</button></div>
       </form>
     </details>}
@@ -169,7 +168,6 @@ function EntryCard({ entry, owner, onEdit, onDelete }: { entry: AiJournalEntry; 
     <header className="journal-card-head">
       <span className="journal-kind">{KIND_LABEL[entry.kind]}</span>
       <time dateTime={entry.createdAt}>{stampOf(entry.createdAt)}</time>
-      {owner && <span className="journal-visibility">{entry.visibility === 'shared' ? 'Shared with players' : 'Only you'}</span>}
     </header>
     <h3>{entry.title}</h3>
     {entry.body && <p>{entry.body}</p>}
@@ -195,7 +193,6 @@ function EntryEditor({ entry, onSave, onCancel }: { entry: AiJournalEntry; onSav
   return <form className="journal-form" onSubmit={save} aria-label={`Edit ${entry.title}`}>
     <label>Title<input required maxLength={200} value={value.title} onChange={event => setValue({ ...value, title: event.target.value })} /></label>
     <label>Text<textarea rows={5} maxLength={6000} value={value.body} onChange={event => setValue({ ...value, body: event.target.value })} /></label>
-    <label className="journal-check"><input type="checkbox" checked={value.shared} onChange={event => setValue({ ...value, shared: event.target.checked })} /><span>Shared with players</span></label>
     {formError && <p role="alert" className="journal-form-error">{formError}</p>}
     <div className="journal-form-actions"><button className="daggery-primary" disabled={busy || !value.title.trim()}>{busy ? 'Saving…' : 'Save changes'}</button><button type="button" className="daggery-roll-toggle" onClick={onCancel}>Cancel</button></div>
   </form>;

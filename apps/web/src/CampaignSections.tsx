@@ -72,9 +72,7 @@ export function Notes({ embedded = false }: { embedded?: boolean } = {}) {
             ? <p className="sg-empty">No notes match your search.</p>
             : filtered.map(note => <ItemCard key={note.id}
               title={note.title}
-              caption={note.visibility === 'private' ? 'Private' : 'Shared'}
-              icon={note.visibility === 'private' ? 'lock' : 'users'}
-              tone={note.visibility === 'private' ? TONES.violet : TONES.teal}
+              tone={TONES.teal}
               open={selected === note.id}
               onToggle={() => open(note)}>
               <NoteForm title={title} setTitle={setTitle} visibility={visibility} setVisibility={setVisibility} body={body} setBody={setBody} onSave={save} onDelete={() => void remove(note.id)} />
@@ -82,7 +80,7 @@ export function Notes({ embedded = false }: { embedded?: boolean } = {}) {
   </>;
   if (embedded) return <div className="cs-journal">{list}</div>;
   return <div className="sg-page campaign-page">
-    <p className="sg-page-intro">Private notes are visible only to their author. Shared notes can be edited by campaign members. They are also your journal in the solo screen.</p>
+    <p className="sg-page-intro">Your notes are also your journal in the panel on the right.</p>
     <PanelSection title="Notes" storageKey="campaign.notes" actions={<IconButton icon="plus" tone="action" label="New note" onClick={startNew} />}>{list}</PanelSection>
   </div>;
 }
@@ -95,7 +93,6 @@ function NoteForm({ title, setTitle, visibility, setVisibility, body, setBody, o
 }) {
   return <form className="cs-form" onSubmit={onSave}>
     <label className="cs-field">Title<input value={title} onChange={e => setTitle(e.target.value)} maxLength={200} required /></label>
-    <label className="cs-field">Visibility<select value={visibility} onChange={e => setVisibility(e.target.value as 'private' | 'shared')}><option value="private">Private — only me</option><option value="shared">Shared — whole campaign</option></select></label>
     <label className="cs-field">Text<textarea value={body} onChange={e => setBody(e.target.value)} maxLength={100000} /></label>
     <div className="cs-form-actions">
       <button className="daggery-primary" type="submit"><Icon name="check" />Save</button>
@@ -133,7 +130,7 @@ export function Library() {
   </label> : undefined;
 
   return <div className="sg-page campaign-page">
-    <p className="sg-page-intro">Images and PDFs for this campaign. For now, uploaded files are available only to the Game Master.</p>
+    <p className="sg-page-intro">Images and PDFs for this campaign.</p>
     <PanelSection title="Library" storageKey="campaign.library" actions={upload}>
       {error && <p role="alert" className="cs-error">{error}</p>}
       {assets.length === 0

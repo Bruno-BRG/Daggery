@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { getRuleset, getGameSystem, type DualityResult, type RollLogEntry } from '@daggery/shared';
 import { useRollReplay } from './dice3d';
 import { getModules, getSystemUI } from './modules';
-import { CampaignSettings } from './CampaignConfiguration';
+import { CampaignSettings, partyLabel } from './CampaignConfiguration';
 import { readPreference, savePreference } from './storage';
 import { useSyncStatus } from './sync/store';
 import { useRollLog } from './useRollLog';
@@ -42,9 +42,6 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   const Companion = companion?.component;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncError, setSyncError] = useState('');
-  const [invite, setInvite] = useState('');
-  const [inviting, setInviting] = useState(false);
-  const [copied, setCopied] = useState(false);
   const { status, rolls, sendRoll } = useRollLog();
   const syncStatus = useSyncStatus();
   const [author, setAuthor] = useState(() => readPreference('daggery:name') ?? 'Player');
@@ -140,18 +137,6 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   function updateAuthor(value: string) {
     setAuthor(value);
     savePreference('daggery:name', value);
-  }
-  async function createInvite() {
-    setInviting(true);
-    setCopied(false);
-    try {
-      const result = await api<{ token: string }>(`/api/campaigns/${encodeURIComponent(campaign.id)}/invites`, 'POST');
-      setInvite(result.token);
-    } catch (error) {
-      setSyncError(error instanceof Error ? error.message : 'Could not create invite.');
-    } finally {
-      setInviting(false);
-    }
   }
   const navigation = (compact = false) => (
     <nav className="daggery-nav" aria-label={compact ? 'All sections' : 'Main navigation'}>
@@ -249,18 +234,6 @@ export default function App({ onLeave }: { onLeave: () => void }) {
               <i aria-hidden="true" />
               <span>{online ? 'Live' : 'Offline'}</span>
             </span>
-            {campaign.role === 'gm' && ruleset?.mode !== 'solo' && (
-              <button
-                type="button"
-                className="daggery-invite daggery-roll-toggle"
-                disabled={inviting}
-                onClick={() => void createInvite()}
-                aria-label="Invite players"
-              >
-                <Icon name="invite" />
-                <span>{inviting ? 'Creating…' : 'Invite players'}</span>
-              </button>
-            )}
             {campaign.role === 'gm' && <button type="button" className="daggery-theme" aria-label="Campaign settings" title="Campaign settings" onClick={() => { if (window.dispatchEvent(new Event('daggery:before-navigate', { cancelable: true }))) setSettingsOpen(true); }}><Icon name="settings" /></button>}
             <button
               type="button"
@@ -380,7 +353,6 @@ export default function App({ onLeave }: { onLeave: () => void }) {
             maxLength={60}
           />
         </label>
-        <p className="daggery-menu-role">Playing as {getRuleset(campaign.configuration)?.mode === 'solo' ? 'Solo player' : campaign.role === 'gm' ? 'Game Master' : 'Player'}</p>
       </Dialog>
       <Dialog open={diceOpen} onClose={() => setDiceOpen(false)} title="Dice & history" className="daggery-dice-dialog">
         {dice}
@@ -424,27 +396,6 @@ export default function App({ onLeave }: { onLeave: () => void }) {
           <p className="daggery-command-empty">No sections found. Try “characters” or “rules”.</p>
         )}
       </Dialog>
-      <Dialog open={!!invite} onClose={() => setInvite('')} title="Invite your party">
-        <p className="daggery-dialog-description">
-          Share this code with a player. They can join from their campaign screen. Each code works once and expires in 7 days.
-        </p>
-        <label className="daggery-invite-code">
-          Invite code
-          <input readOnly value={invite} onFocus={(event) => event.target.select()} />
-        </label>
-        <button
-          type="button"
-          className="daggery-primary"
-          onClick={() => {
-            void navigator.clipboard
-              .writeText(invite)
-              .then(() => setCopied(true))
-              .catch(() => setSyncError('Copy unavailable. Select and copy the invite code manually.'));
-          }}
-        >
-          {copied ? 'Copied!' : 'Copy invite code'}
-        </button>
-      </Dialog>
     </div>
   );
 }
@@ -460,15 +411,14 @@ function Home({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const solo = ruleset?.mode === 'solo';
   const ai = campaign.configuration.gmController === 'ai';
   const main = NAV.find(item => item.id === (ai ? 'ai' : 'sheets')) ?? NAV.find(item => item.primary && item.id !== 'home');
-  const role = solo ? 'Solo player' : campaign.role === 'gm' ? 'Game Master' : 'Player';
-  const party = solo ? (campaign.configuration.options.partyMode === 'party' ? 'Small party' : campaign.configuration.options.partyMode === 'companion' ? 'Hero + companion' : 'Lone hero') : undefined;
+  const party = solo ? partyLabel(campaign.configuration) : undefined;
   const tone = (id: string) => ({ sheets: TONES.gold, ai: TONES.violet, journal: TONES.violet, compendium: TONES.blue, notes: TONES.teal, library: TONES.pink, gm: TONES.red })[id] ?? TONES.brand;
   return (
     <div className="overview">
       <header className="overview-hero">
-        <p className="overview-kicker">{getGameSystem(campaign.configuration.systemId)?.name ?? 'Unknown system'} · {ruleset?.name ?? 'Unknown ruleset'}</p>
+        <p className="overview-kicker">{ruleset?.name ?? 'Daggerheart'}</p>
         <h1>{campaign.name}</h1>
-        <p className="overview-meta"><span>{role}</span>{party && <span>{party}</span>}</p>
+        {party && <p className="overview-meta"><span>{party}</span></p>}
         {main && <button type="button" className="daggery-primary overview-continue" onClick={() => onNavigate(main.id)}>
           <Icon name={main.icon} />{ai ? 'Continue the adventure' : solo ? 'Continue with your hero' : `Open ${main.label.toLowerCase()}`}<Icon name="arrow" />
         </button>}

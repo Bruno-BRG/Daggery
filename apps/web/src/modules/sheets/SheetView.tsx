@@ -520,7 +520,6 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
             <p className="sheet-subtitle">{heritageLine || 'No heritage defined'}</p>
             <div className="sheet-badges">
               <Badge label={`Proficiency ${sheet.proficiency}`} tone="slate" />
-              <Badge label={`Player: ${sheet.playerName}`} tone="slate" />
               {mixedAncestry && <Badge label="Mixed ancestry" tone="accent" />}
               {multiclass && <Badge label={`Multiclass: ${multiclass.name}`} tone="sky" />}
             </div>
