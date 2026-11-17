@@ -546,6 +546,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
         </div>
       </section>
 
+      <div className="folio-dashboard">
       <section className="sheet-panel folio-vitals" aria-label="Vitals">
         <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="heart" />Vitals</h3><div className="folio-vitals-actions"><button type="button" className="sheet-ghost" onClick={() => openRecovery('damage')}><Icon name="shield" />Take damage</button><button type="button" className="sheet-ghost" onClick={() => openRecovery('rest')}><Icon name="moon" />Rest</button></div></div>
         <div className="sheet-threshold-strip">
@@ -560,13 +561,10 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
         <div className="folio-vitals-tracks">
           <ResourceCard compact label="Hit Points" icon="heart" count={sheet.hpMarked} max={currentHpMax} tone="health" extraSlots={{ value: sheet.extraHpSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraHpSlots', raw)) }} onChange={value => mutate(current => ({ ...current, hpMarked: value }))} />
           <ResourceCard compact label="Stress" icon="stress" count={sheet.stressMarked} max={currentStressMax} tone="stress" extraSlots={{ value: sheet.extraStressSlots ?? 0, onChange: raw => mutate(current => setExtraResourceSlots(current, 'extraStressSlots', raw)) }} onChange={value => mutate(current => ({ ...current, stressMarked: value }))} />
-          <ResourceCard compact label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" kind="held" onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
           <ResourceCard compact label="Armor" icon="armor" count={sheet.armorSlotsMarked} max={currentArmorScore} tone="armor" onChange={value => mutate(current => ({ ...current, armorSlotsMarked: value }))} />
         </div>
         {reactionFeature && <button type="button" className="sheet-ghost folio-reaction" disabled={!armorSlotAvailable} onClick={useReaction}><Icon name="shield" />{reactionFeature.name} reaction · mark 1 Armor Slot</button>}
       </section>
-      {messages.length > 0 && <div className="folio-result-banner" role="status"><Icon name="dice" /><span>{messages[0]}</span></div>}
-      <div className="folio-sections">
         <PanelSection title="Active weapons" storageKey="sheet.weapons" actions={<span className="sheet-panel-note">Proficiency {sheet.proficiency}</span>}>
           {spellcastOptions.length > 0 && (
             <div className="folio-spellcast" role="group" aria-label="Spellcast trait">
@@ -584,7 +582,8 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
           </div>
         </PanelSection>
 
-        <PanelSection title="Next roll" storageKey="sheet.next-roll" actions={advantage === 'normal' && !selectedExperience && !difficulty ? <span className="sheet-panel-note">No modifiers</span> : undefined}>
+        <PanelSection className="folio-hope-panel" title="Hope & next roll" storageKey="sheet.next-roll" actions={advantage === 'normal' && !selectedExperience && !difficulty ? <span className="sheet-panel-note">No modifiers</span> : undefined}>
+          <ResourceCard compact label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" kind="held" onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
           <div className="sheet-seg" role="group" aria-label="Advantage">
             {([['normal', 'Normal'], ['advantage', 'Advantage'], ['disadvantage', 'Disadvantage']] as const).map(([value, label]) => (
               <button key={value} type="button" aria-pressed={advantage === value} onClick={() => setAdvantage(value)} className={advantage === value ? 'is-active' : ''}>{label}</button>
@@ -607,7 +606,9 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
             </span>
           </p>
         </PanelSection>
-
+      </div>
+      {messages.length > 0 && <div className="folio-result-banner" role="status"><Icon name="dice" /><span>{messages[0]}</span></div>}
+      <div className="folio-sections">
         {hasClassResources && (
           <PanelSection title="Class resources" storageKey="sheet.resources">
             <ClassResources sheet={sheet} onUpdate={mutate} embedded />

@@ -502,14 +502,14 @@
 
 /* Character pages on the shared layout kit (see components/Accordion.tsx). */
 .character-folio.sg-page { display: flex; flex-direction: column; max-width: 1100px; margin: 0 auto; padding: 24px clamp(12px, 2.5vw, 38px) 48px; gap: 14px; }
-.folio-sections { display: grid; gap: 6px; min-width: 0; }
-.folio-sections > .sg-section { min-width: 0; }
-.character-folio .folio-sections .sg-section-body { gap: 10px; }
-.character-folio .folio-sections .sg-section-body > * { min-width: 0; }
-.character-folio .folio-sections .sg-section-actions .sheet-panel-note { overflow-wrap: anywhere; }
-.character-folio .folio-sections .folio-difficulty { margin: 2px 0; }
-.character-folio .folio-sections .sheet-mini-label { margin-top: 2px; }
-.character-folio .folio-sections .folio-next-summary { margin-top: 2px; }
+:is(.folio-sections, .folio-dashboard) { display: grid; gap: 6px; min-width: 0; }
+:is(.folio-sections, .folio-dashboard) > .sg-section { min-width: 0; }
+.character-folio :is(.folio-sections, .folio-dashboard) .sg-section-body { gap: 10px; }
+.character-folio :is(.folio-sections, .folio-dashboard) .sg-section-body > * { min-width: 0; }
+.character-folio :is(.folio-sections, .folio-dashboard) .sg-section-actions .sheet-panel-note { overflow-wrap: anywhere; }
+.character-folio :is(.folio-sections, .folio-dashboard) .folio-difficulty { margin: 2px 0; }
+.character-folio :is(.folio-sections, .folio-dashboard) .sheet-mini-label { margin-top: 2px; }
+.character-folio :is(.folio-sections, .folio-dashboard) .folio-next-summary { margin-top: 2px; }
 .character-folio .sg-section.is-sky .sg-section-head { background: color-mix(in srgb, var(--color-sky-400) 7%, var(--ds-surface)); }
 
 /* Character library list (modules/sheets/index.tsx). */
@@ -531,3 +531,17 @@
    (e.g. a tablet with the Oracles panel open leaves ~760px for the sheet). */
 @container (max-width: 1000px) { .character-folio .folio-toolbar-label { display: none; } }
 @container (max-width: 820px) { .character-folio .sheet-hero-new > span { display: none; } }
+
+/* Dashboard: the things you touch every turn sit side by side at the top (vitals, weapons, hope + next roll);
+   everything else stacks below. Narrow screens get the old single column. */
+.folio-dashboard { display: grid; gap: 6px; min-width: 0; }
+.folio-dashboard > * { min-width: 0; }
+.character-folio .folio-hope-panel .folio-resource { padding-inline: 0; }
+@container (min-width: 900px) {
+  .folio-dashboard { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+  .folio-dashboard > .sg-section { border: 1px solid var(--folio-line); border-radius: var(--radius-sm); overflow: clip; }
+  .folio-dashboard .sg-section-head { position: static; }
+  .folio-dashboard .sg-section-head > button { min-height: 44px; padding: 0 14px; font-size: 15px; }
+  .folio-dashboard .sg-section-actions .sheet-panel-note { font-size: 11px; }
+  .character-folio .folio-dashboard .folio-vitals-actions > .sheet-ghost { padding: 0 8px; font-size: 12px; }
+}
