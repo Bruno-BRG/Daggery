@@ -263,6 +263,26 @@ body { background-color: var(--ds-surface); }
 .daggery-topbar { min-height: 56px; padding-block: 8px; border-bottom: 0; }
 .daggery-tabs { display: flex; flex-shrink: 0; justify-content: center; gap: 2px; overflow-x: auto; padding: 0 16px; border-bottom: 1px solid var(--folio-frame, var(--ds-border)); background: var(--ds-raised); scrollbar-width: none; }
 .daggery-tabs::-webkit-scrollbar { display: none; }
+/* Scroll-aware chrome: give the space back to the sheet, not an invisible overlay. */
+.daggery-navigation { display: grid; grid-template-rows: 1fr; flex-shrink: 0; transition: grid-template-rows .18s ease; }
+.daggery-navigation.is-hidden { grid-template-rows: 0fr; }
+.daggery-navigation-inner { min-height: 0; overflow: hidden; background: var(--ds-raised); }
+@media (min-width: 1100px) {
+  /* Tablet landscape: brand, navigation and utilities share a single row. */
+  .daggery-navigation-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; column-gap: 12px; padding: 6px 16px; border-bottom: 1px solid var(--folio-frame, var(--ds-border)); }
+  .daggery-navigation .daggery-topbar { display: contents; }
+  .daggery-navigation .daggery-brand-bar { grid-column: 1; grid-row: 1; min-width: 0; }
+  .daggery-navigation .daggery-brand-campaign { max-width: 14ch; }
+  .daggery-navigation .daggery-top-actions { grid-column: 3; grid-row: 1; }
+  .daggery-navigation .daggery-tabs { grid-column: 2; grid-row: 1; padding: 0; border: 0; }
+  .daggery-navigation .daggery-tabs button { min-height: 44px; padding-inline: 12px; font-size: 12px; letter-spacing: .04em; }
+}
+.daggery-workspace { position: relative; }
+.daggery-navigation.is-hidden .daggery-navigation-inner { visibility: hidden; padding-block: 0; border-block: 0; }
+.daggery-reveal-navigation { position: absolute; top: 6px; right: 12px; z-index: 40; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-sm); background: var(--ds-raised); color: var(--ds-ink); cursor: pointer; }
+.daggery-reveal-navigation .daggery-icon { width: 16px; height: 16px; }
+.daggery-reveal-navigation:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .daggery-navigation { transition: none; } }
 .daggery-tabs button { flex: none; min-height: 40px; padding: 0 16px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--ds-muted); font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; cursor: pointer; }
 .daggery-tabs button:hover { color: var(--ds-ink); }
 .daggery-tabs button[aria-current="page"] { border-bottom-color: var(--ds-brand); color: var(--ds-ink); }

@@ -66,6 +66,34 @@ export default function App({ onLeave }: { onLeave: () => void }) {
     return () => window.removeEventListener('daggery:solo-screen', open);
   });
   const mainRef = useRef<HTMLElement>(null);
+  const chromeRef = useRef<HTMLDivElement>(null);
+  const [navigationHidden, setNavigationHidden] = useState(false);
+  useEffect(() => {
+    const main = mainRef.current;
+    if (!main) return;
+    setNavigationHidden(false);
+    let previous = main.scrollTop;
+    let travel = 0;
+    const onScroll = () => {
+      // Clamp overscroll so bouncing at either end cannot toggle navigation.
+      const top = Math.max(0, Math.min(main.scrollTop, main.scrollHeight - main.clientHeight));
+      const delta = top - previous;
+      previous = top;
+      if (top <= 8) {
+        travel = 0;
+        setNavigationHidden(false);
+        return;
+      }
+      if (!delta) return;
+      travel = Math.sign(delta) === Math.sign(travel) ? travel + delta : delta;
+      if (travel < -12) setNavigationHidden(false);
+      if (travel > 24 && top > 64 && !chromeRef.current?.querySelector(':focus-visible')) {
+        setNavigationHidden(true);
+      }
+    };
+    main.addEventListener('scroll', onScroll, { passive: true });
+    return () => main.removeEventListener('scroll', onScroll);
+  }, [page]);
   const [theme, setTheme] = useState<Theme>(() =>
     readPreference('daggery:style-version') === 'owlbear' && readPreference('daggery:theme') === 'light' ? 'light' : 'dark',
   );
@@ -209,6 +237,8 @@ export default function App({ onLeave }: { onLeave: () => void }) {
         Skip to content
       </a>
       <div className="daggery-workspace">
+        <div ref={chromeRef} className={`daggery-navigation${navigationHidden ? ' is-hidden' : ''}`} inert={navigationHidden} onFocusCapture={() => setNavigationHidden(false)}>
+        <div className="daggery-navigation-inner">
         <header className="daggery-topbar">
           <div className="daggery-brand-bar">
             <button type="button" className="daggery-menu-button" onClick={() => setMobileMenu(true)} aria-label="Menu: campaign, profile and every section" aria-expanded={mobileMenu}>
@@ -255,6 +285,9 @@ export default function App({ onLeave }: { onLeave: () => void }) {
             {item.label}
           </button>)}
         </nav>
+        </div>
+        </div>
+        {navigationHidden && <button type="button" className="daggery-reveal-navigation" onClick={() => { setNavigationHidden(false); requestAnimationFrame(() => chromeRef.current?.querySelector<HTMLButtonElement>('button')?.focus()); }} aria-label="Show navigation"><Icon name="more" /><span>Menu</span></button>}
         {syncError && (
           <div role="alert" className="daggery-alert">
             <span>{syncError}</span>

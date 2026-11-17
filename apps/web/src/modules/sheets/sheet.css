@@ -626,3 +626,22 @@
 }
 .folio-spellcast .sheet-chip:disabled { opacity: 1; cursor: default; }
 .folio-weapons-col > .sheet-panel-head .folio-spellcast { margin: 0; }
+
+/* Touch height must never turn a 36px-wide circle into an oval. Keep controls
+   square and put resource labels above the track, leaving room for all slots. */
+.character-folio.sheet-page .folio-resource .folio-resource-control {
+  flex: 0 0 44px; width: 44px; min-width: 44px; max-width: 44px;
+  height: 44px; min-height: 44px; max-height: 44px;
+  padding: 0; border-radius: 50%; align-self: center;
+}
+.character-folio.sheet-page .folio-vitals .folio-resource.is-compact {
+  grid-template-columns: minmax(0, 1fr) 44px; column-gap: 8px; row-gap: 0;
+}
+.character-folio.sheet-page .folio-vitals .is-compact > .folio-resource-header {
+  grid-area: 1 / 1; display: flex; flex-wrap: wrap; align-items: baseline;
+  justify-content: flex-start; gap: 8px; min-height: 24px;
+}
+.character-folio.sheet-page .folio-vitals .is-compact > .folio-resource-adjustment:not([open]) { grid-area: 1 / 2; }
+.character-folio.sheet-page .folio-vitals .is-compact > .folio-resource-track { grid-column: 1 / -1; grid-row: 2; }
+.character-folio.sheet-page .folio-vitals .is-compact > .folio-resource-adjustment[open] { grid-row: 3; }
+.daggery-shell:has(.character-folio.is-focused) :is(.daggery-navigation, .daggery-reveal-navigation) { display: none; }
