@@ -532,16 +532,84 @@
 @container (max-width: 1000px) { .character-folio .folio-toolbar-label { display: none; } }
 @container (max-width: 820px) { .character-folio .sheet-hero-new > span { display: none; } }
 
-/* Dashboard: the things you touch every turn sit side by side at the top (vitals, weapons, hope + next roll);
-   everything else stacks below. Narrow screens get the old single column. */
-.folio-dashboard { display: grid; gap: 6px; min-width: 0; }
-.folio-dashboard > * { min-width: 0; }
-.character-folio .folio-hope-panel .folio-resource { padding-inline: 0; }
+/* Essentials: one framed block with what you reach for every turn (vitals, weapons, hope + next roll),
+   three equal-height columns on wide sheets, stacked on narrow ones. Nothing here folds away. */
+.character-folio .folio-dashboard { display: grid; gap: 0; min-width: 0; border: 1px solid var(--folio-frame, var(--folio-line)); border-radius: var(--folio-corner, var(--radius-lg)); background: var(--ds-raised); overflow: clip; }
+.character-folio .folio-dashboard > .folio-essential { display: flex; flex-direction: column; min-width: 0; margin: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.character-folio .folio-dashboard > .folio-essential + .folio-essential { border-top: 1px solid var(--folio-line); }
+.character-folio .folio-essential > .sheet-panel-head { border-radius: 0; flex-wrap: nowrap; min-height: 54px; }
+.character-folio .folio-essential .sheet-panel-note { color: var(--ds-muted); font-size: 12px; white-space: nowrap; }
+.folio-essential .folio-vitals-tracks { flex: 1; }
+.folio-weapons-col .folio-weapon-list { flex: 1; align-content: start; }
+.folio-weapons-col .folio-spellcast { margin-bottom: 8px; }
+.folio-hope-panel { gap: 10px; }
+.character-folio .folio-hope-panel > .sheet-panel-head { margin-bottom: 6px; }
+/* Hope gets the full column width: label and count on one line, the diamonds on their own row. */
+.character-folio .folio-hope-panel .folio-resource.is-compact { grid-template-columns: minmax(0, 1fr); row-gap: 6px; padding: 0 0 4px; }
+.character-folio .folio-hope-panel .is-compact > .folio-resource-header { display: flex; align-items: baseline; justify-content: space-between; }
+.character-folio .folio-hope-panel .is-compact .folio-resource-label h2 { font-size: 15px; }
+.character-folio .folio-hope-panel .is-compact .folio-resource-counter > strong { font-size: 15px; }
+.character-folio .folio-hope-panel .is-compact > .folio-resource-track { justify-content: space-between; }
+.character-folio .folio-hope-panel .is-compact .folio-resource-pips { flex: 1; flex-wrap: nowrap; justify-content: center; }
+.character-folio .folio-hope-panel .sheet-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.character-folio .folio-hope-panel .sheet-seg > button { min-width: 0; padding-inline: 4px; font-size: 13px; }
+.character-folio .folio-hope-panel .folio-difficulty, .character-folio .folio-hope-panel .sheet-mini-label { margin: 0; }
+.character-folio .folio-hope-panel .folio-next-summary { margin-top: auto; }
 @container (min-width: 900px) {
-  .folio-dashboard { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
-  .folio-dashboard > .sg-section { border: 1px solid var(--folio-line); border-radius: var(--radius-sm); overflow: clip; }
-  .folio-dashboard .sg-section-head { position: static; }
-  .folio-dashboard .sg-section-head > button { min-height: 44px; padding: 0 14px; font-size: 15px; }
-  .folio-dashboard .sg-section-actions .sheet-panel-note { font-size: 11px; }
+  .character-folio .folio-dashboard { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+  .character-folio .folio-dashboard .folio-vitals .folio-resource.is-compact { grid-template-columns: 74px minmax(0, 1fr) 30px; column-gap: 6px; }
+  .character-folio .folio-dashboard > .folio-essential + .folio-essential { border-top: 0; border-left: 1px solid var(--folio-line); }
   .character-folio .folio-dashboard .folio-vitals-actions > .sheet-ghost { padding: 0 8px; font-size: 12px; }
+  .character-folio .folio-dashboard .folio-vitals-actions > .sheet-ghost > .daggery-icon { display: none; }
+}
+
+/* One-screen play view: on wide sheets (tablet landscape and up) the hero, traits and essentials are compacted so
+   they all fit in the first screen, like a printed sheet; scroll only for abilities, inventory and the rest. */
+@container (min-width: 900px) {
+  .character-folio.sheet-page { padding-top: 10px; gap: 10px; }
+  .character-folio.sheet-page .sheet-hero { padding: 10px 18px; }
+  .character-folio.sheet-page .sheet-hero-top { min-height: 0; gap: 14px; align-items: center; }
+  .character-folio.sheet-page .sheet-portrait { width: 54px; height: 62px; }
+  .character-folio.sheet-page .sheet-identity { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 0; }
+  .character-folio.sheet-page .sheet-identity > :is(.sheet-eyebrow, .sheet-name) { flex: 1 0 100%; }
+  .character-folio.sheet-page .sheet-eyebrow { font-size: 12px; line-height: 1.4; }
+  .character-folio.sheet-page .sheet-name { margin: 0; font-size: 26px; line-height: 1.15; }
+  .character-folio.sheet-page .sheet-subtitle { margin: 0; font-size: 13px; }
+  .character-folio.sheet-page .sheet-badges { margin: 0; }
+  .character-folio.sheet-page .sheet-hero-stat { width: 52px; }
+  .character-folio.sheet-page .sheet-hero-stat dd { width: 52px; height: 52px; font-size: 21px; }
+
+  .character-folio.sheet-page .folio-traits-heading { padding-bottom: 4px; }
+  .character-folio.sheet-page .folio-traits-heading > span:not([role="status"]) { display: none; }
+  .character-folio.sheet-page .folio-traits-heading { display: none; }
+  .character-folio.sheet-page .sheet-badges:empty { display: none; }
+  .character-folio.sheet-page .sheet-trait-row { margin-top: 0; gap: 8px; }
+  .character-folio.sheet-page .sheet-trait { padding: 5px 6px; gap: 0; }
+  .character-folio.sheet-page .sheet-trait-value { font-size: 20px; line-height: 1.2; }
+  .character-folio.sheet-page .sheet-trait-actions { overflow: hidden; max-width: 100%; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+
+  .character-folio.sheet-page .folio-dashboard > .folio-essential { padding: 12px; }
+  .character-folio.sheet-page .folio-dashboard > .folio-essential > .sheet-panel-head { min-height: 46px; margin: -12px -12px 10px; padding: 6px 12px; }
+  .character-folio.sheet-page .folio-dashboard .sheet-threshold-strip { margin-bottom: 4px; }
+  .character-folio.sheet-page .folio-dashboard .sheet-tier { padding: 4px; }
+  .character-folio.sheet-page .folio-dashboard .folio-resource.is-compact { padding: 2px 0; }
+  .character-folio.sheet-page .folio-dashboard .is-compact .folio-resource-pips > button { height: 34px; }
+
+  .folio-weapons-col .folio-spellcast { margin-bottom: 6px; }
+  .character-folio.sheet-page .folio-weapons-col .folio-weapon { gap: 6px; padding: 8px; }
+  .character-folio.sheet-page .folio-weapons-col .folio-weapon .item-glyph { display: none; }
+  .character-folio.sheet-page .folio-weapons-col .folio-weapon h4 { font-size: 15px; }
+  .character-folio.sheet-page .folio-weapons-col .folio-weapon small { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+  .character-folio.sheet-page .folio-weapons-col .folio-weapon-swap { width: 34px; min-height: 34px; }
+  .character-folio.sheet-page .folio-weapons-col .folio-weapon-actions { display: flex; align-items: center; gap: 6px; }
+  .character-folio.sheet-page .folio-weapons-col .folio-weapon .sheet-attack { flex: 1; min-height: 36px; }
+  .character-folio.sheet-page .folio-weapons-col .folio-weapon-feature-toggle { max-width: 40%; min-height: 32px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .folio-hope-panel { gap: 8px; }
+  .character-folio.sheet-page .folio-hope-panel .sheet-seg { margin: 0; }
+  .character-folio.sheet-page .folio-hope-panel .sheet-seg > button { min-height: 32px; }
+  .character-folio.sheet-page .folio-hope-panel .folio-difficulty input { min-height: 32px; }
+  .character-folio.sheet-page .folio-hope-panel .folio-experiences { gap: 4px; }
+  .character-folio.sheet-page .folio-hope-panel .folio-experiences button { min-height: 34px; }
+  .character-folio.sheet-page .folio-hope-panel .folio-next-summary { display: none; }
 }

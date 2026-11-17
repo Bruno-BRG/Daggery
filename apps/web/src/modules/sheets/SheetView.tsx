@@ -546,8 +546,8 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
         </div>
       </section>
 
-      <div className="folio-dashboard">
-      <section className="sheet-panel folio-vitals" aria-label="Vitals">
+      <div className="folio-dashboard" aria-label="Essentials">
+      <section className="sheet-panel folio-vitals folio-essential" aria-label="Vitals">
         <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="heart" />Vitals</h3><div className="folio-vitals-actions"><button type="button" className="sheet-ghost" onClick={() => openRecovery('damage')}><Icon name="shield" />Take damage</button><button type="button" className="sheet-ghost" onClick={() => openRecovery('rest')}><Icon name="moon" />Rest</button></div></div>
         <div className="sheet-threshold-strip">
           <Tier label="Minor" note="1 HP" />
@@ -565,7 +565,8 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
         </div>
         {reactionFeature && <button type="button" className="sheet-ghost folio-reaction" disabled={!armorSlotAvailable} onClick={useReaction}><Icon name="shield" />{reactionFeature.name} reaction · mark 1 Armor Slot</button>}
       </section>
-        <PanelSection title="Active weapons" storageKey="sheet.weapons" actions={<span className="sheet-panel-note">Proficiency {sheet.proficiency}</span>}>
+        <section className="sheet-panel folio-essential folio-weapons-col" aria-label="Active weapons">
+          <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="axe" />Active weapons</h3><span className="sheet-panel-note">Proficiency {sheet.proficiency}</span></div>
           {spellcastOptions.length > 0 && (
             <div className="folio-spellcast" role="group" aria-label="Spellcast trait">
               <span>Spellcast</span>
@@ -580,9 +581,10 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
             {primary ? <WeaponRow weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} /> : <EmptyWeaponRow slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
             {secondary ? <WeaponRow weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} /> : <EmptyWeaponRow slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
           </div>
-        </PanelSection>
+        </section>
 
-        <PanelSection className="folio-hope-panel" title="Hope & next roll" storageKey="sheet.next-roll" actions={advantage === 'normal' && !selectedExperience && !difficulty ? <span className="sheet-panel-note">No modifiers</span> : undefined}>
+        <section className="sheet-panel folio-essential folio-hope-panel" aria-label="Hope and next roll">
+          <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="spark" />Hope &amp; next roll</h3></div>
           <ResourceCard compact label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" kind="held" onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
           <div className="sheet-seg" role="group" aria-label="Advantage">
             {([['normal', 'Normal'], ['advantage', 'Advantage'], ['disadvantage', 'Disadvantage']] as const).map(([value, label]) => (
@@ -605,7 +607,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
               <small>{selectedExperience ? `${selectedExperience.name} · spends 1 Hope` : 'Tap a trait or Attack to roll'}</small>
             </span>
           </p>
-        </PanelSection>
+        </section>
       </div>
       {messages.length > 0 && <div className="folio-result-banner" role="status"><Icon name="dice" /><span>{messages[0]}</span></div>}
       <div className="folio-sections">
