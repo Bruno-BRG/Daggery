@@ -300,33 +300,3 @@ body { background-color: var(--ds-surface); }
 @keyframes daggery-drawer-left { from { transform: translateX(-24px); opacity: .4; } }
 @media (prefers-reduced-motion: reduce) { .daggery-menu-dialog, .solo-shell.solo-panel { animation: none; } }
 
-/* ============================================================ Overview */
-.overview { display: grid; align-content: start; gap: 18px; width: 100%; max-width: 920px; margin: 0 auto; padding: 28px 24px 120px; }
-.overview-hero { display: grid; gap: 8px; padding: 24px; border: 1px solid var(--folio-frame, var(--ds-border)); border-radius: var(--radius-md); background: linear-gradient(160deg, color-mix(in srgb, var(--ds-brand) 12%, var(--ds-raised)), var(--ds-raised) 60%); }
-.overview-kicker { margin: 0; color: var(--ds-brand); font-size: 11.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-.overview-hero h1 { margin: 0; font: 650 clamp(28px, 6vw, 40px)/1.1 var(--font-display); color: var(--ds-ink); overflow-wrap: anywhere; }
-.overview-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 8px; }
-.overview-meta span { padding: 4px 10px; border: 1px solid var(--ds-border); border-radius: 999px; color: var(--ds-muted); font-size: 12.5px; font-weight: 600; }
-.overview-continue { justify-self: start; min-height: 48px; padding: 0 20px; font-size: 15px; }
-.overview-continue .daggery-icon:last-child { margin-left: 4px; }
-.overview-tip { display: flex; align-items: center; gap: 12px; margin: 0; padding: 12px 14px; border: 1px dashed var(--ds-brand-line); border-radius: var(--radius-sm); color: var(--ds-muted); font-size: 13.5px; line-height: 1.5; }
-.overview-tip strong { color: var(--ds-ink); }
-.overview-tip-icon { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--ds-brand); color: var(--ds-on-brand); }
-.overview-tip-icon .daggery-icon { width: 16px; height: 16px; transform: rotate(180deg); }
-.overview-heading { margin: 10px 0 0; color: var(--ds-ink); font: 700 15px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
-.overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.overview-tile { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 14px 16px; border: 1px solid var(--ds-border); border-radius: var(--radius-sm); background: var(--ds-raised); color: var(--ds-ink); text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
-.overview-tile:hover { border-color: var(--tile); background: color-mix(in srgb, var(--tile) 10%, var(--ds-raised)); }
-.overview-tile:focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
-.overview-tile-icon { display: grid; place-items: center; flex: none; width: 44px; height: 44px; border-radius: var(--radius-sm); background: color-mix(in srgb, var(--tile) 18%, transparent); color: var(--tile); }
-.overview-tile-icon .daggery-icon { width: 22px; height: 22px; }
-.overview-tile-text { display: grid; flex: 1; min-width: 0; gap: 3px; }
-.overview-tile-text strong { font-size: 16px; font-weight: 650; }
-.overview-tile-text small { color: var(--ds-muted); font-size: 13px; line-height: 1.4; }
-.overview-tile > .daggery-icon:last-child { flex: none; width: 16px; height: 16px; color: var(--ds-faint); }
-@media (max-width: 767px) {
-  .overview { gap: 14px; padding: 16px 14px 120px; }
-  .overview-hero { padding: 18px; }
-  .overview-continue { justify-self: stretch; }
-  .overview-grid { grid-template-columns: minmax(0, 1fr); }
-}

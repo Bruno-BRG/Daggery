@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { lootEntries, lootTableName, rollLoot, type LootSet, type LootTable } from './model';
+import { lootEntries, lootTableName, rollLoot, type LootSet, type LootTable } from './loot';
 
 test('both core loot tables cover every possible total without gaps or duplicates', () => {
   for (const table of ['items', 'consumables'] as LootTable[]) {

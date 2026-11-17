@@ -2,20 +2,35 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import argon2 from 'argon2';
 import type Database from 'better-sqlite3';
 import { LEGACY_CAMPAIGN_ID } from './campaign-db';
-import { getGameSystem, getRuleset, normalizeConfiguration, type CampaignConfiguration } from '@daggery/shared';
+import { DEFAULT_CONFIGURATION, getGameSystem, getRuleset, normalizeConfiguration, type CampaignConfiguration } from '@daggery/shared';
 
 export type CampaignRole = 'gm' | 'player';
 export type NoteVisibility = 'private' | 'shared';
 export interface User { id: string; username: string }
 export interface Campaign { id: string; name: string; description: string; role: CampaignRole; archivedAt: string | null; configuration: CampaignConfiguration }
 export interface Note { id: string; campaignId: string; authorId: string; title: string; body: string; visibility: NoteVisibility; createdAt: string; updatedAt: string }
+export interface CampaignExport {
+  format: 'daggery-campaign';
+  version: 1;
+  exportedAt: string;
+  campaign: { name: string; description: string; configuration: CampaignConfiguration };
+  docs: { ns: string; id: string; value: unknown }[];
+  notes: { title: string; body: string }[];
+}
 
 const token = () => randomBytes(32).toString('base64url');
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const now = () => new Date().toISOString();
 const validName = (value: string, max: number) => typeof value === 'string' && value.trim().length > 0 && value.length <= max;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+/** Old rows may still hold the removed 'core' ruleset or a legacy gmController key; normalise both. */
+function readConfiguration(raw: string): CampaignConfiguration {
+  try { return normalizeConfiguration(JSON.parse(raw) as unknown); }
+  catch { return DEFAULT_CONFIGURATION; }
+}
 
-/** These methods enforce membership independently of the caller's UI or requested role. */
+/** A campaign has exactly one member: its owner, who always acts as the GM. */
 export class CampaignService {
   constructor(private readonly db: Database.Database) {}
 
@@ -56,20 +71,25 @@ export class CampaignService {
     this.db.transaction(() => {
       const at = now();
       this.db.prepare('INSERT INTO campaigns(id, name, description, owner_id, created_at, updated_at, configuration) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, name.trim(), description, userId, at, at, JSON.stringify(config));
-      this.db.prepare("INSERT INTO campaign_members(campaign_id, user_id, role) VALUES (?, ?, 'gm')").run(id, userId);
       this.initializeRulesetDocuments(id, config);
     })();
     return id;
   }
   listCampaigns(userId: string): Campaign[] {
-    const rows = this.db.prepare(`SELECT c.id, c.name, c.description, m.role, c.archived_at AS archivedAt, c.configuration
-      FROM campaigns c JOIN campaign_members m ON m.campaign_id = c.id WHERE m.user_id = ? ORDER BY c.updated_at DESC`).all(userId) as (Omit<Campaign, 'configuration'> & { configuration: string })[];
-    return rows.map(row => ({ ...row, configuration: JSON.parse(row.configuration) as CampaignConfiguration }));
+    const rows = this.db.prepare(`SELECT c.id, c.name, c.description, c.archived_at AS archivedAt, c.configuration
+      FROM campaigns c WHERE c.owner_id = ? ORDER BY c.updated_at DESC`).all(userId) as { id: string; name: string; description: string; archivedAt: string | null; configuration: string }[];
+    return rows.map(row => ({ ...row, role: 'gm' as const, configuration: readConfiguration(row.configuration) }));
   }
   configuration(campaignId: string): CampaignConfiguration {
     const row = this.db.prepare('SELECT configuration FROM campaigns WHERE id = ?').get(campaignId) as { configuration: string } | undefined;
     if (!row) throw new Error('Forbidden');
-    return JSON.parse(row.configuration) as CampaignConfiguration;
+    return readConfiguration(row.configuration);
+  }
+  private owns(userId: string, campaignId: string): boolean {
+    return !!this.db.prepare('SELECT 1 AS found FROM campaigns WHERE id = ? AND owner_id = ?').get(campaignId, userId);
+  }
+  private requireOwner(userId: string, campaignId: string): void {
+    if (!this.owns(userId, campaignId)) throw new Error('Forbidden');
   }
   private initializeRulesetDocuments(campaignId: string, config: CampaignConfiguration) {
     for (const doc of getRuleset(config)?.initialDocuments?.(config.options) ?? []) {
@@ -77,15 +97,9 @@ export class CampaignService {
         .run(campaignId, doc.ns, doc.id, JSON.stringify(doc.value), now());
     }
   }
-  listMembers(userId: string, campaignId: string): (User & { role: CampaignRole })[] {
-    this.requireMember(userId, campaignId);
-    return this.db.prepare(`SELECT u.id, u.username, m.role FROM campaign_members m
-      JOIN users u ON u.id = m.user_id WHERE m.campaign_id = ? ORDER BY m.role, u.username`).all(campaignId) as (User & { role: CampaignRole })[];
-  }
   role(userId: string, campaignId: string): CampaignRole | null {
-    const row = this.db.prepare(`SELECT m.role FROM campaign_members m JOIN campaigns c ON c.id = m.campaign_id
-      WHERE m.user_id = ? AND m.campaign_id = ? AND c.archived_at IS NULL`).get(userId, campaignId) as { role: CampaignRole } | undefined;
-    return row?.role ?? null;
+    const row = this.db.prepare('SELECT 1 AS found FROM campaigns WHERE id = ? AND owner_id = ? AND archived_at IS NULL').get(campaignId, userId);
+    return row ? 'gm' : null;
   }
   requireMember(userId: string, campaignId: string): CampaignRole {
     const role = this.role(userId, campaignId);
@@ -93,21 +107,15 @@ export class CampaignService {
     return role;
   }
   requireGm(userId: string, campaignId: string): void {
-    if (this.requireMember(userId, campaignId) !== 'gm') throw new Error('Forbidden');
+    this.requireMember(userId, campaignId);
   }
   updateCampaign(userId: string, campaignId: string, name: string, description: string, archived: boolean, configuration?: unknown): void {
-    const member = this.db.prepare('SELECT role FROM campaign_members WHERE user_id = ? AND campaign_id = ?').get(userId, campaignId) as { role: CampaignRole } | undefined;
-    if (member?.role !== 'gm') throw new Error('Forbidden');
+    this.requireOwner(userId, campaignId);
     if (!validName(name, 100) || typeof description !== 'string' || description.length > 2000 || typeof archived !== 'boolean') throw new Error('Invalid campaign');
     const old = this.configuration(campaignId);
     const config = configuration === undefined ? old : normalizeConfiguration(configuration);
     if (config.systemId !== old.systemId) throw new Error('Invalid system change: create a new campaign for a different system');
     this.db.transaction(() => {
-      if (getRuleset(config)?.mode === 'solo') {
-        const members = this.db.prepare('SELECT COUNT(*) AS n FROM campaign_members WHERE campaign_id = ? AND user_id <> ?').get(campaignId, userId) as { n: number };
-        if (members.n) throw new Error('Invalid solo campaign: other members are still present');
-        this.db.prepare('UPDATE campaign_invites SET revoked_at = ? WHERE campaign_id = ? AND used_at IS NULL').run(now(), campaignId);
-      }
       this.db.prepare('UPDATE campaigns SET name = ?, description = ?, configuration = ?, updated_at = ?, archived_at = ? WHERE id = ?')
         .run(name.trim(), description, JSON.stringify(config), now(), archived ? now() : null, campaignId);
       const patches = getGameSystem(config.systemId)?.configurationChanged?.({ before: old, after: config, newId: randomUUID,
@@ -124,15 +132,13 @@ export class CampaignService {
   }
   /**
    * Permanently deletes an archived campaign. Every campaign table cascades from `campaigns`, so one
-   * delete removes members, invites, documents, rolls, notes, assets and all AI data. Returns the
-   * stored asset file names so the caller can remove them from disk.
+   * delete removes documents, rolls, notes and assets. Returns the stored asset file names so the
+   * caller can remove them from disk.
    */
   deleteCampaign(userId: string, campaignId: string): string[] {
-    const member = this.db.prepare('SELECT role FROM campaign_members WHERE user_id = ? AND campaign_id = ?').get(userId, campaignId) as { role: CampaignRole } | undefined;
-    if (member?.role !== 'gm') throw new Error('Forbidden');
+    this.requireOwner(userId, campaignId);
     const campaign = this.db.prepare('SELECT archived_at AS archivedAt FROM campaigns WHERE id = ?').get(campaignId) as { archivedAt: string | null } | undefined;
     if (!campaign?.archivedAt) throw new Error('Invalid action: archive the campaign before deleting it');
-    if (this.db.prepare("SELECT 1 FROM ai_turns WHERE campaign_id = ? AND status = 'running'").get(campaignId)) throw new Error('Invalid action: wait for the GM turn to finish before deleting the campaign');
     return this.db.transaction(() => {
       const files = (this.db.prepare('SELECT storage_name AS name FROM campaign_assets WHERE campaign_id = ?').all(campaignId) as { name: string }[]).map(row => row.name);
       this.db.prepare('DELETE FROM campaigns WHERE id = ?').run(campaignId);
@@ -144,32 +150,59 @@ export class CampaignService {
     this.db.transaction(() => {
       const result = this.db.prepare('UPDATE campaigns SET owner_id = ?, updated_at = ? WHERE id = ? AND owner_id IS NULL').run(userId, now(), LEGACY_CAMPAIGN_ID);
       if (result.changes !== 1) throw new Error('Legacy campaign unavailable');
-      this.db.prepare("INSERT INTO campaign_members(campaign_id, user_id, role) VALUES (?, ?, 'gm')").run(LEGACY_CAMPAIGN_ID, userId);
     })();
   }
-  createInvite(userId: string, campaignId: string): string {
-    this.requireGm(userId, campaignId);
-    if (getRuleset(this.configuration(campaignId))?.mode === 'solo') throw new Error('Invalid invite: solo campaigns are private');
-    const value = token();
-    this.db.prepare('INSERT INTO campaign_invites(token_hash, campaign_id, created_by, expires_at, created_at) VALUES (?, ?, ?, ?, ?)')
-      .run(digest(value), campaignId, userId, new Date(Date.now() + 7 * 86400_000).toISOString(), now());
-    return value;
+  /** A portable JSON snapshot. Binary assets and uploads stay on the server. */
+  exportCampaign(userId: string, campaignId: string): CampaignExport {
+    this.requireOwner(userId, campaignId);
+    const row = this.db.prepare('SELECT name, description, configuration FROM campaigns WHERE id = ?').get(campaignId) as { name: string; description: string; configuration: string } | undefined;
+    if (!row) throw new Error('Forbidden');
+    const docs = this.db.prepare('SELECT ns, id, value FROM campaign_docs WHERE campaign_id = ? ORDER BY ns, id').all(campaignId) as { ns: string; id: string; value: string }[];
+    const notes = this.db.prepare('SELECT title, body FROM campaign_notes WHERE campaign_id = ? ORDER BY created_at, id').all(campaignId) as { title: string; body: string }[];
+    return {
+      format: 'daggery-campaign', version: 1, exportedAt: now(),
+      campaign: { name: row.name, description: row.description, configuration: readConfiguration(row.configuration) },
+      docs: docs.map(doc => ({ ns: doc.ns, id: doc.id, value: JSON.parse(doc.value) as unknown })),
+      notes: notes.map(note => ({ title: note.title, body: note.body })),
+    };
   }
-  acceptInvite(userId: string, value: string): string {
-    if (typeof value !== 'string' || value.length !== 43) throw new Error('Invalid invite');
+  /**
+   * Restores an exported campaign as a new campaign owned by the caller. Everything happens in one
+   * transaction; only namespaces the current ruleset allows are copied, and assets are not included.
+   */
+  importCampaign(userId: string, raw: unknown): Campaign {
+    if (!isRecord(raw) || raw.format !== 'daggery-campaign' || raw.version !== 1) throw new Error('Invalid campaign export');
+    const data = raw as { campaign?: unknown; docs?: unknown; notes?: unknown };
+    if (!isRecord(data.campaign)) throw new Error('Invalid campaign export');
+    const { name, description, configuration } = data.campaign;
+    if (typeof name !== 'string' || !validName(name, 100) || typeof description !== 'string' || description.length > 2000) throw new Error('Invalid campaign export');
+    const config = normalizeConfiguration(configuration);
+    if (!Array.isArray(data.docs) || data.docs.length > 10_000) throw new Error('Invalid campaign export');
+    if (!Array.isArray(data.notes) || data.notes.length > 5_000) throw new Error('Invalid campaign export');
+    const allowed = new Set((getRuleset(config)?.documents ?? []).map(policy => policy.namespace));
+    const docs = data.docs.map(entry => {
+      if (!isRecord(entry) || typeof entry.ns !== 'string' || typeof entry.id !== 'string' || !entry.id || entry.id.length > 120 || !isRecord(entry.value)) throw new Error('Invalid campaign export');
+      return { ns: entry.ns, id: entry.id, value: entry.value };
+    }).filter(entry => allowed.has(entry.ns));
+    const notes = data.notes.map(entry => {
+      if (!isRecord(entry) || typeof entry.title !== 'string' || !validName(entry.title, 200) || typeof entry.body !== 'string' || entry.body.length > 100_000) throw new Error('Invalid campaign export');
+      return { title: entry.title.trim(), body: entry.body };
+    });
     return this.db.transaction(() => {
-      const row = this.db.prepare(`SELECT i.campaign_id AS campaignId FROM campaign_invites i JOIN campaigns c ON c.id = i.campaign_id
-        WHERE i.token_hash = ? AND i.used_at IS NULL AND i.revoked_at IS NULL AND i.expires_at > ? AND c.archived_at IS NULL`).get(digest(value), now()) as { campaignId: string } | undefined;
-      if (!row) throw new Error('Invalid invite');
-      if (getRuleset(this.configuration(row.campaignId))?.mode === 'solo') throw new Error('Invalid invite');
-      this.db.prepare("INSERT INTO campaign_members(campaign_id, user_id, role) VALUES (?, ?, 'player') ON CONFLICT DO NOTHING").run(row.campaignId, userId);
-      this.db.prepare('UPDATE campaign_invites SET used_at = ? WHERE token_hash = ?').run(now(), digest(value));
-      return row.campaignId;
+      const taken = !!this.db.prepare('SELECT 1 AS found FROM campaigns WHERE owner_id = ? AND name = ? AND archived_at IS NULL').get(userId, String(name).trim());
+      const suffix = ' (imported)';
+      const finalName = taken ? `${String(name).trim().slice(0, 100 - suffix.length)}${suffix}` : String(name).trim();
+      const id = randomUUID(), at = now();
+      this.db.prepare('INSERT INTO campaigns(id, name, description, owner_id, created_at, updated_at, configuration) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, finalName, description, userId, at, at, JSON.stringify(config));
+      this.initializeRulesetDocuments(id, config);
+      const upsert = this.db.prepare(`INSERT INTO campaign_docs(campaign_id, ns, id, value, updated) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(campaign_id,ns,id) DO UPDATE SET value=excluded.value, updated=excluded.updated`);
+      for (const doc of docs) upsert.run(id, doc.ns, doc.id, JSON.stringify(doc.value), at);
+      const insertNote = this.db.prepare(`INSERT INTO campaign_notes(id, campaign_id, author_id, title, body, visibility, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 'shared', ?, ?)`);
+      for (const note of notes) insertNote.run(randomUUID(), id, userId, note.title, note.body, at, at);
+      return { id, name: finalName, description, role: 'gm' as const, archivedAt: null, configuration: config };
     })();
-  }
-  revokeInvite(userId: string, campaignId: string, value: string): void {
-    this.requireGm(userId, campaignId);
-    this.db.prepare('UPDATE campaign_invites SET revoked_at = ? WHERE campaign_id = ? AND token_hash = ? AND used_at IS NULL').run(now(), campaignId, digest(value));
   }
 
   listNotes(userId: string, campaignId: string): Note[] {

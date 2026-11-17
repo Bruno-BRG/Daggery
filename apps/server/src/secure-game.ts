@@ -11,12 +11,8 @@ import { CampaignService, type CampaignRole } from './campaign-service';
 import { readSessionToken } from './campaign-routes';
 import { canReadDocument, canWriteDocument, hasFeature, isRealtimeDocument } from '@daggery/shared';
 import { registerSoloRoutes } from './solo';
-import { registerAiRoutes } from './ai/routes';
-import type { SecretVault } from './ai/vault';
-import type { Embedder } from './ai/embeddings';
-import type { ModelProvider } from './ai/provider';
 
-interface Options { db: Database.Database; service: CampaignService; origin: string; secureCookies: boolean; assetsDir: string; aiVault?: SecretVault; aiProvider?: ModelProvider; aiEmbedder?: () => Promise<Embedder | null> }
+interface Options { db: Database.Database; service: CampaignService; origin: string; secureCookies: boolean; assetsDir: string }
 interface Peer { socket: WebSocket; session: string; userId: string; campaignId: string }
 const record = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const params = (request: FastifyRequest): Record<string, string> => request.params as Record<string, string>;
@@ -116,15 +112,6 @@ export async function registerSecureGame(app: FastifyInstance, options: Options)
   });
 
   registerSoloRoutes(app, { db, service, secureCookies, publish: (campaign, ns, id, value) => broadcast(campaign, { type: 'doc:set', ns, id, value }, ns, id) });
-  registerAiRoutes(app, { db, service, secureCookies, vault: options.aiVault, provider: options.aiProvider, embedder: options.aiEmbedder,
-    publish: (campaign, ns, id, value) => broadcast(campaign, { type: 'doc:set', ns, id, value }, ns, id),
-    publishRoll: (campaign, kind, result, author = 'AI GM') => {
-      const at = new Date().toISOString();
-      const row = db.prepare('INSERT INTO campaign_rolls(campaign_id,at,author,kind,payload) VALUES (?,?,?,?,?)').run(campaign, at, author, kind, JSON.stringify(result));
-      broadcast(campaign, { type: 'roll', entry: { id: Number(row.lastInsertRowid), at, author, kind, result } });
-    },
-    publishDelta: (campaign, turn, chat, round, text) => broadcast(campaign, { type: 'ai-stream', turnId: turn, chatId: chat, round, text }),
-  });
   const upload = (characterImage: boolean) => async (request: FastifyRequest, reply: FastifyReply) => {
     const campaignId = params(request).campaignId!;
     const { user, role } = auth(request, campaignId);

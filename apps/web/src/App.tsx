@@ -2,12 +2,12 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { getRuleset, getGameSystem, type DualityResult, type RollLogEntry } from '@daggery/shared';
 import { useRollReplay } from './dice3d';
 import { getModules, getSystemUI } from './modules';
-import { CampaignSettings, partyLabel } from './CampaignConfiguration';
 import { readPreference, savePreference } from './storage';
 import { useSyncStatus } from './sync/store';
 import { useRollLog } from './useRollLog';
 import { getActiveCampaign, type ActiveCampaign } from './campaign-context';
-import { Notes, Library } from './CampaignSections';
+import { CampaignMenu } from './CampaignMenu';
+import { useActiveHeroName } from './modules/sheets/activeHero';
 import { api } from './api';
 import { Icon, type IconName } from './components/Icon';
 import { Dialog } from './components/Dialog';
@@ -21,18 +21,14 @@ const OUTCOME_LABEL: Record<DualityResult['outcome'], string> = { critical: 'Cri
 interface NavigationItem { id: string; label: string; icon: IconName; description: string; primary?: boolean }
 function navigationFor(campaign: ActiveCampaign): NavigationItem[] {
   const modules = getModules(campaign.configuration).filter(module => !module.gmOnly || campaign.role === 'gm');
-  return [
-    { id: 'home', label: 'Overview', icon: 'home', description: 'Your campaign at a glance', primary: true },
-    ...modules.filter(module => module.primary),
-    { id: 'notes', label: 'Notes', icon: 'note', description: 'Keep track of every twist in the story' },
-    { id: 'library', label: 'Library', icon: 'library', description: 'Your campaign images and documents' },
-    ...modules.filter(module => !module.primary),
-  ];
+  return modules;
 }
 
 export default function App({ onLeave }: { onLeave: () => void }) {
   const campaign = getActiveCampaign();
-  const NAV = navigationFor(campaign);
+  // Like Stargazer, the character tab carries your hero's name.
+  const heroName = useActiveHeroName();
+  const NAV = navigationFor(campaign).map(item => item.id === 'sheets' && heroName ? { ...item, label: heroName } : item);
   const availableNav = NAV;
   const ruleset = getRuleset(campaign.configuration);
   const systemUI = getSystemUI(campaign.configuration);
@@ -40,13 +36,12 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   const DiceSurface = systemUI?.diceOverlay;
   const companion = systemUI?.companion && ruleset?.features.includes(systemUI.companion.feature) && (!systemUI.companion.gmOnly || campaign.role === 'gm') ? systemUI.companion : undefined;
   const Companion = companion?.component;
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [syncError, setSyncError] = useState('');
   const { status, rolls, sendRoll } = useRollLog();
   const syncStatus = useSyncStatus();
   const [author, setAuthor] = useState(() => readPreference('daggery:name') ?? 'Player');
-  const [requestedPage, setPage] = useState<Page>(campaign.configuration.gmController === 'ai' ? 'ai' : 'home');
-  const page = NAV.some(item => item.id === requestedPage) ? requestedPage : 'home';
+  const [requestedPage, setPage] = useState<Page>(() => NAV[0]?.id ?? '');
+  const page = NAV.some(item => item.id === requestedPage) ? requestedPage : NAV[0]?.id ?? '';
   const [mobileMenu, setMobileMenu] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -122,7 +117,7 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   const online = status === 'open' && syncStatus === 'open';
   const current = NAV.find((item) => item.id === page)!;
   // The solo screen takes the right-hand column; the dice then open over the page instead.
-  const dockVisible = !!DiceControls && wide && diceDocked && page !== 'ai' && !companionBeside;
+  const dockVisible = !!DiceControls && wide && diceDocked && !companionBeside;
   const diceVisible = dockVisible || diceOpen;
 
   function navigate(next: Page) {
@@ -221,7 +216,7 @@ export default function App({ onLeave }: { onLeave: () => void }) {
             </button>
             <span className="daggery-brand-name">daggery</span>
             <span className="daggery-brand-divider" aria-hidden="true" />
-            <button type="button" className="daggery-brand-campaign" onClick={onLeave} title="Switch campaign">{campaign.name}</button>
+            <button type="button" className="daggery-brand-campaign" onClick={() => setMobileMenu(true)} title="Campaigns">{campaign.name}</button>
             <strong className="daggery-brand-page">{current.label}</strong>
           </div>
           <div className="daggery-top-actions">
@@ -234,11 +229,10 @@ export default function App({ onLeave }: { onLeave: () => void }) {
               <i aria-hidden="true" />
               <span>{online ? 'Live' : 'Offline'}</span>
             </span>
-            {campaign.role === 'gm' && <button type="button" className="daggery-theme" aria-label="Campaign settings" title="Campaign settings" onClick={() => { if (window.dispatchEvent(new Event('daggery:before-navigate', { cancelable: true }))) setSettingsOpen(true); }}><Icon name="settings" /></button>}
             <button
               type="button"
               className={`daggery-roll-toggle daggery-dice-toggle ${diceVisible ? 'is-active' : ''}`}
-              onClick={() => (wide && page !== 'ai' && !companionBeside ? setDiceDocked((open) => !open) : setDiceOpen((open) => !open))}
+              onClick={() => (wide && !companionBeside ? setDiceDocked((open) => !open) : setDiceOpen((open) => !open))}
               aria-label={diceVisible ? 'Hide dice' : 'Show dice'}
               aria-expanded={diceVisible}
             >
@@ -261,7 +255,6 @@ export default function App({ onLeave }: { onLeave: () => void }) {
             {item.label}
           </button>)}
         </nav>
-        {settingsOpen && <CampaignSettings campaign={campaign} onClose={() => setSettingsOpen(false)} onSaved={() => window.location.reload()} />}
         {syncError && (
           <div role="alert" className="daggery-alert">
             <span>{syncError}</span>
@@ -272,15 +265,9 @@ export default function App({ onLeave }: { onLeave: () => void }) {
         )}
         <div className="daggery-content">
           <main id="main-content" ref={mainRef} tabIndex={-1} className={`daggery-main daggery-page-${page}`}>
-            {page === 'notes' ? (
-              <Notes />
-            ) : page === 'library' ? (
-              <Library />
-            ) : page === 'home' ? (
-              <Home onNavigate={navigate} />
-            ) : (
+            {(
               Active && (
-                <ErrorBoundary name={current.label} resetKey={page} onBack={() => navigate('home')}><Suspense
+                <ErrorBoundary name={current.label} resetKey={page} onBack={() => navigate(NAV[0]?.id ?? '')}><Suspense
                   fallback={
                     <div role="status" className="daggery-loading">
                       <span />
@@ -334,25 +321,8 @@ export default function App({ onLeave }: { onLeave: () => void }) {
           <span>More</span>
         </button>
       </nav>
-      <Dialog open={mobileMenu} onClose={() => setMobileMenu(false)} title="Menu" className="daggery-menu-dialog">
-        <button type="button" className="daggery-campaign-switch" onClick={onLeave}>
-          <span className="daggery-campaign-monogram">{campaign.name.slice(0, 1).toUpperCase()}</span>
-          <span className="daggery-campaign-info">
-            <strong>{campaign.name}</strong>
-            <small>Switch campaign</small>
-          </span>
-          <Icon name="chevron" />
-        </button>
-        {navigation(true)}
-        <label className="daggery-mobile-profile">
-          Your name
-          <input
-            className="daggery-auth-input"
-            value={author}
-            onChange={(event) => updateAuthor(event.target.value)}
-            maxLength={60}
-          />
-        </label>
+      <Dialog open={mobileMenu} onClose={() => setMobileMenu(false)} title="Daggery" className="daggery-menu-dialog">
+        <CampaignMenu author={author} onAuthor={updateAuthor} />
       </Dialog>
       <Dialog open={diceOpen} onClose={() => setDiceOpen(false)} title="Dice & history" className="daggery-dice-dialog">
         {dice}
@@ -396,45 +366,6 @@ export default function App({ onLeave }: { onLeave: () => void }) {
           <p className="daggery-command-empty">No sections found. Try “characters” or “rules”.</p>
         )}
       </Dialog>
-    </div>
-  );
-}
-
-/**
- * Overview: who and what this campaign is, one clear button to carry on, and every
- * section as a big tile with a line on what it holds.
- */
-function Home({ onNavigate }: { onNavigate: (page: Page) => void }) {
-  const campaign = getActiveCampaign();
-  const NAV = navigationFor(campaign);
-  const ruleset = getRuleset(campaign.configuration);
-  const solo = ruleset?.mode === 'solo';
-  const ai = campaign.configuration.gmController === 'ai';
-  const main = NAV.find(item => item.id === (ai ? 'ai' : 'sheets')) ?? NAV.find(item => item.primary && item.id !== 'home');
-  const party = solo ? partyLabel(campaign.configuration) : undefined;
-  const tone = (id: string) => ({ sheets: TONES.gold, ai: TONES.violet, journal: TONES.violet, compendium: TONES.blue, notes: TONES.teal, library: TONES.pink, gm: TONES.red })[id] ?? TONES.brand;
-  return (
-    <div className="overview">
-      <header className="overview-hero">
-        <p className="overview-kicker">{ruleset?.name ?? 'Daggerheart'}</p>
-        <h1>{campaign.name}</h1>
-        {party && <p className="overview-meta"><span>{party}</span></p>}
-        {main && <button type="button" className="daggery-primary overview-continue" onClick={() => onNavigate(main.id)}>
-          <Icon name={main.icon} />{ai ? 'Continue the adventure' : solo ? 'Continue with your hero' : `Open ${main.label.toLowerCase()}`}<Icon name="arrow" />
-        </button>}
-      </header>
-
-      {solo && <p className="overview-tip"><span className="overview-tip-icon"><Icon name="chevron" /></span>
-        <span><strong>Oracles, moves and your journal</strong> open from the round button at the bottom right, on every page.</span></p>}
-
-      <h2 className="overview-heading">Your campaign</h2>
-      <nav className="overview-grid" aria-label="Campaign sections">
-        {NAV.filter(item => item.id !== 'home').map(item => <button key={item.id} type="button" className="overview-tile" style={{ ['--tile' as string]: tone(item.id) }} onClick={() => onNavigate(item.id)}>
-          <span className="overview-tile-icon"><Icon name={item.icon} /></span>
-          <span className="overview-tile-text"><strong>{item.label}</strong><small>{item.description}</small></span>
-          <Icon name="arrow" />
-        </button>)}
-      </nav>
     </div>
   );
 }

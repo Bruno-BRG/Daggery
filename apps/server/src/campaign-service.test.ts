@@ -86,44 +86,54 @@ test('backup includes committed WAL data and does not overwrite a backup', async
   }
 });
 
-test('sessions, invites and notes enforce campaign and author boundaries', async () => {
+test('sessions, notes and campaign ownership enforce their boundaries', async () => {
   const db = openCampaignDatabase(':memory:');
   try {
     const service = new CampaignService(db);
-    const gm = await service.register('narrator', 'correct horse battery staple');
-    const player = await service.register('player', 'another strong password');
+    const owner = await service.register('narrator', 'correct horse battery staple');
     const outsider = await service.register('outsider', 'third strong password');
     assert.equal(await service.authenticate('narrator', 'bad password'), null);
-    assert.equal((await service.authenticate('NARRATOR', 'correct horse battery staple'))?.id, gm.id);
-    const session = service.createSession(gm.id);
-    assert.equal(service.session(session)?.id, gm.id);
+    assert.equal((await service.authenticate('NARRATOR', 'correct horse battery staple'))?.id, owner.id);
+    const session = service.createSession(owner.id);
+    assert.equal(service.session(session)?.id, owner.id);
     assert.equal(JSON.stringify(db.prepare('SELECT token_hash FROM sessions').get()).includes(session), false);
     service.revokeSession(session);
     assert.equal(service.session(session), null);
 
-    const campaign = service.createCampaign(gm.id, 'Test campaign');
+    const campaign = service.createCampaign(owner.id, 'Test campaign');
     const otherCampaign = service.createCampaign(outsider.id, 'Other campaign');
-    const invite = service.createInvite(gm.id, campaign);
-    assert.equal(JSON.stringify(db.prepare('SELECT token_hash FROM campaign_invites').get()).includes(invite), false);
-    assert.equal(service.acceptInvite(player.id, invite), campaign);
-    assert.throws(() => service.acceptInvite(outsider.id, invite));
-    assert.throws(() => service.createInvite(player.id, campaign));
+    assert.equal(service.role(owner.id, campaign), 'gm');
+    assert.equal(service.role(outsider.id, campaign), null);
     assert.throws(() => service.listNotes(outsider.id, campaign));
 
-    const secret = service.saveNote(player.id, campaign, null, 'Secret', 'do not share', 'private');
-    const shared = service.saveNote(player.id, campaign, null, 'Shared', 'hello', 'shared');
-    assert.deepEqual(service.listNotes(gm.id, campaign).map(n => n.id), [shared]);
-    assert.equal(service.listNotes(player.id, campaign).length, 2);
-    assert.throws(() => service.saveNote(gm.id, campaign, secret, 'stolen', 'x', 'shared'));
-    assert.throws(() => service.deleteNote(gm.id, campaign, secret));
+    const secret = service.saveNote(owner.id, campaign, null, 'Secret', 'do not share', 'private');
+    const shared = service.saveNote(owner.id, campaign, null, 'Shared', 'hello', 'shared');
+    assert.deepEqual(service.listNotes(owner.id, campaign).map(n => n.id).sort(), [secret, shared].sort());
     assert.throws(() => service.saveNote(outsider.id, otherCampaign, shared, 'stolen', 'x', 'shared'));
-    service.saveNote(gm.id, campaign, shared, 'Updated', 'everyone can edit', 'shared');
-    assert.throws(() => service.saveNote(gm.id, campaign, shared, 'hidden', '', 'private'));
-    assert.equal(service.listNotes(player.id, campaign).find(n => n.id === shared)?.title, 'Updated');
-    assert.throws(() => service.updateCampaign(player.id, campaign, 'No', '', true));
-    service.updateCampaign(gm.id, campaign, 'Archived', '', true);
-    assert.throws(() => service.listNotes(player.id, campaign));
-    service.updateCampaign(gm.id, campaign, 'Restored', '', false);
-    assert.equal(service.listNotes(player.id, campaign).length, 2);
+    service.saveNote(owner.id, campaign, shared, 'Updated', 'everyone can edit', 'shared');
+    assert.equal(service.listNotes(owner.id, campaign).find(n => n.id === shared)?.title, 'Updated');
+    assert.throws(() => service.updateCampaign(outsider.id, campaign, 'No', '', true));
+    service.updateCampaign(owner.id, campaign, 'Archived', '', true);
+    assert.throws(() => service.listNotes(owner.id, campaign));
+    service.updateCampaign(owner.id, campaign, 'Restored', '', false);
+    assert.equal(service.listNotes(owner.id, campaign).length, 2);
+  } finally { db.close(); }
+});
+
+test('migration 15 drops the AI tables and invites on an older database', () => {
+  const db = new Database(':memory:');
+  try {
+    db.exec(`CREATE TABLE ai_chats (id TEXT PRIMARY KEY);
+      CREATE TABLE ai_turns (id TEXT PRIMARY KEY, chat_id TEXT REFERENCES ai_chats(id));
+      CREATE TABLE campaign_invites (token_hash TEXT PRIMARY KEY);
+      INSERT INTO ai_chats VALUES ('chat');
+      INSERT INTO ai_turns VALUES ('turn', 'chat');
+      INSERT INTO campaign_invites VALUES ('token');
+      PRAGMA user_version = 14`);
+    migrateCampaignDatabase(db);
+    assert.equal(db.pragma('user_version', { simple: true }), CURRENT_VERSION);
+    for (const table of ['ai_chats', 'ai_turns', 'campaign_invites']) {
+      assert.equal(db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table), undefined, `${table} is dropped`);
+    }
   } finally { db.close(); }
 });

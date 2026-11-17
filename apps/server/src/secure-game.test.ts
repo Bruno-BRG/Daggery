@@ -14,86 +14,78 @@ import { registerCampaignRoutes } from './campaign-routes';
 import { registerSecureGame } from './secure-game';
 
 const origin = 'http://localhost:5173';
-test('asset uploads validate signatures and enforce campaign membership', async () => {
+test('asset uploads validate signatures and enforce campaign ownership', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'daggery-asset-'));
   const db = openCampaignDatabase(':memory:');
   const app = Fastify({ logger: false });
   try {
     const service = new CampaignService(db);
-    const gm = await service.register('assetgm', 'a strong password here');
-    const player = await service.register('assetplayer', 'another strong password');
-    const campaign = service.createCampaign(gm.id, 'Assets');
-    service.acceptInvite(player.id, service.createInvite(gm.id, campaign));
+    const owner = await service.register('assetowner', 'a strong password here');
+    const outsider = await service.register('assetoutsider', 'another strong password');
+    const campaign = service.createCampaign(owner.id, 'Assets');
     await app.register(websocket);
     await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024, files: 1 } });
     await registerCampaignRoutes(app, { service, origin, secureCookies: false, allowRegistration: false });
     await registerSecureGame(app, { db, service, origin, secureCookies: false, assetsDir: dir });
-    const gmCookie = `daggery_session=${service.createSession(gm.id)}`;
-    const playerCookie = `daggery_session=${service.createSession(player.id)}`;
+    const ownerCookie = `daggery_session=${service.createSession(owner.id)}`;
+    const outsiderCookie = `daggery_session=${service.createSession(outsider.id)}`;
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a0kAAAAASUVORK5CYII=', 'base64');
     const payload = (bytes: Buffer) => Buffer.concat([
       Buffer.from('--testboundary\r\nContent-Disposition: form-data; name="file"; filename="test.png"\r\nContent-Type: image/png\r\n\r\n'),
       bytes, Buffer.from('\r\n--testboundary--\r\n'),
     ]);
     const upload = (cookie: string, bytes: Buffer) => app.inject({ method: 'POST', url: `/api/campaigns/${campaign}/assets`, headers: { origin, cookie, 'content-type': 'multipart/form-data; boundary=testboundary' }, payload: payload(bytes) });
-    assert.equal((await upload(gmCookie, Buffer.from('<html>fake</html>'))).statusCode, 400);
-    assert.equal((await upload(playerCookie, png)).statusCode, 403);
-    const created = await upload(gmCookie, png);
+    assert.equal((await upload(ownerCookie, Buffer.from('<html>fake</html>'))).statusCode, 400);
+    assert.equal((await upload(outsiderCookie, png)).statusCode, 403);
+    assert.equal((await upload('', png)).statusCode, 401);
+    const created = await upload(ownerCookie, png);
     assert.equal(created.statusCode, 201);
     const asset = created.json() as { url: string };
-    assert.equal((await app.inject({ method: 'GET', url: asset.url, headers: { cookie: playerCookie } })).statusCode, 404);
-    const response = await app.inject({ method: 'GET', url: asset.url, headers: { cookie: gmCookie } });
+    assert.equal((await app.inject({ method: 'GET', url: asset.url, headers: { cookie: outsiderCookie } })).statusCode, 403);
+    const response = await app.inject({ method: 'GET', url: asset.url, headers: { cookie: ownerCookie } });
     assert.equal(response.statusCode, 200);
     assert.equal(response.headers['x-content-type-options'], 'nosniff');
     assert.deepEqual(response.rawPayload, png);
-    const pdf = await upload(gmCookie, Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF'));
+    const pdf = await upload(ownerCookie, Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF'));
     assert.equal(pdf.statusCode, 201);
     const pdfUrl = (pdf.json() as { url: string }).url;
-    assert.equal((await app.inject({ method: 'GET', url: pdfUrl, headers: { cookie: gmCookie } })).headers['content-disposition'], 'attachment');
-    const inline = await app.inject({ method: 'GET', url: `${pdfUrl}?inline=1`, headers: { cookie: gmCookie } });
+    assert.equal((await app.inject({ method: 'GET', url: pdfUrl, headers: { cookie: ownerCookie } })).headers['content-disposition'], 'attachment');
+    const inline = await app.inject({ method: 'GET', url: `${pdfUrl}?inline=1`, headers: { cookie: ownerCookie } });
     assert.equal(inline.headers['content-type'], 'application/pdf');
     assert.match(inline.headers['content-disposition'] as string, /^inline;/);
-    assert.equal((await app.inject({ method: 'GET', url: `${pdfUrl}?inline=1`, headers: { cookie: playerCookie } })).statusCode, 404);
+
+    // Character images are still uploadable by the campaign owner.
     const characterUpload = (cookie: string, bytes: Buffer, campaignId = campaign) => app.inject({ method: 'POST', url: `/api/campaigns/${campaignId}/character-images`, headers: { origin, cookie, 'content-type': 'multipart/form-data; boundary=testboundary' }, payload: payload(bytes) });
-    const portrait = await characterUpload(playerCookie, png);
-    assert.equal(portrait.statusCode, 201, 'players can upload their character images');
+    const portrait = await characterUpload(ownerCookie, png);
+    assert.equal(portrait.statusCode, 201);
     const portraitUrl = portrait.json().url as string;
-    for (const cookie of [gmCookie, playerCookie]) {
-      const image = await app.inject({ method: 'GET', url: portraitUrl, headers: { cookie } });
-      assert.equal(image.statusCode, 200);
-      assert.deepEqual(image.rawPayload, png);
-    }
-    const stored = db.prepare("SELECT visibility,category FROM campaign_assets WHERE id=?").get(portrait.json().id);
-    assert.deepEqual(stored, { visibility: 'shared', category: 'character' });
-    assert.equal((await characterUpload(playerCookie, Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF'))).statusCode, 400, 'character uploads cannot contain PDFs');
-    assert.equal((await characterUpload(playerCookie, Buffer.from('<svg></svg>'))).statusCode, 400);
+    const image = await app.inject({ method: 'GET', url: portraitUrl, headers: { cookie: ownerCookie } });
+    assert.equal(image.statusCode, 200);
+    assert.deepEqual(image.rawPayload, png);
+    assert.deepEqual(db.prepare("SELECT visibility,category FROM campaign_assets WHERE id=?").get(portrait.json().id), { visibility: 'shared', category: 'character' });
+    assert.equal((await characterUpload(ownerCookie, Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF'))).statusCode, 400, 'character uploads cannot contain PDFs');
+    assert.equal((await characterUpload(ownerCookie, Buffer.from('<svg></svg>'))).statusCode, 400);
     const oversizedDimensions = Buffer.from(png); oversizedDimensions.writeUInt32BE(9000, 16);
-    assert.equal((await characterUpload(playerCookie, oversizedDimensions)).statusCode, 400);
-    assert.equal((await characterUpload(playerCookie, Buffer.concat([png, Buffer.alloc(10 * 1024 * 1024)]))).statusCode, 413);
-    const other = await service.register('imageoutsider', 'another very strong password');
-    const otherCookie = `daggery_session=${service.createSession(other.id)}`;
-    assert.equal((await characterUpload(otherCookie, png)).statusCode, 403);
+    assert.equal((await characterUpload(ownerCookie, oversizedDimensions)).statusCode, 400);
+    assert.equal((await characterUpload(ownerCookie, Buffer.concat([png, Buffer.alloc(10 * 1024 * 1024)]))).statusCode, 413);
+    assert.equal((await characterUpload(outsiderCookie, png)).statusCode, 403);
     assert.equal((await characterUpload('', png)).statusCode, 401);
-    assert.equal((await app.inject({ method: 'GET', url: portraitUrl, headers: { cookie: otherCookie } })).statusCode, 403);
-    const anotherCampaign = service.createCampaign(gm.id, 'Other images');
-    assert.equal((await app.inject({ method: 'GET', url: portraitUrl.replace(campaign, anotherCampaign), headers: { cookie: gmCookie } })).statusCode, 404);
+    const anotherCampaign = service.createCampaign(owner.id, 'Other images');
+    assert.equal((await app.inject({ method: 'GET', url: portraitUrl.replace(campaign, anotherCampaign), headers: { cookie: ownerCookie } })).statusCode, 404);
   } finally { await app.close(); db.close(); rmSync(dir, { recursive: true, force: true }); }
 });
 
-test('WebSockets isolate campaigns, check origin and hide GM documents from players', async () => {
+test('WebSockets isolate campaigns, check origin and keep GM documents private', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'daggery-game-'));
   const db = openCampaignDatabase(':memory:');
   const app = Fastify({ logger: false });
   const sockets: WebSocket[] = [];
   try {
     const service = new CampaignService(db);
-    const gm = await service.register('gm', 'a strong password here');
-    const player = await service.register('player', 'another strong password');
+    const owner = await service.register('gm', 'a strong password here');
     const stranger = await service.register('other', 'yet another password');
-    const campaign = service.createCampaign(gm.id, 'First');
+    const campaign = service.createCampaign(owner.id, 'First');
     const other = service.createCampaign(stranger.id, 'Second');
-    service.acceptInvite(player.id, service.createInvite(gm.id, campaign));
-    db.prepare('INSERT INTO campaign_docs VALUES (?, ?, ?, ?, ?)').run(campaign, 'map', 'token:hidden', JSON.stringify({ hidden: true, name: 'secret' }), '2025');
     db.prepare('INSERT INTO campaign_docs VALUES (?, ?, ?, ?, ?)').run(campaign, 'gm', 'setting', JSON.stringify({ kind: 'setting', title: 'Hidden GM world' }), '2025');
     await app.register(websocket, { options: { maxPayload: 65536 } });
     await app.register(multipart);
@@ -114,61 +106,39 @@ test('WebSockets isolate campaigns, check origin and hide GM documents from play
       });
       return { ws, messages };
     }
-    const a = await connect(gm.id, campaign);
-    const b = await connect(player.id, campaign);
-    const c = await connect(stranger.id, other);
-    assert.match(JSON.stringify(a.messages), /secret/);
-    assert.doesNotMatch(JSON.stringify(b.messages), /secret/);
+    const a = await connect(owner.id, campaign);
+    const b = await connect(stranger.id, other);
     assert.match(JSON.stringify(a.messages), /Hidden GM world/);
     assert.doesNotMatch(JSON.stringify(b.messages), /Hidden GM world/);
     const waitFor = async (predicate: () => boolean) => {
       const until = Date.now() + 2000;
       while (!predicate()) {
-        if (Date.now() > until) throw new Error('GM document timeout');
+        if (Date.now() > until) throw new Error('document timeout');
         await new Promise(resolve => setTimeout(resolve, 5));
       }
     };
     a.ws.send(JSON.stringify({ type: 'doc:set', ns: 'gm', id: 'scenario:test', value: { kind: 'scenario', title: 'Secret scenario' } }));
     await waitFor(() => a.messages.some(m => m.type === 'doc:set' && m.id === 'scenario:test'));
-    const reconnected = await connect(gm.id, campaign);
+    const reconnected = await connect(owner.id, campaign);
     assert.match(JSON.stringify(reconnected.messages), /Secret scenario/);
     assert.doesNotMatch(JSON.stringify(b.messages), /Secret scenario/);
-    assert.doesNotMatch(JSON.stringify(c.messages), /Secret scenario/);
-    for (const type of ['doc:set', 'doc:delete']) {
-      const errorsBefore = b.messages.filter(m => m.type === 'error').length;
-      b.ws.send(JSON.stringify({ type, ns: 'gm', id: 'scenario:test', value: { title: 'tampered' } }));
-      await waitFor(() => b.messages.filter(m => m.type === 'error').length > errorsBefore);
-      const stored = db.prepare("SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = 'gm' AND id = 'scenario:test'").get(campaign) as { value: string };
-      assert.match(stored.value, /Secret scenario/);
-    }
     a.ws.send(JSON.stringify({ type: 'doc:delete', ns: 'gm', id: 'scenario:test' }));
     await waitFor(() => a.messages.some(m => m.type === 'doc:delete' && m.id === 'scenario:test'));
     assert.equal(db.prepare("SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = 'gm' AND id = 'scenario:test'").get(campaign), undefined);
     a.ws.send(JSON.stringify({ type: 'doc:set', ns: 'sheets', id: 'hero', value: { name: 'Hero A' } }));
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('broadcast timeout')), 2000);
-      const check = () => { if (b.messages.some(m => m.type === 'doc:set')) { clearTimeout(timeout); resolve(); } else setTimeout(check, 5); };
-      check();
-    });
-    assert.doesNotMatch(JSON.stringify(c.messages), /Hero A/);
-    b.ws.send(JSON.stringify({ type: 'doc:set', ns: 'map', id: 'scene:hack', value: { name: 'hack' } }));
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('error timeout')), 2000);
-      const check = () => { if (b.messages.some(m => m.type === 'error')) { clearTimeout(timeout); resolve(); } else setTimeout(check, 5); };
-      check();
-    });
+    await waitFor(() => a.messages.some(m => m.type === 'doc:set' && m.id === 'hero'));
+    assert.doesNotMatch(JSON.stringify(b.messages), /Hero A/);
+    // The map namespace was removed with group play, so it is rejected.
+    const errorsBefore = a.messages.filter(m => m.type === 'error').length;
+    a.ws.send(JSON.stringify({ type: 'doc:set', ns: 'map', id: 'scene:hack', value: { name: 'hack' } }));
+    await waitFor(() => a.messages.filter(m => m.type === 'error').length > errorsBefore);
     assert.equal(db.prepare("SELECT id FROM campaign_docs WHERE id = 'scene:hack'").get(), undefined);
     a.ws.send(JSON.stringify({ type: 'roll', author: 'Different display name', clientRollId: 'regression-roll-1', kind: 'dice', result: { notation: '1d6', rolls: [4], modifier: 0, total: 4 } }));
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('roll broadcast timeout')), 2000);
-      const check = () => { if (b.messages.some(m => m.type === 'roll')) { clearTimeout(timeout); resolve(); } else setTimeout(check, 5); };
-      check();
-    });
-    const broadcastRoll = b.messages.find(m => m.type === 'roll')!.entry as Record<string, unknown>;
-    assert.equal(broadcastRoll.author, gm.username, 'author must remain authenticated');
+    await waitFor(() => a.messages.some(m => m.type === 'roll'));
+    const broadcastRoll = a.messages.find(m => m.type === 'roll')!.entry as Record<string, unknown>;
+    assert.equal(broadcastRoll.author, owner.username, 'author must remain authenticated');
     assert.equal(broadcastRoll.clientRollId, 'regression-roll-1', 'the sender must recognize its echo despite the replaced author');
-    assert.doesNotMatch(JSON.stringify(c.messages), /regression-roll-1/);
-    const badOrigin = await app.inject({ method: 'GET', url: `/ws?campaign=${campaign}`, headers: { origin: 'http://evil.example', cookie: `daggery_session=${service.createSession(gm.id)}` } });
+    const badOrigin = await app.inject({ method: 'GET', url: `/ws?campaign=${campaign}`, headers: { origin: 'http://evil.example', cookie: `daggery_session=${service.createSession(owner.id)}` } });
     assert.equal(badOrigin.statusCode, 403);
     const noAccess = await app.inject({ method: 'GET', url: `/api/campaigns/${campaign}/assets`, headers: { cookie: `daggery_session=${service.createSession(stranger.id)}` } });
     assert.equal(noAccess.statusCode, 403);
@@ -178,43 +148,32 @@ test('WebSockets isolate campaigns, check origin and hide GM documents from play
   }
 });
 
-test('a GM can permanently delete an archived campaign, with its AI data and asset files', async () => {
+test('an owner can permanently delete an archived campaign with its asset files', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'daggery-delete-'));
   const db = openCampaignDatabase(':memory:');
   const app = Fastify({ logger: false });
   try {
     const service = new CampaignService(db);
-    const gm = await service.register('deletegm', 'a strong password here');
-    const player = await service.register('deleteplayer', 'another strong password');
-    const campaign = service.createCampaign(gm.id, 'Doomed');
-    const kept = service.createCampaign(gm.id, 'Kept');
-    service.acceptInvite(player.id, service.createInvite(gm.id, campaign));
+    const owner = await service.register('deletegm', 'a strong password here');
+    const outsider = await service.register('deleteplayer', 'another strong password');
+    const campaign = service.createCampaign(owner.id, 'Doomed');
+    const kept = service.createCampaign(owner.id, 'Kept');
     await app.register(websocket);
     await app.register(multipart, { limits: { fileSize: 50 * 1024 * 1024, files: 1 } });
     await registerCampaignRoutes(app, { service, origin, secureCookies: false, allowRegistration: false });
     await registerSecureGame(app, { db, service, origin, secureCookies: false, assetsDir: dir });
-    const gmCookie = `daggery_session=${service.createSession(gm.id)}`;
-    const playerCookie = `daggery_session=${service.createSession(player.id)}`;
+    const ownerCookie = `daggery_session=${service.createSession(owner.id)}`;
+    const outsiderCookie = `daggery_session=${service.createSession(outsider.id)}`;
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/a0kAAAAASUVORK5CYII=', 'base64');
-    const uploaded = await app.inject({ method: 'POST', url: `/api/campaigns/${campaign}/assets`, headers: { origin, cookie: gmCookie, 'content-type': 'multipart/form-data; boundary=b' }, payload: Buffer.concat([Buffer.from('--b\r\nContent-Disposition: form-data; name="file"; filename="map.png"\r\nContent-Type: image/png\r\n\r\n'), png, Buffer.from('\r\n--b--\r\n')]) });
+    const uploaded = await app.inject({ method: 'POST', url: `/api/campaigns/${campaign}/assets`, headers: { origin, cookie: ownerCookie, 'content-type': 'multipart/form-data; boundary=b' }, payload: Buffer.concat([Buffer.from('--b\r\nContent-Disposition: form-data; name="file"; filename="map.png"\r\nContent-Type: image/png\r\n\r\n'), png, Buffer.from('\r\n--b--\r\n')]) });
     assert.equal(uploaded.statusCode, 201);
     const file = (db.prepare('SELECT storage_name AS name FROM campaign_assets WHERE campaign_id = ?').get(campaign) as { name: string }).name;
-    // AI rows reference each other without cascades (messages -> turns -> chats); the campaign cascade must still clear them.
-    const at = new Date().toISOString();
-    db.prepare("INSERT INTO ai_chats(id,campaign_id,ordinal,title,status,created,updated) VALUES ('chat-x',?,99,'Session','ended',?,?)").run(campaign, at, at);
-    db.prepare("INSERT INTO ai_turns(id,campaign_id,user_id,request_id,status,created,updated,chat_id) VALUES ('turn-x',?,?,'req-x','complete',?,?,'chat-x')").run(campaign, gm.id, at, at);
-    db.prepare("INSERT INTO ai_messages(id,campaign_id,turn_id,chat_id,role,text,created) VALUES ('msg-x',?,'turn-x','chat-x','gm','Hello',?)").run(campaign, at);
-    db.prepare("INSERT INTO ai_actions(id,campaign_id,turn_id,call_id,tool,label,result,created) VALUES ('act-x',?,'turn-x','call','tool','label','{}',?)").run(campaign, at);
-    db.prepare("INSERT INTO ai_journal(id,campaign_id,chat_id,kind,title,body,visibility,author,created,updated) VALUES ('jr-x',?,'chat-x','note','T','B','gm','gm',?,?)").run(campaign, at, at);
     const remove = (cookie: string, id = campaign) => app.inject({ method: 'DELETE', url: `/api/campaigns/${id}`, headers: { origin, cookie } });
-    assert.equal((await remove(gmCookie)).statusCode, 400, 'an active campaign must be archived first');
-    service.updateCampaign(gm.id, campaign, 'Doomed', '', true);
-    assert.equal((await remove(playerCookie)).statusCode, 403, 'players cannot delete');
+    assert.equal((await remove(ownerCookie)).statusCode, 400, 'an active campaign must be archived first');
+    service.updateCampaign(owner.id, campaign, 'Doomed', '', true);
+    assert.equal((await remove(outsiderCookie)).statusCode, 403, 'only the owner can delete');
     assert.equal((await remove('')).statusCode, 401);
-    db.prepare("UPDATE ai_turns SET status = 'running' WHERE id = 'turn-x'").run();
-    assert.equal((await remove(gmCookie)).statusCode, 400, 'a running GM turn blocks deletion');
-    db.prepare("UPDATE ai_turns SET status = 'complete' WHERE id = 'turn-x'").run();
-    const deleted = await remove(gmCookie);
+    const deleted = await remove(ownerCookie);
     assert.equal(deleted.statusCode, 200);
     assert.deepEqual(deleted.json(), { deleted: true });
     const tables = (db.prepare("SELECT m.name FROM sqlite_master m WHERE m.type = 'table' AND EXISTS (SELECT 1 FROM pragma_table_info(m.name) WHERE name = 'campaign_id')").all() as { name: string }[]).map(row => row.name);
@@ -222,6 +181,6 @@ test('a GM can permanently delete an archived campaign, with its AI data and ass
     assert.equal(db.prepare('SELECT 1 FROM campaigns WHERE id = ?').get(campaign), undefined);
     assert.ok(!existsSync(join(dir, file)), 'the uploaded file is removed from disk');
     assert.ok(db.prepare('SELECT 1 FROM campaigns WHERE id = ?').get(kept), 'other campaigns are untouched');
-    assert.equal((await remove(gmCookie)).statusCode, 403, 'a deleted campaign cannot be deleted again');
+    assert.equal((await remove(ownerCookie)).statusCode, 403, 'a deleted campaign cannot be deleted again');
   } finally { await app.close(); db.close(); rmSync(dir, { recursive: true, force: true }); }
 });

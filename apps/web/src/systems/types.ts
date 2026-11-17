@@ -4,7 +4,6 @@ import type { IconName } from '../components/Icon';
 export interface SystemModule {
   id: string; feature: string; label: string; icon: IconName; description: string;
   gmOnly?: boolean; primary?: boolean; primaryRulesets?: readonly string[];
-  controller?: 'ai';
   component: LazyExoticComponent<ComponentType<{ author: string }>>;
 }
 export interface SystemUI {

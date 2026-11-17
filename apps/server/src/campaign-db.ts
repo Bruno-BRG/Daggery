@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
  * the old tables and never exposes these new ones.
  */
 export const LEGACY_CAMPAIGN_ID = 'legacy-unclaimed';
-export const CURRENT_VERSION = 14;
+export const CURRENT_VERSION = 15;
 
 /** Schema 6 adds AI sessions and the adventure journal. It only adds tables and columns, then backfills Session 1 for each AI campaign. Every step is idempotent. */
 function migrateAiSessions(db: Database.Database): void {
@@ -376,6 +376,12 @@ export function migrateCampaignDatabase(db: Database.Database): void {
     }
     // Version 14 lets a user cap the context window memory is budgeted against (0 = the model window).
     if (version < 14) addColumn(db, 'ai_credentials', 'context_limit INTEGER NOT NULL DEFAULT 0');
+    // Version 15 removes the AI Game Master and group play. Order matters: child tables go first so
+    // the foreign keys that referenced the chats and turns are already gone when those drop.
+    if (version < 15) {
+      const removed = ['ai_actions', 'ai_messages', 'ai_embeddings', 'ai_clues', 'ai_fronts', 'ai_npcs', 'ai_profiles', 'ai_canon', 'ai_journal', 'ai_turns', 'ai_chats', 'campaign_ai', 'ai_credentials', 'campaign_invites'];
+      for (const table of removed) db.exec(`DROP TABLE IF EXISTS ${table}`);
+    }
   })();
   // Changing a CHECK constraint needs a table rebuild, which only works with foreign_keys OFF
   // outside a transaction, so it runs after the main migration has committed.

@@ -4,8 +4,8 @@ import { setActiveCampaign, type ActiveCampaign } from './campaign-context';
 import { api } from './api';
 import { AuthPanel, LinkEmail } from './EmailLogin';
 import { Icon } from './components/Icon';
-import { type CampaignConfiguration } from '@daggery/shared';
-import { CampaignSettings, ConfigurationFields, partyLabel, SOLO_CONFIGURATION } from './CampaignConfiguration';
+import { CampaignSettings, partyLabel, SOLO_CONFIGURATION } from './CampaignConfiguration';
+import { LAST_CAMPAIGN_KEY } from './CampaignMenu';
 
 type User = { id: string; username: string };
 type Campaign = ActiveCampaign & { description: string; archivedAt: string | null };
@@ -18,7 +18,6 @@ export default function CampaignGate() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [active, setActive] = useState<Campaign | null>(null);
   const [name, setName] = useState('');
-  const [configuration, setConfiguration] = useState<CampaignConfiguration>(SOLO_CONFIGURATION);
   const [settings, setSettings] = useState<Campaign | null>(null);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -39,7 +38,8 @@ export default function CampaignGate() {
         setUser(result.user);
         if (result.user) {
           const list = await refresh();
-          const selected = list.find(c => c.id === sessionStorage.getItem('daggery:campaign') && !c.archivedAt);
+          const remembered = localStorage.getItem(LAST_CAMPAIGN_KEY);
+          const selected = list.find(c => c.id === remembered && !c.archivedAt) ?? list.find(c => !c.archivedAt);
           if (selected && !cancelled) { setActiveCampaign(selected); setActive(selected); }
         }
       } catch { if (!cancelled) setError('Server unavailable. Check that Daggery is running.'); }
@@ -49,12 +49,12 @@ export default function CampaignGate() {
   }, [refresh]);
   async function create(event: FormEvent) {
     event.preventDefault(); setError(''); setBusy('create');
-    try { await api('/api/campaigns', 'POST', { name, description: '', configuration }); setName(''); setConfiguration(SOLO_CONFIGURATION); await refresh(); }
+    try { const { id } = await api<{ id: string }>('/api/campaigns', 'POST', { name, description: '', configuration: SOLO_CONFIGURATION }); const list = await refresh(); const made = list.find(c => c.id === id); if (made) enter(made); else setName(''); }
     catch (e) { setError(e instanceof Error ? e.message : 'Could not create campaign.'); }
     finally { setBusy(null); }
   }
   function enter(campaign: Campaign) {
-    sessionStorage.setItem('daggery:campaign', campaign.id);
+    localStorage.setItem(LAST_CAMPAIGN_KEY, campaign.id);
     setActiveCampaign(campaign); setActive(campaign);
   }
   async function update(campaign: Campaign, archived: boolean, nextName = campaign.name) {
@@ -77,11 +77,11 @@ export default function CampaignGate() {
     setBusy(null);
   }
   async function logout() {
-    try { await api('/api/logout', 'POST'); sessionStorage.removeItem('daggery:campaign'); setActiveCampaign(null); window.location.reload(); }
+    try { await api('/api/logout', 'POST'); localStorage.removeItem(LAST_CAMPAIGN_KEY); setActiveCampaign(null); window.location.reload(); }
     catch (e) { setError(e instanceof Error ? e.message : 'Could not sign out.'); }
   }
   if (loading) return <main className="daggery-home"><p>Loading…</p></main>;
-  if (active) return <App onLeave={() => { sessionStorage.removeItem('daggery:campaign'); window.location.reload(); }} />;
+  if (active) return <App onLeave={() => { localStorage.removeItem(LAST_CAMPAIGN_KEY); window.location.reload(); }} />;
   if (!user) return <AuthPanel initialError={error} onLogin={async loggedIn => { await refresh(); setUser(loggedIn); }} />;
   const visible = campaigns.filter(c => !!c.archivedAt === showArchived && c.name.toLowerCase().includes(search.trim().toLowerCase()));
   const deletable = showArchived ? visible.filter(c => c.archivedAt && c.role === 'gm') : [];
@@ -90,7 +90,7 @@ export default function CampaignGate() {
     <>
       <div className="daggery-campaigns-intro"><p className="daggery-eyebrow">Welcome back, {user.username}</p><h1>Your solo adventures.</h1><p>Pick up where you left off, or start a new story.</p></div>
       <div className="daggery-campaign-forms">
-        <form onSubmit={create} className="daggery-home-feature"><h2><span className="daggery-shortcut-icon"><Icon name="compass" /></span>Start a solo adventure</h2><p>Name it, choose who you play, and begin.</p><label htmlFor="campaign-name">Campaign name</label><input id="campaign-name" className={input} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. The Ashen Wilds" maxLength={100} required /><ConfigurationFields value={configuration} onChange={setConfiguration} /><button className="daggery-primary" type="submit" disabled={busy !== null}>{busy === 'create' ? 'Creating…' : '+ Start adventure'}</button></form>
+        <form onSubmit={create} className="daggery-home-feature"><h2><span className="daggery-shortcut-icon"><Icon name="compass" /></span>Start a solo adventure</h2><p>Give it a name and begin. You can change who you play later in Settings.</p><label htmlFor="campaign-name">Campaign name</label><input id="campaign-name" className={input} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. The Ashen Wilds" maxLength={100} required /><button className="daggery-primary" type="submit" disabled={busy !== null}>{busy === 'create' ? 'Beginning…' : 'Begin campaign'}</button></form>
       </div>
       <div className="daggery-campaign-list-header"><h2>Your campaigns</h2><input className={input} aria-label="Search campaigns" placeholder="Find a campaign…" value={search} onChange={e => setSearch(e.target.value)} /><button className={button} aria-pressed={showArchived} onClick={() => setShowArchived(value => !value)}>{showArchived ? 'Show active' : 'Show archived'}</button>{deletable.length > 1 && <button className={`${button} daggery-danger`} disabled={busy !== null} onClick={() => void remove(deletable)}>{busy === 'delete' ? 'Deleting…' : `Delete all ${deletable.length}`}</button>}</div>
       {visible.length === 0 ? <div className="daggery-empty-state"><Icon name="book" /><strong>{search ? 'No matching campaigns.' : showArchived ? 'No archived adventures.' : 'Your next story starts here.'}</strong><p>{search ? 'Try a different name.' : showArchived ? 'Archived campaigns will appear here.' : 'Start a solo adventure above.'}</p></div> : <div className="daggery-campaign-grid">{visible.map(c => <section key={c.id} className="daggery-campaign-card"><div className="daggery-campaign-card-heading"><span className="daggery-campaign-monogram">{c.name.slice(0, 1).toUpperCase()}</span>{c.archivedAt && <span className="daggery-role-badge">Archived</span>}</div><h2>{c.name}</h2><span className="campaign-rule-label">{partyLabel(c.configuration)}</span><p>{c.description || 'A solo Daggerheart adventure.'}</p><div className="daggery-campaign-card-actions">{!c.archivedAt && <button className="daggery-primary" onClick={() => enter(c)}>Open campaign<Icon name="arrow" /></button>}{c.role === 'gm' && <><button className={button} onClick={() => setSettings(c)}>Settings</button><button className={button} onClick={() => { if (c.archivedAt || window.confirm('Archive this campaign?')) void update(c, !c.archivedAt); }}>{c.archivedAt ? 'Restore' : 'Archive'}</button>{c.archivedAt && <button className={`${button} daggery-danger`} disabled={busy !== null} onClick={() => void remove([c])}>Delete</button>}</>}</div></section>)}</div>}

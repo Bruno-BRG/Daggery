@@ -5,7 +5,7 @@ import { CURRENT_VERSION, migrateCampaignDatabase, openCampaignDatabase } from '
 import { CampaignService } from './campaign-service';
 import { SoloConflict, SoloService } from './solo';
 
-test('v2 campaigns migrate to Daggerheart Group while preserving documents and accounts', async () => {
+test('v2 campaigns migrate to Daggerheart Solo while preserving documents and accounts', async () => {
   const db = openCampaignDatabase(':memory:');
   try {
     const campaigns = new CampaignService(db), user = await campaigns.register('migration', 'a strong migration password');
@@ -16,28 +16,25 @@ test('v2 campaigns migrate to Daggerheart Group while preserving documents and a
     assert.equal(db.pragma('user_version', { simple: true }), CURRENT_VERSION);
     assert.deepEqual(campaigns.configuration(id), DEFAULT_CONFIGURATION);
     assert.equal((await campaigns.authenticate(user.username, 'a strong migration password'))?.id, user.id);
-    assert.match((db.prepare('SELECT value FROM campaign_docs WHERE campaign_id = ?').get(id) as { value: string }).value, /Existing hero/);
+    assert.match((db.prepare("SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = 'sheets' AND id = 'hero'").get(id) as { value: string }).value, /Existing hero/);
   } finally { db.close(); }
 });
 
-test('any user can create a configured campaign; solo privacy and configuration boundaries are enforced', async () => {
+test('campaigns are solo only and configuration boundaries are enforced', async () => {
   const db = openCampaignDatabase(':memory:');
   try {
     const campaigns = new CampaignService(db), user = await campaigns.register('soloowner', 'a strong owner password'), other = await campaigns.register('another', 'another strong owner password');
-    const solo = campaigns.createCampaign(user.id, 'Solo', '', { systemId: 'daggerheart', rulesetId: 'solo', options: { partyMode: 'party', partySize: 3 } });
-    assert.equal(campaigns.role(user.id, solo), 'gm');
-    assert.equal(campaigns.configuration(solo).options.partySize, 3);
-    assert.equal(JSON.parse((db.prepare("SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = 'combat' AND id = 'fear'").get(solo) as { value: string }).value).value, 3);
-    assert.throws(() => campaigns.createInvite(user.id, solo));
+    const campaign = campaigns.createCampaign(user.id, 'Solo', '', { systemId: 'daggerheart', rulesetId: 'solo', options: { partyMode: 'party', partySize: 3 } });
+    assert.equal(campaigns.role(user.id, campaign), 'gm');
+    assert.equal(campaigns.role(other.id, campaign), null);
+    assert.equal(campaigns.configuration(campaign).options.partySize, 3);
+    assert.equal(JSON.parse((db.prepare("SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = 'combat' AND id = 'fear'").get(campaign) as { value: string }).value).value, 3);
     assert.throws(() => campaigns.createCampaign(user.id, 'Bad', '', { systemId: 'missing', rulesetId: 'solo' }));
-    const group = campaigns.createCampaign(user.id, 'Group');
-    const invite = campaigns.createInvite(user.id, group);
-    campaigns.updateCampaign(user.id, group, 'Now solo', '', false, { systemId: 'daggerheart', rulesetId: 'solo' });
-    assert.throws(() => campaigns.acceptInvite(other.id, invite));
-    const shared = campaigns.createCampaign(user.id, 'Shared');
-    campaigns.acceptInvite(other.id, campaigns.createInvite(user.id, shared));
-    assert.throws(() => campaigns.updateCampaign(user.id, shared, 'No', '', false, { systemId: 'daggerheart', rulesetId: 'solo' }));
-    assert.throws(() => campaigns.updateCampaign(other.id, shared, 'No', '', false, DEFAULT_CONFIGURATION));
+    assert.throws(() => campaigns.updateCampaign(other.id, campaign, 'No', '', false, DEFAULT_CONFIGURATION));
+    // A stored legacy group configuration opens as a solo campaign.
+    db.prepare('UPDATE campaigns SET configuration = ? WHERE id = ?').run(JSON.stringify({ systemId: 'daggerheart', rulesetId: 'core', options: {} }), campaign);
+    assert.deepEqual(campaigns.configuration(campaign), DEFAULT_CONFIGURATION);
+    assert.equal(campaigns.listCampaigns(user.id)[0]?.configuration.rulesetId, 'solo');
   } finally { db.close(); }
 });
 
@@ -46,9 +43,9 @@ test('solo preparation, oracle history, accepted facts and procedures persist wi
   try {
     const campaigns = new CampaignService(db), user = await campaigns.register('soloplay', 'a strong play password'), stranger = await campaigns.register('stranger', 'another strong play password');
     const id = campaigns.createCampaign(user.id, 'Solo', '', { systemId: 'daggerheart', rulesetId: 'solo', options: { partyMode: 'companion' } });
-    const group = campaigns.createCampaign(user.id, 'Group');
+    const foreign = campaigns.createCampaign(stranger.id, 'Foreign');
     const published: string[] = [], solo = new SoloService(db, campaigns, (_campaign, ns, key) => { published.push(`${ns}/${key}`); });
-    assert.throws(() => solo.snapshot(stranger.id, id)); assert.throws(() => solo.snapshot(user.id, group));
+    assert.throws(() => solo.snapshot(stranger.id, id)); assert.throws(() => solo.snapshot(user.id, foreign));
     const state = initialSoloState(); state.scene.title = 'The lighthouse'; state.pool[0] = 'The keeper';
     state.countdowns.progressName = 'Find the exit'; state.countdowns.consequenceName = 'Flood';
     state.companions.push({ id: 'ally', name: 'Mira', motive: 'Protect', bond: 'Friend', specialty: 'Scout', tier: 1, hpMarked: 0, stressMarked: 0 });

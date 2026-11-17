@@ -85,5 +85,4 @@ export type ServerMessage =
   | { type: 'hello'; rolls: RollLogEntry[] }
   | { type: 'roll'; entry: RollLogEntry }
   /** In-progress GM narration for one turn. Replaced by the final persisted message. */
-  | { type: 'ai-stream'; turnId: string; chatId: string; round: number; text: string }
   | { type: 'error'; message: string };

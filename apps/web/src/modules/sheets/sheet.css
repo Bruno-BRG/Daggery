@@ -518,3 +518,11 @@
 .sg-page .sg-card-text small { overflow-wrap: anywhere; }
 .sg-page .sg-empty > p { margin: 0 0 8px; }
 .sg-page .sg-empty > .daggery-primary { margin-top: 6px; }
+
+/* Hero switcher in the folio toolbar (modules/sheets/index.tsx). */
+.sheet-hero-switcher { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sheet-hero-picker { display: inline-flex; align-items: center; gap: 5px; min-width: 0; min-height: 32px; padding: 0 6px; border: 1px solid var(--sheet-line); border-radius: var(--radius-md); background: var(--sheet-sunken); color: var(--ds-muted); }
+.sheet-hero-picker > .daggery-icon { width: 14px; height: 14px; flex: none; }
+.sheet-hero-picker select { max-width: 150px; min-width: 0; border: 0; background: transparent; color: var(--ds-ink); font-size: 12px; font-weight: 600; }
+.character-folio .sheet-hero-switcher .sheet-ghost { min-height: 32px; padding: 0 9px; }
+@container (max-width: 620px) { .character-folio .sheet-hero-new > span { display: none; } }

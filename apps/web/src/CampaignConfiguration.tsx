@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { GAME_SYSTEMS, normalizeConfiguration, type CampaignConfiguration } from '@daggery/shared';
+import { normalizeConfiguration, type CampaignConfiguration } from '@daggery/shared';
 import { Dialog } from './components/Dialog';
 import { api } from './api';
 import type { ActiveCampaign } from './campaign-context';
@@ -17,11 +17,9 @@ export function partyLabel(configuration: CampaignConfiguration): string {
 
 /** Who you play and how the world answers. No systems or rulesets to pick: it is always solo. */
 export function ConfigurationFields({ value, onChange }: { value: CampaignConfiguration; onChange: (value: CampaignConfiguration) => void }) {
-  const system = GAME_SYSTEMS.find(system => system.id === value.systemId);
   const Options = getSystemUI(value)?.optionsEditor;
   return <fieldset className="campaign-config-fields"><legend>Your game</legend>
     {Options && <Options value={value} onChange={onChange} />}
-    {system?.supportsAiGm && <label>The world answers through<select aria-label="The world answers through" value={value.gmController ?? 'human'} onChange={event => onChange(normalizeConfiguration({ ...value, gmController: event.target.value }))}><option value="human">Oracles (Duality GME)</option><option value="ai">An AI Game Master · needs your API key</option></select></label>}
   </fieldset>;
 }
 

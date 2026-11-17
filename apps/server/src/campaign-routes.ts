@@ -14,6 +14,9 @@ interface Options {
 const object = (value: unknown): Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const text = (value: unknown): string => typeof value === 'string' ? value : '';
+/** A filesystem-safe base for the export's download filename. */
+const slug = (name: string): string =>
+  name.normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'campaign';
 
 export function readSessionToken(cookieHeader: string | undefined, secureCookies: boolean): string {
   const cookieName = secureCookies ? '__Host-daggery_session' : 'daggery_session';
@@ -62,8 +65,10 @@ export async function registerCampaignRoutes(app: FastifyInstance, options: Opti
   });
   app.setErrorHandler((error, _request, reply) => {
     if (!(error instanceof Error)) return reply.code(500).send({ error: 'Request failed' });
+    // Fastify raises 413 before the body parser runs; keep that status instead of masking it as 500.
+    if ((error as { statusCode?: number }).statusCode === 413) return reply.code(413).send({ error: 'Request body is too large' });
     if (error.message === 'Unauthorized') return reply.code(401).send({ error: 'Unauthorized' });
-    if (error.message === 'Forbidden' || error.message === 'Invalid invite') return reply.code(403).send({ error: 'Forbidden' });
+    if (error.message === 'Forbidden') return reply.code(403).send({ error: 'Forbidden' });
     if (error.message.startsWith('Invalid ')) return reply.code(400).send({ error: error.message.slice(0, 500) });
     // Do not expose SQL errors, credentials or invitation tokens.
     return reply.code(500).send({ error: 'Request failed' });
@@ -133,26 +138,25 @@ export async function registerCampaignRoutes(app: FastifyInstance, options: Opti
   });
   app.get('/api/me', async (request) => ({ user: currentUser(request) }));
   app.get('/api/campaigns', async (request) => ({ campaigns: service.listCampaigns(requireUser(request).id) }));
-  app.get('/api/campaigns/:campaignId/members', async (request) => ({ members: service.listMembers(requireUser(request).id, campaignId(request)) }));
   app.post('/api/campaigns', async (request, reply) => {
     const user = requireUser(request), body = object(request.body);
     const id = service.createCampaign(user.id, text(body.name), text(body.description), body.configuration);
     return reply.code(201).send({ id });
   });
+  app.get('/api/campaigns/:campaignId/export', async (request, reply) => {
+    const data = service.exportCampaign(requireUser(request).id, campaignId(request));
+    return reply
+      .header('Content-Type', 'application/json; charset=utf-8')
+      .header('Content-Disposition', `attachment; filename="${slug(data.campaign.name)}.daggery.json"`)
+      .send(data);
+  });
+  app.post('/api/campaigns/import', { bodyLimit: 10 * 1024 * 1024 }, async (request, reply) => {
+    const campaign = service.importCampaign(requireUser(request).id, request.body);
+    return reply.code(201).send({ campaign });
+  });
   app.patch('/api/campaigns/:campaignId', async (request) => {
     const user = requireUser(request), body = object(request.body);
     service.updateCampaign(user.id, campaignId(request), text(body.name), text(body.description), body.archived as boolean, body.configuration);
-    return { ok: true };
-  });
-  app.post('/api/campaigns/:campaignId/invites', async (request, reply) => {
-    const value = service.createInvite(requireUser(request).id, campaignId(request));
-    return reply.code(201).send({ token: value });
-  });
-  app.post('/api/invites/accept', async (request) => ({
-    campaignId: service.acceptInvite(requireUser(request).id, text(object(request.body).token)),
-  }));
-  app.post('/api/campaigns/:campaignId/invites/revoke', async (request) => {
-    service.revokeInvite(requireUser(request).id, campaignId(request), text(object(request.body).token));
     return { ok: true };
   });
   app.get('/api/campaigns/:campaignId/notes', async (request) => ({ notes: service.listNotes(requireUser(request).id, campaignId(request)) }));

@@ -1,0 +1,63 @@
+/* ============================================================ Campaign: the world, its people and places, threads and loot */
+
+.sg-page.campaign-page { padding-bottom: 48px; }
+
+/* Page header */
+.campaign-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; padding: 22px 18px 14px; }
+.campaign-heading > div { min-width: 0; }
+.campaign-heading h1 { display: flex; align-items: center; gap: 10px; margin: 4px 0 8px; font-size: 26px; font-weight: 650; }
+.campaign-heading p { margin: 0; color: var(--ds-muted); font-size: 13px; line-height: 1.6; }
+.campaign-kicker { margin: 0 0 2px; color: var(--ds-brand); font-size: 12px; }
+.campaign-notice { margin: 0 18px 8px; padding: 10px 12px; border: 1px solid var(--ds-brand-line); border-radius: var(--radius-sm); background: var(--ds-brand-soft); color: var(--ds-ink); font-size: 13px; line-height: 1.5; }
+.campaign-muted { color: var(--ds-muted); font-size: 13px; line-height: 1.6; }
+
+/* Cards and lists */
+.campaign-cards { display: grid; gap: 8px; min-width: 0; }
+.campaign-page .sg-card-body p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.campaign-page .sg-group-head span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.campaign-page .sg-row-line > .daggery-icon { width: 16px; height: 16px; color: var(--ds-muted); }
+.campaign-page :is(button, input, select, textarea, summary, a):focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
+
+/* Forms: selects, inputs and text areas keep one look inside a card */
+.campaign-form-row { display: flex; flex-wrap: wrap; gap: 10px 14px; min-width: 0; }
+.campaign-form-row > * { flex: 1 1 130px; min-width: 0; }
+.campaign-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; color: var(--ds-faint); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.campaign-field :is(input, select, textarea) { width: 100%; min-width: 0; max-width: 100%; padding: 9px 11px; border: 1px solid var(--ds-control); border-radius: var(--radius-xs); background: var(--ds-inset); color: var(--ds-ink); font: inherit; font-size: 13.5px; font-weight: 400; line-height: 1.5; letter-spacing: normal; text-transform: none; }
+.campaign-field textarea { min-height: 120px; resize: vertical; }
+.campaign-field :is(input, textarea)::placeholder { color: var(--ds-faint); opacity: 1; }
+
+/* Editors inside a card */
+.campaign-editor { display: grid; gap: 14px; min-width: 0; }
+.campaign-editor-fields { display: grid; gap: 16px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.campaign-editor-fields > .campaign-field { gap: 8px; }
+.campaign-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; min-width: 0; }
+.campaign-fields .campaign-field { gap: 8px; }
+.campaign-fields textarea { min-height: 104px; }
+.campaign-save-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; min-width: 0; }
+.campaign-save-bar > span { flex: 1 1 100px; }
+.campaign-editor > p[role="alert"] { margin: 0; color: var(--color-rose-300); font-size: 13px; line-height: 1.5; }
+.campaign-delete { margin-left: auto; }
+
+.campaign-environment { padding: 12px 14px; border: 1px solid var(--ds-border); border-radius: var(--radius-sm); background: var(--ds-inset); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.campaign-environment summary { font-weight: 650; cursor: pointer; }
+.campaign-environment p { margin-top: 10px; white-space: pre-wrap; }
+.campaign-environment section { margin-top: 16px; }
+.campaign-environment h3 { font-weight: 650; }
+.campaign-environment h3 small { margin-left: 6px; color: var(--ds-muted); font-weight: 400; }
+
+/* Loot tables */
+.campaign-roll-number { display: inline-grid; place-items: center; min-width: 28px; height: 26px; padding: 0 5px; border-radius: var(--radius-xs); background: var(--ds-hover); color: var(--ds-muted); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.campaign-help { margin: 2px 0 0; color: var(--ds-muted); font-size: 12px; line-height: 1.5; }
+.campaign-help a { text-decoration: underline; }
+
+@media (max-width: 1100px) {
+  .campaign-fields { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .campaign-heading { padding: 16px 14px 10px; gap: 8px; }
+  .campaign-heading h1 { font-size: 23px; }
+  .campaign-notice { margin-inline: 14px; }
+  .campaign-form-row { gap: 10px; }
+  .campaign-save-bar > span { flex: 1 1 100%; }
+}

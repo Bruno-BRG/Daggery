@@ -12,7 +12,7 @@ import { CampaignService } from './campaign-service';
 import { registerCampaignRoutes } from './campaign-routes';
 import { registerSecureGame } from './secure-game';
 
-test('solo HTTP endpoints validate configurations, membership, CSRF, revisions and resource isolation', async () => {
+test('solo HTTP endpoints validate configurations, ownership, CSRF, revisions and resource isolation', async () => {
   const db = openCampaignDatabase(':memory:'), app = Fastify({ logger: false });
   const assetsDir = mkdtempSync(join(tmpdir(), 'solo-routes-')), origin = 'http://localhost:5173';
   try {
@@ -28,9 +28,6 @@ test('solo HTTP endpoints validate configurations, membership, CSRF, revisions a
     assert.equal((await app.inject({ method: 'POST', url: '/api/campaigns', headers: { origin, cookie }, payload: { name: 'Bad', configuration: { systemId: 'unknown', rulesetId: 'solo' } } })).statusCode, 400);
     assert.equal((await app.inject({ method: 'GET', url: base })).statusCode, 401);
     assert.equal((await app.inject({ method: 'GET', url: base, headers: { cookie: outsider } })).statusCode, 403);
-    // Even an imported player membership cannot read GM-only solo state.
-    db.prepare("INSERT INTO campaign_members VALUES (?, ?, 'player')").run(id, other.id);
-    assert.equal((await app.inject({ method: 'GET', url: base, headers: { cookie: outsider } })).statusCode, 403);
     const state = initialSoloState(); state.scene.title = 'Private';
     assert.equal((await app.inject({ method: 'PUT', url: `${base}/state`, headers: { origin: 'http://evil.test', cookie }, payload: state })).statusCode, 403);
     assert.equal((await app.inject({ method: 'PUT', url: `${base}/state`, headers: { origin, cookie }, payload: state })).statusCode, 200);
@@ -44,6 +41,5 @@ test('solo HTTP endpoints validate configurations, membership, CSRF, revisions a
     assert.equal(reloaded.state.scene.title, 'Private'); assert.equal(reloaded.entries[0].interpretation, 'The hut is empty.');
     assert.deepEqual(db.prepare("SELECT value FROM campaign_docs WHERE campaign_id = ? AND ns = 'combat'").get(id), before);
     assert.equal((await app.inject({ method: 'POST', url: `${base}/roll`, headers: { origin, cookie }, payload: { requestId: 'invalid', kind: 'oracle', question: 'Q', likelihood: 'wrong' } })).statusCode, 400);
-    assert.equal((await app.inject({ method: 'POST', url: `/api/campaigns/${id}/invites`, headers: { origin, cookie } })).statusCode, 400);
   } finally { await app.close(); db.close(); rmSync(assetsDir, { recursive: true, force: true }); }
 });

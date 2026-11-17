@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useDocs } from '../../sync/store';
 import Wizard from './Wizard';
 import SheetView from './SheetView';
+import { useActiveHero } from './activeHero';
 import { Icon } from '../../components/Icon';
 import { IconButton, ItemCard, PanelSection, TONES } from '../../components/Accordion';
 import { getAncestry, getClass, getCommunity, getSubclass, hpMax, stressMax, tierLabel } from './rules';
@@ -9,17 +10,19 @@ import type { Sheet } from './types';
 import { portraitImage } from './appearance';
 import './sheet.css';
 
+const NEW_HERO = '__new-hero';
+const ALL_HEROES = '__all-heroes';
+
+/**
+ * Hero-first characters page: the module opens the active hero's sheet directly, and the
+ * toolbar switcher moves between heroes or out to the full list. `allHeroes` is the escape
+ * hatch back to the library (and the empty state that starts the creation wizard).
+ */
 export default function SheetsModule({ author }: { author: string }) {
-  const { items, set, remove } = useDocs<Sheet>('sheets');
+  const { set, remove } = useDocs<Sheet>('sheets');
+  const { hero, heroes, select } = useActiveHero();
   const [creating, setCreating] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const sheets = useMemo(
-    () => Object.values(items).sort((left, right) => (left.createdAt ?? '').localeCompare(right.createdAt ?? '')),
-    [items],
-  );
-
-  const selected = selectedId ? items[selectedId] : undefined;
+  const [allHeroes, setAllHeroes] = useState(false);
 
   if (creating) {
     return (
@@ -29,23 +32,33 @@ export default function SheetsModule({ author }: { author: string }) {
         onCreate={(sheet) => {
           set(sheet.id, sheet);
           setCreating(false);
-          setSelectedId(sheet.id);
+          setAllHeroes(false);
+          select(sheet.id);
         }}
       />
     );
   }
 
-  if (selected) {
+  if (hero && !allHeroes) {
     return (
       <SheetView
-        sheet={selected}
+        sheet={hero}
         author={author}
-        onBack={() => setSelectedId(null)}
+        onBack={() => setAllHeroes(true)}
         onChange={(next) => set(next.id, next)}
-        onDelete={() => {
-          remove(selected.id);
-          setSelectedId(null);
-        }}
+        onDelete={() => remove(hero.id)}
+        heroNav={
+          <HeroSwitcher
+            heroes={heroes}
+            activeId={hero.id}
+            onSelect={(id) => {
+              select(id);
+              setAllHeroes(false);
+            }}
+            onNew={() => setCreating(true)}
+            onAll={() => setAllHeroes(true)}
+          />
+        }
       />
     );
   }
@@ -61,7 +74,7 @@ export default function SheetsModule({ author }: { author: string }) {
           </button>
         }
       >
-        {sheets.length === 0 ? (
+        {heroes.length === 0 ? (
           <div className="sg-empty">
             <p>No character sheets yet.</p>
             <p>
@@ -74,22 +87,58 @@ export default function SheetsModule({ author }: { author: string }) {
           </div>
         ) : (
           <div className="daggery-character-grid">
-            {sheets.map((sheet) => (
+            {heroes.map((sheet) => (
               <SheetCard
                 key={sheet.id}
                 sheet={sheet}
-                onOpen={() => setSelectedId(sheet.id)}
+                onOpen={() => {
+                  select(sheet.id);
+                  setAllHeroes(false);
+                }}
                 onDelete={() => {
-                  if (window.confirm(`Delete ${sheet.name}'s sheet?`)) {
-                    remove(sheet.id);
-                    if (selectedId === sheet.id) setSelectedId(null);
-                  }
+                  if (window.confirm(`Delete ${sheet.name}'s sheet?`)) remove(sheet.id);
                 }}
               />
             ))}
           </div>
         )}
       </PanelSection>
+    </div>
+  );
+}
+
+/** Unobtrusive toolbar menu: pick a hero, jump to the library, or start a new hero. */
+function HeroSwitcher({ heroes, activeId, onSelect, onNew, onAll }: {
+  heroes: Sheet[];
+  activeId: string;
+  onSelect: (id: string) => void;
+  onNew: () => void;
+  onAll: () => void;
+}) {
+  return (
+    <div className="sheet-hero-switcher">
+      {heroes.length > 1 && (
+        <label className="sheet-hero-picker">
+          <Icon name="sheet" />
+          <select
+            aria-label="Switch hero"
+            value={activeId}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === NEW_HERO) onNew();
+              else if (value === ALL_HEROES) onAll();
+              else onSelect(value);
+            }}
+          >
+            {heroes.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
+            <option value={ALL_HEROES}>All characters…</option>
+            <option value={NEW_HERO}>New hero…</option>
+          </select>
+        </label>
+      )}
+      <button type="button" className="sheet-ghost is-small sheet-hero-new" onClick={onNew} aria-label="New hero">
+        <Icon name="plus" /><span>New hero</span>
+      </button>
     </div>
   );
 }

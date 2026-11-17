@@ -4,7 +4,7 @@ import { initialSoloState, resolveSoloOracle, resolveSoloScene, soloPrompt, SOLO
 
 describe('campaign system registry', () => {
   test('a registered future system keeps its own options and document policies without inheriting Daggerheart tools', () => {
-    const system: GameSystemDefinition = { id: 'test-system', name: 'Test system', rulesets: [{ id: 'standard', name: 'Standard', mode: 'group', version: '1', description: 'Test', features: ['test-system.characters'], documents: [{ namespace: 'test-characters', read: 'members', write: 'members' }], normalizeOptions: options => ({ custom: options.custom ?? true }) }] };
+    const system: GameSystemDefinition = { id: 'test-system', name: 'Test system', rulesets: [{ id: 'standard', name: 'Standard', mode: 'solo', version: '1', description: 'Test', features: ['test-system.characters'], documents: [{ namespace: 'test-characters', read: 'members', write: 'members' }], normalizeOptions: options => ({ custom: options.custom ?? true }) }] };
     const registry = GAME_SYSTEMS as GameSystemDefinition[];
     registry.push(system);
     try {
@@ -17,7 +17,7 @@ describe('campaign system registry', () => {
   });
   test('defaults only omitted configuration; rejects unknown systems, incompatible rulesets, and invalid options', () => {
     expect(normalizeConfiguration()).toEqual(DEFAULT_CONFIGURATION);
-    for (const value of [null, {}, { systemId: 'missing', rulesetId: 'core' }, { systemId: 'daggerheart', rulesetId: 'missing' }, { systemId: 'daggerheart', rulesetId: 'solo', options: { partyMode: 'whatever' } }, { systemId: 'daggerheart', rulesetId: 'solo', options: { fearThreshold: '3' } }]) expect(() => normalizeConfiguration(value)).toThrow();
+    for (const value of [null, {}, { systemId: 'missing', rulesetId: 'solo' }, { systemId: 'daggerheart', rulesetId: 'missing' }, { systemId: 'daggerheart', rulesetId: 'solo', options: { partyMode: 'whatever' } }, { systemId: 'daggerheart', rulesetId: 'solo', options: { fearThreshold: '3' } }]) expect(() => normalizeConfiguration(value)).toThrow();
     const solo = normalizeConfiguration({ systemId: 'daggerheart', rulesetId: 'solo' });
     expect(solo.options).toEqual({ partyMode: 'lone', fearThreshold: 3, partySize: 2 });
     expect(getRuleset(solo)?.features).toContain('daggerheart.solo');
@@ -25,7 +25,15 @@ describe('campaign system registry', () => {
     expect(canWriteDocument(solo, 'gm', 'daggerheart.solo')).toBe(false);
     expect(canReadDocument(solo, 'player', 'combat', 'fear')).toBe(true);
     expect(canWriteDocument(solo, 'gm', 'combat', 'fear')).toBe(false);
-    expect(canReadDocument(DEFAULT_CONFIGURATION, 'gm', 'solo', 'state')).toBe(false);
+    expect(canReadDocument(DEFAULT_CONFIGURATION, 'gm', 'solo', 'state')).toBe(true);
+    expect(canWriteDocument(DEFAULT_CONFIGURATION, 'gm', 'solo', 'state')).toBe(false);
+    expect(getRuleset(solo)?.documents.some(policy => policy.namespace === 'map')).toBe(false);
+  });
+  test('legacy group campaigns normalise onto the solo ruleset with default options', () => {
+    expect(normalizeConfiguration({ systemId: 'daggerheart', rulesetId: 'core' })).toEqual(DEFAULT_CONFIGURATION);
+    expect(normalizeConfiguration({ systemId: 'daggerheart', rulesetId: 'core', options: { partyMode: 'party', partySize: 3 } })).toEqual(DEFAULT_CONFIGURATION);
+    expect(normalizeConfiguration({ systemId: 'daggerheart', rulesetId: 'core', options: {}, gmController: { enabled: true } })).toEqual(DEFAULT_CONFIGURATION);
+    expect(DEFAULT_CONFIGURATION.rulesetId).toBe('solo');
   });
 });
 describe('solo duality engine', () => {
