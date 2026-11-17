@@ -18,29 +18,8 @@
 .solo-search kbd { position: absolute; right: 9px; display: grid; place-items: center; min-width: 20px; height: 20px; border: 1px solid var(--ds-border); border-radius: 5px; color: var(--ds-faint); font: 600 11px/1 var(--font-mono, monospace); pointer-events: none; }
 
 /* ============================================================ Oracle dock */
-.solo-dock { position: sticky; top: 0; z-index: 6; display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px 0; margin: 0 -8px 18px; padding: 10px 8px; border-bottom: 1px solid var(--ds-border); background: color-mix(in srgb, var(--ds-surface) 94%, transparent); backdrop-filter: blur(12px); }
-.solo-dock-group { display: grid; gap: 5px; align-content: start; padding: 0 14px; border-left: 1px solid var(--ds-border); }
-.solo-dock-group:first-child { padding-left: 0; border-left: 0; }
-.solo-dock-label { color: var(--ds-faint); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
-.solo-dock-buttons { display: flex; flex-wrap: wrap; gap: 5px; }
-.solo-dock-buttons > button { display: grid; justify-items: start; gap: 1px; min-height: 42px; padding: 5px 11px; border: 1px solid var(--ds-control); border-radius: var(--radius-sm); background: var(--ds-raised); color: var(--ds-ink); text-align: left; cursor: pointer; transition: border-color .15s, background .15s, transform .08s; }
-.solo-dock-buttons > button span { font-size: 12.5px; font-weight: 650; line-height: 1.2; white-space: nowrap; }
-.solo-dock-buttons > button small { color: var(--ds-faint); font-size: 10.5px; font-weight: 550; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.solo-dock-buttons > button:hover:not(:disabled) { border-color: var(--ds-brand); background: var(--ds-brand-soft); }
-.solo-dock-buttons > button:active:not(:disabled) { transform: translateY(1px); }
-.solo-dock-fear .solo-dock-buttons > button:hover:not(:disabled) { border-color: var(--ds-fear); background: var(--ds-fear-soft); }
-.solo-dock-buttons > button.is-price { border-color: color-mix(in srgb, var(--ds-fear) 45%, var(--ds-control)); }
-.solo-dock-buttons > button.is-price:hover { border-color: var(--ds-fear); background: var(--ds-fear-soft); }
-@keyframes solo-pulse { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 4px var(--ds-brand-soft); } }
-.solo-dock-oracle.is-pulsing .solo-dock-buttons > button { animation: solo-pulse 1.1s ease-out 2; border-color: var(--ds-brand-line); }
 
 /* Steppers: Fear, modifier */
-.solo-stepper { display: inline-flex; align-items: center; height: 42px; border: 1px solid var(--ds-control); border-radius: var(--radius-sm); background: var(--ds-inset); overflow: hidden; }
-.solo-stepper button { display: grid; place-items: center; width: 34px; height: 100%; padding: 0; border: 0; background: transparent; color: var(--ds-muted); cursor: pointer; }
-.solo-stepper button:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-ink); }
-.solo-stepper .daggery-icon { width: 14px; height: 14px; }
-.solo-stepper output { min-width: 34px; text-align: center; font: 700 17px/1 var(--font-display); font-variant-numeric: tabular-nums; }
-.solo-stepper.is-fear output { color: var(--ds-fear); }
 
 
 /* ============================================================ Moves */
@@ -58,45 +37,12 @@
 .solo-move-block h3, .solo-field-label { margin: 0; color: var(--ds-faint); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
 
 /* Linked rolls */
-.solo-steps { display: flex; flex-wrap: wrap; gap: 6px; }
-.solo-steps button { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border: 1px solid var(--ds-brand-line); border-radius: 999px; background: var(--ds-brand-soft); color: var(--ds-brand-strong); font-size: 12.5px; font-weight: 650; cursor: pointer; transition: background .15s, border-color .15s; }
-.solo-steps button:hover { border-color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 24%, transparent); }
-.solo-steps button.is-price { border-color: color-mix(in srgb, var(--ds-fear) 50%, transparent); background: var(--ds-fear-soft); color: var(--ds-fear); }
-.solo-steps button.is-price:hover { border-color: var(--ds-fear); }
-.solo-steps .daggery-icon { width: 13px; height: 13px; }
-.solo-steps.is-compact button { min-height: 28px; padding: 0 10px; font-size: 12px; }
 
 /* Rollers */
-.solo-roller { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-inset); }
-.solo-roller-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; }
 .solo-field { display: grid; gap: 6px; }
-.solo-segmented { display: inline-flex; border: 1px solid var(--ds-control); border-radius: var(--radius-sm); background: var(--ds-raised); overflow: hidden; }
-.solo-segmented button { display: grid; justify-items: center; gap: 1px; min-width: 62px; padding: 5px 8px; border: 0; border-left: 1px solid var(--ds-border); background: transparent; color: var(--ds-muted); cursor: pointer; }
-.solo-segmented button:first-child { border-left: 0; }
-.solo-segmented button strong { font: 700 16px/1.1 var(--font-display); color: var(--ds-ink); font-variant-numeric: tabular-nums; }
-.solo-segmented button small { font-size: 10px; font-weight: 600; white-space: nowrap; }
-.solo-segmented button:hover { background: var(--ds-hover); }
-.solo-segmented button[aria-checked="true"] { background: var(--ds-brand-soft); color: var(--ds-brand-strong); box-shadow: inset 0 -2px 0 var(--ds-brand); }
-.solo-segmented button[aria-checked="true"] strong { color: var(--ds-brand-strong); }
-.solo-roller-hint { margin: 0; color: var(--ds-muted); font-size: 12px; line-height: 1.5; }
 
-.solo-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 0 18px; border: 1px solid var(--ds-brand); border-radius: var(--radius-sm); background: var(--ds-brand); color: var(--ds-on-brand); font-size: 13.5px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: filter .15s, transform .08s; }
-.solo-primary:hover { filter: brightness(1.08); }
-.solo-primary:active { transform: translateY(1px); }
-.solo-primary .daggery-icon { width: 16px; height: 16px; }
-.solo-primary.is-quiet { background: var(--ds-brand-soft); color: var(--ds-brand-strong); border-color: var(--ds-brand-line); }
 
-.solo-boxes { display: inline-flex; gap: 3px; }
-.solo-boxes button { width: 24px; height: 30px; padding: 0; border: 1px solid var(--ds-control); border-radius: 4px; background: var(--ds-raised); color: var(--ds-faint); font-size: 10.5px; font-weight: 700; cursor: pointer; }
-.solo-boxes button:hover { border-color: var(--ds-brand); }
-.solo-boxes button.is-filled { border-color: var(--ds-brand-line); background: var(--ds-brand); }
-.solo-boxes button[aria-checked="true"] { outline: 2px solid var(--ds-brand-strong); outline-offset: 1px; }
 
-.solo-record { padding-top: 6px; border-top: 1px dashed var(--ds-border); color: var(--ds-muted); font-size: 12px; }
-.solo-record summary { width: fit-content; padding: 6px 0; cursor: pointer; }
-.solo-record > div { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }
-.solo-record button { min-height: 28px; padding: 0 10px; border: 1px solid var(--ds-border); border-radius: 999px; background: transparent; color: var(--ds-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
-.solo-record button:hover { color: var(--ds-ink); border-color: var(--ds-control); background: var(--ds-hover); }
 
 /* Outcomes */
 .solo-outcomes { display: grid; gap: 8px; }
@@ -111,11 +57,7 @@
 .solo-outcome.is-current { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 9%, var(--ds-raised)); animation: solo-pop .25s ease-out; }
 
 /* ============================================================ Tables */
-.solo-pair-bar { display: flex; flex-wrap: wrap; gap: 8px; }
 
-.solo-roll { display: inline-flex; align-items: center; gap: 6px; flex: none; min-height: 32px; padding: 0 12px; border: 1px solid var(--ds-brand-line); border-radius: var(--radius-sm); background: var(--ds-brand-soft); color: var(--ds-brand-strong); font-size: 12.5px; font-weight: 700; cursor: pointer; }
-.solo-roll:hover { border-color: var(--ds-brand); }
-.solo-roll .daggery-icon { width: 14px; height: 14px; }
 
 
 
@@ -129,9 +71,6 @@
 .solo-table tbody tr.is-rolled > .solo-range { color: var(--ds-brand-strong); }
 .solo-table td.is-answer { font-weight: 650; background: color-mix(in srgb, var(--ds-brand) 16%, transparent); box-shadow: inset 3px 0 0 var(--ds-brand); animation: solo-flash .7s ease-out; }
 .solo-cell-range { display: block; color: var(--ds-faint); font-size: 10.5px; font-weight: 500; }
-.solo-column-roll { display: inline-flex; align-items: center; gap: 5px; min-height: 26px; margin: 0 -6px; padding: 0 6px; border: 1px solid transparent; border-radius: var(--radius-xs); background: transparent; color: inherit; text-transform: inherit; letter-spacing: inherit; font-size: inherit; font-weight: inherit; cursor: pointer; }
-.solo-column-roll:hover { border-color: var(--ds-brand-line); background: var(--ds-brand-soft); color: var(--ds-brand-strong); }
-.solo-column-roll .daggery-icon { width: 12px; height: 12px; }
 
 /* Search */
 .solo-rules h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 15px; font-weight: 650; }
@@ -151,43 +90,8 @@
 .solo-reference-block dd { margin: 0; overflow-wrap: anywhere; }
 
 /* ============================================================ Results log */
-.solo-log { position: sticky; top: calc(var(--solo-dock-height) + 4px); display: grid; grid-template-rows: auto minmax(0, 1fr); max-height: calc(100vh - var(--solo-dock-height) - 24px); border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-raised); overflow: hidden; }
-.solo-log-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 10px 10px 16px; border-bottom: 1px solid var(--ds-border); }
-.solo-log-head h2 { margin: 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ds-muted); }
-.solo-log-head div { display: flex; gap: 4px; }
-.solo-log-head button { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; padding: 0 9px; border: 1px solid var(--ds-border); border-radius: var(--radius-xs); background: transparent; color: var(--ds-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
-.solo-log-head button:hover:not(:disabled) { color: var(--ds-ink); background: var(--ds-hover); }
-.solo-log-head .daggery-icon { width: 13px; height: 13px; }
-.solo-log-scroll { display: grid; align-content: start; gap: 10px; padding: 12px; overflow-y: auto; scrollbar-width: thin; }
-.solo-log-empty { display: grid; justify-items: center; gap: 8px; padding: 34px 14px; color: var(--ds-muted); text-align: center; font-size: 12.5px; line-height: 1.55; }
-.solo-log-empty .daggery-icon { width: 28px; height: 28px; color: var(--ds-faint); }
-.solo-log-empty strong { color: var(--ds-ink); font-size: 14px; }
-.solo-log-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 
-.solo-entry { --tone: var(--ds-muted); display: grid; gap: 4px; padding: 9px 11px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-inset); box-shadow: inset 2px 0 0 var(--tone); }
-.solo-entry.is-yes { --tone: var(--ds-brand); }
-.solo-entry.is-no { --tone: var(--ds-fear); }
-.solo-entry.is-crit { --tone: var(--ds-brand-strong); }
-.solo-entry header { display: flex; align-items: center; gap: 6px; color: var(--ds-faint); font-size: 11px; font-weight: 600; }
-.solo-entry header span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.solo-entry header .daggery-icon { width: 12px; height: 12px; color: var(--tone); }
-.solo-entry time { font-variant-numeric: tabular-nums; }
-.solo-entry-answer { font-size: 13.5px; font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; }
-.solo-entry-lines { display: grid; gap: 3px; margin: 0; }
-.solo-entry-lines > div { display: grid; grid-template-columns: minmax(58px, auto) minmax(0, 1fr); gap: 8px; font-size: 12.5px; }
-.solo-entry-lines dt { color: var(--ds-faint); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
-.solo-entry-lines dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
-.solo-entry-detail { margin: 0; color: var(--ds-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
 
-.solo-entry.is-featured { gap: 7px; padding: 14px 15px 15px; border-color: color-mix(in srgb, var(--tone) 55%, var(--ds-border)); background: color-mix(in srgb, var(--tone) 8%, var(--ds-raised)); box-shadow: inset 3px 0 0 var(--tone); }
-.solo-entry.is-featured .solo-entry-answer { font: 650 22px/1.2 var(--font-display); color: var(--ds-ink); }
-.solo-entry.is-featured.is-yes .solo-entry-answer, .solo-entry.is-featured.is-crit .solo-entry-answer { color: var(--ds-brand-strong); }
-.solo-entry.is-featured.is-no .solo-entry-answer { color: var(--ds-fear); }
-.solo-entry.is-featured .solo-entry-lines > div { font-size: 13.5px; }
-.solo-entry.is-featured .solo-entry-detail { font-size: 11.5px; }
-.solo-entry-note { margin: 0; padding-top: 7px; border-top: 1px solid var(--ds-border); color: var(--ds-muted); font-size: 12.5px; line-height: 1.55; }
-.solo-entry-next { display: grid; gap: 6px; padding-top: 4px; }
-.solo-entry-next > span { color: var(--ds-faint); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
 
 /* Static physical-dice reference tables. */
 .solo-reference-table, .solo-oracle-reference { display: grid; gap: 20px; }
@@ -226,15 +130,8 @@
 .solo-rules-stage .solo-reference-grid { grid-template-columns: minmax(0, 1fr); }
 
 /* The oracle dock, stacked to fit the column */
-.solo-panel .solo-dock { position: static; display: grid; gap: 12px; margin: 0; padding: 2px 0; border: 0; background: none; backdrop-filter: none; }
-.solo-panel .solo-dock-group { padding: 0; border: 0; }
-.solo-panel .solo-dock-buttons > button { flex: 1 1 auto; }
 
 /* Results */
-.solo-log { position: static; max-height: none; display: grid; grid-template-rows: auto minmax(0, 1fr); border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-raised); overflow: hidden; }
-.solo-log-scroll { max-height: 520px; }
-.solo-log-list { display: grid; }
-.solo-log-more { display: none; }
 
 /* Big collapsible panel headings: ORACLES, MOVES */
 
@@ -267,11 +164,9 @@
 }
 
 /* ============================================================ Phone: the reader over the page */
-.solo-reader-sheet { position: fixed; inset: 0 0 calc(68px + env(safe-area-inset-bottom)); z-index: 35; overflow-y: auto; overscroll-behavior: contain; background: var(--ds-surface); }
 
 /* On the shared kit (components/Accordion.tsx) */
 .solo-move-accordions { display: grid; gap: 6px; }
-.solo-roll-number { margin-left: 6px; color: var(--ds-faint); font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .sg-card .solo-move { padding: 0; border: 0; animation: none; }
 .solo-panel .sg-row > .solo-table-scroll { margin: 0 0 6px; }
 
@@ -287,3 +182,21 @@
   .solo-shell.solo-panel { bottom: calc(68px + env(safe-area-inset-bottom)); padding-bottom: 72px; }
 }
 @keyframes solo-drawer { from { transform: translateX(24px); opacity: .4; } }
+
+/* Printed reference: tables shown in full, sized for the panel */
+.solo-printed, .solo-move-tables { display: grid; gap: 18px; }
+.solo-printed-intro, .solo-move-uses { margin: 0; color: var(--ds-muted); font-size: 13px; line-height: 1.55; }
+.solo-move-uses strong { color: var(--ds-ink); }
+.solo-move-tables { padding-top: 12px; border-top: 1px solid var(--ds-border); }
+.solo-panel .solo-reference-table { gap: 8px; }
+.solo-panel .solo-reference-table header h2, .solo-panel .solo-reference-table header h3 { margin: 0 0 4px; font: 650 16px/1.3 var(--font-display); }
+.solo-panel .solo-reference-table header p { font-size: 12.5px; }
+.solo-panel .solo-reference-column > h3, .solo-panel .solo-reference-column > h4 { margin: 4px 0 6px; font-size: 13px; font-weight: 700; color: var(--ds-brand-strong); }
+.solo-panel .solo-reference-table .solo-table { font-size: 13.5px; line-height: 1.5; }
+.solo-panel .solo-reference-table .solo-table :is(th, td) { padding: 6px 8px; }
+.solo-panel .solo-reference-table .solo-table .solo-range { width: 42px; }
+.solo-panel .solo-oracle-reference { gap: 12px; }
+.solo-panel .solo-oracle-reference p { font-size: 13px; }
+.solo-panel .solo-oracle-reference section h3 { margin: 0 0 4px; font-size: 14px; }
+.solo-difficulty th { width: 44px; text-align: center; color: var(--ds-brand-strong); font-variant-numeric: tabular-nums; }
+.solo-difficulty td { font-size: 13px; }

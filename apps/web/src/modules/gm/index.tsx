@@ -4,7 +4,7 @@ import { getActiveCampaign } from '../../campaign-context';
 import { Icon } from '../../components/Icon';
 import { Group, IconButton, ItemCard, PanelSection, Row, SearchField, TONES } from '../../components/Accordion';
 import { useDocs, useSyncStatus } from '../../sync/store';
-import { lootEntries, lootTableName, RARITIES, rollLoot, SCENARIO_FIELDS, SETTING_FIELDS, type GmDoc, type LootDoc, type LootSet, type LootTable, type PrepDoc } from './model';
+import { lootEntries, lootTableName, RARITIES, SCENARIO_FIELDS, SETTING_FIELDS, type GmDoc, type LootDoc, type LootSet, type LootTable, type PrepDoc } from './model';
 import './gm.css';
 
 const emptyPrep = (kind: PrepDoc['kind']): PrepDoc => ({ kind, title: '', fields: {}, environmentId: '', status: 'planned', updated: '' });
@@ -73,7 +73,7 @@ function Workspace() {
   }
 
   return <div className="sg-page gm-workspace gm-page">
-    <header className="gm-heading"><div><p className="gm-kicker">Campaign preparation</p><h1><Icon name="compass" />GM tools</h1><p>Prepare the world. Keep what you need at the table.</p></div><span className="gm-private"><Icon name="lock" />GM only</span></header>
+    <header className="gm-heading"><div><p className="gm-kicker">Campaign preparation</p><h1><Icon name="compass" />GM tools</h1><p>Prepare the world your hero walks into.</p></div></header>
     {!connected && <p role="status" className="gm-notice">Connecting… Saving will be available when the campaign reconnects.</p>}
     <PanelSection id="gm-loot" title="Loot tables" storageKey="gm.loot">
       <Loot items={docs.items} save={docs.set} remove={docs.remove} connected={connected} />
@@ -149,65 +149,39 @@ function CreatedObserver({ id, updated, onCreated }: { id: string; updated: stri
   return null;
 }
 
-function Loot({ items, save, remove, connected }: { items: Record<string, GmDoc>; save: (id: string, doc: GmDoc) => void; remove: (id: string) => void; connected: boolean }) {
+/** Loot: the printed tables, read with your own dice. The log keeps results saved before. */
+function Loot({ items, remove, connected }: { items: Record<string, GmDoc>; save: (id: string, doc: GmDoc) => void; remove: (id: string) => void; connected: boolean }) {
   const [table, setTable] = useState<LootTable>('items');
   const [lootSet, setLootSet] = useState<LootSet>('core');
-  const [rarity, setRarity] = useState<keyof typeof RARITIES>('Common');
-  const [count, setCount] = useState(1);
-  const [result, setResult] = useState<ReturnType<typeof rollLoot> | null>(null);
-  const [note, setNote] = useState('');
-  const [keptId, setKeptId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const log = Object.entries(items).filter((entry): entry is [string, LootDoc] => entry[1].kind === 'loot').sort((a, b) => b[1].updated.localeCompare(a[1].updated));
   const entries = lootEntries(table, lootSet).filter(entry => `${entry.roll} ${entry.name} ${entry.description}`.toLowerCase().includes(search.toLowerCase()));
-  useEffect(() => { if (!connected && keptId && !items[keptId]) setKeptId(null); }, [connected, keptId, items]);
-  useEffect(() => { const handler = () => setKeptId(null); window.addEventListener('daggery:sync-error', handler); return () => window.removeEventListener('daggery:sync-error', handler); }, []);
-
-  function roll() {
-    setResult(rollLoot(table, count, undefined, lootSet));
-    setKeptId(null);
-    setNote('');
-  }
 
   return <>
-    <Group title="Roll for loot" icon="chest" defaultOpen>
+    <Group title="Rarity and dice" icon="chest" defaultOpen>
+      <p className="gm-help">Roll the dice for the rarity, add them, and read the matching row of the table below.</p>
+      {Object.entries(RARITIES).map(([name, pools]) => <Row key={name} label={name} value={pools.map(n => `${n}d12`).join(' or ')} />)}
+    </Group>
+    <Group title={lootTableName(table, lootSet)} icon="grid" count={entries.length} defaultOpen>
       <div className="gm-form-row">
         <label className="gm-field">Table<select aria-label="Table" value={table} onChange={e => { setTable(e.target.value as LootTable); setSearch(''); }}><option value="items">Items</option><option value="consumables">Consumables</option></select></label>
         <label className="gm-field">Source<select aria-label="Table source" value={lootSet} onChange={e => { setLootSet(e.target.value as LootSet); setSearch(''); }}><option value="core">Core Set</option><option value="additional">Additional (Hope &amp; Fear)</option></select></label>
-        <label className="gm-field">Rarity<select aria-label="Rarity" value={rarity} onChange={e => { const next = e.target.value as keyof typeof RARITIES; setRarity(next); setCount(RARITIES[next][0]); }}>{Object.keys(RARITIES).map(key => <option key={key}>{key}</option>)}</select></label>
-        <label className="gm-field">Dice pool<select aria-label="Dice pool" value={count} onChange={e => setCount(Number(e.target.value))}>{RARITIES[rarity].map(n => <option key={n} value={n}>{n}d12</option>)}</select></label>
       </div>
-      <Row
-        label={result ? 'Last roll' : 'Loot roll'}
-        value={result ? result.name : `Roll ${count}d12 · ${lootTableName(table, lootSet)}`}
-        action={<IconButton icon="dice" tone="action" label={`Roll ${count}d12`} onClick={roll} />}
-      />
-      {result && <div className="gm-loot-result" aria-live="polite">
-        <p className="gm-kicker">{lootTableName(result.table, result.set)} · {result.dice.join(' + ')} = {result.total}</p>
-        <p>{result.description}</p>
-        <label className="gm-field">Recipient / notes<input maxLength={500} value={note} disabled={!!keptId} onChange={e => setNote(e.target.value)} placeholder="Who gets it? Where was it found?" /></label>
-        <button className="daggery-roll-toggle" disabled={!connected || !!keptId} onClick={() => { const id = `loot:${crypto.randomUUID()}`; save(id, { ...result, kind: 'loot', note, updated: new Date().toISOString() }); setKeptId(id); }}><Icon name="plus" />{keptId ? items[keptId] ? 'Kept in loot log' : 'Saving…' : 'Keep result'}</button>
-      </div>}
-      <p className="gm-help">Rolls stay private. Keep a result to save it to your campaign.</p>
-    </Group>
-    <Group title="Loot log" icon="chest" count={log.length} defaultOpen>
-      {log.length === 0
-        ? <p className="sg-empty">Keep rolled results here to track rewards between sessions.</p>
-        : log.map(([id, entry]) => <ItemCard key={id}
-          title={entry.name}
-          caption={`${lootTableName(entry.table, entry.set)} · Roll ${entry.total}`}
-          tone={TONES.gold}
-          actions={<IconButton icon="trash" tone="danger" label={`Remove ${entry.name}`} disabled={!connected} onClick={() => { if (window.confirm(`Remove “${entry.name}” from the loot log?`)) remove(id); }} />}>
-          {entry.note && <p>{entry.note}</p>}
-          <p>{entry.description}</p>
-        </ItemCard>)}
-    </Group>
-    <Group title={lootTableName(table, lootSet)} icon="grid" count={entries.length} defaultOpen>
       <SearchField value={search} onChange={setSearch} placeholder="Name, effect, or roll number" label="Search table" />
       {entries.length === 0
         ? <p className="sg-empty">No entries match your search.</p>
         : entries.map(entry => <Row key={entry.id} leading={<span className="gm-roll-number">{String(entry.roll).padStart(2, '0')}</span>} label={entry.name} value={entry.description} />)}
       <p className="gm-help">Daggerheart Core Rulebook and Hope &amp; Fear · <a href="https://www.daggerheart.com/srd/" target="_blank" rel="noreferrer">System Reference Document</a></p>
     </Group>
+    {log.length > 0 && <Group title="Loot log" icon="chest" count={log.length}>
+      {log.map(([id, entry]) => <ItemCard key={id}
+        title={entry.name}
+        caption={`${lootTableName(entry.table, entry.set)} · Roll ${entry.total}`}
+        tone={TONES.gold}
+        actions={<IconButton icon="trash" tone="danger" label={`Remove ${entry.name}`} disabled={!connected} onClick={() => { if (window.confirm(`Remove “${entry.name}” from the loot log?`)) remove(id); }} />}>
+        {entry.note && <p>{entry.note}</p>}
+        <p>{entry.description}</p>
+      </ItemCard>)}
+    </Group>}
   </>;
 }
