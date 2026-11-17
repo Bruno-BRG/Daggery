@@ -526,3 +526,24 @@
 .sheet-hero-picker select { max-width: 150px; min-width: 0; border: 0; background: transparent; color: var(--ds-ink); font-size: 12px; font-weight: 600; }
 .character-folio .sheet-hero-switcher .sheet-ghost { min-height: 32px; padding: 0 9px; }
 @container (max-width: 620px) { .character-folio .sheet-hero-new > span { display: none; } }
+
+/* Toolbar: drop the redundant label first, then the New hero text, so the buttons never collide
+   (e.g. a tablet with the Oracles panel open leaves ~760px for the sheet). */
+@container (max-width: 1000px) { .character-folio .folio-toolbar-label { display: none; } }
+@container (max-width: 820px) { .character-folio .sheet-hero-new > span { display: none; } }
+
+/* Wide sheets (tablet landscape, desktop): vitals stay pinned in a left column while the
+   weapons, next roll and ability sections scroll beside them, instead of stretching edge to edge. */
+@container (min-width: 940px) {
+  .character-folio.sg-page { display: grid; grid-template-columns: minmax(330px, 400px) minmax(0, 1fr); column-gap: 18px; align-items: start; max-width: 1280px; }
+  .character-folio.sg-page > * { grid-column: 1 / -1; }
+  .character-folio.sg-page > .folio-vitals { grid-column: 1; grid-row: span 2; position: sticky; top: 12px; z-index: 4; }
+  .character-folio.sg-page > :is(.folio-result-banner, .folio-sections) { grid-column: 2; }
+  .character-folio.is-focused.sg-page > .folio-vitals { top: 84px; }
+  .character-folio .folio-vitals .sheet-panel-head { flex-wrap: wrap; gap: 8px; }
+  .character-folio .folio-resource.is-compact { grid-template-columns: minmax(0, 1fr) 40px; padding: 4px 0 2px; }
+  .is-compact > .folio-resource-header { grid-area: 1 / 1; display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-height: 26px; }
+  .is-compact > .folio-resource-adjustment:not([open]) { grid-area: 1 / 2; }
+  .is-compact > .folio-resource-adjustment:not([open]) > summary { min-height: 26px; }
+  .is-compact > .folio-resource-track { grid-column: 1 / -1; grid-row: 2; }
+}

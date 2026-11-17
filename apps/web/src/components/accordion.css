@@ -6,7 +6,7 @@
 .sg-section-head > button { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 0 18px; border: 0; background: transparent; color: var(--ds-ink); font: 700 19px/1 var(--font-display); text-transform: uppercase; letter-spacing: .04em; text-align: left; cursor: pointer; }
 .sg-section-head > button:hover { background: var(--ds-hover); }
 .sg-section-actions { display: flex; align-items: center; gap: 6px; padding-right: 12px; }
-.sg-section-body { display: grid; gap: 6px; padding: 12px 14px 20px; }
+.sg-section-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; padding: 12px 14px 20px; }
 
 /* Shared chevron: down when closed, up when open */
 :is(.sg-section-head > button, .sg-group-head button, .sg-card-summary) > .daggery-icon:last-child { flex: none; width: 15px; height: 15px; color: var(--ds-muted); transform: rotate(90deg); transition: transform .15s; }
@@ -20,7 +20,7 @@
 .sg-group-head .daggery-icon:first-child:not(:last-child) { width: 15px; height: 15px; color: var(--ds-brand); }
 .sg-group-head span { flex: 1; min-width: 0; }
 .sg-group-head small { color: var(--ds-faint); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.sg-group-body { display: grid; gap: 4px; padding: 8px 10px 6px; border-top: 1px solid var(--ds-border); }
+.sg-group-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; padding: 8px 10px 6px; border-top: 1px solid var(--ds-border); }
 .sg-group-clear { justify-self: center; display: grid; place-items: center; width: 32px; height: 28px; border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--ds-muted); cursor: pointer; }
 .sg-group-clear:hover:not(:disabled) { background: var(--ds-hover); color: var(--ds-ink); }
 .sg-group-clear:disabled { opacity: .35; cursor: default; }
