@@ -8,7 +8,6 @@ export const DAGGERHEART_UI: SystemUI = { optionsEditor: DaggerheartOptions, dic
   modules: [
     { id: 'ai', feature: 'daggerheart.ai-gm', label: 'Adventure', icon: 'scroll', description: 'Play with your connected AI Game Master', controller: 'ai', primary: true, component: lazy(() => import('../modules/ai')) },
     { id: 'journal', feature: 'daggerheart.ai-gm', label: 'Journal', icon: 'book', description: 'Chapters, notes and events from your adventure', controller: 'ai', component: lazy(() => import('../modules/journal')) },
-    { id: 'map', feature: 'daggerheart.table', label: 'Game table', icon: 'map', description: 'Maps, miniatures, and combat in one place', primaryRulesets: ['core'], component: lazy(() => import('../modules/map')) },
     { id: 'sheets', feature: 'daggerheart.sheets', label: 'Characters', icon: 'sheet', description: 'Create heroes and manage their sheets', primary: true, component: lazy(() => import('../modules/sheets')) },
     { id: 'compendium', feature: 'daggerheart.compendium', label: 'Compendium', icon: 'book', description: 'Find classes, cards, equipment, and rules', component: lazy(() => import('../modules/compendium')) },
     { id: 'gm', feature: 'daggerheart.gm-tools', label: 'GM tools', icon: 'compass', description: 'Loot tables, setting notes, and scenario preparation', gmOnly: true, component: lazy(() => import('../modules/gm')) },

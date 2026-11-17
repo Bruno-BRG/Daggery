@@ -11,7 +11,7 @@ import { Notes, Library } from './CampaignSections';
 import { api } from './api';
 import { Icon, type IconName } from './components/Icon';
 import { Dialog } from './components/Dialog';
-import { IconButton, ItemCard, PanelSection, Row, TONES } from './components/Accordion';
+import { TONES } from './components/Accordion';
 import { useMediaQuery } from './useMediaQuery';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -56,14 +56,15 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   const [diceOpen, setDiceOpen] = useState(false);
   const [diceDocked, setDiceDocked] = useState(true);
   const wide = useMediaQuery('(min-width: 1440px)');
-  const phone = useMediaQuery('(max-width: 767px)');
-  // The solo screen stays open beside every page on desktop; on a phone it opens over the page on demand.
+  // Below 1100px the panel slides in over the page instead of sitting beside it.
+  const overlay = useMediaQuery('(max-width: 1100px)');
+  // Wide screens keep the panel docked (remembered); narrower ones open it over the page on demand.
   const [companionDocked, setCompanionDocked] = useState(() => readPreference('daggery:companion') !== 'closed');
   const [companionSheet, setCompanionSheet] = useState(false);
-  const companionOpen = !!Companion && (phone ? companionSheet : companionDocked);
-  const companionBeside = !!Companion && !phone && companionDocked;
+  const companionOpen = !!Companion && (overlay ? companionSheet : companionDocked);
+  const companionBeside = !!Companion && !overlay && companionDocked;
   function setCompanion(open: boolean) {
-    if (phone) { setCompanionSheet(open); return; }
+    if (overlay) { setCompanionSheet(open); return; }
     setCompanionDocked(open);
     savePreference('daggery:companion', open ? 'open' : 'closed');
   }
@@ -124,7 +125,7 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   const online = status === 'open' && syncStatus === 'open';
   const current = NAV.find((item) => item.id === page)!;
   // The solo screen takes the right-hand column; the dice then open over the page instead.
-  const dockVisible = !!DiceControls && wide && diceDocked && page !== 'map' && page !== 'ai' && !companionBeside;
+  const dockVisible = !!DiceControls && wide && diceDocked && page !== 'ai' && !companionBeside;
   const diceVisible = dockVisible || diceOpen;
 
   function navigate(next: Page) {
@@ -222,7 +223,7 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   );
 
   return (
-    <div className={`daggery-shell ${page === 'map' ? 'daggery-shell-table' : ''}`}>
+    <div className="daggery-shell">
       {DiceSurface && <ErrorBoundary name="Dice display"><DiceSurface /></ErrorBoundary>}
       <a className="daggery-skip" href="#main-content">
         Skip to content
@@ -261,20 +262,10 @@ export default function App({ onLeave }: { onLeave: () => void }) {
               </button>
             )}
             {campaign.role === 'gm' && <button type="button" className="daggery-theme" aria-label="Campaign settings" title="Campaign settings" onClick={() => { if (window.dispatchEvent(new Event('daggery:before-navigate', { cancelable: true }))) setSettingsOpen(true); }}><Icon name="settings" /></button>}
-            {companion && <button
-              type="button"
-              className={`daggery-roll-toggle daggery-companion-toggle ${companionOpen ? 'is-active' : ''}`}
-              onClick={() => setCompanion(!companionOpen)}
-              aria-label={companionOpen ? `Hide ${companion.label.toLowerCase()}` : `Show ${companion.label.toLowerCase()}`}
-              aria-expanded={companionOpen}
-            >
-              <Icon name={companion.icon} />
-              <span>Oracles</span>
-            </button>}
             <button
               type="button"
               className={`daggery-roll-toggle daggery-dice-toggle ${diceVisible ? 'is-active' : ''}`}
-              onClick={() => (wide && page !== 'map' && page !== 'ai' && !companionBeside ? setDiceDocked((open) => !open) : setDiceOpen((open) => !open))}
+              onClick={() => (wide && page !== 'ai' && !companionBeside ? setDiceDocked((open) => !open) : setDiceOpen((open) => !open))}
               aria-label={diceVisible ? 'Hide dice' : 'Show dice'}
               aria-expanded={diceVisible}
             >
@@ -294,7 +285,7 @@ export default function App({ onLeave }: { onLeave: () => void }) {
         </header>
         <nav className="daggery-tabs" aria-label="Main navigation">
           {availableNav.map(item => <button key={item.id} type="button" onClick={() => navigate(item.id)} aria-current={page === item.id ? 'page' : undefined}>
-            {item.id === 'map' ? 'Game table' : item.label}
+            {item.label}
           </button>)}
         </nav>
         {settingsOpen && <CampaignSettings campaign={campaign} onClose={() => setSettingsOpen(false)} onSaved={() => window.location.reload()} />}
@@ -329,6 +320,11 @@ export default function App({ onLeave }: { onLeave: () => void }) {
               )
             )}
           </main>
+          {Companion && overlay && companionOpen && <div className="daggery-companion-backdrop" aria-hidden="true" onClick={() => setCompanion(false)} />}
+          {companion && <button type="button" className={`daggery-companion-fab${companionOpen ? ' is-open' : ''}`} onClick={() => setCompanion(!companionOpen)}
+            aria-expanded={companionOpen} aria-label={companionOpen ? 'Close oracles, moves and journal' : 'Open oracles, moves and journal'} title={companionOpen ? 'Close the panel' : 'Oracles, moves and journal'}>
+            <Icon name="chevron" />
+          </button>}
           {Companion && <ErrorBoundary name={companion.label} resetKey="companion" onBack={() => setCompanion(false)}><Suspense fallback={null}>
             <Companion open={companionOpen} onClose={() => setCompanion(false)} />
           </Suspense></ErrorBoundary>}
@@ -340,28 +336,25 @@ export default function App({ onLeave }: { onLeave: () => void }) {
         </div>
       </div>
       <nav className="daggery-bottom-nav" aria-label="Mobile navigation">
-        {NAV.slice(0, companion ? 3 : 4).map((item) => (
+        {NAV.slice(0, 4).map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => navigate(item.id)}
-            aria-current={page === item.id && !companionSheet ? 'page' : undefined}
+            aria-current={page === item.id ? 'page' : undefined}
           >
             <Icon name={item.icon} />
-            <span>{item.id === 'map' ? 'Table' : item.label}</span>
+            <span>{item.label}</span>
           </button>
         ))}
-        {companion && <button type="button" onClick={() => setCompanion(!companionSheet)} aria-expanded={companionSheet} className={companionSheet ? 'is-active' : ''}>
-          <Icon name={companion.icon} />
-          <span>Tables</span>
-        </button>}
+
         <button
           type="button"
           onClick={() => setMobileMenu(true)}
           aria-expanded={mobileMenu}
           aria-label="More sections"
           className={
-            !companionSheet && !NAV.slice(0, companion ? 3 : 4).some((item) => item.id === page) ? 'is-active' : ''
+            !NAV.slice(0, 4).some((item) => item.id === page) ? 'is-active' : ''
           }
         >
           <Icon name="more" />
@@ -456,30 +449,42 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   );
 }
 
-/** Overview, laid out like the rest of the app: foldable sections of rows and cards. */
+/**
+ * Overview: who and what this campaign is, one clear button to carry on, and every
+ * section as a big tile with a line on what it holds.
+ */
 function Home({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const campaign = getActiveCampaign();
   const NAV = navigationFor(campaign);
   const ruleset = getRuleset(campaign.configuration);
   const solo = ruleset?.mode === 'solo';
   const ai = campaign.configuration.gmController === 'ai';
-  const main = NAV.find(item => item.id === (ai ? 'ai' : solo ? 'sheets' : 'map')) ?? NAV.find(item => item.primary && item.id !== 'home');
+  const main = NAV.find(item => item.id === (ai ? 'ai' : 'sheets')) ?? NAV.find(item => item.primary && item.id !== 'home');
   const role = solo ? 'Solo player' : campaign.role === 'gm' ? 'Game Master' : 'Player';
   const party = solo ? (campaign.configuration.options.partyMode === 'party' ? 'Small party' : campaign.configuration.options.partyMode === 'companion' ? 'Hero + companion' : 'Lone hero') : undefined;
-  const sections = NAV.filter(item => item.id !== 'home');
-  const tone = (id: string) => ({ sheets: TONES.gold, map: TONES.green, ai: TONES.violet, journal: TONES.violet, compendium: TONES.blue, notes: TONES.teal, library: TONES.pink, gm: TONES.red })[id] ?? TONES.brand;
-  const open = (id: string, label: string) => <IconButton icon="arrow" tone="action" label={`Open ${label.toLowerCase()}`} onClick={() => onNavigate(id)} />;
+  const tone = (id: string) => ({ sheets: TONES.gold, ai: TONES.violet, journal: TONES.violet, compendium: TONES.blue, notes: TONES.teal, library: TONES.pink, gm: TONES.red })[id] ?? TONES.brand;
   return (
-    <div className="sg-page daggery-overview-page">
-      <PanelSection title={campaign.name} storageKey="overview.campaign">
-        <Row label="Game" value={`${getGameSystem(campaign.configuration.systemId)?.name ?? 'Unknown system'} · ${ruleset?.name ?? 'Unknown ruleset'}`} />
-        <Row label="Playing as" value={party ? `${role} · ${party}` : role} />
-        {main && <Row label={ai ? 'Your next chapter' : solo ? 'Your solo adventure' : 'Where you play'} value={main.label} action={<button type="button" className="daggery-primary" onClick={() => onNavigate(main.id)}><Icon name={main.icon} />{ai ? 'Continue adventure' : solo ? 'Continue with your hero' : `Open ${main.label.toLowerCase()}`}</button>} />}
-        {solo && <p className="sg-page-intro">Every oracle, move and result is in the solo screen on the right, beside every page. Hide or show it with <strong>Oracles</strong> in the top bar.</p>}
-      </PanelSection>
-      <PanelSection title="Sections" storageKey="overview.sections">
-        {sections.map(item => <ItemCard key={item.id} title={item.label} caption={item.description} icon={item.icon} tone={tone(item.id)} actions={open(item.id, item.label)} />)}
-      </PanelSection>
+    <div className="overview">
+      <header className="overview-hero">
+        <p className="overview-kicker">{getGameSystem(campaign.configuration.systemId)?.name ?? 'Unknown system'} · {ruleset?.name ?? 'Unknown ruleset'}</p>
+        <h1>{campaign.name}</h1>
+        <p className="overview-meta"><span>{role}</span>{party && <span>{party}</span>}</p>
+        {main && <button type="button" className="daggery-primary overview-continue" onClick={() => onNavigate(main.id)}>
+          <Icon name={main.icon} />{ai ? 'Continue the adventure' : solo ? 'Continue with your hero' : `Open ${main.label.toLowerCase()}`}<Icon name="arrow" />
+        </button>}
+      </header>
+
+      {solo && <p className="overview-tip"><span className="overview-tip-icon"><Icon name="chevron" /></span>
+        <span><strong>Oracles, moves and your journal</strong> open from the round button at the bottom right, on every page.</span></p>}
+
+      <h2 className="overview-heading">Your campaign</h2>
+      <nav className="overview-grid" aria-label="Campaign sections">
+        {NAV.filter(item => item.id !== 'home').map(item => <button key={item.id} type="button" className="overview-tile" style={{ ['--tile' as string]: tone(item.id) }} onClick={() => onNavigate(item.id)}>
+          <span className="overview-tile-icon"><Icon name={item.icon} /></span>
+          <span className="overview-tile-text"><strong>{item.label}</strong><small>{item.description}</small></span>
+          <Icon name="arrow" />
+        </button>)}
+      </nav>
     </div>
   );
 }

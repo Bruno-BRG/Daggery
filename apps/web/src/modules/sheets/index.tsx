@@ -4,7 +4,6 @@ import Wizard from './Wizard';
 import SheetView from './SheetView';
 import { Icon } from '../../components/Icon';
 import { IconButton, ItemCard, PanelSection, TONES } from '../../components/Accordion';
-import { bringCharacterToTable } from '../../table-navigation';
 import { getAncestry, getClass, getCommunity, getSubclass, hpMax, stressMax, tierLabel } from './rules';
 import type { Sheet } from './types';
 import { portraitImage } from './appearance';
@@ -42,7 +41,6 @@ export default function SheetsModule({ author }: { author: string }) {
         sheet={selected}
         author={author}
         onBack={() => setSelectedId(null)}
-        onPlay={() => bringCharacterToTable(selected.id)}
         onChange={(next) => set(next.id, next)}
         onDelete={() => {
           remove(selected.id);
@@ -133,15 +131,6 @@ function SheetCard({ sheet, onOpen, onDelete }: { sheet: Sheet; onOpen: () => vo
         >
           <Icon name="sheet" />
           Open sheet
-        </button>
-        <button
-          type="button"
-          aria-label={`Bring ${sheet.name} to table`}
-          title="Bring to table"
-          onClick={() => bringCharacterToTable(sheet.id)}
-        >
-          <Icon name="map" />
-          Table
         </button>
         <button
           type="button"

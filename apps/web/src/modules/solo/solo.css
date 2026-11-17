@@ -218,11 +218,6 @@
    every oracle table, every move, the results and the rules, each collapsible. */
 .solo-shell.solo-panel { flex: 0 0 var(--solo-panel-width, 430px); width: var(--solo-panel-width, 430px); max-width: none; height: 100%; min-height: 0; margin: 0; padding: 0 0 24px; overflow-y: auto; overscroll-behavior: contain; border-left: 1px solid var(--ds-border); background: var(--ds-surface); scrollbar-width: thin; }
 .solo-shell.solo-panel[hidden] { display: none; }
-.solo-panel-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 12px 12px 18px; }
-.solo-panel-top strong { font: 650 17px/1.2 var(--font-display); }
-.solo-panel-close { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--ds-muted); cursor: pointer; }
-.solo-panel-close:hover { background: var(--ds-hover); color: var(--ds-ink); }
-.solo-panel-close .daggery-icon { width: 16px; height: 16px; }
 .solo-part { scroll-margin-top: 0; }
 .solo-rules-stage { display: grid; gap: 28px; }
 .solo-rules-stage .solo-oracle-reference header h2 { font-size: 20px; }
@@ -279,3 +274,16 @@
 .solo-roll-number { margin-left: 6px; color: var(--ds-faint); font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .sg-card .solo-move { padding: 0; border: 0; animation: none; }
 .solo-panel .sg-row > .solo-table-scroll { margin: 0 0 6px; }
+
+/* Stargazer-style panel: three big parts, a small credit line, and on phones a drawer */
+.solo-shell.solo-panel { padding-top: 0; }
+.solo-panel-credit { margin: 6px 0 0; color: var(--ds-faint); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; text-align: center; }
+.solo-panel .sg-group .solo-dock, .solo-panel .sg-group .solo-log { margin: 2px 0 4px; }
+@media (max-width: 1100px) {
+  /* Narrow screens: the panel slides in over the page from the right instead of squeezing it. */
+  .solo-shell.solo-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 45; width: min(440px, 92vw); max-width: 92vw; box-shadow: -18px 0 48px var(--ds-shadow-lg, rgb(0 0 0 / .5)); animation: solo-drawer .2s ease-out; }
+}
+@media (max-width: 767px) {
+  .solo-shell.solo-panel { bottom: calc(68px + env(safe-area-inset-bottom)); padding-bottom: 72px; }
+}
+@keyframes solo-drawer { from { transform: translateX(24px); opacity: .4; } }

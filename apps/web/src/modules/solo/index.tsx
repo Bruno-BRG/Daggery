@@ -6,13 +6,13 @@ import {
   type DualityMeaningTable, type DualityTable, type IronMove, type IronMoveGroup, type IronOutcome,
 } from '@daggery/shared';
 import { getActiveCampaign } from '../../campaign-context';
+import { Notes } from '../../CampaignSections';
 import { Group, IconButton, ItemCard, PanelSection, Row, SearchField, TONES } from '../../components/Accordion';
 import { Icon, type IconName } from '../../components/Icon';
 import { useMediaQuery } from '../../useMediaQuery';
 import { SOLO_SECTIONS, type RefBlock, type SoloSection } from './reference';
 import { DIFFICULTIES, MOVE_FLOWS, MOVE_GROUP_META, OUTCOME_ORDER, type MoveFlow, type Step } from './workflow';
 import { segments, rangeLabel } from './table-reference';
-import { MobileReferenceReader } from './reader';
 import './solo.css';
 import './reader.css';
 
@@ -70,34 +70,32 @@ interface MeaningRoll { hope: number; fear: number; entry: string; n: number }
 const EMPTY_ROLLS: TableRolls = {};
 
 /**
- * The solo panel sits beside every page of a solo campaign, like a GM screen: the oracle
- * and Fear up top, then every oracle table, every move, the results and the rules, each a
- * collapsible part.
+ * The solo panel, after Stargazer's: three big parts, ORACLES, MOVES and JOURNAL. Asking the
+ * oracle and the results are groups at the top of Oracles; the rules are a group under Moves.
  */
-type PanelPart = 'ask' | 'oracles' | 'moves' | 'results' | 'rules';
+type PanelPart = 'oracles' | 'moves' | 'journal';
 const PANEL_PARTS: readonly { id: PanelPart; label: string }[] = [
-  { id: 'ask', label: 'Ask the Oracle' },
   { id: 'oracles', label: 'Oracles' },
   { id: 'moves', label: 'Moves' },
-  { id: 'results', label: 'Results' },
-  { id: 'rules', label: 'Rules' },
+  { id: 'journal', label: 'Journal' },
 ];
-const PANEL_KEY = 'daggery.solo.panel';
+/** Groups that are not oracle tables, and the part each lives in. */
+type PanelGroup = 'ask' | 'results' | 'rules';
+const GROUP_PART: Record<PanelGroup, PanelPart> = { ask: 'oracles', results: 'oracles', rules: 'moves' };
+const PANEL_KEY = 'daggery.solo.panel.v2';
 type PanelState = Record<PanelPart, boolean> & { categories: string[] };
-const PANEL_DEFAULT: PanelState = { ask: true, oracles: true, moves: true, results: true, rules: false, categories: [] };
+const PANEL_DEFAULT: PanelState = { oracles: true, moves: false, journal: false, categories: ['ask', 'results'] };
 function loadPanel(): PanelState {
   try { const raw = localStorage.getItem(PANEL_KEY); return raw ? { ...PANEL_DEFAULT, ...JSON.parse(raw) as Partial<PanelState> } : PANEL_DEFAULT; } catch { return PANEL_DEFAULT; }
 }
 
 /**
- * Mounted by the app shell for solo campaigns. On desktop it is the side panel; on a phone
- * it is the reference-only reader, opened full screen over the page. It stays mounted while
- * closed so rolls and open accordions survive moving between pages.
+ * Mounted by the app shell for solo campaigns: docked beside the page on desktop, sliding in
+ * over it on a phone. It stays mounted while closed so rolls and open groups survive moving
+ * between pages.
  */
 export default function SoloCompanion({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const mobile = useMediaQuery('(max-width: 767px)');
   if (!hasFeature(getActiveCampaign().configuration, 'daggerheart.solo') || getActiveCampaign().role !== 'gm') return null;
-  if (mobile) return open ? <div className="solo-reader-sheet" role="dialog" aria-modal="true" aria-label="Solo reference"><MobileReferenceReader onClose={onClose} /></div> : null;
   return <SoloPanel open={open} onClose={onClose} />;
 }
 
@@ -105,7 +103,7 @@ export default function SoloCompanion({ open, onClose }: { open: boolean; onClos
  * Reads the hash: `#solo-rules` or `#solo-oracle` open that part, `#solo-moves-face-danger`
  * opens a move, and `#solo-tables-combat` (or the older `#solo-combat`) opens an oracle group.
  */
-function readHash(): { part?: PanelPart; move?: string; category?: string } {
+function readHash(): { part?: PanelGroup; move?: string; category?: string } {
   const match = /^#solo-(moves|tables|rules|oracle|play)(?:-(.+))?$/.exec(window.location.hash);
   if (match) {
     const [, kind, id] = match;
@@ -125,7 +123,7 @@ function SoloPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const initial = useMemo(() => readHash(), []);
   const [panel, setPanel] = useState<PanelState>(() => {
     const saved = loadPanel();
-    if (initial.part) return { ...saved, [initial.part]: true };
+    if (initial.part) return { ...saved, [GROUP_PART[initial.part]]: true, categories: [...new Set([...saved.categories, initial.part])] };
     if (initial.category && !saved.categories.includes(initial.category)) return { ...saved, oracles: true, categories: [...saved.categories, initial.category] };
     if (initial.move) return { ...saved, moves: true };
     return saved;
@@ -181,9 +179,9 @@ function SoloPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   function scrollPanelTo(id: string) {
     requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: 'start', behavior: prefersReducedMotion() ? 'auto' : 'smooth' }));
   }
-  function revealPart(part: PanelPart) {
-    setPanel(previous => ({ ...previous, [part]: true }));
-    scrollPanelTo(`solo-part-${part}`);
+  function revealPart(group: PanelGroup) {
+    setPanel(previous => ({ ...previous, [GROUP_PART[group]]: true, categories: previous.categories.includes(group) ? previous.categories : [...previous.categories, group] }));
+    scrollPanelTo(`solo-oracles-${group}`);
   }
   function togglePart(part: PanelPart) {
     setPanel(previous => ({ ...previous, [part]: !previous[part] }));
@@ -350,30 +348,26 @@ function SoloPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
     const meta = PANEL_PARTS.find(item => item.id === id)!;
     return <PanelSection id={`solo-part-${id}`} className={`solo-part solo-part-${id}`} title={meta.label} open={panel[id]} onToggle={() => togglePart(id)}>{body}</PanelSection>;
   };
+  const group = (id: PanelGroup, title: string, icon: IconName, body: ReactNode) =>
+    <Group id={`solo-oracles-${id}`} title={title} icon={icon} open={panel.categories.includes(id)} onToggle={() => toggleCategory(id)}>{body}</Group>;
 
-  return <aside className="solo-shell solo-panel" aria-label="Solo oracles and moves" hidden={!open}>
-    <header className="solo-panel-top">
-      <div className="solo-title">
-        <p className="solo-kicker">{`Duality GME ${DUALITY_ENGINE_VERSION}`}</p>
-        <strong>Solo screen</strong>
-      </div>
-      <button type="button" className="solo-panel-close" onClick={onClose} aria-label="Hide the solo screen" title="Hide the solo screen"><Icon name="close" /></button>
-    </header>
-
-    {part('ask', <OracleDock ref={dock} pulse={dockPulse} fear={fear} setFear={setFear} onAsk={askOracle} onMeaning={rollMeaningPair} onFearCheck={rollFearCheck} onPrice={() => rollTable('iron-price')} />)}
-
-    {part('oracles', SOLO_SECTIONS.filter(section => section.tables.length).map(section => <OracleCategory key={section.id} section={section}
-      open={panel.categories.includes(section.id)} onToggle={() => toggleCategory(section.id)} onClear={() => clearCategory(section.id)}
-      tableRolls={tableRolls} meaningRolls={meaningRolls} onRoll={rollTable} onPair={rollMeaningPair} />))}
+  return <aside className="solo-shell solo-panel" aria-label="Oracles, moves and journal" hidden={!open}>
+    {part('oracles', <>
+      {group('ask', 'Ask the Oracle', 'spark', <OracleDock ref={dock} pulse={dockPulse} fear={fear} setFear={setFear} onAsk={askOracle} onMeaning={rollMeaningPair} onFearCheck={rollFearCheck} onPrice={() => rollTable('iron-price')} />)}
+      {group('results', `Results${log.length ? ` (${log.length})` : ''}`, 'dice', <RollLog log={log} onRunStep={runStep} onCopy={copyLog} onClear={() => setLog([])} />)}
+      {SOLO_SECTIONS.filter(section => section.tables.length).map(section => <OracleCategory key={section.id} section={section}
+        open={panel.categories.includes(section.id)} onToggle={() => toggleCategory(section.id)} onClear={() => clearCategory(section.id)}
+        tableRolls={tableRolls} meaningRolls={meaningRolls} onRoll={rollTable} onPair={rollMeaningPair} />)}
+      <p className="solo-panel-credit">{`Duality GME ${DUALITY_ENGINE_VERSION}`}</p>
+    </>)}
 
     {part('moves', <>
       <SearchField inputRef={search} value={query} onChange={setQuery} label="Search moves (press /)" />
       <MoveList query={trimmed} openMoves={openMoves} onToggle={toggleMove} outcomes={moveOutcomes} onRunStep={runStep} onAction={rollAction} onProgress={rollProgress} onRecord={recordOutcome} />
+      {group('rules', 'Rules reference', 'book', <div className="solo-rules-stage"><OracleReference onTable={openReferenceTable} /><RulesView /></div>)}
     </>)}
 
-    {part('results', <RollLog log={log} onRunStep={runStep} onCopy={copyLog} onClear={() => setLog([])} />)}
-
-    {part('rules', <div className="solo-rules-stage"><OracleReference onTable={openReferenceTable} /><RulesView /></div>)}
+    {part('journal', <Notes embedded />)}
   </aside>;
 }
 

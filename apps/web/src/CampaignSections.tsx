@@ -11,8 +11,11 @@ interface Asset { id: string; name: string; mediaType: string; size: number }
 const base = () => `/api/campaigns/${encodeURIComponent(getActiveCampaign().id)}`;
 const message = (e: unknown) => e instanceof Error ? e.message : 'Could not complete the action.';
 
-/** Notes: one searchable card per note, each opening its edit form in place. */
-export function Notes() {
+/**
+ * Notes: one searchable card per note, each opening its edit form in place.
+ * `embedded` renders just the list, for the Journal part of the solo screen.
+ */
+export function Notes({ embedded = false }: { embedded?: boolean } = {}) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -51,12 +54,14 @@ export function Notes() {
   const query = search.toLocaleLowerCase();
   const filtered = notes.filter(note => `${note.title} ${note.body}`.toLocaleLowerCase().includes(query));
 
-  return <div className="sg-page campaign-page">
-    <p className="sg-page-intro">Private notes are visible only to their author. Shared notes can be edited by campaign members.</p>
-    <PanelSection title="Notes" storageKey="campaign.notes" actions={<IconButton icon="plus" tone="action" label="New note" onClick={startNew} />}>
-      <SearchField value={search} onChange={setSearch} placeholder="Search your notes…" label="Search notes" />
+  const list = <>
+      {embedded && <div className="cs-journal-bar">
+        <IconButton icon="plus" tone="action" label="New journal entry" onClick={startNew} />
+        <SearchField value={search} onChange={setSearch} placeholder="Search by title or content" label="Search the journal" />
+      </div>}
+      {!embedded && <SearchField value={search} onChange={setSearch} placeholder="Search your notes…" label="Search notes" />}
       {error && <p role="alert" className="cs-error">{error}</p>}
-      {creating && <ItemCard title="New note" caption="Not saved yet" open onToggle={() => setCreating(false)}>
+      {creating && <ItemCard title={embedded ? 'New journal entry' : 'New note'} caption="Not saved yet" open onToggle={() => setCreating(false)}>
         <NoteForm title={title} setTitle={setTitle} visibility={visibility} setVisibility={setVisibility} body={body} setBody={setBody} onSave={save} />
       </ItemCard>}
       {loading
@@ -74,7 +79,11 @@ export function Notes() {
               onToggle={() => open(note)}>
               <NoteForm title={title} setTitle={setTitle} visibility={visibility} setVisibility={setVisibility} body={body} setBody={setBody} onSave={save} onDelete={() => void remove(note.id)} />
             </ItemCard>)}
-    </PanelSection>
+  </>;
+  if (embedded) return <div className="cs-journal">{list}</div>;
+  return <div className="sg-page campaign-page">
+    <p className="sg-page-intro">Private notes are visible only to their author. Shared notes can be edited by campaign members. They are also your journal in the solo screen.</p>
+    <PanelSection title="Notes" storageKey="campaign.notes" actions={<IconButton icon="plus" tone="action" label="New note" onClick={startNew} />}>{list}</PanelSection>
   </div>;
 }
 

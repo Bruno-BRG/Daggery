@@ -31,3 +31,8 @@
   .cs-upload { min-height: 40px; }
   .cs-field textarea { min-height: 150px; }
 }
+
+/* Journal: the notes list inside the solo screen */
+.cs-journal { display: grid; gap: 6px; }
+.cs-journal-bar { display: flex; align-items: center; gap: 8px; }
+.cs-journal-bar .sg-icon-button { width: 40px; height: 40px; border-radius: 50%; }

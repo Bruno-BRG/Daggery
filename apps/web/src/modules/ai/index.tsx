@@ -386,7 +386,6 @@ export default function Adventure({ author: _author }: { author: string }) {
         <section>
           <h2>Your campaign</h2>
           <div className="ai-shortcuts">
-          <button type="button" className="ai-link" onClick={() => navigate('map')}>Game table <Icon name="map" /></button>
           <button type="button" className="ai-link" onClick={() => navigate('notes')}>Session notes <Icon name="note" /></button>
           {campaign.configuration.rulesetId === 'solo' && data.isGm && <button type="button" className="ai-link" onClick={() => window.dispatchEvent(new Event('daggery:solo-screen'))}>Duality GME <Icon name="spark" /></button>}
           {data.isGm && <button type="button" className="ai-link" onClick={() => navigate('gm')}>GM preparations <Icon name="compass" /></button>}

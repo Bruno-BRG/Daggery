@@ -82,7 +82,6 @@ interface SheetViewProps {
   onBack: () => void;
   onChange: (next: Sheet) => void;
   onDelete: () => void;
-  onPlay?: () => void;
   backLabel?: string;
 }
 
@@ -98,7 +97,7 @@ function leadingCardCost(text: string): { track: 'hope' | 'stress'; amount: numb
   };
 }
 
-export default function SheetView({ sheet, author, onBack, onChange, onDelete, onPlay, backLabel = 'All characters' }: SheetViewProps) {
+export default function SheetView({ sheet, author, onBack, onChange, onDelete, backLabel = 'All characters' }: SheetViewProps) {
   const { roll } = useDiceTray();
   const assistance = useSoloAssistance(sheet.id);
   const sheetRef = useRef(sheet);
@@ -506,7 +505,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, o
       <header className="sheet-toolbar folio-toolbar">
         <button type="button" onClick={onBack} className="sheet-ghost" aria-label={backLabel}><Icon name="arrow" /><span className="folio-back-label">{backLabel}</span></button>
         <span className="folio-toolbar-label">{focused ? sheet.name : 'CHARACTER SHEET'}</span>{focused && <span role="status" className={`sheet-session-connection ${connection === 'open' ? 'is-connected' : ''}`}><i />{connection === 'open' ? 'Connected' : 'Reconnecting…'}</span>}
-        <div className="sheet-toolbar-actions"><button type="button" onClick={() => setExportOpen(true)} className="sheet-ghost sheet-export-trigger" aria-label="Export character PDF"><Icon name="pdf" /><span>PDF</span></button>{onPlay && <button type="button" className="sheet-ghost sheet-focus-toggle" aria-label={focused ? 'Exit focused sheet view' : 'Focus character sheet'} title={focused ? 'Back to campaign (Escape)' : 'Focus sheet for play'} aria-pressed={focused} onClick={() => setFocused(value => !value)}><Icon name={focused ? 'shrink' : 'expand'} /><span>{focused ? 'Exit focus' : 'Focus'}</span></button>}{onPlay && <button type="button" onClick={onPlay} className="sheet-ghost" title="Bring this character to the current scene"><Icon name="map" /><span>Table</span></button>}<button type="button" aria-label="Rest" onClick={() => openRecovery('rest')} className="sheet-ghost"><Icon name="moon" /><span>Rest</span></button><button type="button" onClick={() => setShowLevelUp(true)} disabled={sheet.level >= 10} className="sheet-primary"><Icon name="spark" />Level up</button><button type="button" onClick={() => setActionsOpen(true)} className="sheet-ghost folio-more" aria-label="Character actions"><Icon name="more" /></button></div>
+        <div className="sheet-toolbar-actions"><button type="button" onClick={() => setExportOpen(true)} className="sheet-ghost sheet-export-trigger" aria-label="Export character PDF"><Icon name="pdf" /><span>PDF</span></button><button type="button" className="sheet-ghost sheet-focus-toggle" aria-label={focused ? 'Exit focused sheet view' : 'Focus character sheet'} title={focused ? 'Back to campaign (Escape)' : 'Focus sheet for play'} aria-pressed={focused} onClick={() => setFocused(value => !value)}><Icon name={focused ? 'shrink' : 'expand'} /><span>{focused ? 'Exit focus' : 'Focus'}</span></button><button type="button" aria-label="Rest" onClick={() => openRecovery('rest')} className="sheet-ghost"><Icon name="moon" /><span>Rest</span></button><button type="button" onClick={() => setShowLevelUp(true)} disabled={sheet.level >= 10} className="sheet-primary"><Icon name="spark" />Level up</button><button type="button" onClick={() => setActionsOpen(true)} className="sheet-ghost folio-more" aria-label="Character actions"><Icon name="more" /></button></div>
       </header>
 
       <section className={`sheet-hero ${sheet.bannerUrl ? 'has-character-banner' : ''}`}>
