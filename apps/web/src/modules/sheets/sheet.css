@@ -541,10 +541,10 @@
 .character-folio .folio-essential .sheet-panel-note { color: var(--ds-muted); font-size: 12px; white-space: nowrap; }
 .folio-essential .folio-vitals-tracks { flex: 1; }
 .folio-weapons-col .folio-weapon-list { flex: 1; align-content: start; }
-.folio-weapons-col .folio-spellcast { margin-bottom: 8px; }
 .folio-hope-panel { gap: 10px; }
 .character-folio .folio-hope-panel > .sheet-panel-head { margin-bottom: 6px; }
 /* Hope gets the full column width: label and count on one line, the diamonds on their own row. */
+.character-folio .folio-hope-panel .is-compact > .folio-resource-header { display: none !important; }.character-folio .folio-hope-count { font-size: 13px; }.character-folio .folio-hope-count strong { color: var(--ds-ink); font-size: 15px; }
 .character-folio .folio-hope-panel .folio-resource.is-compact { grid-template-columns: minmax(0, 1fr); row-gap: 6px; padding: 0 0 4px; }
 .character-folio .folio-hope-panel .is-compact > .folio-resource-header { display: flex; align-items: baseline; justify-content: space-between; }
 .character-folio .folio-hope-panel .is-compact .folio-resource-label h2 { font-size: 15px; }
@@ -567,17 +567,20 @@
    they all fit in the first screen, like a printed sheet; scroll only for abilities, inventory and the rest. */
 @container (min-width: 900px) {
   .character-folio.sheet-page { padding-top: 10px; gap: 10px; }
-  .character-folio.sheet-page .sheet-hero { padding: 10px 18px; }
-  .character-folio.sheet-page .sheet-hero-top { min-height: 0; gap: 14px; align-items: center; }
-  .character-folio.sheet-page .sheet-portrait { width: 54px; height: 62px; }
+  /* Hero as one slim band: portrait, name, then class / heritage / badges on a single line; Evasion and Level as small plates. */
+  .character-folio.sheet-page .sheet-hero { padding: 8px 16px; }
+  .character-folio.sheet-page .sheet-hero-top { min-height: 0; gap: 12px; align-items: center; }
+  .character-folio.sheet-page .sheet-portrait { width: 44px; height: 48px; }
   .character-folio.sheet-page .sheet-identity { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; row-gap: 0; }
-  .character-folio.sheet-page .sheet-identity > :is(.sheet-eyebrow, .sheet-name) { flex: 1 0 100%; }
-  .character-folio.sheet-page .sheet-eyebrow { font-size: 12px; line-height: 1.4; }
-  .character-folio.sheet-page .sheet-name { margin: 0; font-size: 26px; line-height: 1.15; }
-  .character-folio.sheet-page .sheet-subtitle { margin: 0; font-size: 13px; }
+  .character-folio.sheet-page .sheet-name { order: -1; flex: 1 0 100%; min-height: 0; height: 30px; margin: 0; font-size: 23px; line-height: 1.15; }
+  .character-folio.sheet-page .sheet-eyebrow { margin: 0; font-size: 12px; line-height: 1.4; }
+  .character-folio.sheet-page .sheet-subtitle { margin: 0; font-size: 12.5px; }
   .character-folio.sheet-page .sheet-badges { margin: 0; }
-  .character-folio.sheet-page .sheet-hero-stat { width: 52px; }
-  .character-folio.sheet-page .sheet-hero-stat dd { width: 52px; height: 52px; font-size: 21px; }
+  .character-folio.sheet-page .sheet-badges > * { padding-block: 0; font-size: 11.5px; }
+  .character-folio.sheet-page .sheet-shields { gap: 10px; }
+  .character-folio.sheet-page .sheet-hero-stat { display: flex; align-items: center; gap: 7px; width: auto; }
+  .character-folio.sheet-page .sheet-hero-stat dt { font-size: 12px; }
+  .character-folio.sheet-page .sheet-hero-stat dd { width: 42px; height: 42px; font-size: 19px; }
 
   .character-folio.sheet-page .folio-traits-heading { padding-bottom: 4px; }
   .character-folio.sheet-page .folio-traits-heading > span:not([role="status"]) { display: none; }
@@ -592,10 +595,18 @@
   .character-folio.sheet-page .folio-dashboard > .folio-essential > .sheet-panel-head { min-height: 46px; margin: -12px -12px 10px; padding: 6px 12px; }
   .character-folio.sheet-page .folio-dashboard .sheet-threshold-strip { margin-bottom: 4px; }
   .character-folio.sheet-page .folio-dashboard .sheet-tier { padding: 4px; }
+  /* Rest already lives in the toolbar; Vitals keeps a single, roomy Take damage button. */
+  .character-folio.sheet-page .folio-dashboard .folio-vitals-actions > .sheet-ghost:not(:first-child) { display: none; }
+  .character-folio.sheet-page .folio-dashboard .folio-vitals-actions > .sheet-ghost { padding: 0 12px; border-radius: var(--radius-sm); font-size: 13px; }
+  .character-folio.sheet-page .folio-dashboard .folio-vitals-actions > .sheet-ghost > .daggery-icon { display: inline-block; }
+  /* Spellcast sits in the weapons heading, next to the title. */
+  .character-folio.sheet-page .folio-weapons-col > .sheet-panel-head { gap: 8px; }
+  .character-folio.sheet-page .folio-weapons-col .folio-spellcast { flex-wrap: nowrap; gap: 5px; }
+  .character-folio.sheet-page .folio-weapons-col .folio-spellcast > span { display: inline; font-size: 12px; }
+  .character-folio.sheet-page .folio-weapons-col .folio-spellcast .sheet-chip { min-height: 28px; padding: 0 10px; font-size: 12px; }
   .character-folio.sheet-page .folio-dashboard .folio-resource.is-compact { padding: 2px 0; }
   .character-folio.sheet-page .folio-dashboard .is-compact .folio-resource-pips > button { height: 34px; }
 
-  .folio-weapons-col .folio-spellcast { margin-bottom: 6px; }
   .character-folio.sheet-page .folio-weapons-col .folio-weapon { gap: 6px; padding: 8px; }
   .character-folio.sheet-page .folio-weapons-col .folio-weapon .item-glyph { display: none; }
   .character-folio.sheet-page .folio-weapons-col .folio-weapon h4 { font-size: 15px; }
@@ -613,3 +624,5 @@
   .character-folio.sheet-page .folio-hope-panel .folio-experiences button { min-height: 34px; }
   .character-folio.sheet-page .folio-hope-panel .folio-next-summary { display: none; }
 }
+.folio-spellcast .sheet-chip:disabled { opacity: 1; cursor: default; }
+.folio-weapons-col > .sheet-panel-head .folio-spellcast { margin: 0; }

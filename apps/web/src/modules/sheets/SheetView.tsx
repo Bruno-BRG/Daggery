@@ -566,17 +566,9 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
         {reactionFeature && <button type="button" className="sheet-ghost folio-reaction" disabled={!armorSlotAvailable} onClick={useReaction}><Icon name="shield" />{reactionFeature.name} reaction · mark 1 Armor Slot</button>}
       </section>
         <section className="sheet-panel folio-essential folio-weapons-col" aria-label="Active weapons">
-          <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="axe" />Active weapons</h3><span className="sheet-panel-note">Proficiency {sheet.proficiency}</span></div>
-          {spellcastOptions.length > 0 && (
-            <div className="folio-spellcast" role="group" aria-label="Spellcast trait">
-              <span>Spellcast</span>
-              {spellcastOptions.map((trait) => (
-                <button key={trait} type="button" title={`Spellcast trait: ${TRAIT_LABELS[trait]}`} aria-pressed={spellcastTrait === trait} onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>
-                  {TRAIT_LABELS[trait]} {traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="axe" />Active weapons</h3>{spellcastOptions.length > 0
+            ? <div className="folio-spellcast" role="group" aria-label="Spellcast trait"><span>Spellcast</span>{spellcastOptions.map((trait) => <button key={trait} type="button" title={spellcastOptions.length > 1 ? `Use ${TRAIT_LABELS[trait]} as your Spellcast trait` : `Spellcast trait: ${TRAIT_LABELS[trait]}`} aria-pressed={spellcastTrait === trait} disabled={spellcastOptions.length === 1} onClick={() => mutate((current) => ({ ...current, spellcastTraitOverride: trait }))} className={`sheet-chip ${spellcastTrait === trait ? 'is-active' : ''}`}>{TRAIT_LABELS[trait]} {traitValue(sheet, trait) >= 0 ? `+${traitValue(sheet, trait)}` : traitValue(sheet, trait)}</button>)}</div>
+            : <span className="sheet-panel-note">Proficiency {sheet.proficiency}</span>}</div>
           <div className="folio-weapon-list">
             {primary ? <WeaponRow weapon={primary} slot="Primary" modifier={weaponModifier(sheet, primary)} damage={weaponDamageNotation(sheet, primary)} disabled={rolling} onAttack={() => attack(primary)} onChange={()=>setEquipmentSlot('primary')} /> : <EmptyWeaponRow slot="primary" onEquip={()=>setEquipmentSlot('primary')} />}
             {secondary ? <WeaponRow weapon={secondary} slot="Secondary" modifier={weaponModifier(sheet, secondary)} damage={weaponDamageNotation(sheet, secondary)} disabled={rolling} onAttack={() => attack(secondary)} onChange={()=>setEquipmentSlot('secondary')} /> : <EmptyWeaponRow slot="secondary" disabled={secondaryBlocked(sheet)} onEquip={()=>setEquipmentSlot('secondary')} />}
@@ -584,7 +576,7 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
         </section>
 
         <section className="sheet-panel folio-essential folio-hope-panel" aria-label="Hope and next roll">
-          <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="spark" />Hope &amp; next roll</h3></div>
+          <div className="sheet-panel-head"><h3 className="sheet-section-title"><Icon name="spark" />Hope &amp; next roll</h3><span className="sheet-panel-note folio-hope-count"><strong>{sheet.hope}</strong> / {MAX_HOPE} Hope</span></div>
           <ResourceCard compact label="Hope" icon="spark" count={sheet.hope} max={MAX_HOPE} tone="hope" kind="held" onChange={value => mutate(current => ({ ...current, hope: Math.min(MAX_HOPE, Math.max(0, value)) }))} />
           <div className="sheet-seg" role="group" aria-label="Advantage">
             {([['normal', 'Normal'], ['advantage', 'Advantage'], ['disadvantage', 'Disadvantage']] as const).map(([value, label]) => (
