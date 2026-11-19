@@ -36,6 +36,7 @@ export default function App({ onLeave }: { onLeave: () => void }) {
   const DiceSurface = systemUI?.diceOverlay;
   const companion = systemUI?.companion && ruleset?.features.includes(systemUI.companion.feature) && (!systemUI.companion.gmOnly || campaign.role === 'gm') ? systemUI.companion : undefined;
   const Companion = companion?.component;
+  const StatusItem = systemUI?.statusItem && ruleset?.features.includes(systemUI.statusItem.feature) ? systemUI.statusItem.component : undefined;
   const [syncError, setSyncError] = useState('');
   const { status, rolls, sendRoll } = useRollLog();
   const syncStatus = useSyncStatus();
@@ -251,6 +252,7 @@ export default function App({ onLeave }: { onLeave: () => void }) {
           </div>
           <div className="daggery-top-actions">
             <button type="button" className="daggery-theme" onClick={() => setSearchOpen(true)} aria-label="Quick navigation (Ctrl K)" title="Quick navigation (Ctrl K)"><Icon name="search" /></button>
+            {StatusItem && <StatusItem />}
             <span
               role="status"
               className={`daggery-connection ${online ? 'is-online' : ''}`}
