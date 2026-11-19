@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { createPortal } from 'react-dom';
 import { DUALITY_MAX_FEAR } from '@daggery/shared';
 import { Icon } from '../components/Icon';
 import { getActiveCampaign } from '../campaign-context';
@@ -16,7 +17,7 @@ export function FearTracker() {
   const fear = Math.min(DUALITY_MAX_FEAR, Math.max(0, Math.trunc(Number(doc?.value) || 0)));
   const threshold = Number(campaign.configuration.options.fearThreshold) || 0;
   const isGm = campaign.role === 'gm';
-  const { open, setOpen, rootRef } = useTrackerPanel();
+  const { open, setOpen, rootRef, panelRef, style } = useTrackerPanel();
   const pulse = usePulse(fear);
   const panelId = useId();
 
@@ -37,8 +38,8 @@ export function FearTracker() {
         </span>
         <strong className="tracker-count" aria-live="polite">{fear}</strong>
       </button>
-      {open && (
-        <div className="tracker-panel" id={panelId} role="group" aria-label="Fear pool">
+      {open && createPortal(
+        <div className="tracker is-fear tracker-panel" id={panelId} ref={panelRef} style={style} role="group" aria-label="Fear pool">
           <section className="tracker-card is-hero" aria-label="Fear">
             <h4><Icon name="adversary" />Fear<small>the world acts at {threshold}+</small></h4>
             <div className="tracker-dial">
@@ -56,7 +57,8 @@ export function FearTracker() {
             <p className={`tracker-state${active ? '' : ''}`} role="status"><Icon name={active ? 'stress' : 'shield'} /><span>{status}</span></p>
             <p className="tracker-note">A roll made with Fear adds 1 automatically.</p>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

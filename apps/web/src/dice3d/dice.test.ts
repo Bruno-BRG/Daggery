@@ -9,6 +9,7 @@ import { parseAppearance, paletteFor } from './appearance';
 import type { RollLogEntry, RollPayload } from '@daggery/shared';
 import { executeRoll } from './rollExecution';
 import { diceForPayload } from './rollPlan';
+import { parseChoice, pickQuality, QUALITY } from './quality';
 import { faceLabel } from './faceLabels';
 import { buildBevelledMesh } from './bevel';
 
@@ -167,4 +168,25 @@ test('saved appearances accept the new finishes and presets', () => {
   const tens = paletteFor('percentile', parseAppearance('{}'));
   const units = paletteFor('neutral', parseAppearance('{}'));
   assert.notEqual(tens.body, units.body);
+});
+
+test('auto quality gives touch devices and small machines the light profile, and a choice always wins', () => {
+  const desktop = { coarsePointer: false, cores: 12, memoryGb: 16 };
+  assert.equal(pickQuality('auto', desktop).id, 'full');
+  assert.equal(pickQuality('auto', { ...desktop, coarsePointer: true }).id, 'light');
+  assert.equal(pickQuality('auto', { ...desktop, cores: 4 }).id, 'light');
+  assert.equal(pickQuality('auto', { ...desktop, memoryGb: 4 }).id, 'light');
+  assert.equal(pickQuality('full', { ...desktop, coarsePointer: true }).id, 'full');
+  assert.equal(pickQuality('light', desktop).id, 'light');
+  assert.equal(parseChoice('light'), 'light');
+  assert.equal(parseChoice('weird'), 'auto');
+  assert.equal(parseChoice(null), 'auto');
+});
+
+test('the light profile asks for less of everything it can', () => {
+  assert.ok(QUALITY.light.pixelRatio < QUALITY.full.pixelRatio);
+  assert.ok(QUALITY.light.shadowMapSize < QUALITY.full.shadowMapSize);
+  assert.ok(QUALITY.light.atlasCellPx < QUALITY.full.atlasCellPx);
+  assert.ok(QUALITY.light.envSize < QUALITY.full.envSize);
+  assert.equal(QUALITY.light.fancyMaterials, false);
 });

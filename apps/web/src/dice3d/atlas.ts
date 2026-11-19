@@ -3,7 +3,7 @@ import { type Colorway } from './colorways';
 import { faceLabel, type FaceReading } from './faceLabels';
 import { atlasPoint, faceDirection, type DieShape } from './shapes';
 
-/** Pixels per atlas cell. One cell per face. */
+/** Pixels per atlas cell, by default. One cell per face. */
 const CELL_PX = 256;
 
 /** Numeral height as a fraction of the cell, tuned per shape so numerals fit their faces. */
@@ -12,6 +12,8 @@ const NUMERAL_SIZE: Record<number, number> = { 4: 0.2, 6: 0.5, 8: 0.32, 10: 0.3,
 export interface AtlasOptions {
   finish?: 'matte' | 'polished' | 'metal' | 'pearl' | 'marble';
   reading?: FaceReading;
+  /** Pixels per face. Tablets use fewer. */
+  cellPx?: number;
 }
 
 /** Small seeded generator, so the same die always gets the same marble pattern. */
@@ -82,10 +84,10 @@ function paintGrain(ctx: CanvasRenderingContext2D, width: number, height: number
   }
 }
 
-function makeCanvas(shape: DieShape): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+function makeCanvas(shape: DieShape, cellPx = CELL_PX): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const canvas = document.createElement('canvas');
-  canvas.width = shape.cols * CELL_PX;
-  canvas.height = shape.rows * CELL_PX;
+  canvas.width = shape.cols * cellPx;
+  canvas.height = shape.rows * cellPx;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('2D canvas is unavailable');
   return { canvas, ctx };
@@ -98,7 +100,7 @@ function eachNumeral(
   reading: FaceReading | undefined,
   draw: (text: string, px: number) => void,
 ): void {
-  const base = (NUMERAL_SIZE[shape.sides] ?? 0.3) * CELL_PX;
+  const base = (NUMERAL_SIZE[shape.sides] ?? 0.3) * ctx.canvas.width / shape.cols;
   for (const numeral of shape.numerals) {
     const text = faceLabel(numeral.value, reading);
     // Two-digit labels are wider, so they shrink to stay on the face.
@@ -125,7 +127,7 @@ const NEEDS_UNDERLINE = new Set(['6', '9', '60', '90']);
  * read upright once the die is set to that result.
  */
 export function buildAtlas(shape: DieShape, palette: Colorway, options: AtlasOptions = {}): HTMLCanvasElement {
-  const { canvas, ctx } = makeCanvas(shape);
+  const { canvas, ctx } = makeCanvas(shape, options.cellPx);
   const seed = hashText(`${shape.sides}:${palette.body}`);
   if (options.finish === 'marble') {
     paintMarble(ctx, canvas.width, canvas.height, palette.body, seed);
@@ -155,8 +157,8 @@ export function buildAtlas(shape: DieShape, palette: Colorway, options: AtlasOpt
  * Height map for engraved numerals: white is the surface, black is cut into it. The shader reads
  * it as a bump map, so the numerals look carved into the die, as on a real one.
  */
-export function buildBumpAtlas(shape: DieShape, reading?: FaceReading): HTMLCanvasElement {
-  const { canvas, ctx } = makeCanvas(shape);
+export function buildBumpAtlas(shape: DieShape, reading?: FaceReading, cellPx?: number): HTMLCanvasElement {
+  const { canvas, ctx } = makeCanvas(shape, cellPx);
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.lineJoin = 'round';

@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { createPortal } from 'react-dom';
 import {
   burnMomentum, DEBILITIES, initiativeLabelFor, maxMomentum, MOMENTUM_MAX, MOMENTUM_MIN, resetMomentum, setDebility, setInitiative,
   setMomentum, sufferMomentum, sufferSupply, SUPPLY_MAX, takeMomentum, takeSupply, turnTheTide, type DebilityId, type Initiative,
@@ -18,7 +19,7 @@ const GROUPS = [
 /** Momentum in the top bar: your side of the table. Click it for the ladder, Supply, Initiative and Debilities. */
 export function MomentumTracker() {
   const { tracker, update } = useMomentum();
-  const { open, setOpen, rootRef } = useTrackerPanel();
+  const { open, setOpen, rootRef, panelRef, style } = useTrackerPanel();
   const pulse = usePulse(tracker.value);
   const panelId = useId();
   const max = maxMomentum(tracker.debilities), reset = resetMomentum(tracker.debilities);
@@ -49,8 +50,8 @@ export function MomentumTracker() {
         {fighting && <span className="tracker-badge"><Icon name={tracker.initiative === 'hero' ? 'combat' : 'adversary'} />{tracker.initiative === 'hero' ? 'You' : 'Foe'}</span>}
       </button>
 
-      {open && (
-        <div className="tracker-panel" id={panelId} role="group" aria-label="Momentum and trackers">
+      {open && createPortal(
+        <div className="tracker is-momentum tracker-panel" id={panelId} ref={panelRef} style={style} role="group" aria-label="Momentum and trackers" data-negative={tracker.value < 0 || undefined}>
           <section className="tracker-card is-hero" aria-label="Momentum">
             <h4><Icon name="spark" />Momentum<small>max {signed(max)} · reset {signed(reset)}</small></h4>
             <div className="tracker-dial">
@@ -132,7 +133,8 @@ export function MomentumTracker() {
               </div>
             </div>
           </section>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

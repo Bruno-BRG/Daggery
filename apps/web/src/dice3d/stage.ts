@@ -7,7 +7,8 @@ import { upwardResult } from './landing';
 import { MAX_TRAY_DICE, type DieRequest } from './rollPlan';
 import { getDieShape, type DieShape } from './shapes';
 import { DIE_RADIUS, PHYSICS_STEP, prepareThrow, type Bounds, type PreparedThrow } from './simulation';
-import { FADE_MS, HOLD_MS, MAX_PIXEL_RATIO, REDUCED_MOTION_SECONDS } from './motion';
+import { FADE_MS, HOLD_MS, REDUCED_MOTION_SECONDS } from './motion';
+import { getDiceQuality, type DiceQuality } from './quality';
 
 export interface TrayRect { left: number; top: number; right: number; bottom: number }
 export const DEFAULT_TRAY_RECT: TrayRect = { left: .08, top: .32, right: .92, bottom: .94 };
@@ -39,6 +40,12 @@ const FINISHES: Record<DiceFinish, THREE.MeshPhysicalMaterialParameters> = {
   marble: { roughness: .22, metalness: .02, clearcoat: 1, clearcoatRoughness: .04, envMapIntensity: 1.05 },
 };
 
+/** Pearl's iridescence and sheen are the costliest parts of a die's shader. Light quality leaves them out. */
+function finishFor(finish: DiceFinish, fancy: boolean): THREE.MeshPhysicalMaterialParameters {
+  const { iridescence: _i, iridescenceIOR: _o, iridescenceThicknessMinimum: _a, iridescenceThicknessMaximum: _b, sheen: _s, sheenRoughness: _r, sheenColor: _c, ...plain } = FINISHES[finish];
+  return fancy ? FINISHES[finish] : plain;
+}
+
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 interface Job { requests: DieRequest[]; appearance: DiceAppearance; resolve: ()=>void; reject: (reason: Error)=>void }
 interface ActiveJob { job: Job; motion: PreparedThrow; elapsed: number }
@@ -51,6 +58,9 @@ export class DiceStage {
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(36,1,.1,200);
   private readonly resizeObserver: ResizeObserver;
+  private readonly quality: DiceQuality = getDiceQuality();
+  private dirty = true;
+  private pumpScheduled = false;
   private readonly shadowFloor: THREE.Mesh;
   private readonly geometries = new Map<number,THREE.BufferGeometry>();
   private readonly baseMaterials = new Map<string,DieMaterial>();
@@ -99,13 +109,13 @@ export class DiceStage {
     this.placeCamera(0,0,0);
     // A small studio room gives the clear coat and the metal something to reflect.
     const pmrem = new THREE.PMREMGenerator(this.renderer);
-    this.environment = pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+    this.environment = pmrem.fromScene(new RoomEnvironment(),0.04,0.1,100,{size:this.quality.envSize}).texture;
     pmrem.dispose();
     this.scene.environment = this.environment;
     this.scene.environmentIntensity = .62;
     const hemisphere = new THREE.HemisphereLight(0xffffff,0x3b3550,.3);
     const sun = new THREE.DirectionalLight(0xfff4e0,1.7);
-    sun.position.set(-5,14,6); sun.castShadow = true; sun.shadow.mapSize.set(2048,2048); sun.shadow.radius = 3;
+    sun.position.set(-5,14,6); sun.castShadow = true; sun.shadow.mapSize.set(this.quality.shadowMapSize,this.quality.shadowMapSize); sun.shadow.radius = 3;
     Object.assign(sun.shadow.camera,{left:-10,right:10,top:10,bottom:-10,near:1,far:40});
     sun.shadow.camera.updateProjectionMatrix(); sun.shadow.bias = -.0006; sun.shadow.normalBias = .02;
     // A cool light from behind picks out every bevelled edge.
@@ -140,7 +150,7 @@ export class DiceStage {
   enqueue(requests: DieRequest[], appearance: DiceAppearance = DEFAULT_APPEARANCE): Promise<void> {
     return new Promise((resolve, reject)=>{
       if (this.disposed || !requests.length) { resolve(); return; }
-      this.queue.push({requests:requests.slice(0,MAX_TRAY_DICE),appearance,resolve,reject}); this.pump();
+      this.queue.push({requests:requests.slice(0,MAX_TRAY_DICE),appearance,resolve,reject}); this.schedulePump();
     });
   }
 
@@ -172,7 +182,7 @@ export class DiceStage {
   private resize(): void {
     if (this.disposed) return;
     const width = Math.max(1,this.container.clientWidth), height = Math.max(1,this.container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,MAX_PIXEL_RATIO)); this.renderer.setSize(width,height,false);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,this.quality.pixelRatio)); this.renderer.setSize(width,height,false);
     this.camera.aspect = width/height; this.camera.updateProjectionMatrix(); this.placeCamera(0,0,0); this.camera.updateMatrixWorld();
     const floor = new THREE.Plane(new THREE.Vector3(0,1,0),0), ray = new THREE.Raycaster(), hit = new THREE.Vector3();
     const {left,top,right,bottom} = this.rect;
@@ -187,9 +197,23 @@ export class DiceStage {
     this.render();
   }
 
+  /**
+   * The throw is simulated once, up front, which takes a moment on a tablet. Starting it a frame later lets the tap
+   * that asked for it paint first (the button, the summary) instead of freezing while the physics runs.
+   */
+  private schedulePump(): void {
+    if (this.pumpScheduled || this.active || this.disposed) return;
+    this.pumpScheduled = true;
+    requestAnimationFrame(() => { this.pumpScheduled = false; this.pump(); });
+  }
+
+  /** True when no roll is playing or waiting and no die is on screen, so the stage can be released. */
+  get idle(): boolean { return !this.active && this.queue.length === 0 && this.dice.length === 0; }
+
   private pump(): void {
     if (this.active || this.disposed) return;
     const job = this.queue.shift(); if (!job) return;
+    this.canvas.style.visibility = 'visible'; this.dirty = true;
     this.clearDice();
     const style = JSON.stringify(job.appearance);
     if (style !== this.materialStyle) { this.clearMaterials(); this.materialStyle = style; }
@@ -339,7 +363,13 @@ export class DiceStage {
       }
       this.updateSettle(now,fade);
     }
-    this.render(); if (this.active || this.dice.length) this.ensureLoop(); else if (faded) this.hooks.onIdle?.();
+    // While the dice rest and nothing else moves, the last frame stays on screen: drawing it again would only cost battery.
+    const moving = !!this.active || this.fadeStart !== null || faded || this.dirty
+      || (now-this.settledAt)/1000 < SETTLE_RING_SECONDS + .1 || (this.effect==='sparks' && now-this.settledAt < 1200);
+    if (moving) { this.render(); this.dirty = false; }
+    // A resting canvas is hidden, so the page under it is not blended with a full-screen layer.
+    if (faded) this.canvas.style.visibility = 'hidden';
+    if (this.active || this.dice.length) this.ensureLoop(); else if (faded) this.hooks.onIdle?.();
   };
 
   private ensureLoop(): void { if (!this.frameId && !this.disposed) this.frameId = requestAnimationFrame(this.frame); }
@@ -372,13 +402,13 @@ export class DiceStage {
   private baseMaterial(shape: DieShape, request: DieRequest, appearance: DiceAppearance): DieMaterial {
     const key = shape.sides+':'+request.colorway+':'+(request.reading ?? ''); let material = this.baseMaterials.get(key);
     if (!material) {
-      const palette = paletteFor(request.colorway,appearance), anisotropy = Math.min(8,this.renderer.capabilities.getMaxAnisotropy());
-      const color = new THREE.CanvasTexture(buildAtlas(shape,palette,{finish:appearance.finish,reading:request.reading}));
+      const palette = paletteFor(request.colorway,appearance), anisotropy = Math.min(this.quality.anisotropy,this.renderer.capabilities.getMaxAnisotropy());
+      const color = new THREE.CanvasTexture(buildAtlas(shape,palette,{finish:appearance.finish,reading:request.reading,cellPx:this.quality.atlasCellPx}));
       color.colorSpace = THREE.SRGBColorSpace; color.anisotropy = anisotropy;
       // The numerals are cut into the die, so light catches their edges as it would on a real one.
-      const engraving = new THREE.CanvasTexture(buildBumpAtlas(shape,request.reading));
+      const engraving = new THREE.CanvasTexture(buildBumpAtlas(shape,request.reading,this.quality.atlasCellPx));
       engraving.anisotropy = anisotropy;
-      material = new THREE.MeshPhysicalMaterial({map:color,bumpMap:engraving,bumpScale:appearance.finish==='metal'?2.2:3,...FINISHES[appearance.finish],emissive:this.effect==='none' ? '#000000' : palette.body,emissiveIntensity:.15});
+      material = new THREE.MeshPhysicalMaterial({map:color,bumpMap:engraving,bumpScale:appearance.finish==='metal'?2.2:3,...finishFor(appearance.finish,this.quality.fancyMaterials),emissive:this.effect==='none' ? '#000000' : palette.body,emissiveIntensity:.15});
       this.baseMaterials.set(key,material);
     }
     return material;

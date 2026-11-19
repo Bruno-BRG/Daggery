@@ -33,7 +33,7 @@
 @keyframes tracker-down { 0% { transform: scale(1); } 22% { transform: scale(.93); } 100% { transform: scale(1); } }
 
 /* ------------------------------------------------------------------------------------------ The panel */
-.tracker-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 70; width: min(352px, calc(100vw - 24px)); max-height: min(88vh, 800px); overflow-y: auto; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--ds-border-strong); border-radius: var(--radius-xl); background: var(--ds-raised); color: var(--ds-ink); box-shadow: 0 18px 44px var(--ds-shadow-lg); animation: tracker-panel .18s ease-out; scrollbar-width: thin; }
+.tracker.tracker-panel { position: fixed; z-index: 80; width: min(352px, calc(100vw - 20px)); max-height: min(88vh, 800px); overflow-y: auto; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--ds-border-strong); border-radius: var(--radius-xl); background: var(--ds-raised); color: var(--ds-ink); box-shadow: 0 18px 44px var(--ds-shadow-lg); animation: tracker-panel .18s ease-out; scrollbar-width: thin; }
 @keyframes tracker-panel { from { opacity: 0; transform: translateY(-6px) scale(.985); } }
 .tracker-card { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-surface); }
 .tracker-card.is-hero { padding: 14px 12px 12px; background: radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--tone) 20%, transparent), transparent 70%), var(--ds-surface); border-color: color-mix(in srgb, var(--tone) 38%, var(--ds-border)); }
@@ -120,13 +120,11 @@
 
 .tracker :is(button):focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
 
-@media (max-width: 1100px) { .tracker-meter { display: none; } }
+/* Tablets: an icon and a number are enough, so the top bar fits. */
+@media (max-width: 1100px) { .tracker-meter, .tracker-label { display: none; } .tracker-chip { padding: 0 11px 0 9px; gap: 7px; } }
 @media (max-width: 760px) {
-  .tracker-label { display: none; }
   .tracker-chip { padding: 0 10px 0 8px; gap: 6px; }
-  .daggery-trackers { position: static; gap: 6px; }
-  .daggery-trackers .tracker { position: static; }
-  .tracker-panel { position: fixed; top: 64px; right: 10px; left: 10px; width: auto; max-height: calc(100dvh - 80px); }
+  .daggery-trackers { gap: 6px; }
   .tracker-ladder button { height: 34px; font-size: 9px; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -27,6 +27,8 @@ type Capability = Exclude<DiceTrayStatus, 'detached'>;
 /** Whatever draws a roll right now. The 3D stage and the flat fallback both match this shape. */
 interface TraySurface {
   readonly kind: 'three' | 'flat';
+  /** True when nothing is playing or waiting and no die is on screen. */
+  readonly idle?: boolean;
   enqueue(requests: DieRequest[], appearance: DiceAppearance): Promise<void>;
   abort(reason: Error): void;
   dispose(): void;
@@ -44,6 +46,13 @@ let capability: Capability = 'untested';
 const listeners = new Set<() => void>();
 const echoes = new RollEchoes();
 let rollSequence = 0;
+/**
+ * A 3D stage stays alive this long after its dice fade, hidden and not drawing. Starting one costs real time on a
+ * tablet (the GPU context, the reflections, the shaders), and rolls often come a few seconds apart. After this
+ * long with no roll it is released, so a quiet page still holds no WebGL context.
+ */
+const KEEP_WARM_MS = 30_000;
+let warmTimer = 0;
 
 function emit(): void {
   for (const listener of listeners) listener();
@@ -78,6 +87,7 @@ export function attachTray(target: HTMLElement): () => void {
   return () => {
     if (container !== target) return;
     container = null;
+    window.clearTimeout(warmTimer);
     const live = surface;
     surface = null;
     live?.dispose();
@@ -96,13 +106,16 @@ function removeStrayCanvases(host: HTMLElement): void {
  * dice; a reload tries 3D again.
  */
 function ensureSurface(): TraySurface | null {
-  if (surface) return surface;
+  if (surface) {
+    window.clearTimeout(warmTimer);
+    return surface;
+  }
   const host = container;
   if (!host || capability === 'none') return null;
   if (capability !== 'flat') {
     try {
       const stage: DiceStage = new DiceStage(host, DEFAULT_TRAY_RECT, {
-        onIdle: () => release(stage),
+        onIdle: () => keepWarm(stage),
         onLost: () => retire(stage, new Error('The WebGL context was lost.')),
       });
       surface = stage;
@@ -126,8 +139,20 @@ function ensureSurface(): TraySurface | null {
   }
 }
 
+/** Lets a faded stage rest for a while before it is released. A new roll cancels this. */
+function keepWarm(target: TraySurface): void {
+  window.clearTimeout(warmTimer);
+  warmTimer = window.setTimeout(() => { if (target.idle !== false) release(target); }, KEEP_WARM_MS);
+}
+
+/** Drops an idle stage now, so the next roll builds one with the current quality setting. */
+export function refreshDiceQuality(): void {
+  if (surface && surface.idle) release(surface);
+}
+
 /** Releases a surface whose dice have faded. The next roll builds a fresh one. */
 function release(target: TraySurface): void {
+  window.clearTimeout(warmTimer);
   if (surface !== target) return;
   surface = null;
   target.dispose();
