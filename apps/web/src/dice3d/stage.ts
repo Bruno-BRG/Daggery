@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { buildAtlas, buildBumpAtlas } from './atlas';
+import { cachedAtlas, cachedBumpAtlas } from './atlas';
 import { buildBevelledMesh } from './bevel';
 import { DEFAULT_APPEARANCE, mixHex, paletteFor, type DiceAppearance, type DiceFinish } from './appearance';
 import { upwardResult } from './landing';
 import { MAX_TRAY_DICE, type DieRequest } from './rollPlan';
 import { getDieShape, type DieShape } from './shapes';
-import { DIE_RADIUS, PHYSICS_STEP, prepareThrow, type Bounds, type PreparedThrow } from './simulation';
+import { DIE_RADIUS, PHYSICS_STEP, type Bounds, type PreparedThrow } from './simulation';
+import { prepareThrowOffThread } from './simulationClient';
 import { FADE_MS, HOLD_MS, REDUCED_MOTION_SECONDS } from './motion';
 import { getDiceQuality, type DiceQuality } from './quality';
 
@@ -46,6 +47,15 @@ function finishFor(finish: DiceFinish, fancy: boolean): THREE.MeshPhysicalMateri
   return fancy ? FINISHES[finish] : plain;
 }
 
+/**
+ * Resolution while dice move is adaptive. The stage times its frames: when they run slower than SLOW_MS it draws
+ * fewer pixels, and when they run fast it draws more. What it learns is kept for the next roll on this page.
+ */
+const SLOW_MS = 23;
+const FAST_MS = 17.5;
+const SAMPLE_FRAMES = 14;
+let learnedMoveRatio: number | null = null;
+
 const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 interface Job { requests: DieRequest[]; appearance: DiceAppearance; resolve: ()=>void; reject: (reason: Error)=>void }
 interface ActiveJob { job: Job; motion: PreparedThrow; elapsed: number }
@@ -61,6 +71,13 @@ export class DiceStage {
   private readonly quality: DiceQuality = getDiceQuality();
   private dirty = true;
   private pumpScheduled = false;
+  /** The job whose throw is being simulated off the page's thread. */
+  private preparing: Job | null = null;
+  private moveRatio = Math.min(learnedMoveRatio ?? this.quality.moveRatio, this.quality.moveRatio);
+  private ratio = this.moveRatio;
+  private frameSamples = 0;
+  private frameMs = 0;
+  private fastStreak = 0;
   private readonly shadowFloor: THREE.Mesh;
   private readonly geometries = new Map<number,THREE.BufferGeometry>();
   private readonly baseMaterials = new Map<string,DieMaterial>();
@@ -101,6 +118,8 @@ export class DiceStage {
     this.renderer.toneMappingExposure = .92;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    // The shadow map is drawn only while dice move. A resting scene keeps the last one.
+    this.renderer.shadowMap.autoUpdate = false; this.renderer.shadowMap.needsUpdate = true;
     Object.assign(this.canvas.style,{display:'block',width:'100%',height:'100%'});
     container.appendChild(this.canvas);
     // A lost context cannot draw again. Report it, so the tray moves future rolls to flat dice.
@@ -122,7 +141,7 @@ export class DiceStage {
     const rim = new THREE.DirectionalLight(0xaecbff,1.1);
     rim.position.set(7,6,-9);
     this.scene.add(hemisphere,sun,sun.target,rim);
-    this.shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.ShadowMaterial({opacity:.3}));
+    this.shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.ShadowMaterial({opacity:.3}));
     this.shadowFloor.rotation.x = -Math.PI/2; this.shadowFloor.receiveShadow = true; this.scene.add(this.shadowFloor);
 
     const haloCanvas = document.createElement('canvas'); haloCanvas.width = haloCanvas.height = 64;
@@ -157,9 +176,9 @@ export class DiceStage {
   /** Rejects the rolls still waiting here, so the tray can replay them flat, then releases the GPU. */
   abort(reason: Error): void {
     if (this.disposed) return;
-    const pending = this.active ? [this.active.job] : [];
+    const pending = this.active ? [this.active.job] : this.preparing ? [this.preparing] : [];
     pending.push(...this.queue.splice(0));
-    this.active = null;
+    this.active = null; this.preparing = null;
     this.dispose();
     pending.forEach(job=>job.reject(reason));
   }
@@ -167,7 +186,7 @@ export class DiceStage {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true; cancelAnimationFrame(this.frameId); this.resizeObserver.disconnect();
-    this.active?.job.resolve(); this.active = null;
+    this.active?.job.resolve(); this.active = null; this.preparing?.resolve(); this.preparing = null;
     this.queue.splice(0).forEach(job=>job.resolve()); this.clearDice();
     this.geometries.forEach(g=>g.dispose()); this.clearMaterials();
     this.haloTexture.dispose(); this.ringTexture.dispose(); this.ringGeometry.dispose(); this.environment.dispose(); this.sparks.geometry.dispose(); this.sparks.material.dispose();
@@ -179,10 +198,17 @@ export class DiceStage {
     this.canvas.remove();
   }
 
+  /** Sets how many device pixels the canvas draws per CSS pixel. The device's own ratio is the ceiling. */
+  private applyRatio(ratio: number, width = Math.max(1,this.container.clientWidth), height = Math.max(1,this.container.clientHeight)): void {
+    this.ratio = Math.min(window.devicePixelRatio||1,ratio);
+    this.renderer.setPixelRatio(this.ratio); this.renderer.setSize(width,height,false);
+    this.dirty = true;
+  }
+
   private resize(): void {
     if (this.disposed) return;
     const width = Math.max(1,this.container.clientWidth), height = Math.max(1,this.container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,this.quality.pixelRatio)); this.renderer.setSize(width,height,false);
+    this.applyRatio(this.ratio,width,height);
     this.camera.aspect = width/height; this.camera.updateProjectionMatrix(); this.placeCamera(0,0,0); this.camera.updateMatrixWorld();
     const floor = new THREE.Plane(new THREE.Vector3(0,1,0),0), ray = new THREE.Raycaster(), hit = new THREE.Vector3();
     const {left,top,right,bottom} = this.rect;
@@ -193,7 +219,13 @@ export class DiceStage {
       bounds.minX = Math.min(bounds.minX,hit.x); bounds.maxX = Math.max(bounds.maxX,hit.x);
       bounds.minZ = Math.min(bounds.minZ,hit.z); bounds.maxZ = Math.max(bounds.maxZ,hit.z);
     }
-    if (Number.isFinite(bounds.minX)) this.bounds = bounds;
+    if (Number.isFinite(bounds.minX)) {
+      this.bounds = bounds;
+      // The shadow catcher only has to cover where the dice can land, not the whole screen: its pixels all run a shader.
+      this.shadowFloor.scale.set(bounds.maxX-bounds.minX+6,bounds.maxZ-bounds.minZ+6,1);
+      this.shadowFloor.position.set((bounds.minX+bounds.maxX)/2,0,(bounds.minZ+bounds.maxZ)/2);
+    }
+    this.renderer.shadowMap.needsUpdate = true;
     this.render();
   }
 
@@ -202,23 +234,36 @@ export class DiceStage {
    * that asked for it paint first (the button, the summary) instead of freezing while the physics runs.
    */
   private schedulePump(): void {
-    if (this.pumpScheduled || this.active || this.disposed) return;
+    if (this.pumpScheduled || this.active || this.preparing || this.disposed) return;
     this.pumpScheduled = true;
     requestAnimationFrame(() => { this.pumpScheduled = false; this.pump(); });
   }
 
   /** True when no roll is playing or waiting and no die is on screen, so the stage can be released. */
-  get idle(): boolean { return !this.active && this.queue.length === 0 && this.dice.length === 0; }
+  get idle(): boolean { return !this.active && !this.preparing && this.queue.length === 0 && this.dice.length === 0; }
 
   private pump(): void {
-    if (this.active || this.disposed) return;
+    if (this.active || this.preparing || this.disposed) return;
     const job = this.queue.shift(); if (!job) return;
-    this.canvas.style.visibility = 'visible'; this.dirty = true;
+    this.preparing = job;
+    this.canvas.style.visibility = 'visible';
+    // Moving dice are drawn at the adaptive ratio. The sharp, resting ratio comes back when they stop.
+    if (this.ratio !== this.moveRatio) this.applyRatio(this.moveRatio);
+    prepareThrowOffThread(job.requests,this.bounds).then(motion=>{
+      if (this.disposed || this.preparing !== job) return;
+      this.preparing = null; this.start(job,motion);
+    },(error: unknown)=>{
+      if (this.disposed || this.preparing !== job) return;
+      this.preparing = null; job.reject(error instanceof Error ? error : new Error(String(error))); this.pump();
+    });
+  }
+
+  private start(job: Job, motion: PreparedThrow): void {
+    this.dirty = true; this.frameSamples = 0; this.frameMs = 0; this.fastStreak = 0;
     this.clearDice();
     const style = JSON.stringify(job.appearance);
     if (style !== this.materialStyle) { this.clearMaterials(); this.materialStyle = style; }
     this.effect = this.reducedMotion.matches ? 'none' : job.appearance.effect;
-    const motion = prepareThrow(job.requests,this.bounds);
     job.requests.forEach(request=>{
       const shape = getDieShape(request.sides), material = this.baseMaterial(shape,request,job.appearance).clone();
       material.transparent = true;
@@ -344,12 +389,15 @@ export class DiceStage {
       const current = this.active;
       const speed = this.reducedMotion.matches ? Math.max(current.motion.duration,PHYSICS_STEP)/REDUCED_MOTION_SECONDS : Math.max(1,current.motion.duration/THROW_SCREEN_SECONDS);
       current.elapsed = Math.min(current.motion.duration,current.elapsed+dt*speed);
+      this.renderer.shadowMap.autoUpdate = true;
       this.applyFrame(current.elapsed);
+      this.adaptResolution(dt);
       if (current.elapsed>=current.motion.duration) {
         this.canvas.dataset.rollState = 'settled';
         this.canvas.dataset.visibleValues = this.dice.map(die=>upwardResult(die.shape,die.mesh.quaternion)).join(',');
         this.canvas.dataset.rollsCompleted = String(++this.rollsCompleted);
         this.settledAt = now; this.startSettle(); this.placeCamera(0,0,0);
+        this.renderer.shadowMap.needsUpdate = true;
         this.active = null; this.sparks.geometry.setDrawRange(0,0); this.holdUntil = now+HOLD_MS;
         current.job.resolve(); this.pump();
       }
@@ -366,11 +414,34 @@ export class DiceStage {
     // While the dice rest and nothing else moves, the last frame stays on screen: drawing it again would only cost battery.
     const moving = !!this.active || this.fadeStart !== null || faded || this.dirty
       || (now-this.settledAt)/1000 < SETTLE_RING_SECONDS + .1 || (this.effect==='sparks' && now-this.settledAt < 1200);
-    if (moving) { this.render(); this.dirty = false; }
+    if (!this.active) this.renderer.shadowMap.autoUpdate = false;
+    // At rest, one frame at the full ratio makes the numerals sharp. It costs nothing while the dice are still.
+    if (!moving && this.dice.length && this.ratio < Math.min(window.devicePixelRatio||1,this.quality.restRatio)) {
+      this.applyRatio(this.quality.restRatio); this.renderer.shadowMap.needsUpdate = true;
+    }
+    if (moving || this.dirty) { this.render(); this.dirty = false; }
     // A resting canvas is hidden, so the page under it is not blended with a full-screen layer.
     if (faded) this.canvas.style.visibility = 'hidden';
     if (this.active || this.dice.length) this.ensureLoop(); else if (faded) this.hooks.onIdle?.();
   };
+
+  /**
+   * Times the frames of a throw and trades pixels for speed. Slow frames lower the ratio at once; a long run of fast
+   * frames raises it a little. The result is remembered for the next roll.
+   */
+  private adaptResolution(dt: number): void {
+    // The first frames pay for shader compiles and texture uploads, and a long gap means the tab was away.
+    if (this.frameSamples++ < 4 || dt > 0.12 || dt <= 0) return;
+    this.frameMs += dt*1000;
+    if ((this.frameSamples-4) % SAMPLE_FRAMES !== 0) return;
+    const average = this.frameMs/SAMPLE_FRAMES; this.frameMs = 0;
+    if (average > SLOW_MS && this.moveRatio > this.quality.minRatio) {
+      this.moveRatio = Math.max(this.quality.minRatio,+(this.moveRatio-.2).toFixed(2)); this.fastStreak = 0;
+      learnedMoveRatio = this.moveRatio; this.applyRatio(this.moveRatio);
+    } else if (average < FAST_MS && this.moveRatio < this.quality.moveRatio) {
+      if (++this.fastStreak >= 4) { this.moveRatio = Math.min(this.quality.moveRatio,+(this.moveRatio+.1).toFixed(2)); this.fastStreak = 0; learnedMoveRatio = this.moveRatio; this.applyRatio(this.moveRatio); }
+    } else this.fastStreak = 0;
+  }
 
   private ensureLoop(): void { if (!this.frameId && !this.disposed) this.frameId = requestAnimationFrame(this.frame); }
   private landingSparks(now: number): void {
@@ -403,10 +474,10 @@ export class DiceStage {
     const key = shape.sides+':'+request.colorway+':'+(request.reading ?? ''); let material = this.baseMaterials.get(key);
     if (!material) {
       const palette = paletteFor(request.colorway,appearance), anisotropy = Math.min(this.quality.anisotropy,this.renderer.capabilities.getMaxAnisotropy());
-      const color = new THREE.CanvasTexture(buildAtlas(shape,palette,{finish:appearance.finish,reading:request.reading,cellPx:this.quality.atlasCellPx}));
+      const color = new THREE.CanvasTexture(cachedAtlas(shape,palette,{finish:appearance.finish,reading:request.reading,cellPx:this.quality.atlasCellPx}));
       color.colorSpace = THREE.SRGBColorSpace; color.anisotropy = anisotropy;
       // The numerals are cut into the die, so light catches their edges as it would on a real one.
-      const engraving = new THREE.CanvasTexture(buildBumpAtlas(shape,request.reading,this.quality.atlasCellPx));
+      const engraving = new THREE.CanvasTexture(cachedBumpAtlas(shape,request.reading,this.quality.atlasCellPx));
       engraving.anisotropy = anisotropy;
       material = new THREE.MeshPhysicalMaterial({map:color,bumpMap:engraving,bumpScale:appearance.finish==='metal'?2.2:3,...finishFor(appearance.finish,this.quality.fancyMaterials),emissive:this.effect==='none' ? '#000000' : palette.body,emissiveIntensity:.15});
       this.baseMaterials.set(key,material);

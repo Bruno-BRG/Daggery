@@ -10,6 +10,7 @@ import type { RollLogEntry, RollPayload } from '@daggery/shared';
 import { executeRoll } from './rollExecution';
 import { diceForPayload } from './rollPlan';
 import { parseChoice, pickQuality, QUALITY } from './quality';
+import { packThrow, unpackThrow } from './simulationPack';
 import { faceLabel } from './faceLabels';
 import { buildBevelledMesh } from './bevel';
 
@@ -183,10 +184,38 @@ test('auto quality gives touch devices and small machines the light profile, and
   assert.equal(parseChoice(null), 'auto');
 });
 
-test('the light profile asks for less of everything it can', () => {
-  assert.ok(QUALITY.light.pixelRatio < QUALITY.full.pixelRatio);
+test('the light profile starts lighter, but keeps the numerals sharp', () => {
+  assert.ok(QUALITY.light.moveRatio < QUALITY.full.moveRatio);
   assert.ok(QUALITY.light.shadowMapSize < QUALITY.full.shadowMapSize);
-  assert.ok(QUALITY.light.atlasCellPx < QUALITY.full.atlasCellPx);
   assert.ok(QUALITY.light.envSize < QUALITY.full.envSize);
   assert.equal(QUALITY.light.fancyMaterials, false);
+  // Sharpness: the same face textures, and the same ratio once the dice rest.
+  assert.equal(QUALITY.light.atlasCellPx, QUALITY.full.atlasCellPx);
+  assert.equal(QUALITY.light.restRatio, QUALITY.full.restRatio);
+  for (const profile of Object.values(QUALITY)) {
+    assert.ok(profile.minRatio <= profile.moveRatio && profile.moveRatio <= profile.restRatio);
+    assert.ok(profile.atlasCellPx >= 256);
+  }
+});
+
+test('a prepared throw survives the trip from the worker, down to the last frame', () => {
+  const requests = [{ sides: 20, value: 7, colorway: 'neutral' as const }, { sides: 6, value: 3, colorway: 'hope' as const }];
+  let state = 7;
+  const rng = () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 2 ** 32; };
+  const original = prepareThrow(requests, { minX: -6, maxX: 6, minZ: -4, maxZ: 4 }, rng);
+  const copy = unpackThrow(packThrow(original));
+  assert.equal(copy.frames.length, original.frames.length);
+  assert.equal(copy.duration, original.duration);
+  assert.deepEqual(copy.impacts, original.impacts);
+  const last = original.frames.length - 1;
+  for (const f of [0, Math.floor(last / 2), last]) original.frames[f]!.forEach((pose, d) => {
+    assert.ok(pose.position.distanceTo(copy.frames[f]![d]!.position) < 1e-4);
+    assert.ok(pose.quaternion.angleTo(copy.frames[f]![d]!.quaternion) < 1e-4);
+  });
+  original.rotations.forEach((q, d) => assert.ok(q.angleTo(copy.rotations[d]!) < 1e-4));
+  // The copy still lands on the requested faces.
+  requests.forEach((request, d) => {
+    const q = copy.frames[last]![d]!.quaternion.clone().multiply(copy.rotations[d]!);
+    assert.equal(upwardResult(getDieShape(request.sides), q), request.value);
+  });
 });

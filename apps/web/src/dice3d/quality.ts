@@ -2,19 +2,22 @@ import { useSyncExternalStore } from 'react';
 import { readPreference, savePreference } from '../storage';
 
 /**
- * How much the 3D dice may ask of the GPU. A tablet draws every frame on a full-screen layer, so it gets a lighter
- * profile than a desktop: fewer pixels, a smaller shadow map, smaller textures and plainer materials. The look stays:
- * the dice keep their bevels, clear coat, reflections and engraved numerals.
+ * How much the 3D dice may ask of the GPU. A tablet draws every frame on a full-screen layer, so it starts lighter than
+ * a desktop: fewer pixels while the dice move, a smaller shadow map and plainer materials. The numerals stay sharp:
+ * the textures keep their size, and once the dice rest the canvas is drawn at full resolution.
  */
 export type DiceQualityChoice = 'auto' | 'full' | 'light';
 export type DiceQualityId = 'full' | 'light';
 
 export interface DiceQuality {
   id: DiceQualityId;
-  /** Most device pixels per CSS pixel the canvas draws. */
-  pixelRatio: number;
+  /** Device pixels per CSS pixel while dice move. The stage lowers it, down to `minRatio`, if frames run slow. */
+  moveRatio: number;
+  minRatio: number;
+  /** Device pixels per CSS pixel once the dice rest: the numerals are drawn sharp, as one frame. */
+  restRatio: number;
   shadowMapSize: number;
-  /** Pixels per face on the texture atlas. */
+  /** Pixels per face on the texture atlas. The numerals are cut from it, so it stays high on every profile. */
   atlasCellPx: number;
   anisotropy: number;
   /** Size of one side of the reflection cube. */
@@ -24,8 +27,8 @@ export interface DiceQuality {
 }
 
 export const QUALITY: Record<DiceQualityId, DiceQuality> = {
-  full: { id: 'full', pixelRatio: 1.5, shadowMapSize: 2048, atlasCellPx: 256, anisotropy: 8, envSize: 256, fancyMaterials: true },
-  light: { id: 'light', pixelRatio: 1.1, shadowMapSize: 1024, atlasCellPx: 160, anisotropy: 2, envSize: 128, fancyMaterials: false },
+  full: { id: 'full', moveRatio: 1.5, minRatio: 1, restRatio: 2, shadowMapSize: 2048, atlasCellPx: 256, anisotropy: 8, envSize: 256, fancyMaterials: true },
+  light: { id: 'light', moveRatio: 1.25, minRatio: 1, restRatio: 2, shadowMapSize: 1024, atlasCellPx: 256, anisotropy: 4, envSize: 128, fancyMaterials: false },
 };
 
 export interface DeviceSignals { coarsePointer: boolean; cores: number; memoryGb: number }

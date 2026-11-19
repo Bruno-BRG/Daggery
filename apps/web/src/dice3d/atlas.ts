@@ -173,3 +173,25 @@ export function buildBumpAtlas(shape: DieShape, reading?: FaceReading, cellPx?: 
   });
   return canvas;
 }
+
+// ------------------------------------------------------------------------------------------------ cache
+// The face canvases are plain 2D canvases: they do not belong to a GL context, so a new stage can reuse them.
+// Painting them is the slowest part of starting a roll on a tablet, so each style is painted once.
+const CACHE_LIMIT = 48;
+const cache = new Map<string, HTMLCanvasElement>();
+
+function remember(key: string, make: () => HTMLCanvasElement): HTMLCanvasElement {
+  const hit = cache.get(key);
+  if (hit) { cache.delete(key); cache.set(key, hit); return hit; }
+  const made = make();
+  cache.set(key, made);
+  while (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value!);
+  return made;
+}
+
+export function cachedAtlas(shape: DieShape, palette: Colorway, options: AtlasOptions = {}): HTMLCanvasElement {
+  return remember(`c|${shape.sides}|${palette.body}|${palette.numeral}|${palette.outline}|${options.finish ?? ''}|${options.reading ?? ''}|${options.cellPx ?? CELL_PX}`, () => buildAtlas(shape, palette, options));
+}
+export function cachedBumpAtlas(shape: DieShape, reading?: FaceReading, cellPx?: number): HTMLCanvasElement {
+  return remember(`b|${shape.sides}|${reading ?? ''}|${cellPx ?? CELL_PX}`, () => buildBumpAtlas(shape, reading, cellPx));
+}
