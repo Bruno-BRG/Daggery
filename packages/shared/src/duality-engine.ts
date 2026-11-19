@@ -139,7 +139,7 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
       'Cursed or haunted ground', 'Natural disaster', 'The lair of something big'],
     Discovery: ['A quiet road; nothing', 'Fellow travelers', 'Shelter or a good campsite', 'A ruin', 'A settlement or homestead',
       'A shrine or landmark', 'A useful resource', 'Tracks or signs', 'A trader', 'Someone in need', 'A hidden cache',
-      'A wondrous sight: take +1 momentum'] }),
+      'A wondrous sight: +1 momentum'] }),
   table('wilds', 'Wilds: Terrain, Weather and Landmark', 'explore', {
     Terrain: ['Open plains', 'Rolling hills', 'Dense forest', 'Old, quiet forest', 'Marsh or bog', 'Mountains or crags',
       'Highland moor', 'River valley', 'Coast or cliffs', 'Desert or badlands', 'Snowfields or tundra', 'Strange land (roll Descriptor)'],

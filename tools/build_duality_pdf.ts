@@ -6,7 +6,7 @@
  * References: duality-gme, the Duality GME manual duality-gme-manual and the playkit duality-gme-playkit
  * (docs/duality-solo-engine/<name>.html).
  * Each template keeps `// BEGIN TABLES` and `// END TABLES` markers; between them this writes
- * `const T` (every table, by id) and `const M` (the Duality GME moves). The build fails when a
+ * `const T` (every table, by id), `const M` (the Duality GME moves) and `const L` (the Ironsworn d100 oracles). The build fails when a
  * template marks a block that would be cut off (`data-overflow` on the body).
  * Printing needs Microsoft Edge or Google Chrome; set DAGGERY_BROWSER to use another Chromium.
  */
@@ -14,6 +14,9 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DUALITY_TABLES } from '../packages/shared/src/duality-engine';
+import { ADVERSARY_TYPES, FOE_RANKS, foeRankFor, ROLE_BONUS, STAT_TRAITS } from '../packages/shared/src/duality-foes';
+import { LODESTAR_GROUPS, LODESTAR_TABLES } from '../packages/shared/src/lodestar-oracles';
+import { DEBILITIES } from '../packages/shared/src/duality-momentum';
 import { IRON_LIKELIHOODS, IRON_MOVE_GROUPS, IRON_MOVES, IRON_RANKS } from '../packages/shared/src/duality-variants';
 
 const ENGINES = ['duality-gme', 'duality-gme-manual', 'duality-gme-playkit'];
@@ -27,6 +30,27 @@ const printed: Record<string, Printed> = {
   'iron-ranks': { h: ['Rank', 'Mark progress', 'Difficulty'], nonum: true, c: [
     IRON_RANKS.map(row => row.label), IRON_RANKS.map(row => row.mark), IRON_RANKS.map(row => String(row.difficulty))] },
 };
+const ROLE_ROWS: [string, AdversaryTypeList][] = [
+  ['Minion', ['Minion']], ['Standard, Skulk, Ranged, Support, Social', ['Standard', 'Skulk', 'Ranged', 'Support', 'Social']],
+  ['Horde, Bruiser, Leader', ['Horde', 'Bruiser', 'Leader']], ['Solo', ['Solo']],
+];
+type AdversaryTypeList = (typeof ADVERSARY_TYPES)[number][];
+Object.assign(printed, {
+  'iron-foes': { h: ['Rank', 'Ironsworn', 'The foe is…', 'Harm to you', 'Each of your harm marks'], nonum: true, c: [
+    FOE_RANKS.map(rank => rank.label), FOE_RANKS.map(rank => rank.ironsworn), FOE_RANKS.map(rank => rank.foe),
+    FOE_RANKS.map(rank => `${rank.harm}`), FOE_RANKS.map(rank => rank.progress)].map(column => column.map(escape)) },
+  'iron-foes-short': { h: ['Rank', 'Harm to you', 'Each harm marks'], nonum: true, c: [FOE_RANKS.map(rank => `${rank.label} (${rank.ironsworn})`), FOE_RANKS.map(rank => String(rank.harm)), FOE_RANKS.map(rank => rank.progress)] },
+  'iron-foe-tiers': { h: ['Adversary role', 'Tier 1', 'Tier 2', 'Tier 3', 'Tier 4', 'Bonus'], nonum: true, c: [
+    ROLE_ROWS.map(([label]) => label),
+    ...[1, 2, 3, 4].map(tier => ROLE_ROWS.map(([, types]) => FOE_RANKS.find(rank => rank.id === foeRankFor(types[0]!, tier))!.label)),
+    ROLE_ROWS.map(([, types]) => { const bonus = ROLE_BONUS[types[0]!]; return bonus > 0 ? `+${bonus}` : `${bonus}`.replace('-', '\u2212'); })] },
+  'iron-stats': { h: ['Ironsworn stat', 'Duality trait', 'You act with…'], nonum: true, c: [
+    STAT_TRAITS.map(row => row.stat[0]!.toUpperCase() + row.stat.slice(1)), STAT_TRAITS.map(row => row.trait), STAT_TRAITS.map(row => row.acts)] },
+  'iron-debilities': { h: ['Debility', 'Kind', 'What it means'], nonum: true, c: [
+    DEBILITIES.map(item => item.label), DEBILITIES.map(item => item.group === 'condition' ? 'Condition' : item.group === 'bane' ? 'Bane' : 'Burden'),
+    DEBILITIES.map(item => escape(item.hint))] },
+});
+
 for (const table of DUALITY_TABLES) {
   const single = table.columns.length === 1;
   const entries = table.columns.map(column => column.entries.map(escape));
@@ -48,6 +72,18 @@ const moves = Object.fromEntries(IRON_MOVE_GROUPS.map(group => [group.id, {
     Object.fromEntries(Object.entries(move).map(([key, value]) => [key, escape(value)]))),
 }]));
 
+/** The Ironsworn Lodestar d100 tables: `L[id] = { title, intro, group, columns: [{ label, rows: [[range, text]] }] }`. 00 prints for 100. */
+const d100 = (value: number) => (value === 100 ? '00' : String(value));
+const lodestar = {
+  groups: LODESTAR_GROUPS,
+  tables: Object.fromEntries(LODESTAR_TABLES.map(table => [table.id, {
+    title: escape(table.title), intro: escape(table.intro), group: table.group,
+    columns: table.columns.map(column => ({ label: escape(column.label), rows: column.rows.map(([from, to, text]) => [from === to ? d100(from) : `${d100(from)}\u2013${d100(to)}`, escape(text)]) })),
+  }])),
+};
+
+/** Chromium refuses to run its sandbox as root (as in a container). */
+const sandbox = process.getuid?.() === 0 ? ['--no-sandbox'] : [];
 const wanted = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
 const browser = [process.env.DAGGERY_BROWSER, 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
   'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/chromium', '/usr/bin/google-chrome']
@@ -61,14 +97,14 @@ for (const name of wanted.length ? wanted : ENGINES) {
   const begin = '// BEGIN TABLES', end = '// END TABLES';
   const from = source.indexOf(begin), to = source.indexOf(end);
   if (from < 0 || to < from) throw new Error(`Table markers not found in ${name}.html`);
-  writeFileSync(html, `${source.slice(0, from + begin.length)}\nconst T = ${JSON.stringify(printed, null, 1)};\nconst M = ${JSON.stringify(moves, null, 1)};\n${source.slice(to)}`);
+  writeFileSync(html, `${source.slice(0, from + begin.length)}\nconst T = ${JSON.stringify(printed, null, 1)};\nconst M = ${JSON.stringify(moves, null, 1)};\nconst L = ${JSON.stringify(lodestar, null, 1)};\n${source.slice(to)}`);
   console.log(`Wrote ${html}`);
   if (process.argv.includes('--html')) continue;
   if (!browser) throw new Error('No Chromium browser found; set DAGGERY_BROWSER');
-  const dom = execFileSync(browser, ['--headless=new', '--disable-gpu', '--dump-dom', pathToFileURL(html).href], { encoding: 'utf8' });
+  const dom = execFileSync(browser, ['--headless=new', ...sandbox, '--disable-gpu', '--dump-dom', pathToFileURL(html).href], { encoding: 'utf8' });
   const overflow = /data-overflow="([^"]*)"/.exec(dom)?.[1];
   if (overflow === undefined) throw new Error(`The overflow check did not run in ${name}.html`);
   if (overflow) throw new Error(`${name}: these blocks do not fit their page and would be cut off: ${overflow}`);
-  execFileSync(browser, ['--headless=new', '--disable-gpu', '--no-pdf-header-footer', `--print-to-pdf=${pdf}`, pathToFileURL(html).href], { stdio: 'inherit' });
+  execFileSync(browser, ['--headless=new', ...sandbox, '--disable-gpu', '--no-pdf-header-footer', `--print-to-pdf=${pdf}`, pathToFileURL(html).href], { stdio: 'inherit' });
   console.log(`Wrote ${pdf}`);
 }
