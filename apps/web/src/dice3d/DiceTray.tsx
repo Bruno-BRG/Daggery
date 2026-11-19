@@ -5,7 +5,10 @@ import { getActiveCampaign } from '../campaign-context';
 import { signed, useMomentum } from '../systems/useMomentum';
 import { Icon } from '../components/Icon';
 import '../systems/trackers.css';
-import { addFear } from '../sync/store';
+import { addFear, useDocs } from '../sync/store';
+import { useActiveHero } from '../modules/sheets/activeHero';
+import { MAX_HOPE } from '../modules/sheets/rules';
+import type { Sheet } from '../modules/sheets/types';
 import { describePayload, normalizeAuthor, type RollSpec } from './rollPlan';
 import { attachTray } from './tray';
 import { useDiceTray } from './useDiceTray';
@@ -135,6 +138,8 @@ export function DiceTray({ author, onRolled }: DiceTrayProps) {
   const [lastDuality, setLastDuality] = useState<DualityResult | null>(null);
   const [burned, setBurned] = useState(false);
   const { tracker, update } = useMomentum();
+  const { hero } = useActiveHero();
+  const { set: setSheet } = useDocs<Sheet>('sheets');
 
   useEffect(() => {
     setMounted(true);
@@ -243,6 +248,8 @@ export function DiceTray({ author, onRolled }: DiceTrayProps) {
           update(burnMomentum);
           // The Fear die is ignored, so the world does not keep the Fear this roll gave it.
           if (lastDuality.withFear && getActiveCampaign().role === 'gm') addFear(-1);
+          // A burned roll counts as a roll with Hope: the hero gains 1 Hope, as Daggerheart says it does.
+          if (lastDuality.withFear && hero) setSheet(hero.id, { ...hero, hope: Math.min(MAX_HOPE, hero.hope + 1), updatedAt: new Date().toISOString() });
           setBurned(true);
         }} />}
       {error && <p className="text-sm text-rose-300">{error}</p>}

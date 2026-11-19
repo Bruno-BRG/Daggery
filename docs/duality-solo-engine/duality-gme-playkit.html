@@ -132,7 +132,7 @@
 <div class="block">
 <h2>Momentum</h2>
   <p><b>&minus;6 to +10</b>, starts at +2. <b>Take +N</b> up to your maximum; <b>suffer &minus;N</b> down to &minus;6. At &minus;6, more loss is <i>Face a Setback</i>.</p>
-  <p><b class="h">Burn it</b> after an action roll when it is <b>higher than your Fear die</b>: ignore the Fear die and improve the result one step (miss to weak, weak to strong); the world gains no Fear. Then reset: +2, or +1 with one debility, or 0 with more. Not on a progress roll.</p>
+  <p><b class="h">Burn it</b> after an action roll when it is <b>higher than your Fear die</b>: ignore the Fear die and improve the result one step (miss to weak, weak to strong); no Fear for the world, +1 Hope for you. Then reset: +2, +1 with one debility, 0 with more. Not on a progress roll.</p>
   <p><b class="f">Negative Momentum</b> that matches your Hope die cancels it: take its number off the total.</p>
   <p><b>Initiative</b> (fights): a strong hit takes or keeps it; a weak hit or a miss gives it to your foe.</p>
 </div>
@@ -248,7 +248,7 @@
 <h2>Foes</h2>
   <p>A foe's <b>rank</b> sets the harm it deals you and the progress each harm you inflict marks. A Daggerheart adversary's rank is <b>tier &minus; 1 + role bonus</b>.</p>
   <div data-t="iron-foes-short"></div><div data-t="iron-foe-tiers"></div>
-  <p>A small pack (3 to 5 Minor or Serious foes) is one rank higher; a large pack (6 to 10) two. Your harm: 2 with a deadly weapon, 1 otherwise.</p>
+  <p>A small pack (3 to 5 Minor or Serious foes) is one rank higher; a large pack (6 to 10) two. Your harm: 1 + half Proficiency (up), or 1 unarmed.</p>
 </div>
 <div class="block">
 <h2 class="hope">Stats and Traits</h2>
@@ -1641,7 +1641,8 @@ const M = {
     "roll": "Presence. If you make this vow to a person or community with whom you share a bond, add +2.",
     "strong": "You are emboldened and it is clear what you must do next (Ask the Oracle if unsure). Take +2 momentum.",
     "weak": "You are determined, but you begin your quest with more questions than answers. Take +1 momentum, and envision what you do to find a path forward.",
-    "miss": "You face a significant obstacle before you can begin. Envision what stands in your way (Ask the Oracle if unsure), and choose one: you press on (suffer -2 momentum, and do what you must to overcome the obstacle), or you give up (Forsake Your Vow)."
+    "miss": "You face a significant obstacle before you can begin. Envision what stands in your way (Ask the Oracle if unsure), and choose one: you press on (suffer -2 momentum, and do what you must to overcome the obstacle), or you give up (Forsake Your Vow).",
+    "text": "Good first vows come from your Daggerheart background answers and connections. A vow to a person or community you are connected to adds +2."
    },
    {
     "id": "milestone",
@@ -1727,7 +1728,8 @@ const M = {
     "roll": "Instinct, adding your supply (to a maximum of +3).",
     "strong": "You and your allies may each choose two. Recuperate: clear 1 Hit Point for you and any companions. Partake: suffer -1 supply and clear 1 Hit Point for you and any companions. Relax: clear 1 Stress. Focus: take +1 momentum. Prepare: when you break camp, add +2 if you Undertake a Journey.",
     "weak": "As above, but choose one.",
-    "miss": "You take no comfort. Pay the Price."
+    "miss": "You take no comfort. Pay the Price.",
+    "text": "A rest lets the world move on: it gains 1 Fear after a few hours (short rest) or 1d4 after a night (long rest). A strong hit may also choose Repair: clear 2 Armor Slots."
    },
    {
     "id": "undertake-expedition",
@@ -1948,7 +1950,7 @@ const M = {
    {
     "id": "endure-harm",
     "name": "Endure Harm",
-    "trigger": "When you face physical damage, suffer -health equal to your foe’s rank or as appropriate to the situation: mark that many Hit Points. If you have no Hit Points left, suffer -momentum equal to any remaining harm. Then roll.",
+    "trigger": "When you face physical damage, suffer -health equal to your foe’s rank or as appropriate to the situation: mark that many Hit Points. Armor first: you may mark 1 Armor Slot to reduce the harm by 1, as your Daggerheart armor does. When you mark your last Hit Point, make a death move (see Face Death). Suffer -momentum equal to any harm left over. Then roll.",
     "roll": "Strength, or your unmarked Hit Points (to a maximum of +3), whichever is higher.",
     "strong": "Choose one. Shake it off: if you still have an unmarked Hit Point, suffer -1 momentum in exchange for clearing 1 Hit Point. Embrace the pain: take +1 momentum.",
     "weak": "You press on.",
@@ -1957,7 +1959,7 @@ const M = {
    {
     "id": "face-death",
     "name": "Face Death",
-    "trigger": "When you are brought to the brink of death, and glimpse the world beyond. Use this in place of the Daggerheart death move.",
+    "trigger": "When you are brought to the brink of death, and glimpse the world beyond. Use it as your death move when you mark your last Hit Point. You may instead choose a Daggerheart death move: Blaze of Glory, Avoid Death or Risk It All. Choose Face Death when you want Fate, with its vow and its curse, to decide. Choose a Daggerheart move for a quick, clean end.",
     "roll": "Presence",
     "strong": "Death rejects you. You are cast back into the mortal world.",
     "weak": "Choose one. You die, but not before making a noble sacrifice (envision your final moments). Or death desires something of you in exchange for your life: envision what it wants (Ask the Oracle if unsure), and Swear an Iron Vow (Grave or Dire) to complete that quest. If you fail to score a hit when you Swear an Iron Vow, or refuse the quest, you are dead. Otherwise, you return to the mortal world and are now Cursed. You may only clear the Cursed debility by completing the quest.",
@@ -1975,11 +1977,11 @@ const M = {
    {
     "id": "endure-stress",
     "name": "Endure Stress",
-    "trigger": "When you face mental shock or despair, suffer -spirit equal to your foe’s rank or as appropriate to the situation: mark that much Stress. If you have no unmarked Stress left, suffer -momentum equal to any remaining stress. Then roll.",
+    "trigger": "When you face mental shock or despair, suffer -spirit equal to your foe’s rank or as appropriate to the situation: mark that much Stress. When you mark your last Stress you are Vulnerable until you clear 1 Stress. If you must mark Stress and have none left, mark 1 Hit Point instead, however much was left over. Then roll.",
     "roll": "Presence, or your unmarked Stress (to a maximum of +3), whichever is higher.",
     "strong": "Choose one. Shake it off: if you still have unmarked Stress, suffer -1 momentum in exchange for clearing 1 Stress. Embrace the darkness: take +1 momentum.",
     "weak": "You press on.",
-    "miss": "Also suffer -1 momentum. If you have no unmarked Stress left, you must mark Shaken or Corrupted (if currently unmarked) or roll on the Endure Stress table."
+    "miss": "Also suffer -1 momentum. If your Stress is full, you must mark Shaken or Corrupted (if currently unmarked) or roll on the Endure Stress table."
    },
    {
     "id": "face-desolation",
@@ -2019,7 +2021,7 @@ const M = {
     "name": "Pay the Price",
     "trigger": "When you suffer the outcome of a move, choose one.",
     "roll": "Pay the Price table",
-    "text": "Make the most obvious negative outcome happen. Or envision two negative outcomes, rate one as likely, and Ask the Oracle: on a yes, make that outcome happen, otherwise make the other. Or roll on the Pay the Price table. If you have difficulty interpreting the result, roll again. A severe price (a failure with Fear, or a move that says so) rolls twice: the world may spend 1 Fear to make it so."
+    "text": "Make the most obvious negative outcome happen. Or envision two negative outcomes, rate one as likely, and Ask the Oracle: on a yes, make that outcome happen, otherwise make the other. Or roll on the Pay the Price table. If you have difficulty interpreting the result, roll again. A failure with Hope is a mild price. A severe price (a failure with Fear, or a move that says so) rolls twice: the world may spend 1 Fear to make it so."
    }
   ]
  }

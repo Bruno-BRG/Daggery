@@ -2,6 +2,7 @@ import { DAGGERHEART_CONDITIONS, IRONSWORN_CONDITIONS, maxMomentum, parseConditi
 import { Icon } from '../../components/Icon';
 import { useMomentum } from '../../systems/useMomentum';
 import { useActiveHero } from './activeHero';
+import { stressMax } from './rules';
 import type { Sheet } from './types';
 import './conditions.css';
 
@@ -21,6 +22,9 @@ export function ConditionsPanel({ sheet, onUpdate }: { sheet: Sheet; onUpdate: (
   const { hero } = useActiveHero();
   const { update } = useMomentum();
   const debilities = debilitiesOf(marked);
+  // Daggerheart: marking your last Stress makes you Vulnerable until you clear 1 Stress.
+  const stressFull = sheet.stressMarked >= stressMax(sheet);
+  const active = (item: SheetCondition) => marked.includes(item.id) || (item.id === 'vulnerable' && stressFull);
 
   const toggle = (item: SheetCondition) => {
     const on = !marked.includes(item.id);
@@ -29,18 +33,21 @@ export function ConditionsPanel({ sheet, onUpdate }: { sheet: Sheet; onUpdate: (
     else onUpdate(current => ({ ...current, conditions: toggleCondition(current.conditions ?? [], item.id, on) }));
   };
 
-  const card = (item: SheetCondition) => (
+  const card = (item: SheetCondition) => {
+    const fromStress = item.id === 'vulnerable' && stressFull;
+    return (
     <button key={item.id} type="button" className="condition-card" data-source={item.source} data-group={item.group}
-      aria-pressed={marked.includes(item.id)} onClick={() => toggle(item)}>
-      <span className="condition-name">{item.label}{item.momentum && <em>−1 Momentum max</em>}</span>
+      aria-pressed={active(item)} disabled={fromStress} onClick={() => toggle(item)}>
+      <span className="condition-name">{item.label}{item.momentum && <em>−1 Momentum max</em>}{fromStress && <em>from full Stress</em>}</span>
       <small>{item.text}</small>
     </button>
-  );
+    );
+  };
 
   return (
     <div className="conditions-panel">
       <p className="conditions-summary" role="status">
-        {marked.length === 0 ? 'No conditions. Tap one to mark it.' : <><Icon name="stress" /><strong>{marked.length} marked:</strong> {marked.join(', ')}</>}
+        {marked.length === 0 && !stressFull ? 'No conditions. Tap one to mark it.' : <><Icon name="stress" /><strong>{new Set([...marked, ...(stressFull ? ['vulnerable'] : [])]).size} marked:</strong> {[...new Set([...marked, ...(stressFull ? ['vulnerable'] : [])])].join(', ')}</>}
         {debilities.length > 0 && <span> · Momentum max {maxMomentum(debilities)}</span>}
       </p>
       <section aria-label="Daggerheart conditions">

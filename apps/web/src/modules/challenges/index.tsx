@@ -2,8 +2,9 @@ import { useState, type FormEvent } from 'react';
 import { Icon } from '../../components/Icon';
 import { IconButton, ItemCard, PanelSection, TONES } from '../../components/Accordion';
 import { useDocs } from '../../sync/store';
+import { useActiveHero } from '../sheets/activeHero';
 import { adversaries } from '@daggery/content';
-import { initiativeLabelFor, setInitiative, turnTheTide, type IronRank, type PackSize } from '@daggery/shared';
+import { heroHarm, initiativeLabelFor, setInitiative, turnTheTide, type IronRank, type PackSize } from '@daggery/shared';
 import { FightMomentum } from '../../systems/FightMomentum';
 import { signed, useMomentum } from '../../systems/useMomentum';
 import '../../systems/trackers.css';
@@ -186,6 +187,8 @@ function TrackCard({ id, doc, onSave, onRemove }: {
   onSave: (id: string, doc: TrackDoc, changes: Record<string, unknown>) => void;
   onRemove: (id: string) => void;
 }) {
+  const { hero } = useActiveHero();
+  const mine = heroHarm('deadly', hero?.proficiency ?? 1);
   return <ItemCard
     title={doc.name}
     caption={<span className="challenges-caption"><span>{trackCaption(doc)}</span>{doc.type !== 'countdown' && <TrackBar ticks={doc.ticks} />}</span>}
@@ -223,8 +226,9 @@ function TrackCard({ id, doc, onSave, onRemove }: {
           <div className="challenges-actions">
             {doc.type === 'fight'
               ? <>
-                {[1, 2, 3].map(harm => <button key={harm} type="button" className={`challenges-btn is-harm${harm === 2 ? ' is-primary' : ''}`} aria-label={`Inflict ${harm} harm on ${doc.name}`}
-                  onClick={() => onSave(id, doc, { ticks: inflictHarm(doc.ticks, doc.rank, harm) })}>Inflict {harm} harm</button>)}
+                {[1, mine, mine + 1].filter((harm, index, all) => all.indexOf(harm) === index).map(harm => <button key={harm} type="button" className={`challenges-btn is-harm${harm === mine ? ' is-primary' : ''}`} aria-label={`Inflict ${harm} harm on ${doc.name}`}
+                  title={harm === 1 ? 'Unarmed or a simple weapon' : harm === mine ? 'Your harm: 1 plus half your Proficiency, rounded up' : 'A strong hit on Strike or Clash adds 1 harm'}
+                  onClick={() => onSave(id, doc, { ticks: inflictHarm(doc.ticks, doc.rank, harm) })}>Inflict {harm} harm{harm === mine ? ' (yours)' : ''}</button>)}
               </>
               : <button type="button" className="challenges-btn is-primary" aria-label={`Mark progress for ${doc.name}`}
                 onClick={() => onSave(id, doc, { ticks: doc.type === 'bond' ? addTicks(doc.ticks, progressTicks('bond', doc.rank)) : markProgress(doc.ticks, doc.rank) })}>{doc.type === 'bond' ? 'Forge a bond' : 'Mark progress'}</button>}

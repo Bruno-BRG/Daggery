@@ -13,6 +13,10 @@ describe('Foe ranks', () => {
     expect(foeHarm('formidable')).toBe(3);
     expect(heroHarm('deadly')).toBe(2);
     expect(heroHarm('simple')).toBe(1);
+    expect(heroHarm('deadly', 2)).toBe(2);
+    expect(heroHarm('deadly', 3)).toBe(3);
+    expect(heroHarm('deadly', 6)).toBe(4);
+    expect(heroHarm('simple', 6)).toBe(1);
   });
   it('turns a Daggerheart type and tier into a rank', () => {
     expect(foeRankFor('Standard', 1)).toBe('troublesome');

@@ -75,8 +75,16 @@ export function ticksPerHarm(rank: IronRank): number {
   return found.ticks;
 }
 
-/** Your own harm: 2 with a deadly weapon, 1 when unarmed or with a simple weapon. */
-export const heroHarm = (weapon: 'deadly' | 'simple'): number => (weapon === 'deadly' ? 2 : 1);
+/**
+ * Your own harm. Unarmed or with a simple weapon it is 1. With a real weapon it is 1 plus half your
+ * Daggerheart Proficiency, rounded up: 2 at Proficiency 1 or 2, 3 at 3 or 4, and so on. Your level
+ * therefore makes you hit harder, as it does in Daggerheart. A strong hit on Strike adds 1 more.
+ */
+export function heroHarm(weapon: 'deadly' | 'simple', proficiency = 1): number {
+  if (weapon === 'simple') return 1;
+  const level = Number.isFinite(proficiency) ? Math.min(6, Math.max(1, Math.trunc(proficiency))) : 1;
+  return 1 + Math.ceil(level / 2);
+}
 
 export type PackSize = 'single' | 'small' | 'large';
 /**

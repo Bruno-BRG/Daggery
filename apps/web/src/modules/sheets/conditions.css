@@ -14,3 +14,4 @@
 .condition-card[aria-pressed='true'] .condition-name::before { content: '✕'; margin-right: 6px; font-size: 10px; color: var(--tone); }
 .condition-name em { margin-left: auto; font-style: normal; font-size: 10.5px; font-weight: 500; color: var(--ds-muted); white-space: nowrap; }
 .condition-card small { color: var(--ds-muted); font-size: 12px; line-height: 1.45; }
+.condition-card:disabled { cursor: default; }
