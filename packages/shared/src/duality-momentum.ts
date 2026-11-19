@@ -1,5 +1,5 @@
 /**
- * Duality GME trackers: Momentum, Supply, Initiative, Debilities and Experience.
+ * Duality GME trackers: Momentum, Supply, Initiative and the Momentum record of each fight.
  *
  * They come from Ironsworn (Lodestar). Momentum says how well the quest is going. It is the
  * hero's side of the table, as the Fear pool is the world's side. Every function here is pure:
@@ -10,8 +10,9 @@
  *   Fear, and a miss is a failure.
  * - Ironsworn's two challenge dice become the Fear die. Burning Momentum cancels it.
  * - Ironsworn's action die becomes the Hope die. Negative Momentum can cancel it.
- * - Health and spirit are the sheet's Hit Points and Stress. Only Momentum, Supply, the
- *   Debilities, Initiative and Experience are kept here.
+ * - Health and spirit are the sheet's Hit Points and Stress. Levels come from milestones, as in
+ *   Daggerheart, so there is no experience count. Debilities are conditions on the character sheet
+ *   (see duality-conditions.ts). Only Momentum, Supply, Initiative and the fight record live here.
  */
 
 export const MOMENTUM_MIN = -6;
@@ -36,19 +37,31 @@ const DEBILITY_IDS: readonly string[] = DEBILITIES.map(item => item.id);
 /** Who holds the spotlight in a fight. `null` means no fight is on. */
 export type Initiative = 'hero' | 'foe' | null;
 
+/** The Momentum of one fight: where it began, where it is (or ended), and its best and worst points. */
+export interface FightRecord {
+  start: number;
+  end: number;
+  peak: number;
+  low: number;
+}
+export const FIGHT_HISTORY = 5;
+
 export interface MomentumTracker {
   kind: 'momentum';
   value: number;
   supply: number;
   debilities: DebilityId[];
   initiative: Initiative;
-  experience: number;
   /** Set once per fight when Turn the Tide is used. */
   tideTurned: boolean;
+  /** The fight that is on now, or `null`. */
+  fight: FightRecord | null;
+  /** The last fights, newest first. */
+  history: FightRecord[];
 }
 
 export const initialMomentum = (): MomentumTracker => ({
-  kind: 'momentum', value: MOMENTUM_RESET, supply: SUPPLY_MAX, debilities: [], initiative: null, experience: 0, tideTurned: false,
+  kind: 'momentum', value: MOMENTUM_RESET, supply: SUPPLY_MAX, debilities: [], initiative: null, tideTurned: false, fight: null, history: [],
 });
 
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
@@ -74,9 +87,18 @@ export function parseMomentum(raw: unknown): MomentumTracker {
     value: clamp(whole(input.value, initial.value), MOMENTUM_MIN, maxMomentum(debilities)),
     supply: clamp(whole(input.supply, initial.supply), 0, SUPPLY_MAX),
     initiative: input.initiative === 'hero' || input.initiative === 'foe' ? input.initiative : null,
-    experience: clamp(whole(input.experience, 0), 0, 999),
     tideTurned: input.tideTurned === true,
+    fight: parseFight(input.fight),
+    history: Array.isArray(input.history) ? input.history.map(parseFight).filter((item): item is FightRecord => item !== null).slice(0, FIGHT_HISTORY) : [],
   };
+}
+
+function parseFight(raw: unknown): FightRecord | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const input = raw as Record<string, unknown>;
+  const read = (value: unknown) => clamp(whole(value, 0), MOMENTUM_MIN, MOMENTUM_MAX);
+  const start = read(input.start), end = read(input.end);
+  return { start, end, peak: Math.max(read(input.peak), start, end), low: Math.min(read(input.low), start, end) };
 }
 
 /** "Take +N momentum": never above the maximum. */
@@ -146,10 +168,28 @@ export function setDebility(tracker: MomentumTracker, id: DebilityId, marked: bo
   return { ...tracker, debilities, value: Math.min(tracker.value, maxMomentum(debilities)) };
 }
 
-/** Starts a fight: nobody has Initiative until Enter the Fray decides. Ends it by passing `null`. */
-export const setInitiative = (tracker: MomentumTracker, initiative: Initiative): MomentumTracker => ({
-  ...tracker, initiative, tideTurned: initiative === null ? false : tracker.tideTurned,
-});
+/**
+ * Starts a fight, or ends it by passing `null`. Starting writes a fresh record of this fight's Momentum.
+ * Ending moves that record into the history. Changing who has Initiative mid-fight keeps the record.
+ */
+export function setInitiative(tracker: MomentumTracker, initiative: Initiative): MomentumTracker {
+  if (initiative === null) {
+    const history = tracker.fight ? [{ ...tracker.fight, end: tracker.value }, ...tracker.history].slice(0, FIGHT_HISTORY) : tracker.history;
+    return { ...tracker, initiative, tideTurned: false, fight: null, history };
+  }
+  const fight = tracker.fight ?? { start: tracker.value, end: tracker.value, peak: tracker.value, low: tracker.value };
+  return { ...tracker, initiative, fight };
+}
+
+/** Keeps the current fight's record up to date. Call it after any change to Momentum. */
+export function trackFight(tracker: MomentumTracker): MomentumTracker {
+  const fight = tracker.fight;
+  if (!fight || (fight.end === tracker.value && fight.peak >= tracker.value && fight.low <= tracker.value)) return tracker;
+  return { ...tracker, fight: { ...fight, end: tracker.value, peak: Math.max(fight.peak, tracker.value), low: Math.min(fight.low, tracker.value) } };
+}
+
+/** What a fight did to your Momentum: the end minus the start. */
+export const fightNet = (fight: FightRecord): number => fight.end - fight.start;
 
 /** Turn the Tide: once per fight, the hero steals Initiative. */
 export function turnTheTide(tracker: MomentumTracker): MomentumTracker {

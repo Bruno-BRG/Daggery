@@ -63,6 +63,7 @@ import { Group, PanelSection } from '../../components/Accordion';
 import { Dialog } from '../../components/Dialog';
 import { ResourceCard } from './ResourceCard';
 import { ClassResources } from './ClassResources';
+import { ConditionsPanel } from './ConditionsPanel';
 import './classResources.css';
 import { setExtraResourceSlots } from './resource-slots';
 import { AbilityCard } from './AbilityCard';
@@ -603,6 +604,10 @@ export default function SheetView({ sheet, author, onBack, onChange, onDelete, b
       </div>
       {messages.length > 0 && <div className="folio-result-banner" role="status"><Icon name="dice" /><span>{messages[0]}</span></div>}
       <div className="folio-sections">
+        <PanelSection title="Conditions" storageKey="sheet.conditions" actions={<span className="sheet-panel-note">{(sheet.conditions ?? []).length === 0 ? 'none' : `${(sheet.conditions ?? []).length} marked`}</span>}>
+          <ConditionsPanel sheet={sheet} onUpdate={mutate} />
+        </PanelSection>
+
         {hasClassResources && (
           <PanelSection title="Class resources" storageKey="sheet.resources">
             <ClassResources sheet={sheet} onUpdate={mutate} embedded />

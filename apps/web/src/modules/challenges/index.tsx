@@ -4,6 +4,7 @@ import { IconButton, ItemCard, PanelSection, TONES } from '../../components/Acco
 import { useDocs } from '../../sync/store';
 import { adversaries } from '@daggery/content';
 import { initiativeLabelFor, setInitiative, turnTheTide, type IronRank, type PackSize } from '@daggery/shared';
+import { FightMomentum } from '../../systems/FightMomentum';
 import { signed, useMomentum } from '../../systems/useMomentum';
 import '../../systems/trackers.css';
 import {
@@ -114,6 +115,7 @@ function InitiativeBar() {
     {fighting && <button type="button" className="tracker-action" disabled={tracker.tideTurned} onClick={() => update(turnTheTide)}>
       <Icon name="rotate" /><strong>Turn the Tide</strong><small>{tracker.tideTurned ? 'Used this fight' : 'Once per fight: steal initiative'}</small>
     </button>}
+    <FightMomentum tracker={tracker} />
   </div>;
 }
 

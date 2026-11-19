@@ -1,0 +1,16 @@
+.conditions-panel { display: grid; gap: 14px; }
+.conditions-panel h4 { margin: 0 0 6px; font-size: 13px; font-weight: 650; }
+.conditions-panel h4 small { margin-left: 6px; color: var(--ds-muted); font-weight: 400; font-size: 12px; }
+.conditions-summary { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; color: var(--ds-muted); font-size: 12.5px; }
+.conditions-summary .daggery-icon { width: 15px; height: 15px; }
+.condition-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 8px; }
+.condition-card { --tone: var(--ds-brand); display: grid; gap: 4px; align-content: start; min-height: 64px; padding: 10px 12px; text-align: left; border: 1px solid var(--ds-border-strong); border-radius: var(--radius-md); background: transparent; color: var(--ds-ink); cursor: pointer; transition: background .15s, border-color .15s; }
+.condition-card[data-group='bane'] { --tone: var(--color-rose-400); }
+.condition-card[data-group='burden'] { --tone: var(--ds-fear); }
+.condition-card[data-source='daggerheart'] { --tone: var(--ds-hope, var(--ds-brand)); }
+.condition-card:hover { border-color: var(--tone); }
+.condition-card[aria-pressed='true'] { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 18%, transparent); }
+.condition-name { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 14px; font-weight: 650; }
+.condition-card[aria-pressed='true'] .condition-name::before { content: '✕'; margin-right: 6px; font-size: 10px; color: var(--tone); }
+.condition-name em { margin-left: auto; font-style: normal; font-size: 10.5px; font-weight: 500; color: var(--ds-muted); white-space: nowrap; }
+.condition-card small { color: var(--ds-muted); font-size: 12px; line-height: 1.45; }

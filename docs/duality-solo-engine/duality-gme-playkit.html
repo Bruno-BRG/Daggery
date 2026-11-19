@@ -261,8 +261,8 @@
   <div data-t="iron-debilities"></div>
 </div>
 <div class="block">
-<h2 class="hope">Supply and Experience</h2>
-  <p><b>Supply</b> is 0 to 5. At 0, mark <b>Unprepared</b>. <b>Experience</b> is marked by <i>Fulfill Your Vow</i> and spent by <i>Advance</i>: 3 for a new asset, 2 to upgrade one. Health and spirit are your Hit Points and Stress.</p>
+<h2 class="hope">Supply and Levels</h2>
+  <p><b>Supply</b> is 0 to 5. At 0, mark <b>Unprepared</b>. You level up at a <b>milestone</b> (a Grave or greater vow, a story arc): <i>Advance</i>. Conditions are on the character sheet. Health and spirit are your Hit Points and Stress.</p>
 </div>
 <div class="block">
 <h2>Meaning</h2>
@@ -292,7 +292,7 @@
   <div class="row" style="margin-top:2mm;align-items:flex-end">
     <div style="flex:1.1"><h3 style="margin:0 0 1mm">Supply</h3><div class="meter"><i>1</i><i>2</i><i>3</i><i>4</i><i>5</i></div></div>
     <div style="flex:1.4"><h3 style="margin:0 0 1mm">Initiative</h3><div class="inits"><span>You</span><span>Foe</span><span>No fight</span><span>Tide turned</span></div></div>
-    <div style="flex:1"><h3 style="margin:0 0 1mm">Experience</h3><div class="meter"><i></i><i></i><i></i><i></i><i></i></div></div>
+    <div style="flex:1"><h3 style="margin:0 0 1mm">This fight</h3><div class="inits"><span>Start</span><span>Best</span><span>Worst</span><span>Net</span></div></div>
   </div>
   <div class="debs" data-debilities></div></div>
 <div class="block row">
@@ -1654,8 +1654,8 @@ const M = {
     "name": "Fulfill Your Vow",
     "trigger": "When you achieve what you believe to be the fulfillment of your vow.",
     "roll": "Progress roll. Momentum is ignored.",
-    "strong": "Your quest is complete. Mark experience: Minor 1, Serious 2, Grave 3, Dire 4, Legendary 5.",
-    "weak": "There is more to be done or you realize the truth of your quest. Envision what you discover (Ask the Oracle if unsure). Then mark experience: Minor 0, Serious 1, Grave 2, Dire 3, Legendary 4. You may Swear an Iron Vow to set things right, and add +2.",
+    "strong": "Your quest is complete. Take the reward for its rank: Minor, gain 1 Hope. Serious, gain 1 Hope and clear 1 Stress. Grave, Dire or Legendary, this is a milestone: Advance (level up).",
+    "weak": "There is more to be done or you realize the truth of your quest. Envision what you discover (Ask the Oracle if unsure). Then take the reward of a quest one rank lower (a Minor quest gives nothing; a Grave quest gives the Serious reward; a Dire quest is still a milestone). You may Swear an Iron Vow to set things right, and add +2.",
     "miss": "Your quest is undone. Envision what happens (Ask the Oracle if unsure), and choose one: you recommit (clear all but one filled progress, and raise the quest’s rank by one if not already Legendary), or you give up (Forsake Your Vow)."
    },
    {
@@ -1667,8 +1667,8 @@ const M = {
    {
     "id": "advance",
     "name": "Advance",
-    "trigger": "When you focus on your skills, receive training, find inspiration, earn a reward, or gain a companion.",
-    "text": "You may spend 3 experience to add a new asset, or 2 experience to upgrade an asset. In Duality GME an asset is a Daggerheart choice: a domain card, an Experience, or a companion. Use this instead of levelling up by milestones, or alongside it."
+    "trigger": "When you reach a milestone: you fulfill a Grave, Dire or Legendary vow, you finish a story arc, or the table agrees it is time.",
+    "text": "No roll. You level up, as the Daggerheart rules say: choose two advancements, take a domain card and, at levels 2, 5 and 8, a new Experience. Duality GME has no experience count. Levels come only from milestones, one level for each milestone."
    }
   ]
  },

@@ -5,5 +5,6 @@ export * from './systems/daggerheart/solo';
 export * from './duality-engine';
 export * from './duality-variants';
 export * from './duality-momentum';
+export * from './duality-conditions';
 export * from './duality-foes';
 export * from './lodestar-oracles';

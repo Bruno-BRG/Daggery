@@ -281,13 +281,14 @@ export const SOLO_SECTIONS: readonly SoloSection[] = [
         ],
       },
       {
-        title: 'Supply, Debilities and Experience',
+        title: 'Supply, conditions and levels',
         rows: [
           ['Supply', '0 to 5. At 0, mark Unprepared. Each extra loss while Unprepared is paid with Hit Points, Stress or Momentum (Out of Supply).'],
-          ['Conditions', 'Wounded, Shaken, Unprepared, Encumbered. Each clears with the moves that name it.'],
+          ['Conditions', 'On your character sheet. Daggerheart: Hidden, Restrained, Vulnerable. Ironsworn: Wounded, Shaken, Unprepared, Encumbered. Each Ironsworn one clears with the moves that name it.'],
           ['Banes and burdens', 'Maimed, Corrupted (banes), Cursed, Tormented (burdens). Burdens clear only by finishing the quest that caused them.'],
           ['Debility cost', 'Each marked Debility lowers your maximum Momentum by 1 and your reset (+2, then +1, then 0).'],
-          ['Experience', 'Fulfill Your Vow marks it by rank. Advance spends 3 for a new asset or 2 to upgrade one.'],
+          ['Levels', 'There is no experience count. You level up at a milestone: a Grave, Dire or Legendary vow fulfilled, a story arc finished, or when the table agrees. Use Advance.'],
+          ['Fight Momentum', 'The tracker records Momentum from the start of each fight: start, now, best, worst and net.'],
           ['Hit Points and Stress', 'Ironsworn’s health and spirit are the Hit Points and Stress on your sheet.'],
         ],
       },

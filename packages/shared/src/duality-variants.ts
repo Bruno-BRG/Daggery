@@ -109,13 +109,13 @@ export const IRON_MOVES: readonly IronMove[] = [
   { id: 'milestone', group: 'quest', name: 'Reach a Milestone', trigger: 'When you make significant progress in your quest by overcoming a critical obstacle, completing a perilous journey, solving a complex mystery, defeating a powerful threat, gaining vital support, or acquiring a crucial item, you may mark progress.',
     text: 'Mark progress on the vow at its rank: Minor 3 boxes, Serious 2 boxes, Grave 1 box, Dire 2 ticks, Legendary 1 tick.' },
   { id: 'fulfill-vow', group: 'quest', name: 'Fulfill Your Vow', trigger: 'When you achieve what you believe to be the fulfillment of your vow.', roll: 'Progress roll. Momentum is ignored.',
-    strong: 'Your quest is complete. Mark experience: Minor 1, Serious 2, Grave 3, Dire 4, Legendary 5.',
-    weak: 'There is more to be done or you realize the truth of your quest. Envision what you discover (Ask the Oracle if unsure). Then mark experience: Minor 0, Serious 1, Grave 2, Dire 3, Legendary 4. You may Swear an Iron Vow to set things right, and add +2.',
+    strong: 'Your quest is complete. Take the reward for its rank: Minor, gain 1 Hope. Serious, gain 1 Hope and clear 1 Stress. Grave, Dire or Legendary, this is a milestone: Advance (level up).',
+    weak: 'There is more to be done or you realize the truth of your quest. Envision what you discover (Ask the Oracle if unsure). Then take the reward of a quest one rank lower (a Minor quest gives nothing; a Grave quest gives the Serious reward; a Dire quest is still a milestone). You may Swear an Iron Vow to set things right, and add +2.',
     miss: 'Your quest is undone. Envision what happens (Ask the Oracle if unsure), and choose one: you recommit (clear all but one filled progress, and raise the quest’s rank by one if not already Legendary), or you give up (Forsake Your Vow).' },
   { id: 'forsake-vow', group: 'quest', name: 'Forsake Your Vow', trigger: 'When you renounce your quest, betray your promise, or the goal is lost to you.',
     text: 'Clear the vow and Endure Stress. You suffer -spirit (mark Stress) by the rank of your quest: Minor 1, Serious 2, Grave 3, Dire 4, Legendary 5. If the vow was made to a person or community with whom you share a bond, Test Your Bond when you next meet.' },
-  { id: 'advance', group: 'quest', name: 'Advance', trigger: 'When you focus on your skills, receive training, find inspiration, earn a reward, or gain a companion.',
-    text: 'You may spend 3 experience to add a new asset, or 2 experience to upgrade an asset. In Duality GME an asset is a Daggerheart choice: a domain card, an Experience, or a companion. Use this instead of levelling up by milestones, or alongside it.' },
+  { id: 'advance', group: 'quest', name: 'Advance', trigger: 'When you reach a milestone: you fulfill a Grave, Dire or Legendary vow, you finish a story arc, or the table agrees it is time.',
+    text: 'No roll. You level up, as the Daggerheart rules say: choose two advancements, take a domain card and, at levels 2, 5 and 8, a new Experience. Duality GME has no experience count. Levels come only from milestones, one level for each milestone.' },
 
   // ------------------------------------------------------------------ Adventure moves
   { id: 'face-danger', group: 'adventure', name: 'Face Danger', trigger: 'When you attempt something risky or react to an imminent threat, envision your action and roll.', roll: TRAITS,

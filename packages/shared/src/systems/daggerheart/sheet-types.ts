@@ -158,6 +158,8 @@ export interface Sheet {
   /** Manually recorded Stress slots from items, transformations, or other effects. */
   extraStressSlots?: number;
   experiences: Experience[];
+  /** Condition ids: Daggerheart conditions and Ironsworn Debilities (see duality-conditions.ts). */
+  conditions?: string[];
   weapons: SheetWeapon[];
   inventory: InventoryEntry[];
   /** Gold in "handfuls" (the SRD keeps gold abstract). */

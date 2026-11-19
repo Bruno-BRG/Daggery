@@ -1,22 +1,18 @@
 import { useId } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  burnMomentum, DEBILITIES, initiativeLabelFor, maxMomentum, MOMENTUM_MAX, MOMENTUM_MIN, resetMomentum, setDebility, setInitiative,
-  setMomentum, sufferMomentum, sufferSupply, SUPPLY_MAX, takeMomentum, takeSupply, turnTheTide, type DebilityId, type Initiative,
+  burnMomentum, DEBILITIES, initiativeLabelFor, maxMomentum, MOMENTUM_MAX, MOMENTUM_MIN, resetMomentum, setInitiative,
+  setMomentum, sufferMomentum, sufferSupply, SUPPLY_MAX, takeMomentum, takeSupply, turnTheTide, type Initiative,
 } from '@daggery/shared';
 import { Icon } from '../components/Icon';
+import { FightMomentum } from './FightMomentum';
 import { signed, useMomentum } from './useMomentum';
 import { usePulse, useTrackerPanel } from './useTrackerPanel';
 import './trackers.css';
 
 const RUNGS = Array.from({ length: MOMENTUM_MAX - MOMENTUM_MIN + 1 }, (_, index) => MOMENTUM_MIN + index);
-const GROUPS = [
-  { id: 'condition', label: 'Conditions' },
-  { id: 'bane', label: 'Banes' },
-  { id: 'burden', label: 'Burdens' },
-] as const;
 
-/** Momentum in the top bar: your side of the table. Click it for the ladder, Supply, Initiative and Debilities. */
+/** Momentum in the top bar: your side of the table. Click it for the ladder, Supply, Initiative and the Momentum of this fight. */
 export function MomentumTracker() {
   const { tracker, update } = useMomentum();
   const { open, setOpen, rootRef, panelRef, style } = useTrackerPanel();
@@ -104,34 +100,16 @@ export function MomentumTracker() {
             </button>
           </section>
 
-          <section className="tracker-card" aria-label="Debilities">
-            <h4><Icon name="stress" />Debilities<small>{tracker.debilities.length === 0 ? 'none' : `${tracker.debilities.length} marked`}</small></h4>
-            <div className="tracker-debs">
-              {GROUPS.map(group => (
-                <div key={group.id}>
-                  <h5>{group.label}</h5>
-                  <div className="chips">
-                    {DEBILITIES.filter(item => item.group === group.id).map(item => (
-                      <button key={item.id} type="button" data-group={item.group} aria-pressed={tracker.debilities.includes(item.id)} title={item.hint}
-                        onClick={() => update(current => setDebility(current, item.id as DebilityId, !current.debilities.includes(item.id)))}>{item.label}</button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="tracker-note">Each one lowers the most Momentum you can hold, and the reset.</p>
+          <section className="tracker-card" aria-label="Momentum of this fight">
+            <h4><Icon name="combat" />This fight<small>{fighting ? 'recorded' : 'no fight'}</small></h4>
+            <FightMomentum tracker={tracker} />
           </section>
 
-          <section className="tracker-card" aria-label="Experience">
-            <h4><Icon name="gem" />Experience</h4>
-            <div className="tracker-row">
-              <p className="tracker-note">Spend 3 to add an asset, 2 to upgrade one.</p>
-              <div className="tracker-mini">
-                <button type="button" onClick={() => update(current => ({ ...current, experience: Math.max(0, current.experience - 1) }))} disabled={tracker.experience === 0} aria-label="Spend 1 experience"><Icon name="minus" /></button>
-                <strong aria-label={`Experience: ${tracker.experience}`}>{tracker.experience}</strong>
-                <button type="button" onClick={() => update(current => ({ ...current, experience: Math.min(999, current.experience + 1) }))} aria-label="Mark 1 experience"><Icon name="plus" /></button>
-              </div>
-            </div>
+          <section className="tracker-card" aria-label="Conditions">
+            <h4><Icon name="stress" />Conditions<small>{tracker.debilities.length === 0 ? 'none' : `${tracker.debilities.length} lower Momentum`}</small></h4>
+            <p className="tracker-note">{tracker.debilities.length === 0
+              ? 'Conditions live on your character sheet. Each Ironsworn one lowers your maximum Momentum.'
+              : `${tracker.debilities.map(id => DEBILITIES.find(item => item.id === id)?.label ?? id).join(', ')}. Change them on your character sheet.`}</p>
           </section>
         </div>,
         document.body,

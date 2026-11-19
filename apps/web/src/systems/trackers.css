@@ -139,3 +139,16 @@
 /* Used outside the top bar (Challenges, the dice tray): the same pieces on a plain block. */
 .tracker.is-inline { position: static; display: grid; gap: 8px; }
 .tracker.is-inline .tracker-segments { max-width: 420px; }
+
+/* Momentum of a fight */
+.fight-momentum { display: grid; gap: 8px; }
+.fight-now { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.fight-now div { display: grid; gap: 2px; padding: 7px 4px; text-align: center; border-radius: var(--radius-md); background: color-mix(in srgb, var(--ds-brand) 9%, transparent); border: 1px solid color-mix(in srgb, var(--ds-brand) 24%, transparent); }
+.fight-now dt { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ds-muted); }
+.fight-now dd { margin: 0; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fight-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.fight-history li { display: grid; grid-template-columns: auto auto 1fr auto; gap: 8px; align-items: center; font-size: 12.5px; padding: 6px 9px; border-radius: var(--radius-md); background: var(--ds-raised); border: 1px solid var(--ds-border); }
+.fight-history li .daggery-icon { width: 15px; height: 15px; }
+.fight-history small { color: var(--ds-muted); }
+.fight-history strong { font-variant-numeric: tabular-nums; }
+.fight-now .is-neg, .fight-history .is-neg { color: var(--color-rose-400); }

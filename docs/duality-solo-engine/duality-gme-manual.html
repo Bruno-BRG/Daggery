@@ -510,8 +510,8 @@
       <p><b>Supply</b> stands for your food, gear and preparation. It runs from 0 to 5 and starts at 5. A move that says <b>suffer &minus;1 supply</b> takes a point. When Supply falls to 0, mark <b>Unprepared</b>. Any more Supply you must suffer while Unprepared is paid with Hit Points, Stress or Momentum: that is the move <i>Out of Supply</i>.</p>
     </div>
     <div class="block">
-      <h2>Debilities</h2>
-      <p>A <b>debility</b> is a lasting problem. Mark it on your tracker sheet. Each one lowers your maximum Momentum and your reset by 1.</p>
+      <h2>Conditions and debilities</h2>
+      <p>Conditions live on your <b>character sheet</b>, not on the tracker. Daggerheart has three: <b>Hidden</b> (rolls against you have disadvantage), <b>Restrained</b> (you cannot move) and <b>Vulnerable</b> (rolls that target you have advantage). Ironsworn adds eight <b>debilities</b>. Each debility lowers your maximum Momentum and your reset by 1.</p>
       <div data-t="iron-debilities"></div>
     </div>
     <div class="block">
@@ -524,9 +524,12 @@
       <p>A <b>strong hit</b> on a combat move takes or keeps initiative. A <b>weak hit or a miss</b> passes it to your foe. Once per fight, <i>Turn the Tide</i> steals it back. When no fight is on, nobody has initiative: leave the tracker blank.</p>
     </div>
     <div class="block">
-      <h2>Experience</h2>
-      <p>Mark <b>experience</b> when you <i>Fulfill Your Vow</i>: Minor 1, Serious 2, Grave 3, Dire 4, Legendary 5 on a strong hit, one less on a weak hit. Then <i>Advance</i>: spend 3 experience to add a new asset, or 2 to upgrade one. In Duality GME an asset is a Daggerheart choice: a domain card, an Experience or a companion.</p>
-      <p>This replaces levelling up by milestones if you want it to. Use whichever you prefer, but not both for the same vow.</p>
+      <h2>Milestones and levels</h2>
+      <p>There is no experience count. As in Daggerheart, you level up at a <b>milestone</b>: you <i>Fulfill Your Vow</i> of rank Grave, Dire or Legendary, you finish a story arc, or the table agrees it is time. Then use <i>Advance</i>: follow the level-up steps on your character sheet. One milestone gives one level. Minor and Serious vows give Hope and Stress relief instead.</p>
+    </div>
+    <div class="block">
+      <h2>Momentum of a fight</h2>
+      <p>Every fight has its own record. When the fight begins, write down your <b>start</b> Momentum. Note the <b>best</b> and the <b>worst</b> it reaches. When the fight ends, write the <b>net</b>: the end minus the start. The app does this for you. Your Momentum is still one number for the whole character: the record only shows how each fight went.</p>
     </div>
     <div class="block">
       <h2>Ironsworn stats and Duality traits</h2>
@@ -672,7 +675,7 @@
 <section class="page" data-ch="Quest Moves">
   <header class="band"><h1>Quest Moves</h1></header>
   <div class="cols">
-    <div class="block"><p>Quests drive the story. Each vow is a promise with a progress track. You swear it, reach milestones toward it, and at last fulfill it or let it go. Experience pays for the effort: see <i>Advance</i>.</p></div>
+    <div class="block"><p>Quests drive the story. Each vow is a promise with a progress track. You swear it, reach milestones toward it, and at last fulfill it or let it go. A Grave or greater vow is a milestone: see <i>Advance</i>.</p></div>
     <div data-moves="*" data-only="swear-vow,milestone,fulfill-vow,forsake-vow,advance"></div>
   </div>
 </section>
@@ -1235,7 +1238,8 @@
       </div>
     </div>
     <div class="box"><h4>Momentum</h4><div class="ladder" data-momentum></div>
-      <div class="pips" style="margin-top:1.4mm">INITIATIVE <span class="tick">You</span> <i></i> <span class="tick">Foe</span> <i></i> <span class="tick">No fight</span> <i></i> <span class="tick">Tide turned</span> <i></i> <span class="tick">Experience</span> <i></i><i></i><i></i><i></i><i></i></div>
+      <div class="pips" style="margin-top:1.4mm">INITIATIVE <span class="tick">You</span> <i></i> <span class="tick">Foe</span> <i></i> <span class="tick">No fight</span> <i></i> <span class="tick">Tide turned</span> <i></i></div>
+      <div class="pips" style="margin-top:1.4mm">THIS FIGHT: START <span class="tick">&nbsp;&nbsp;&nbsp;</span> BEST <span class="tick">&nbsp;&nbsp;&nbsp;</span> WORST <span class="tick">&nbsp;&nbsp;&nbsp;</span> NET <span class="tick">&nbsp;&nbsp;&nbsp;</span></div>
       <div class="debs" data-debilities></div></div>
     <div class="box"><h4>Vows</h4><div data-tracks="3"></div></div>
     <div class="row2">
@@ -2653,8 +2657,8 @@ const M = {
     "name": "Fulfill Your Vow",
     "trigger": "When you achieve what you believe to be the fulfillment of your vow.",
     "roll": "Progress roll. Momentum is ignored.",
-    "strong": "Your quest is complete. Mark experience: Minor 1, Serious 2, Grave 3, Dire 4, Legendary 5.",
-    "weak": "There is more to be done or you realize the truth of your quest. Envision what you discover (Ask the Oracle if unsure). Then mark experience: Minor 0, Serious 1, Grave 2, Dire 3, Legendary 4. You may Swear an Iron Vow to set things right, and add +2.",
+    "strong": "Your quest is complete. Take the reward for its rank: Minor, gain 1 Hope. Serious, gain 1 Hope and clear 1 Stress. Grave, Dire or Legendary, this is a milestone: Advance (level up).",
+    "weak": "There is more to be done or you realize the truth of your quest. Envision what you discover (Ask the Oracle if unsure). Then take the reward of a quest one rank lower (a Minor quest gives nothing; a Grave quest gives the Serious reward; a Dire quest is still a milestone). You may Swear an Iron Vow to set things right, and add +2.",
     "miss": "Your quest is undone. Envision what happens (Ask the Oracle if unsure), and choose one: you recommit (clear all but one filled progress, and raise the quest’s rank by one if not already Legendary), or you give up (Forsake Your Vow)."
    },
    {
@@ -2666,8 +2670,8 @@ const M = {
    {
     "id": "advance",
     "name": "Advance",
-    "trigger": "When you focus on your skills, receive training, find inspiration, earn a reward, or gain a companion.",
-    "text": "You may spend 3 experience to add a new asset, or 2 experience to upgrade an asset. In Duality GME an asset is a Daggerheart choice: a domain card, an Experience, or a companion. Use this instead of levelling up by milestones, or alongside it."
+    "trigger": "When you reach a milestone: you fulfill a Grave, Dire or Legendary vow, you finish a story arc, or the table agrees it is time.",
+    "text": "No roll. You level up, as the Daggerheart rules say: choose two advancements, take a domain card and, at levels 2, 5 and 8, a new Experience. Duality GME has no experience count. Levels come only from milestones, one level for each milestone."
    }
   ]
  },
@@ -7859,7 +7863,7 @@ const NOTES = {
   'milestone': 'Mark progress when the story moves forward, not for every roll. A good milestone changes what your character knows or where they stand: a key witness found, a gate opened, a rival defeated.',
   'fulfill-vow': 'Make this move when you believe you have done it, even with a partial track. A weak hit is not a failure: it means the story is not finished, and a new vow carries it on.',
   'forsake-vow': 'Sometimes the right story is giving up. Mark the Stress and let the consequences follow you.',
-  'advance': 'Experience is a reward, not a chore. Spend it when the story gives a reason: a mentor, a lost weapon rediscovered, a hard lesson learned.',
+  'advance': 'A level is a milestone, not a chore. Take it when the story earns it: a vow kept, a villain beaten, a hard lesson learned.',
   'face-danger': 'The most common move in the game. Use it whenever you act under pressure and no other move fits: climbing in a storm, slipping past a guard, holding a door. Choose the trait by how you act.',
   'secure-advantage': 'Use it to set up a risky action: study the lock, find the high ground, wait for the guard to turn. Advantage is a d6 added to your next roll. A strong hit also lets you prepare to act and bank +2 momentum.',
   'gather-information': 'When the answer matters and finding it is not trivial. If you learn something that moves a vow forward, it is a milestone.',

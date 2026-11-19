@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   burnedOutcome, burnMomentum, setMomentum, canBurnMomentum, initialMomentum, initiativeAfter, maxMomentum, negativeMomentumCancelsHope,
-  parseMomentum, resetMomentum, setDebility, setInitiative, sufferMomentum, sufferSupply, takeMomentum, takeSupply, turnTheTide,
+  parseMomentum, resetMomentum, setDebility, setInitiative, sufferMomentum, sufferSupply, takeMomentum, takeSupply, trackFight, turnTheTide, fightNet,
 } from './duality-momentum';
 
 describe('Momentum', () => {
@@ -51,8 +51,8 @@ describe('Momentum', () => {
     expect(negativeMomentumCancelsHope({ ...tracker, value: 3 }, 3)).toBe(false);
   });
   it('repairs a damaged saved tracker', () => {
-    const fixed = parseMomentum({ value: 99, supply: -4, debilities: ['wounded', 'wounded', 'bogus'], initiative: 'dragon', experience: 'x' });
-    expect(fixed).toMatchObject({ value: 9, supply: 0, debilities: ['wounded'], initiative: null, experience: 0 });
+    const fixed = parseMomentum({ value: 99, supply: -4, debilities: ['wounded', 'wounded', 'bogus'], initiative: 'dragon', fight: 'x' });
+    expect(fixed).toMatchObject({ value: 9, supply: 0, debilities: ['wounded'], initiative: null, fight: null, history: [] });
     expect(parseMomentum(null)).toEqual(initialMomentum());
   });
 });
@@ -94,5 +94,30 @@ describe('Initiative', () => {
     expect(() => turnTheTide({ ...tracker, initiative: 'foe' })).toThrow('already');
     expect(setInitiative(tracker, null)).toMatchObject({ initiative: null, tideTurned: false });
     expect(() => turnTheTide(initialMomentum())).toThrow('No fight');
+  });
+});
+
+describe('Momentum of a fight', () => {
+  it('starts a record when a fight begins and keeps best and worst points', () => {
+    let t = setInitiative({ ...initialMomentum(), value: 3 }, 'hero');
+    expect(t.fight).toEqual({ start: 3, end: 3, peak: 3, low: 3 });
+    t = trackFight({ ...t, value: 7 });
+    t = trackFight({ ...t, value: -1 });
+    expect(t.fight).toEqual({ start: 3, end: -1, peak: 7, low: -1 });
+    expect(fightNet(t.fight!)).toBe(-4);
+  });
+  it('keeps the record when Initiative changes hands', () => {
+    const t = setInitiative(setInitiative({ ...initialMomentum(), value: 3 }, 'hero'), 'foe');
+    expect(t.fight?.start).toBe(3);
+  });
+  it('moves the record to the history when the fight ends, newest first, five at most', () => {
+    let t = initialMomentum();
+    for (let i = 0; i < 7; i++) {
+      t = setInitiative({ ...t, value: i }, 'hero');
+      t = setInitiative(trackFight({ ...t, value: i + 1 }), null);
+    }
+    expect(t.fight).toBeNull();
+    expect(t.history).toHaveLength(5);
+    expect(t.history[0]).toMatchObject({ start: 6, end: 7 });
   });
 });
