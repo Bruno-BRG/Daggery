@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  DUALITY_ENGINE_VERSION, DUALITY_LIKELIHOODS, IRON_MOVE_GROUPS, IRON_MOVES, IRON_OUTCOME_LABELS,
-  dualityTable, hasFeature, type IronMove, type IronMoveGroup,
+  DUALITY_ENGINE_VERSION, DUALITY_LIKELIHOODS, IRON_MOVE_GROUPS, IRON_MOVES, IRON_OUTCOME_LABELS, isLodestarMove,
+  dualityTable, hasFeature, lodestarTable, type IronMove, type IronMoveGroup, type LodestarGroup,
 } from '@daggery/shared';
 import { getActiveCampaign } from '../../campaign-context';
 import { Notes } from '../../CampaignSections';
@@ -10,6 +10,7 @@ import { Icon, type IconName } from '../../components/Icon';
 import { SOLO_SECTIONS, type RefBlock, type SoloSection } from './reference';
 import { DIFFICULTIES, MOVE_FLOWS, MOVE_GROUP_META, OUTCOME_ORDER, type Step } from './workflow';
 import { ReferenceTableCard } from './table-reference';
+import { LODESTAR_GROUPS, LodestarTableCard, lodestarTablesIn } from './lodestar-reference';
 import './solo.css';
 
 /**
@@ -40,7 +41,7 @@ export default function SoloCompanion({ open }: { open: boolean; onClose: () => 
 function readHash(): { move?: string; group?: string } {
   const match = /^#solo-(moves|tables)-(.+)$/.exec(window.location.hash);
   if (match?.[1] === 'moves' && IRON_MOVES.some(move => move.id === match[2])) return { move: match[2] };
-  if (match?.[1] === 'tables' && SOLO_SECTIONS.some(section => section.id === match[2])) return { group: match[2] };
+  if (match?.[1] === 'tables' && (SOLO_SECTIONS.some(section => section.id === match[2]) || LODESTAR_GROUPS.some(group => `lodestar-${group.id}` === match[2]))) return { group: match[2] };
   const legacy = window.location.hash.replace(/^#solo-/, '');
   if (SOLO_SECTIONS.some(section => section.id === legacy)) return { group: legacy };
   return {};
@@ -114,7 +115,8 @@ function SoloPanel({ open }: { open: boolean }) {
     {part('oracles', <>
       {group('ask', 'Ask the Oracle', 'spark', <AskTheOracle />)}
       {SOLO_SECTIONS.filter(section => section.tables.length).map(section => group(section.id, section.label, section.icon, <OracleTables section={section} />, section.tables.length))}
-      <p className="solo-panel-credit">{`Duality GME ${DUALITY_ENGINE_VERSION}`}</p>
+      {LODESTAR_GROUPS.map(item => group(`lodestar-${item.id}`, `Ironsworn d100: ${item.label}`, LODESTAR_ICONS[item.id], <LodestarTables group={item.id} />, lodestarTablesIn(item.id).length))}
+      <p className="solo-panel-credit">{`Duality GME ${DUALITY_ENGINE_VERSION}`} · d100 oracles from Ironsworn Lodestar by Shawn Tomkin (CC BY-NC-SA 4.0)</p>
     </>)}
 
     {part('moves', <>
@@ -129,15 +131,29 @@ function SoloPanel({ open }: { open: boolean }) {
 
 // ------------------------------------------------------------------- oracles
 
+const D100_ODDS = [11, 26, 51, 76, 91] as const;
+
 function AskTheOracle() {
   return <div className="solo-oracle-reference">
     <p>Ask a yes or no question. Choose how likely “yes” is, roll both d12 and add them. Meet the target for yes; below it means no.</p>
     <table className="solo-table"><thead><tr><th scope="col">Likelihood</th><th scope="col">Target</th><th scope="col">Chance</th></tr></thead><tbody>
       {DUALITY_LIKELIHOODS.map(item => <tr key={item.id}><th scope="row">{item.label}</th><td>{item.target}+</td><td>{item.chance}</td></tr>)}
     </tbody></table>
+    <p className="solo-printed-intro">Ironsworn’s d100 odds, for the same likelihoods: {DUALITY_LIKELIHOODS.map((item, index) => `${item.label} ${D100_ODDS[index]}+`).join(', ')}. In Duality GME, roll the Duality Dice instead.</p>
     <p className="solo-reference-callout"><strong>Doubles</strong> mean an extreme result or a twist: “yes, and more” or “no, and worse.” Oracle rolls never give Hope or Fear.</p>
     <section><h3>Need meaning?</h3><p>Read an Action + Subject for what happens, or a Descriptor + Subject for what something is like. The tables are under Meaning.</p></section>
     <section><h3>Fear Check</h3><p>Roll a d12. At or under the world’s current Fear, the world acts. At 0 Fear, the check always fails.</p></section>
+  </div>;
+}
+
+const LODESTAR_ICONS: Record<LodestarGroup, IconName> = {
+  moves: 'dice', prompt: 'spark', place: 'map', settlement: 'home', character: 'users', names: 'tag', turning: 'target',
+};
+/** The Ironsworn Lodestar d100 tables, as printed. Roll a d100 in the dice tray: it throws a tens die and a units die. */
+function LodestarTables({ group }: { group: LodestarGroup }) {
+  return <div className="solo-printed">
+    <p className="solo-printed-intro">Roll a d100 in the dice tray (a tens die and a units die). 00 is 100. If a result is a poor fit, check the row above or below, or reverse the digits (37 becomes 73).</p>
+    {lodestarTablesIn(group).map(table => <LodestarTableCard key={table.id} table={table} headingLevel={3} />)}
   </div>;
 }
 
@@ -153,7 +169,7 @@ function OracleTables({ section }: { section: SoloSection }) {
 /** Each move group keeps one colour, from the shared tones. */
 const MOVE_TONES: Record<IronMoveGroup, string> = {
   session: TONES.teal, quest: TONES.gold, adventure: TONES.blue, exploration: TONES.green,
-  connection: TONES.pink, scene: TONES.violet, combat: TONES.red, fate: TONES.fear,
+  connection: TONES.pink, scene: TONES.violet, combat: TONES.red, suffer: TONES.orange, fate: TONES.fear,
 };
 
 function MoveList({ query, openMoves, onToggle }: { query: string; openMoves: readonly string[]; onToggle: (id: string) => void }) {
@@ -166,7 +182,7 @@ function MoveList({ query, openMoves, onToggle }: { query: string; openMoves: re
       const group = IRON_MOVE_GROUPS.find(item => item.id === move.group)!;
       const resolve = MOVE_FLOWS[move.id]?.resolve;
       return <ItemCard key={move.id} id={`solo-move-${move.id}`} title={move.name} tone={MOVE_TONES[move.group]} icon={MOVE_GROUP_META[move.group].icon}
-        caption={`${group.label.replace(/ moves$/, '')}${resolve === 'action' ? ' · Action roll' : resolve === 'progress' ? ' · Progress roll' : ''}`}
+        caption={`${group.label.replace(/ moves$/, '')}${resolve === 'action' ? ' · Action roll' : resolve === 'progress' ? ' · Progress roll' : ''}${isLodestarMove(move) ? ' · Ironsworn' : ''}`}
         open={openMoves.includes(move.id)} onToggle={() => onToggle(move.id)}>
         <MoveDetail move={move} />
       </ItemCard>;
@@ -177,6 +193,7 @@ function MoveList({ query, openMoves, onToggle }: { query: string; openMoves: re
 /** What a step points at, said in words: no buttons, the tables are printed below. */
 function stepText(step: Step): string {
   if (step.kind === 'table') return step.label ?? dualityTable(step.table).title;
+  if (step.kind === 'lodestar') return step.label ?? lodestarTable(step.table).title;
   if (step.kind === 'meaning') return step.first === 'action' ? 'Action + Subject' : 'Descriptor + Subject';
   if (step.kind === 'fear-check') return 'Fear Check';
   return 'Ask the Oracle';
@@ -190,9 +207,17 @@ function moveTables(move: IronMove): string[] {
   return [...new Set(ids)];
 }
 
+/** The Lodestar d100 tables a move uses, each once. */
+function moveLodestarTables(move: IronMove): string[] {
+  const flow = MOVE_FLOWS[move.id];
+  const steps = [...(flow?.tools ?? []), ...OUTCOME_ORDER.flatMap(outcome => flow?.[outcome] ?? [])];
+  return [...new Set(steps.flatMap(step => step.kind === 'lodestar' ? [step.table] : []))];
+}
+
 function MoveDetail({ move }: { move: IronMove }) {
   const flow = MOVE_FLOWS[move.id] ?? { resolve: 'none' as const };
   const tables = moveTables(move);
+  const d100Tables = moveLodestarTables(move);
   const usesOracle = [...(flow.tools ?? []), ...OUTCOME_ORDER.flatMap(outcome => flow[outcome] ?? [])].some(step => step.kind === 'oracle' || step.kind === 'fear-check');
   return <article className="solo-move">
     <p className="solo-move-trigger">{move.trigger}</p>
@@ -216,8 +241,9 @@ function MoveDetail({ move }: { move: IronMove }) {
     </section>}
 
     {usesOracle && <p className="solo-move-uses">Ask the Oracle and the Fear Check are under <strong>Oracles › Ask the Oracle</strong>.</p>}
-    {tables.length > 0 && <section className="solo-move-tables" aria-label="Tables for this move">
+    {(tables.length > 0 || d100Tables.length > 0) && <section className="solo-move-tables" aria-label="Tables for this move">
       {tables.map(id => <ReferenceTableCard key={id} table={dualityTable(id)} headingLevel={3} />)}
+      {d100Tables.map(id => <LodestarTableCard key={id} table={lodestarTable(id)} headingLevel={3} />)}
     </section>}
   </article>;
 }

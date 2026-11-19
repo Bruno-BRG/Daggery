@@ -1,5 +1,5 @@
 import type { IconName } from '../../components/Icon';
-import { DUALITY_LIKELIHOODS, IRON_RANKS } from '@daggery/shared';
+import { DUALITY_LIKELIHOODS, FOE_RANKS, IRON_RANKS } from '@daggery/shared';
 
 export interface RefBlock { title: string; note?: string; rows: readonly (readonly [string, string])[] }
 export interface SoloSection {
@@ -21,6 +21,11 @@ const ORACLE_ROWS: readonly (readonly [string, string])[] = [
 /** The ranks chart, straight from the engine's ranks so the marks and Difficulties cannot drift. */
 const RANK_ROWS: readonly (readonly [string, string])[] = IRON_RANKS.map(
   (rank): readonly [string, string] => [rank.label, `Mark ${rank.mark}. Difficulty ${rank.difficulty}.`],
+);
+
+/** Foe ranks, straight from the engine so harm and progress cannot drift. */
+const FOE_RANK_ROWS: readonly (readonly [string, string])[] = FOE_RANKS.map(
+  (rank): readonly [string, string] => [`${rank.label} (${rank.ironsworn})`, `${rank.foe}. Harm ${rank.harm}; ${rank.progress}. Look for: ${rank.fits}.`],
 );
 
 export const SOLO_SECTIONS: readonly SoloSection[] = [
@@ -100,7 +105,7 @@ export const SOLO_SECTIONS: readonly SoloSection[] = [
           ['In a fight', 'Damage, a lost weapon, a new foe, an ally down.'],
           ['On the road', 'Lost time, lost supplies, a wrong turn, bad weather.'],
           ['Among people', 'A lost friend, a broken promise, a rumor about you.'],
-          ['On an oath', 'Lose progress, the goal moves, a rival gets there first.'],
+          ['On a vow', 'Lose progress, the goal moves, a rival gets there first.'],
         ],
       },
     ],
@@ -127,7 +132,7 @@ export const SOLO_SECTIONS: readonly SoloSection[] = [
         title: 'When to roll these',
         rows: [
           ['Vignette', 'What happens elsewhere while you are away. Envision it, then gain a Hope as you return to your character.'],
-          ['Plot hook', 'For an inciting incident or a new oath: what must be done, and who stands in the way.'],
+          ['Plot hook', 'For an inciting incident or a new vow: what must be done, and who stands in the way.'],
           ['Reward and twist', 'What it is worth, and what nobody has told you yet. Write the twist down and save it.'],
           ['Rumor', 'When the story needs a push: something heard in a tavern, or a sign on the road.'],
         ],
@@ -198,18 +203,33 @@ export const SOLO_SECTIONS: readonly SoloSection[] = [
     id: 'combat',
     label: 'Combat',
     icon: 'combat',
-    intro: 'Keep Daggerheart combat. Your attacks and the adversaries’ stat blocks work as the core rules say; the Fear Check runs the opposition when the spotlight passes to the GM.',
+    intro: 'Fights run on initiative and Momentum, as in Ironsworn. Daggerheart stat blocks give you each foe’s features; the foe’s rank gives its harm and its progress track. When a foe has initiative, the Fear Check runs it.',
     tables: ['adversary-creature', 'adversary-type', 'tactics', 'fear-spend'],
     reference: [
       {
-        title: 'Running a full fight',
+        title: 'Running a fight',
         rows: [
-          ['1. Choose your foes', 'Use the adversaries the story calls for, or roll Creature and Situation and Adversary Type, then pick a stat block of your tier.'],
-          ['2. Join the Fray', 'Roll to see who acts first.'],
-          ['3. Your spotlight', 'A success with Hope keeps the spotlight; a roll with Fear or a failure passes it to the GM.'],
-          ['4. The GM turn', 'Pick an adversary. Fear Check: fail = free action (Tactics); pass = roll Fear Spend and pay the cost.'],
-          ['Chain checks', 'After each GM action check again: a pass spends 1 Fear and brings in another adversary (Tactics). The first fail ends the turn.'],
-          ['5. End the fight', 'When the foes fall, flee or yield, or when you do. If the fight mattered to an oath, Reach a Milestone.'],
+          ['1. Choose your foes', 'Use the adversaries the story calls for, or roll Foe rank, Creature and Situation, and Adversary Type. Give each foe (or each pack) a rank and a progress track on the Challenges page.'],
+          ['2. Enter the Fray', 'Roll Presence (face off), Finesse (strike first) or Instinct (ambushed). A strong hit: take +2 momentum and you have initiative.'],
+          ['3. With initiative', 'You act: Strike, Secure an Advantage, Face Danger, Aid Your Ally, Compel or End the Fight.'],
+          ['4. Without initiative', 'The foe acts: roll Combat Action, or the GM turn. You react: Clash, Face Danger, Compel or Turn the Tide.'],
+          ['5. Keep or lose the lead', 'A strong hit takes or keeps initiative. A weak hit or a miss passes it to your foe.'],
+          ['6. End the Fight', 'When you score a strong hit on a decisive move, roll a progress roll on the foe’s track. Reach a Milestone if the fight mattered to a vow.'],
+        ],
+      },
+      {
+        title: 'Foe ranks',
+        note: 'A foe’s rank sets the harm it deals you (marks Hit Points, or Stress) and how much each of your harm marks on its track.',
+        rows: FOE_RANK_ROWS,
+      },
+      {
+        title: 'From stat block to rank',
+        note: 'rank = tier − 1 + role bonus, from Minor (0) to Legendary (4).',
+        rows: [
+          ['Role bonus', 'Minion −1. Standard, Skulk, Ranged, Support, Social 0. Horde, Bruiser, Leader +1. Solo +2.'],
+          ['Examples', 'Tier 1 Standard: Minor. Tier 2 Bruiser: Grave. Tier 3 Solo: Legendary.'],
+          ['Packs', 'Fight a group of Minor or Serious foes as one pack with one track: a small pack (3 to 5) is one rank higher, a large pack (6 to 10) two.'],
+          ['Your harm', '2 harm with a deadly weapon. 1 harm when unarmed or with a simple weapon. Strike on a strong hit, or Clash and find an opening, add 1.'],
         ],
       },
       {
@@ -227,7 +247,59 @@ export const SOLO_SECTIONS: readonly SoloSection[] = [
           ['Tier by level', 'Tier 1 at level 1, tier 2 at levels 2 to 4, tier 3 at levels 5 to 7, tier 4 at levels 8 to 10.'],
           ['Roles', 'Minions and hordes come in numbers; standards are the backbone; bruisers hit hard; skulks hide.'],
           ['More roles', 'Leaders and supports make the others dangerous; social adversaries fight with words; a solo is a whole fight.'],
-          ['Joining and fleeing', 'Join the Fray decides who acts first. Breaking away is Face Danger; a long pursuit is a scene challenge.'],
+          ['Joining and fleeing', 'Enter the Fray decides who has initiative. Breaking away is Face Danger; a long pursuit is a scene challenge.'],
+        ],
+      },
+    ],
+  },
+  {
+    id: 'momentum',
+    label: 'Momentum and trackers',
+    icon: 'spark',
+    intro: 'Momentum is the hero’s side of the table, as Fear is the world’s. It says how well your quest is going, and you can burn it to turn a roll your way. Keep it on the Momentum tracker in the top bar.',
+    tables: [],
+    reference: [
+      {
+        title: 'Momentum',
+        note: 'From −6 to +10. It starts at +2. Each moves says when to take or suffer it.',
+        rows: [
+          ['Take +N', 'Add N, up to your maximum (+10, minus 1 for each Debility).'],
+          ['Suffer −N', 'Subtract N, down to −6. If Momentum is already −6, Face a Setback.'],
+          ['Burn Momentum', 'After an action roll, if Momentum is higher than your Fear die, you may burn it: ignore the Fear die, improve the outcome one step (a miss becomes a weak hit, a weak hit a strong hit), and the world does not gain Fear from the roll. Then Momentum resets.'],
+          ['Reset', '+2. With one Debility, +1. With two or more, 0.'],
+          ['Negative Momentum', 'If Momentum is below 0 and its number matches your Hope die, cancel that die: subtract it from the total, and the roll cannot be with Hope.'],
+          ['Progress rolls', 'Momentum is ignored: you cannot burn it, and a negative value does not hurt you.'],
+        ],
+      },
+      {
+        title: 'Initiative',
+        note: 'Initiative is the spotlight in a fight: who is acting, and who is reacting.',
+        rows: [
+          ['Take or keep it', 'A strong hit on a combat move.'],
+          ['Lose it', 'A weak hit or a miss on a combat move: your foe has it.'],
+          ['Turn the Tide', 'Once per fight you may steal initiative to make a move (not a progress move): add +2, and take +1 momentum on a hit. On a failure, Pay the Price (severe).'],
+        ],
+      },
+      {
+        title: 'Supply, Debilities and Experience',
+        rows: [
+          ['Supply', '0 to 5. At 0, mark Unprepared. Each extra loss while Unprepared is paid with Hit Points, Stress or Momentum (Out of Supply).'],
+          ['Conditions', 'Wounded, Shaken, Unprepared, Encumbered. Each clears with the moves that name it.'],
+          ['Banes and burdens', 'Maimed, Corrupted (banes), Cursed, Tormented (burdens). Burdens clear only by finishing the quest that caused them.'],
+          ['Debility cost', 'Each marked Debility lowers your maximum Momentum by 1 and your reset (+2, then +1, then 0).'],
+          ['Experience', 'Fulfill Your Vow marks it by rank. Advance spends 3 for a new asset or 2 to upgrade one.'],
+          ['Hit Points and Stress', 'Ironsworn’s health and spirit are the Hit Points and Stress on your sheet.'],
+        ],
+      },
+      {
+        title: 'Ironsworn stats and Duality traits',
+        rows: [
+          ['Edge', 'Agility: speed, agility, precision.'],
+          ['Heart', 'Presence: charm, loyalty, courage.'],
+          ['Iron', 'Strength: aggressive action, forceful defense, endurance.'],
+          ['Shadow', 'Finesse: deception, stealth, trickery.'],
+          ['Wits', 'Instinct or Knowledge: observation, insight, expertise.'],
+          ['+1 on a roll', 'Is +2 here. The Duality Dice are bigger.'],
         ],
       },
     ],
@@ -269,7 +341,7 @@ export const SOLO_SECTIONS: readonly SoloSection[] = [
       {
         title: 'When to roll loot',
         rows: [
-          ['When', 'After a hard fight, at the heart of a site, or as the reward of a fulfilled oath. Not for every corpse.'],
+          ['When', 'After a hard fight, at the heart of a site, or as the reward of a fulfilled vow. Not for every corpse.'],
           ['What it is', 'Weapons, armor and gold work as Daggerheart says; the table says what it is and why it matters.'],
           ['Detail', 'Roll a detail that makes the loot a story.'],
         ],

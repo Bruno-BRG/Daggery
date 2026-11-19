@@ -66,3 +66,10 @@
   .challenges-actions { gap: 6px; }
   .challenges-btn { flex: 0 1 auto; }
 }
+
+.challenges-hint { margin: 0; color: var(--ds-muted); font-size: 13px; line-height: 1.55; }
+.challenges-hint strong { color: var(--ds-ink); }
+.challenges-initiative { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-surface); }
+.challenges-initiative p { margin: 0; color: var(--ds-muted); font-size: 12.5px; line-height: 1.5; }
+.challenges-initiative-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.challenges-initiative-buttons .challenges-btn[aria-pressed='true'] { border-color: var(--ds-brand); color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 10%, var(--ds-surface)); font-weight: 650; }

@@ -1,5 +1,5 @@
 /**
- * Duality GME: oaths, moves, progress tracks and Pay
+ * Duality GME: vows, moves, progress tracks and Pay
  * the Price, using the Daggerheart action roll as the move roll. Every
  * function takes its dice as arguments: the server rolls, these decide.
  *

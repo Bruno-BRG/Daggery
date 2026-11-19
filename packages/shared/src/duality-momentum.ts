@@ -157,3 +157,9 @@ export function turnTheTide(tracker: MomentumTracker): MomentumTracker {
   if (tracker.tideTurned) throw new Error('You already turned the tide in this fight');
   return { ...tracker, initiative: 'hero', tideTurned: true };
 }
+
+/** One line for the screen: what Initiative means for your next move. */
+export const initiativeLabelFor = (initiative: Initiative): string =>
+  initiative === 'hero' ? 'You have initiative: Strike, Secure an Advantage, Face Danger or End the Fight.'
+    : initiative === 'foe' ? 'Your foe has initiative: Clash, Face Danger, Compel or Turn the Tide.'
+      : '';

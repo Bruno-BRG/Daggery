@@ -2,8 +2,8 @@ import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import type { IronRank } from '@daggery/shared';
 import {
-  addTicks, boxTicks, clamp, COUNTDOWN_SIZES, createCountdown, createTrack, isTrackDoc, markProgress,
-  RANK_OPTIONS, rankTicks, score, TICKS_PER_BOX, toggleCountdown, TRACK_BOXES, TRACK_TICKS, trackCaption,
+  addTicks, boxTicks, clamp, COUNTDOWN_SIZES, createCountdown, createTrack, harmFromFoe, inflictHarm, isTrackDoc, markProgress, progressTicks,
+  rankForAdversary, RANK_OPTIONS, rankTicks, score, TICKS_PER_BOX, toggleCountdown, TRACK_BOXES, TRACK_TICKS, trackCaption, TYPE_ORDER, TYPE_TITLE,
 } from './model';
 
 test('the ranks come from the shared engine with their printed tick values', () => {
@@ -116,4 +116,41 @@ test('only well-formed track documents are read from the sync namespace', () => 
   for (const rank of ['troublesome', 'dangerous', 'formidable', 'extreme', 'epic'] as IronRank[]) {
     assert.equal(isTrackDoc(createTrack('scene', 'A duel at dusk', rank)), true);
   }
+});
+
+test('a fight marks the foe’s rank for each harm, and a bond is always one tick', () => {
+  assert.equal(inflictHarm(0, 'troublesome', 1), 12);
+  assert.equal(inflictHarm(0, 'dangerous', 2), 16);
+  assert.equal(inflictHarm(0, 'formidable', 3), 12);
+  assert.equal(inflictHarm(0, 'extreme', 2), 4);
+  assert.equal(inflictHarm(0, 'epic', 1), 1);
+  assert.equal(inflictHarm(38, 'troublesome', 1), 40);
+  assert.equal(inflictHarm(5, 'epic', -3), 5);
+  assert.equal(progressTicks('bond', 'epic'), 1);
+  assert.equal(progressTicks('bond', 'troublesome'), 1);
+  assert.equal(progressTicks('oath', 'troublesome'), 12);
+  assert.equal(progressTicks('fight', 'extreme'), 2);
+});
+
+test('a Daggerheart adversary sets the rank of its fight, raised for a pack of weaker foes only', () => {
+  assert.equal(rankForAdversary('Standard', 1), 'troublesome');
+  assert.equal(rankForAdversary('Standard', 1, 'small'), 'dangerous');
+  assert.equal(rankForAdversary('Minion', 1, 'large'), 'formidable');
+  assert.equal(rankForAdversary('Standard', 2, 'large'), 'extreme');
+  assert.equal(rankForAdversary('Bruiser', 2, 'small'), 'formidable');
+  assert.equal(rankForAdversary('Solo', 3, 'large'), 'epic');
+  assert.equal(harmFromFoe('formidable'), 3);
+});
+
+test('fights and bonds get their own captions and are valid track documents', () => {
+  const fight = createTrack('fight', 'The mine boss', 'formidable', '2026-01-01T00:00:00.000Z');
+  assert.equal(trackCaption(fight), 'Grave foe · harm 3 · 0/10 boxes');
+  assert.equal(trackCaption({ ...fight, ticks: 12 }), 'Grave foe · harm 3 · 3/10 boxes');
+  const bonds = createTrack('bond', 'Bonds', 'troublesome', '2026-01-01T00:00:00.000Z');
+  assert.equal(trackCaption({ ...bonds, ticks: 6 }), '6 bonds · 1/10 boxes');
+  assert.equal(isTrackDoc(fight), true);
+  assert.equal(isTrackDoc({ ...fight, adversary: 'goblin', pack: 'small' }), true);
+  assert.equal(isTrackDoc(bonds), true);
+  assert.deepEqual(TYPE_ORDER, ['oath', 'fight', 'journey', 'bond', 'scene', 'countdown']);
+  assert.equal(TYPE_TITLE.oath, 'Vows');
 });

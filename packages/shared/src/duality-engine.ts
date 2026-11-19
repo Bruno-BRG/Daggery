@@ -62,7 +62,7 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
     'Action A': ['Seek', 'Oppose', 'Communicate', 'Move', 'Harm', 'Create', 'Reveal', 'Command', 'Take', 'Protect', 'Assist', 'Transform'],
     'Action B': ['Deceive', 'Abandon', 'Betray', 'Pursue', 'Trap', 'Destroy', 'Hide', 'Bargain', 'Release', 'Delay', 'Summon', 'Sacrifice'] }),
   table('subject', 'Subject', 'meaning', {
-    'Subject A': ['Enemy', 'Ally', 'Community', 'Home', 'Wealth', 'Knowledge', 'Magic', 'Path', 'Secret', 'Oath', 'Authority', 'Nature'],
+    'Subject A': ['Enemy', 'Ally', 'Community', 'Home', 'Wealth', 'Knowledge', 'Magic', 'Path', 'Secret', 'Vow', 'Authority', 'Nature'],
     'Subject B': ['Monster', 'Stranger', 'Family', 'Ruin', 'Weapon', 'Relic', 'The gods', 'Border', 'Rumor', 'Debt', 'Rebellion', 'Death'] }),
   table('descriptor', 'Descriptor', 'meaning', {
     'Descriptor A': ['Ancient', 'Broken', 'Hidden', 'Sacred', 'Cursed', 'Wild', 'Gilded', 'Humble', 'Strange', 'Dangerous', 'Beautiful', 'Forgotten'],
@@ -171,17 +171,17 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
     'Lose progress: clear 1 box on a related track', 'The GM gains a Fear', 'An unwelcome truth comes out',
     'Time is lost; the world moves without you', 'Two prices: roll twice, both happen'] }),
   table('iron-vignette', 'Begin a Session: Vignette', 'iron', { 'Elsewhere…': [
-    'A foe makes a move against you', 'A rival gains ground on your oath', 'Someone you care about is in trouble',
+    'A foe makes a move against you', 'A rival gains ground on your vow', 'Someone you care about is in trouble',
     'A secret is uncovered far away', 'A faction changes its plans', 'A threat grows: tick a countdown',
     'An omen appears to a stranger', 'An ally finds a lead for you', 'A place you know is changed',
-    'Something old wakes up', 'A messenger is on the way to you', 'The goal of your oath moves or changes'] }),
+    'Something old wakes up', 'A messenger is on the way to you', 'The goal of your vow moves or changes'] }),
   table('iron-waypoint', 'Waypoint', 'iron', { 'You reach…': [
     'A ruined outpost', 'A river crossing', 'A hunter’s camp', 'A shrine to a forgotten god', 'A cave system',
     'An old battlefield', 'An abandoned village', 'A lookout or tower', 'A strange monolith', 'A beast’s lair',
     'A trading post', 'A crossroads'] }),
   table('iron-opportunity', 'Find an Opportunity', 'iron', { Opportunity: [
     'The terrain favors you', 'A hidden path', 'Useful supplies', 'You learn a foe’s weakness', 'Shelter or safety',
-    'A distraction you can use', 'Someone offers help', 'A clue to your oath', 'Something left behind',
+    'A distraction you can use', 'Someone offers help', 'A clue to your vow', 'Something left behind',
     'High ground: advantage on your next roll', 'An enemy gives themselves away', 'Take +1 momentum'] }),
   table('iron-discovery', 'Make a Discovery', 'iron', { Discovery: [
     'An untouched place of power', 'A lost settlement, still alive', 'A great beast at peace', 'Ruins of a vanished people',

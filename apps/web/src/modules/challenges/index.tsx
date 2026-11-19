@@ -2,31 +2,39 @@ import { useState, type FormEvent } from 'react';
 import { Icon } from '../../components/Icon';
 import { IconButton, ItemCard, PanelSection, TONES } from '../../components/Accordion';
 import { useDocs } from '../../sync/store';
-import type { IronRank } from '@daggery/shared';
+import { adversaries } from '@daggery/content';
+import { initiativeLabelFor, setInitiative, turnTheTide, type IronRank, type PackSize } from '@daggery/shared';
+import { useMomentum } from '../../systems/useMomentum';
 import {
   COUNTDOWN_SIZES, RANK_OPTIONS, TRACK_TICKS, TYPE_LABEL, TYPE_ORDER, TYPE_TITLE,
-  addTicks, boxTicks, clamp, createCountdown, createTrack, isTrackDoc, markProgress, score, toggleCountdown, trackCaption,
-  type CountdownSize, type TrackDoc, type TrackKind,
+  addTicks, boxTicks, clamp, createCountdown, createTrack, harmFromFoe, inflictHarm, isTrackDoc, markProgress, progressTicks, rankForAdversary, rankLabel, score, toggleCountdown, trackCaption,
+  type CountdownSize, type ProgressTrackDoc, type TrackDoc, type TrackKind,
 } from './model';
 import './challenges.css';
 
 /** One colour per kind, so the same track reads the same on every visit. */
 const TONE: Record<TrackKind, string> = {
   oath: TONES.gold,
+  fight: TONES.orange,
   journey: TONES.teal,
+  bond: TONES.pink,
   scene: TONES.violet,
   countdown: TONES.red,
 };
 
 const TYPE_PLACEHOLDER: Record<TrackKind, string> = {
   oath: 'What did you swear to do?',
+  fight: 'Who or what do you fight?',
+  bond: 'Bonds',
   journey: 'Where are you going, and through what?',
   scene: 'What is this scene trying to settle?',
   countdown: 'What happens when the clock fills?',
 };
 
 const TYPE_EMPTY: Record<TrackKind, string> = {
-  oath: 'No oaths yet. Swear one, then mark progress when you reach a milestone.',
+  oath: 'No vows yet. Swear an Iron Vow, then mark progress when you reach a milestone.',
+  fight: 'No fights. Enter the Fray: give each foe, or each pack, a rank and a track.',
+  bond: 'No bonds yet. Forge a Bond, and mark a tick for each one.',
   journey: 'No journeys yet. Give the road a rank and a destination.',
   scene: 'No scenes yet. Name the challenge and see where it goes.',
   countdown: 'No countdowns yet. Fill the segments as the danger closes in.',
@@ -51,9 +59,9 @@ export default function Challenges({ author: _author }: { author: string }) {
     docs.set(id, { ...doc, ...changes, updated: new Date().toISOString() } as TrackDoc);
   }
 
-  function add(type: TrackKind, name: string, rank: IronRank, size: CountdownSize) {
+  function add(type: TrackKind, name: string, rank: IronRank, size: CountdownSize, extra?: { adversary?: string; pack?: PackSize }) {
     const id = `track:${crypto.randomUUID()}`;
-    docs.set(id, type === 'countdown' ? createCountdown(name, size) : createTrack(type, name, rank));
+    docs.set(id, type === 'countdown' ? createCountdown(name, size) : { ...createTrack(type, name, rank), ...extra });
     setDraft(null);
   }
 
@@ -61,7 +69,7 @@ export default function Challenges({ author: _author }: { author: string }) {
     <header className="challenges-heading">
       <p className="challenges-kicker">Solo play</p>
       <h1><Icon name="target" />Challenges</h1>
-      <p>Keep the oaths, journeys, scenes and countdowns that matter. Mark progress from the rank, then count the full boxes for a progress score; the dice stay on the table.</p>
+      <p>Keep the vows, fights, journeys, bonds, scenes and countdowns that matter. Mark progress from the rank, then count the full boxes for a progress score. Roll the challenge dice (two d10) against it on the table.</p>
     </header>
 
     {TYPE_ORDER.map(type => {
@@ -71,7 +79,8 @@ export default function Challenges({ author: _author }: { author: string }) {
         title={TYPE_TITLE[type]}
         storageKey={`challenges.${type}`}
         actions={<IconButton icon="plus" tone="action" label={`Add ${TYPE_LABEL[type].toLowerCase()}`} onClick={() => setDraft(type)} />}>
-        {draft === type && <NewTrackCard type={type} onAdd={(name, rank, size) => add(type, name, rank, size)} onCancel={() => setDraft(null)} />}
+        {type === 'fight' && <InitiativeBar />}
+        {draft === type && <NewTrackCard type={type} onAdd={(name, rank, size, extra) => add(type, name, rank, size, extra)} onCancel={() => setDraft(null)} />}
         {entries.length === 0
           ? draft === type ? null : <p className="sg-empty">{TYPE_EMPTY[type]}</p>
           : entries.map(([id, doc]) => <TrackCard key={id} id={id} doc={doc} onSave={save} onRemove={docs.remove} />)}
@@ -86,40 +95,75 @@ export default function Challenges({ author: _author }: { author: string }) {
   </div>;
 }
 
+/** Who has initiative in the fight, and Turn the Tide. The same tracker as the top bar. */
+function InitiativeBar() {
+  const { tracker, update } = useMomentum();
+  return <div className="challenges-initiative" role="group" aria-label="Initiative">
+    <div className="challenges-initiative-buttons">
+      {([[null, 'No fight'], ['hero', 'You have initiative'], ['foe', 'Foe has initiative']] as const).map(([value, label]) => (
+        <button key={label} type="button" className="challenges-btn" aria-pressed={tracker.initiative === value} onClick={() => update(current => setInitiative(current, value))}>{label}</button>
+      ))}
+      <button type="button" className="challenges-btn" disabled={tracker.initiative === null || tracker.tideTurned} onClick={() => update(turnTheTide)}>Turn the Tide{tracker.tideTurned ? ' (used)' : ''}</button>
+    </div>
+    {tracker.initiative && <p>{initiativeLabelFor(tracker.initiative)}</p>}
+  </div>;
+}
+
 function NewTrackCard({ type, onAdd, onCancel }: {
   type: TrackKind;
-  onAdd: (name: string, rank: IronRank, size: CountdownSize) => void;
+  onAdd: (name: string, rank: IronRank, size: CountdownSize, extra?: { adversary?: string; pack?: PackSize }) => void;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(type === 'bond' ? 'Bonds' : '');
   const [rank, setRank] = useState<IronRank>('formidable');
   const [size, setSize] = useState<CountdownSize>(8);
+  const [adversary, setAdversary] = useState('');
+  const [pack, setPack] = useState<PackSize>('single');
+  const stat = type === 'fight' ? adversaries.find(item => item.name.toLowerCase() === adversary.trim().toLowerCase()) : undefined;
+  // A Daggerheart adversary sets the rank itself: its tier and type, raised if you fight a pack of them.
+  const derived: IronRank | null = stat ? rankForAdversary(stat.type, stat.tier, pack) : null;
+  const effective = derived ?? rank;
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const trimmed = name.trim();
+    const trimmed = (name.trim() || stat?.name || '').trim();
     if (!trimmed) return;
-    onAdd(trimmed, rank, size);
+    onAdd(trimmed, effective, size, stat ? { adversary: stat.id, pack } : undefined);
   }
 
   return <ItemCard defaultOpen title={`New ${TYPE_LABEL[type].toLowerCase()}`} tone={TONE[type]}>
     <form className="challenges-form" onSubmit={submit}>
-      <label className="challenges-field">{TYPE_LABEL[type]} name
-        <input required maxLength={120} value={name} placeholder={TYPE_PLACEHOLDER[type]} onChange={event => setName(event.target.value)} />
-      </label>
+      {type === 'fight' && <>
+        <label className="challenges-field">Daggerheart adversary (optional)
+          <input list="challenges-adversaries" value={adversary} maxLength={80} placeholder="Type a name to set the rank from its tier and type" onChange={event => setAdversary(event.target.value)} />
+          <datalist id="challenges-adversaries">{adversaries.map(item => <option key={item.id} value={item.name}>{`Tier ${item.tier} ${item.type}`}</option>)}</datalist>
+        </label>
+        <label className="challenges-field">Fighting
+          <select aria-label="Pack size" value={pack} onChange={event => setPack(event.target.value as PackSize)}>
+            <option value="single">One foe</option>
+            <option value="small">A small pack (3 to 5): rank +1</option>
+            <option value="large">A large pack (6 to 10): rank +2</option>
+          </select>
+        </label>
+        {stat && <p className="challenges-hint">Tier {stat.tier} {stat.type}{pack === 'single' ? '' : ' pack'}: <strong>{rankLabel(effective)}</strong> foe. It deals {harmFromFoe(effective)} harm to you.</p>}
+      </>}
+      {type !== 'bond' && <label className="challenges-field">{TYPE_LABEL[type]} name
+        <input required={!stat} maxLength={120} value={name} placeholder={stat && type === 'fight' ? stat.name : TYPE_PLACEHOLDER[type]} onChange={event => setName(event.target.value)} />
+      </label>}
       {type === 'countdown'
         ? <label className="challenges-field">Size
             <select aria-label="Countdown size" value={size} onChange={event => setSize(Number(event.target.value) as CountdownSize)}>
               {COUNTDOWN_SIZES.map(value => <option key={value} value={value}>{value} segments</option>)}
             </select>
           </label>
+        : type === 'bond' ? <p className="challenges-hint">Ironsworn keeps one bonds track: a tick for each bond. Four bonds fill a box.</p>
         : <label className="challenges-field">Rank
-            <select aria-label="Rank" value={rank} onChange={event => setRank(event.target.value as IronRank)}>
+            <select aria-label="Rank" value={effective} disabled={derived !== null} onChange={event => setRank(event.target.value as IronRank)}>
               {RANK_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label} · mark {option.mark} · Difficulty {option.difficulty}</option>)}
             </select>
           </label>}
       <div className="challenges-footer">
-        <button className="challenges-btn is-primary" type="submit" disabled={!name.trim()}>Add {TYPE_LABEL[type].toLowerCase()}</button>
+        <button className="challenges-btn is-primary" type="submit" disabled={type !== 'bond' && !name.trim() && !stat}>Add {TYPE_LABEL[type].toLowerCase()}</button>
         <button className="challenges-btn" type="button" onClick={onCancel}>Cancel</button>
       </div>
     </form>
@@ -157,8 +201,15 @@ function TrackCard({ id, doc, onSave, onRemove }: {
         </>
       : <>
           <p className="challenges-score">Progress score: <strong>{score(doc.ticks)}</strong> <span>· {clamp(doc.ticks, 0, TRACK_TICKS)}/{TRACK_TICKS} ticks</span></p>
+          {doc.type === 'fight' && <p className="challenges-hint">This foe deals {harmFromFoe(doc.rank)} harm to you: mark that many Hit Points (or Stress). Each harm you inflict marks {RANK_OPTIONS.find(option => option.id === doc.rank)!.mark}. When you End the Fight, roll against {score(doc.ticks)}.</p>}
           <div className="challenges-actions">
-            <button type="button" className="challenges-btn is-primary" aria-label={`Mark progress for ${doc.name}`} onClick={() => onSave(id, doc, { ticks: markProgress(doc.ticks, doc.rank) })}>Mark progress</button>
+            {doc.type === 'fight'
+              ? <>
+                {[1, 2, 3].map(harm => <button key={harm} type="button" className={`challenges-btn${harm === 2 ? ' is-primary' : ''}`} aria-label={`Inflict ${harm} harm on ${doc.name}`}
+                  onClick={() => onSave(id, doc, { ticks: inflictHarm(doc.ticks, doc.rank, harm) })}>Inflict {harm} harm</button>)}
+              </>
+              : <button type="button" className="challenges-btn is-primary" aria-label={`Mark progress for ${doc.name}`}
+                onClick={() => onSave(id, doc, { ticks: doc.type === 'bond' ? addTicks(doc.ticks, progressTicks('bond', doc.rank)) : markProgress(doc.ticks, doc.rank) })}>{doc.type === 'bond' ? 'Forge a bond' : 'Mark progress'}</button>}
             <button type="button" className="challenges-btn" aria-label={`Remove one tick from ${doc.name}`} onClick={() => onSave(id, doc, { ticks: addTicks(doc.ticks, -1) })}>−1 tick</button>
             <button type="button" className="challenges-btn" aria-label={`Add one tick to ${doc.name}`} onClick={() => onSave(id, doc, { ticks: addTicks(doc.ticks, 1) })}>+1 tick</button>
           </div>

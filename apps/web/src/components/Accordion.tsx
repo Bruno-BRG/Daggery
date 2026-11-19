@@ -123,5 +123,5 @@ export function IconButton({ icon, label, onClick, tone = 'plain', pressed, disa
 /** Tones for `ItemCard`, so kinds keep the same colour on every page. */
 export const TONES = {
   teal: '#3aa0a8', gold: '#c9a24a', blue: '#6c8fd6', green: '#5daa6e',
-  pink: '#c46fa6', violet: '#9a7fd8', red: '#d0684f', fear: 'var(--ds-fear)', brand: 'var(--ds-brand)',
+  pink: '#c46fa6', violet: '#9a7fd8', red: '#d0684f', orange: '#d98a45', fear: 'var(--ds-fear)', brand: 'var(--ds-brand)',
 } as const;

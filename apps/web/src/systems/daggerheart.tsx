@@ -2,15 +2,15 @@ import { lazy } from 'react';
 import { getRuleset, normalizeConfiguration, type CampaignConfiguration } from '@daggery/shared';
 import { DiceTray, DiceOverlay } from '../dice3d';
 import type { SystemUI } from './types';
-import { FearTracker } from './FearTracker';
+import { DaggerheartTrackers } from './Trackers';
 export const DAGGERHEART_UI: SystemUI = { optionsEditor: DaggerheartOptions, diceTray: DiceTray, diceOverlay: DiceOverlay,
-  statusItem: { feature: 'daggerheart.duality', component: FearTracker },
+  statusItem: { feature: 'daggerheart.duality', component: DaggerheartTrackers },
   // Oracles, moves and results beside the character sheet and every other page, not a page of their own.
   companion: { feature: 'daggerheart.solo', label: 'Solo screen', icon: 'spark', gmOnly: true, component: lazy(() => import('../modules/solo')) },
   modules: [
     { id: 'campaign', feature: 'daggerheart.gm-tools', label: 'Campaign', icon: 'compass', description: 'Setting, people, places, threads and loot', primary: true, component: lazy(() => import('../modules/campaign')) },
     { id: 'sheets', feature: 'daggerheart.sheets', label: 'Characters', icon: 'sheet', description: 'Create heroes and manage their sheets', primary: true, component: lazy(() => import('../modules/sheets')) },
-    { id: 'challenges', feature: 'daggerheart.sheets', label: 'Challenges', icon: 'target', description: 'Oaths, journeys, scenes and countdowns', primary: true, component: lazy(() => import('../modules/challenges')) },
+    { id: 'challenges', feature: 'daggerheart.sheets', label: 'Challenges', icon: 'target', description: 'Vows, journeys, scenes and countdowns', primary: true, component: lazy(() => import('../modules/challenges')) },
     { id: 'compendium', feature: 'daggerheart.compendium', label: 'Compendium', icon: 'book', description: 'Find classes, cards, equipment, and rules', component: lazy(() => import('../modules/compendium')) },
   ] };
 

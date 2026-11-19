@@ -200,3 +200,11 @@
 .solo-panel .solo-oracle-reference section h3 { margin: 0 0 4px; font-size: 14px; }
 .solo-difficulty th { width: 44px; text-align: center; color: var(--ds-brand-strong); font-variant-numeric: tabular-nums; }
 .solo-difficulty td { font-size: 13px; }
+
+/* Ironsworn d100 tables: long word lists print as a grid, as in the book */
+.solo-d100-grid { margin: 0; padding: 0; list-style: none; column-width: 9.5rem; column-gap: 14px; font-size: 13px; line-height: 1.7; }
+.solo-d100-grid li { break-inside: avoid; overflow-wrap: anywhere; }
+.solo-d100-grid li b { display: inline-block; min-width: 2.1ch; margin-right: 4px; color: var(--ds-muted); font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+.solo-lodestar-table .solo-table td { overflow-wrap: anywhere; }
+.solo-panel-credit { text-wrap: balance; }
+.solo-panel .solo-lodestar-table .solo-table .solo-range { width: 4.6em; white-space: nowrap; }

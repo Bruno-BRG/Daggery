@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Advantage, ClientRollMessage } from '@daggery/shared';
+import { burnMomentum, negativeMomentumCancelsHope, resetMomentum, type Advantage, type ClientRollMessage, type DualityResult } from '@daggery/shared';
+import { getActiveCampaign } from '../campaign-context';
+import { signed, useMomentum } from '../systems/useMomentum';
 import { addFear } from '../sync/store';
 import { describePayload, normalizeAuthor, type RollSpec } from './rollPlan';
 import { attachTray } from './tray';
@@ -89,6 +91,42 @@ function DiceFallbackNote({ hidden, dockOpen }: { hidden: boolean; dockOpen: boo
   );
 }
 
+/**
+ * What Momentum can do for the roll you just made. It reads the dice only: whether the roll beat the
+ * Difficulty is yours to judge, so the burn is offered whenever it could help.
+ */
+function MomentumHint({ result, momentum, reset, cancelsHope, onBurn }: {
+  result: DualityResult; momentum: number; reset: number; cancelsHope: boolean; onBurn: () => void;
+}) {
+  const canBurn = !result.critical && momentum > result.fear && momentum > reset;
+  if (!canBurn && !cancelsHope) return null;
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-200" role="status">
+      {cancelsHope && (
+        <p>
+          Momentum {signed(momentum)} matches your Hope die ({result.hope}). Cancel that die: subtract {result.hope} from the total
+          ({result.total} becomes {result.total - result.hope}). The roll cannot be with Hope.
+        </p>
+      )}
+      {canBurn && (
+        <>
+          <p>
+            Momentum {signed(momentum)} is higher than your Fear die ({result.fear}). If the roll was not a strong hit, you may burn it:
+            ignore the Fear die and improve the result one step. Momentum resets to {signed(reset)}.
+          </p>
+          <button
+            type="button"
+            onClick={onBurn}
+            className="rounded-lg border border-accent-500/60 bg-accent-500/10 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-accent-500/20"
+          >
+            Burn Momentum
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 /** Duality and damage controls. */
 export function DiceTray({ author, onRolled }: DiceTrayProps) {
   const { roll, status } = useDiceTray();
@@ -100,6 +138,9 @@ export function DiceTray({ author, onRolled }: DiceTrayProps) {
   const [mounted, setMounted] = useState(false);
   const [rolling, setRolling] = useState(false);
   const rollingRef = useRef(false);
+  const [lastDuality, setLastDuality] = useState<DualityResult | null>(null);
+  const [burned, setBurned] = useState(false);
+  const { tracker, update } = useMomentum();
 
   useEffect(() => {
     setMounted(true);
@@ -115,6 +156,8 @@ export function DiceTray({ author, onRolled }: DiceTrayProps) {
       author: name,
       onComputed: (payload) => {
         setSummary(describePayload(payload));
+        setLastDuality(payload.kind === 'duality' ? payload.result : null);
+        setBurned(false);
         onRolled?.({ type: 'roll', author: name, ...payload });
         if (payload.kind === 'duality' && payload.result.withFear) addFear(1);
       },
@@ -200,6 +243,14 @@ export function DiceTray({ author, onRolled }: DiceTrayProps) {
           {summary}
         </p>
       )}
+      {lastDuality && !burned && <MomentumHint result={lastDuality} momentum={tracker.value} reset={resetMomentum(tracker.debilities)}
+        cancelsHope={negativeMomentumCancelsHope(tracker, lastDuality.hope)}
+        onBurn={() => {
+          update(burnMomentum);
+          // The Fear die is ignored, so the world does not keep the Fear this roll gave it.
+          if (lastDuality.withFear && getActiveCampaign().role === 'gm') addFear(-1);
+          setBurned(true);
+        }} />}
       {error && <p className="text-sm text-rose-300">{error}</p>}
       <DiceCustomizer ready={status !== 'detached'} />
       {mounted && status === 'flat' && <p className="text-xs leading-5 text-amber-200">3D dice are unavailable. {FLAT_DETAIL}</p>}
