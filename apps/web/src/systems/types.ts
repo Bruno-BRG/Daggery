@@ -11,6 +11,8 @@ export interface SystemUI {
   optionsEditor?: ComponentType<{ value: CampaignConfiguration; onChange: (value: CampaignConfiguration) => void }>;
   diceTray?: ComponentType<{ author: string; onRolled?: (message: ClientRollMessage) => void }>;
   diceOverlay?: ComponentType;
+  /** A small control kept in the top bar, such as the Fear pool. Shown when the ruleset has `feature`. */
+  statusItem?: { feature: string; component: ComponentType };
   /** A side panel shown beside every page when the campaign has its feature, such as the solo screen. */
   companion?: {
     feature: string; label: string; icon: IconName; gmOnly?: boolean;

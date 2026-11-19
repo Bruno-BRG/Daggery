@@ -2,7 +2,9 @@ import { lazy } from 'react';
 import { getRuleset, normalizeConfiguration, type CampaignConfiguration } from '@daggery/shared';
 import { DiceTray, DiceOverlay } from '../dice3d';
 import type { SystemUI } from './types';
+import { FearTracker } from './FearTracker';
 export const DAGGERHEART_UI: SystemUI = { optionsEditor: DaggerheartOptions, diceTray: DiceTray, diceOverlay: DiceOverlay,
+  statusItem: { feature: 'daggerheart.duality', component: FearTracker },
   // Oracles, moves and results beside the character sheet and every other page, not a page of their own.
   companion: { feature: 'daggerheart.solo', label: 'Solo screen', icon: 'spark', gmOnly: true, component: lazy(() => import('../modules/solo')) },
   modules: [

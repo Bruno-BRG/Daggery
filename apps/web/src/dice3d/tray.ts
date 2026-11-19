@@ -176,7 +176,16 @@ export function replay(payload: RollPayload): Promise<void> {
 
 /** Cosmetic preview: no game randomness, Fear changes, or shared log entries. */
 export function previewDice(): Promise<void> {
-  return play([{ sides: 12, value: 12, colorway: 'hope' }, { sides: 12, value: 7, colorway: 'fear' }, { sides: 20, value: 20, colorway: 'neutral' }], getDiceAppearance());
+  return play([
+    { sides: 12, value: 12, colorway: 'hope' },
+    { sides: 12, value: 7, colorway: 'fear' },
+    { sides: 6, value: 5, colorway: 'advantage' },
+    { sides: 20, value: 20, colorway: 'neutral' },
+    { sides: 10, value: 7, colorway: 'percentile', reading: 'tens' },
+    { sides: 10, value: 3, colorway: 'neutral', reading: 'units' },
+    { sides: 8, value: 8, colorway: 'neutral' },
+    { sides: 4, value: 4, colorway: 'neutral' },
+  ], getDiceAppearance());
 }
 
 /**
