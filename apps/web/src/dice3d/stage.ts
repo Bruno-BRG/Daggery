@@ -1,9 +1,11 @@
 import * as THREE from 'three';
-import { buildAtlas } from './atlas';
-import { DEFAULT_APPEARANCE, paletteFor, type DiceAppearance } from './appearance';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { buildAtlas, buildBumpAtlas } from './atlas';
+import { buildBevelledMesh } from './bevel';
+import { DEFAULT_APPEARANCE, mixHex, paletteFor, type DiceAppearance, type DiceFinish } from './appearance';
 import { upwardResult } from './landing';
 import { MAX_TRAY_DICE, type DieRequest } from './rollPlan';
-import { atlasPoint, faceTriangles, getDieShape, type DieShape } from './shapes';
+import { getDieShape, type DieShape } from './shapes';
 import { DIE_RADIUS, PHYSICS_STEP, prepareThrow, type Bounds, type PreparedThrow } from './simulation';
 import { FADE_MS, HOLD_MS, MAX_PIXEL_RATIO, REDUCED_MOTION_SECONDS } from './motion';
 
@@ -11,10 +13,33 @@ export interface TrayRect { left: number; top: number; right: number; bottom: nu
 export const DEFAULT_TRAY_RECT: TrayRect = { left: .08, top: .32, right: .92, bottom: .94 };
 /** Lifecycle hooks: onIdle fires once the last dice have faded, and onLost fires if the WebGL context is lost. */
 export interface StageHooks { onIdle?: () => void; onLost?: () => void }
+type DieMaterial = THREE.MeshPhysicalMaterial;
+type RingMesh = THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
 interface Die {
-  request: DieRequest; shape: DieShape; mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
-  material: THREE.MeshStandardMaterial; halo?: THREE.Sprite;
+  request: DieRequest; shape: DieShape; mesh: THREE.Mesh<THREE.BufferGeometry, DieMaterial>;
+  material: DieMaterial; halo?: THREE.Sprite; settleRing?: RingMesh;
 }
+/** A ring on the floor where a die hit hard. It plays at `time` physics seconds into the throw. */
+interface ImpactRing { mesh: RingMesh; time: number; strength: number }
+
+/** Where the camera rests. A throw starts a little further back and pushes in. */
+const CAMERA_REST = new THREE.Vector3(0, 16, 4.3);
+/** Seconds a roll is stretched to on screen. The physics runs faster or slower to fit. */
+const THROW_SCREEN_SECONDS = 2.9;
+const IMPACT_RING_SECONDS = 0.5;
+const SETTLE_RING_SECONDS = 0.9;
+const MAX_IMPACT_RINGS = 14;
+
+/** Surface look for each finish. Every die gets a clear coat except matte, which is what makes resin look like resin. */
+const FINISHES: Record<DiceFinish, THREE.MeshPhysicalMaterialParameters> = {
+  polished: { roughness: .3, metalness: .04, clearcoat: 1, clearcoatRoughness: .05, envMapIntensity: 1 },
+  matte: { roughness: .8, metalness: 0, clearcoat: 0, envMapIntensity: .5 },
+  metal: { roughness: .26, metalness: .9, clearcoat: .35, clearcoatRoughness: .18, envMapIntensity: 1.35 },
+  pearl: { roughness: .34, metalness: .08, clearcoat: 1, clearcoatRoughness: .05, iridescence: 1, iridescenceIOR: 1.5, iridescenceThicknessMinimum: 180, iridescenceThicknessMaximum: 520, sheen: .7, sheenRoughness: .4, sheenColor: new THREE.Color('#ffffff'), envMapIntensity: 1.1 },
+  marble: { roughness: .22, metalness: .02, clearcoat: 1, clearcoatRoughness: .04, envMapIntensity: 1.05 },
+};
+
+const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
 interface Job { requests: DieRequest[]; appearance: DiceAppearance; resolve: ()=>void; reject: (reason: Error)=>void }
 interface ActiveJob { job: Job; motion: PreparedThrow; elapsed: number }
 
@@ -28,8 +53,12 @@ export class DiceStage {
   private readonly resizeObserver: ResizeObserver;
   private readonly shadowFloor: THREE.Mesh;
   private readonly geometries = new Map<number,THREE.BufferGeometry>();
-  private readonly baseMaterials = new Map<string,THREE.MeshStandardMaterial>();
+  private readonly baseMaterials = new Map<string,DieMaterial>();
   private readonly haloTexture: THREE.CanvasTexture;
+  private readonly ringTexture: THREE.CanvasTexture;
+  private readonly ringGeometry = new THREE.PlaneGeometry(1,1);
+  private readonly environment: THREE.Texture;
+  private readonly impactRings: ImpactRing[] = [];
   private readonly sparks: THREE.Points<THREE.BufferGeometry,THREE.PointsMaterial>;
   private readonly sparkPositions = new Float32Array(MAX_TRAY_DICE*18*3);
   private readonly sparkColors = new Float32Array(MAX_TRAY_DICE*18*3);
@@ -57,6 +86,9 @@ export class DiceStage {
     this.canvas.dataset.rollsCompleted = '0';
     this.renderer = new THREE.WebGLRenderer({ canvas:this.canvas,alpha:true,antialias:true,premultipliedAlpha:true });
     this.renderer.setClearColor(0x000000,0);
+    // Neutral tone mapping keeps the colours the player picked, where filmic curves would wash them out.
+    this.renderer.toneMapping = THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = .92;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     Object.assign(this.canvas.style,{display:'block',width:'100%',height:'100%'});
@@ -64,14 +96,23 @@ export class DiceStage {
     // A lost context cannot draw again. Report it, so the tray moves future rolls to flat dice.
     this.canvas.addEventListener('webglcontextlost', this.handleContextLost);
     // Look down at the table from 15 degrees off vertical, retaining a little depth.
-    this.camera.position.set(0,16,4.3); this.camera.lookAt(0,0,0);
-    const hemisphere = new THREE.HemisphereLight(0xffffff,0x3b3550,1.5);
-    const sun = new THREE.DirectionalLight(0xffffff,2.1);
-    sun.position.set(-5,14,6); sun.castShadow = true; sun.shadow.mapSize.set(1024,1024);
+    this.placeCamera(0,0,0);
+    // A small studio room gives the clear coat and the metal something to reflect.
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.environment = pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+    pmrem.dispose();
+    this.scene.environment = this.environment;
+    this.scene.environmentIntensity = .62;
+    const hemisphere = new THREE.HemisphereLight(0xffffff,0x3b3550,.3);
+    const sun = new THREE.DirectionalLight(0xfff4e0,1.7);
+    sun.position.set(-5,14,6); sun.castShadow = true; sun.shadow.mapSize.set(2048,2048); sun.shadow.radius = 3;
     Object.assign(sun.shadow.camera,{left:-10,right:10,top:10,bottom:-10,near:1,far:40});
-    sun.shadow.camera.updateProjectionMatrix(); sun.shadow.bias = -.0008; sun.shadow.normalBias = .02;
-    this.scene.add(hemisphere,sun,sun.target);
-    this.shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.ShadowMaterial({opacity:.22}));
+    sun.shadow.camera.updateProjectionMatrix(); sun.shadow.bias = -.0006; sun.shadow.normalBias = .02;
+    // A cool light from behind picks out every bevelled edge.
+    const rim = new THREE.DirectionalLight(0xaecbff,1.1);
+    rim.position.set(7,6,-9);
+    this.scene.add(hemisphere,sun,sun.target,rim);
+    this.shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.ShadowMaterial({opacity:.3}));
     this.shadowFloor.rotation.x = -Math.PI/2; this.shadowFloor.receiveShadow = true; this.scene.add(this.shadowFloor);
 
     const haloCanvas = document.createElement('canvas'); haloCanvas.width = haloCanvas.height = 64;
@@ -80,6 +121,12 @@ export class DiceStage {
     gradient.addColorStop(0,'rgba(255,255,255,.7)'); gradient.addColorStop(.25,'rgba(255,255,255,.3)'); gradient.addColorStop(1,'rgba(255,255,255,0)');
     ctx.fillStyle = gradient; ctx.fillRect(0,0,64,64);
     this.haloTexture = new THREE.CanvasTexture(haloCanvas);
+    const ringCanvas = document.createElement('canvas'); ringCanvas.width = ringCanvas.height = 128;
+    const ringContext = ringCanvas.getContext('2d')!;
+    const ringGradient = ringContext.createRadialGradient(64,64,30,64,64,63);
+    ringGradient.addColorStop(0,'rgba(255,255,255,0)'); ringGradient.addColorStop(.55,'rgba(255,255,255,.95)'); ringGradient.addColorStop(.72,'rgba(255,255,255,.3)'); ringGradient.addColorStop(1,'rgba(255,255,255,0)');
+    ringContext.fillStyle = ringGradient; ringContext.fillRect(0,0,128,128);
+    this.ringTexture = new THREE.CanvasTexture(ringCanvas);
     const sparkGeometry = new THREE.BufferGeometry();
     sparkGeometry.setAttribute('position',new THREE.BufferAttribute(this.sparkPositions,3));
     sparkGeometry.setAttribute('color',new THREE.BufferAttribute(this.sparkColors,3));
@@ -113,7 +160,7 @@ export class DiceStage {
     this.active?.job.resolve(); this.active = null;
     this.queue.splice(0).forEach(job=>job.resolve()); this.clearDice();
     this.geometries.forEach(g=>g.dispose()); this.clearMaterials();
-    this.haloTexture.dispose(); this.sparks.geometry.dispose(); this.sparks.material.dispose();
+    this.haloTexture.dispose(); this.ringTexture.dispose(); this.ringGeometry.dispose(); this.environment.dispose(); this.sparks.geometry.dispose(); this.sparks.material.dispose();
     this.shadowFloor.geometry.dispose(); (this.shadowFloor.material as THREE.Material).dispose();
     this.canvas.removeEventListener('webglcontextlost', this.handleContextLost);
     this.renderer.dispose();
@@ -126,7 +173,7 @@ export class DiceStage {
     if (this.disposed) return;
     const width = Math.max(1,this.container.clientWidth), height = Math.max(1,this.container.clientHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,MAX_PIXEL_RATIO)); this.renderer.setSize(width,height,false);
-    this.camera.aspect = width/height; this.camera.updateProjectionMatrix(); this.camera.updateMatrixWorld();
+    this.camera.aspect = width/height; this.camera.updateProjectionMatrix(); this.placeCamera(0,0,0); this.camera.updateMatrixWorld();
     const floor = new THREE.Plane(new THREE.Vector3(0,1,0),0), ray = new THREE.Raycaster(), hit = new THREE.Vector3();
     const {left,top,right,bottom} = this.rect;
     const bounds = {minX:Infinity,maxX:-Infinity,minZ:Infinity,maxZ:-Infinity};
@@ -160,6 +207,11 @@ export class DiceStage {
       }
       this.dice.push(die);
     });
+    if (!this.reducedMotion.matches) for (const impact of motion.impacts.slice(0,MAX_IMPACT_RINGS)) {
+      const ring = this.makeRing(mixHex('#ffffff',paletteFor(job.requests[0]!.colorway,job.appearance).body,.25));
+      ring.mesh.position.set(impact.x,.02,impact.z);
+      this.impactRings.push({mesh:ring.mesh,time:impact.time,strength:impact.strength});
+    }
     this.active = {job,motion,elapsed:0};
     this.canvas.dataset.rollState = 'rolling'; this.canvas.dataset.rollsStarted = String(++this.rollsStarted);
     this.canvas.dataset.appearance = style;
@@ -177,6 +229,61 @@ export class DiceStage {
       die.halo?.position.copy(die.mesh.position);
     });
     this.updateSparks(index);
+    this.updateImpacts(seconds,active.motion);
+  }
+
+  /** Puts the camera at rest, plus a push-in offset and a shake offset. Both are zero once a roll has landed. */
+  private placeCamera(push: number, shakeX: number, shakeZ: number): void {
+    this.camera.position.copy(CAMERA_REST).multiplyScalar(1+push*.07).add(new THREE.Vector3(shakeX,0,shakeZ));
+    this.camera.lookAt(0,0,0);
+  }
+
+  /** Floor rings and a short camera shake at every hard hit. Skipped for reduced motion. */
+  private updateImpacts(seconds: number, motion: PreparedThrow): void {
+    if (this.reducedMotion.matches) return;
+    let shakeX = 0, shakeZ = 0;
+    for (const impact of motion.impacts) {
+      const age = seconds-impact.time;
+      if (age<0 || age>.4) continue;
+      const amplitude = Math.min(.07,impact.strength*.0055)*Math.exp(-age*11);
+      shakeX += Math.sin(age*72+impact.x)*amplitude; shakeZ += Math.cos(age*58+impact.z)*amplitude;
+    }
+    this.placeCamera((1-easeOutCubic(Math.min(1,seconds/Math.max(motion.duration,PHYSICS_STEP))))*1,shakeX,shakeZ);
+    for (const ring of this.impactRings) {
+      const progress = (seconds-ring.time)/IMPACT_RING_SECONDS;
+      ring.mesh.visible = progress>=0 && progress<1;
+      if (!ring.mesh.visible) continue;
+      const reach = Math.min(2.6,1+ring.strength*.1);
+      ring.mesh.scale.setScalar(DIE_RADIUS*(.8+easeOutCubic(progress)*reach));
+      ring.mesh.material.opacity = (1-progress)**2*Math.min(.55,.14+ring.strength*.035);
+    }
+  }
+
+  private makeRing(color: THREE.ColorRepresentation): { mesh: RingMesh } {
+    const material = new THREE.MeshBasicMaterial({map:this.ringTexture,color,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});
+    const mesh: RingMesh = new THREE.Mesh(this.ringGeometry,material);
+    mesh.rotation.x = -Math.PI/2; mesh.visible = false; mesh.renderOrder = -1; this.scene.add(mesh);
+    return { mesh };
+  }
+
+  /** When dice land, a ring spreads from each one, tinted with its colour, so the eye goes to the result. */
+  private startSettle(): void {
+    if (this.reducedMotion.matches) return;
+    for (const die of this.dice) {
+      const ring = this.makeRing(mixHex('#ffffff',paletteFor(die.request.colorway,this.active?.job.appearance ?? DEFAULT_APPEARANCE).body,.55));
+      ring.mesh.position.set(die.mesh.position.x,.025,die.mesh.position.z);
+      die.settleRing = ring.mesh;
+    }
+  }
+  private updateSettle(now: number, fade: number): void {
+    const progress = (now-this.settledAt)/1000/SETTLE_RING_SECONDS;
+    for (const die of this.dice) {
+      const ring = die.settleRing; if (!ring) continue;
+      ring.visible = progress<1;
+      if (!ring.visible) continue;
+      ring.scale.setScalar(DIE_RADIUS*(1.2+easeOutCubic(progress)*2.4));
+      ring.material.opacity = (1-progress)**1.5*.7*fade;
+    }
   }
 
   private updateSparks(frame: number): void {
@@ -211,23 +318,26 @@ export class DiceStage {
     const dt = Math.max(0,(now-this.lastFrame)/1000); this.lastFrame = now;
     if (this.active) {
       const current = this.active;
-      const speed = this.reducedMotion.matches ? Math.max(current.motion.duration,PHYSICS_STEP)/REDUCED_MOTION_SECONDS : Math.max(1,current.motion.duration/2.6);
+      const speed = this.reducedMotion.matches ? Math.max(current.motion.duration,PHYSICS_STEP)/REDUCED_MOTION_SECONDS : Math.max(1,current.motion.duration/THROW_SCREEN_SECONDS);
       current.elapsed = Math.min(current.motion.duration,current.elapsed+dt*speed);
       this.applyFrame(current.elapsed);
       if (current.elapsed>=current.motion.duration) {
         this.canvas.dataset.rollState = 'settled';
         this.canvas.dataset.visibleValues = this.dice.map(die=>upwardResult(die.shape,die.mesh.quaternion)).join(',');
         this.canvas.dataset.rollsCompleted = String(++this.rollsCompleted);
-        this.active = null; this.settledAt = now; this.sparks.geometry.setDrawRange(0,0); this.holdUntil = now+HOLD_MS;
+        this.settledAt = now; this.startSettle(); this.placeCamera(0,0,0);
+        this.active = null; this.sparks.geometry.setDrawRange(0,0); this.holdUntil = now+HOLD_MS;
         current.job.resolve(); this.pump();
       }
     } else if (this.dice.length) {
       this.landingSparks(now);
+      let fade = 1;
       if (now>=this.holdUntil) {
-        this.fadeStart ??= now; const opacity = Math.max(0,1-(now-this.fadeStart)/FADE_MS);
+        this.fadeStart ??= now; const opacity = Math.max(0,1-(now-this.fadeStart)/FADE_MS); fade = opacity;
         this.dice.forEach(die=>{die.material.opacity=opacity; if (die.halo) die.halo.material.opacity=opacity*.5;});
         if (!opacity) { this.clearDice(); this.canvas.dataset.rollState = 'idle'; faded = true; }
       }
+      this.updateSettle(now,fade);
     }
     this.render(); if (this.active || this.dice.length) this.ensureLoop(); else if (faded) this.hooks.onIdle?.();
   };
@@ -254,33 +364,30 @@ export class DiceStage {
   }
   private render(): void { this.renderer.render(this.scene,this.camera); }
   private clearDice(): void {
-    this.dice.forEach(die=>{this.scene.remove(die.mesh);die.material.dispose();if(die.halo){this.scene.remove(die.halo);die.halo.material.dispose();}});
-    this.dice.length=0; this.sparks.geometry.setDrawRange(0,0); this.fadeStart=null;
+    this.dice.forEach(die=>{this.scene.remove(die.mesh);die.material.dispose();if(die.halo){this.scene.remove(die.halo);die.halo.material.dispose();}if(die.settleRing){this.scene.remove(die.settleRing);die.settleRing.material.dispose();}});
+    this.impactRings.forEach(ring=>{this.scene.remove(ring.mesh);ring.mesh.material.dispose();});
+    this.impactRings.length=0; this.dice.length=0; this.sparks.geometry.setDrawRange(0,0); this.fadeStart=null;
   }
-  private clearMaterials(): void { this.baseMaterials.forEach(material=>{material.map?.dispose();material.dispose();});this.baseMaterials.clear(); }
-  private baseMaterial(shape: DieShape, request: DieRequest, appearance: DiceAppearance): THREE.MeshStandardMaterial {
-    const key = shape.sides+':'+request.colorway; let material = this.baseMaterials.get(key);
+  private clearMaterials(): void { this.baseMaterials.forEach(material=>{material.map?.dispose();material.bumpMap?.dispose();material.dispose();});this.baseMaterials.clear(); }
+  private baseMaterial(shape: DieShape, request: DieRequest, appearance: DiceAppearance): DieMaterial {
+    const key = shape.sides+':'+request.colorway+':'+(request.reading ?? ''); let material = this.baseMaterials.get(key);
     if (!material) {
-      const palette = paletteFor(request.colorway,appearance), texture = new THREE.CanvasTexture(buildAtlas(shape,palette));
-      texture.colorSpace = THREE.SRGBColorSpace; texture.anisotropy = Math.min(4,this.renderer.capabilities.getMaxAnisotropy());
-      const finish = appearance.finish === 'metal' ? {roughness:.27,metalness:.65} : appearance.finish === 'matte' ? {roughness:.9,metalness:0} : {roughness:.3,metalness:.12};
-      material = new THREE.MeshStandardMaterial({map:texture,...finish,emissive:this.effect==='none' ? '#000000' : palette.body,emissiveIntensity:.15});
+      const palette = paletteFor(request.colorway,appearance), anisotropy = Math.min(8,this.renderer.capabilities.getMaxAnisotropy());
+      const color = new THREE.CanvasTexture(buildAtlas(shape,palette,{finish:appearance.finish,reading:request.reading}));
+      color.colorSpace = THREE.SRGBColorSpace; color.anisotropy = anisotropy;
+      // The numerals are cut into the die, so light catches their edges as it would on a real one.
+      const engraving = new THREE.CanvasTexture(buildBumpAtlas(shape,request.reading));
+      engraving.anisotropy = anisotropy;
+      material = new THREE.MeshPhysicalMaterial({map:color,bumpMap:engraving,bumpScale:appearance.finish==='metal'?2.2:3,...FINISHES[appearance.finish],emissive:this.effect==='none' ? '#000000' : palette.body,emissiveIntensity:.15});
       this.baseMaterials.set(key,material);
     }
     return material;
   }
   private geometryFor(shape: DieShape): THREE.BufferGeometry {
     const cached = this.geometries.get(shape.sides); if (cached) return cached;
-    const positions:number[]=[],normals:number[]=[],uvs:number[]=[];
-    shape.faces.forEach((face,faceIndex)=>{
-      for (const triangle of faceTriangles(shape,faceIndex)) for (const [x,y,z] of triangle) {
-        positions.push(x*DIE_RADIUS,y*DIE_RADIUS,z*DIE_RADIUS); normals.push(...face.normal);
-        const [u,v]=atlasPoint(shape,faceIndex,[x,y,z]);uvs.push(u,1-v);
-      }
-    });
+    const {positions,normals,uvs} = buildBevelledMesh(shape,DIE_RADIUS);
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
     this.geometries.set(shape.sides,geometry);return geometry;
   }
 }
-

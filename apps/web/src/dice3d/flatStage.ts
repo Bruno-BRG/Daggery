@@ -1,5 +1,6 @@
 import { paletteFor, type DiceAppearance } from './appearance';
 import { FADE_MS, FLAT_THROW_SECONDS, HOLD_MS, MAX_PIXEL_RATIO, REDUCED_MOTION_SECONDS } from './motion';
+import { faceLabel, type FaceReading } from './faceLabels';
 import { MAX_TRAY_DICE, type DieRequest } from './rollPlan';
 import type { StageHooks, TrayRect } from './stage';
 
@@ -10,7 +11,7 @@ import type { StageHooks, TrayRect } from './stage';
  */
 
 interface FlatJob { requests: DieRequest[]; appearance: DiceAppearance; resolve: () => void; reject: (reason: Error) => void }
-interface FlatDie { sides: number; value: number; fill: string; numeral: string; outline: string; x: number; restY: number; startY: number; size: number; spin: number }
+interface FlatDie { sides: number; value: number; reading?: FaceReading; fill: string; numeral: string; outline: string; x: number; restY: number; startY: number; size: number; spin: number }
 interface ActiveFlat { job: FlatJob; elapsed: number; duration: number }
 
 /** Outline of each die in units of its radius, so each size has its own silhouette. */
@@ -168,6 +169,7 @@ export class FlatStage {
       return {
         sides: request.sides,
         value: request.value,
+        reading: request.reading,
         fill: palette.body,
         numeral: palette.numeral,
         outline: palette.outline,
@@ -238,7 +240,7 @@ export class FlatStage {
     });
     this.dice.forEach((die, index) => {
       const p = poses[index]!;
-      const face = this.progress < 0.72 ? tumbleFace(die.sides, index, elapsed) : die.value;
+      const face = faceLabel(this.progress < 0.72 ? tumbleFace(die.sides, index, elapsed) : die.value, die.reading);
       const radius = die.size / 2;
       const outline = SHAPES[die.sides] ?? SHAPES[6]!;
       ctx.save();
@@ -258,14 +260,14 @@ export class FlatStage {
       ctx.lineWidth = Math.max(1.5, die.size * 0.05);
       ctx.strokeStyle = die.outline;
       ctx.stroke();
-      ctx.font = `600 ${Math.round(die.size * 0.42)}px system-ui, sans-serif`;
+      ctx.font = `600 ${Math.round(die.size * (face.length > 1 ? 0.36 : 0.42))}px system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.lineWidth = Math.max(2, die.size * 0.06);
       ctx.strokeStyle = die.outline;
-      ctx.strokeText(String(face), 0, 0);
+      ctx.strokeText(face, 0, 0);
       ctx.fillStyle = die.numeral;
-      ctx.fillText(String(face), 0, 0);
+      ctx.fillText(face, 0, 0);
       ctx.restore();
     });
   }

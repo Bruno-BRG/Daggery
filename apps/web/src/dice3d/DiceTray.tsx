@@ -15,7 +15,7 @@ interface DiceTrayProps {
   onRolled?: (message: ClientRollMessage) => void;
 }
 
-const DIE_SIZES = [4, 6, 8, 10, 20] as const;
+const DIE_SIZES = [4, 6, 8, 10, 12, 20, 100] as const;
 
 /** Plain words for the cause, then the fix. Shown wherever 3D has failed. */
 const FLAT_DETAIL = 'This browser could not start the 3D graphics it needs (WebGL 2), so rolls show as flat dice. Results still appear in the history. To get 3D dice, turn on graphics acceleration in Chrome at chrome://settings/system, then reload this page.';
@@ -176,11 +176,12 @@ export function DiceTray({ author, onRolled }: DiceTrayProps) {
 
       <div className="flex flex-col gap-2">
         <span className="text-xs font-medium text-slate-400">Dice</span>
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           {DIE_SIZES.map((sides) => (
             <button
               key={sides}
               type="button"
+              title={sides === 100 ? 'Percentile: a tens die and a units die' : undefined}
               onClick={() => throwDice({ kind: 'dice', notation: `1d${sides}${suffix}` })}
               disabled={rolling}
               className="rounded-lg border border-slate-700 bg-slate-900 py-2 text-sm font-semibold tabular-nums text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 active:bg-slate-950"

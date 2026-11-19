@@ -6,6 +6,7 @@ import {
   type RollPayload,
 } from '@daggery/shared';
 import type { ColorwayId } from './colorways';
+import { percentileFaces, type FaceReading } from './faceLabels';
 import { isSupportedSides } from './shapes';
 
 /** What to roll. The result is computed from @daggery/shared before any dice move. */
@@ -18,6 +19,8 @@ export interface DieRequest {
   sides: number;
   value: number;
   colorway: ColorwayId;
+  /** Set on the two d10 of a d100 roll, so their faces read 00-90 or 0-9. */
+  reading?: FaceReading;
 }
 
 /**
@@ -62,7 +65,18 @@ export function diceForPayload(payload: RollPayload): DieRequest[] {
     if (Array.isArray(payload.result.rolls)) {
       payload.result.rolls.forEach((value, index) => {
         const faces = sides[index];
-        if (faces !== undefined) requests.push({ sides: faces, value, colorway: 'neutral' });
+        if (faces === undefined) return;
+        if (faces === 100) {
+          // A d100 is a pair of d10: tens first, then units. A bad value is dropped, as for other dice.
+          if (!Number.isInteger(value) || value < 1 || value > 100) return;
+          const { tens, units } = percentileFaces(value);
+          requests.push(
+            { sides: 10, value: tens, colorway: 'percentile', reading: 'tens' },
+            { sides: 10, value: units, colorway: 'neutral', reading: 'units' },
+          );
+          return;
+        }
+        requests.push({ sides: faces, value, colorway: 'neutral' });
       });
     }
   }

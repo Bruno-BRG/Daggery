@@ -1,5 +1,5 @@
 /** Die colour schemes. Hope and Fear are the two Duality dice; the rest are shown by their role. */
-export type ColorwayId = 'hope' | 'fear' | 'advantage' | 'disadvantage' | 'neutral';
+export type ColorwayId = 'hope' | 'fear' | 'advantage' | 'disadvantage' | 'neutral' | 'percentile';
 
 export interface Colorway {
   /** Die body colour. */
@@ -16,4 +16,6 @@ export const COLORWAYS: Record<ColorwayId, Colorway> = {
   advantage: { body: '#2f8a69', numeral: '#f4fff9', outline: '#0e3b2b' },
   disadvantage: { body: '#5a5f70', numeral: '#f2f2f7', outline: '#1f2130' },
   neutral: { body: '#d9d4c7', numeral: '#1f1d24', outline: '#8c877c' },
+  /** The tens die of a d100: the neutral colour, one step darker, so the pair is easy to tell apart. */
+  percentile: { body: '#9c8f7d', numeral: '#fffdf5', outline: '#2c2419' },
 };

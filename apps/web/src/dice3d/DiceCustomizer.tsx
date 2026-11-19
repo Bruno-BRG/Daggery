@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '../components/Icon';
-import { DEFAULT_APPEARANCE, DICE_PRESETS, paletteFor, setDiceAppearance, useDiceAppearance } from './appearance';
+import { DEFAULT_APPEARANCE, DICE_FINISHES, DICE_PRESETS, paletteFor, setDiceAppearance, useDiceAppearance } from './appearance';
 import { previewDice } from './tray';
 import './customizer.css';
 
@@ -16,7 +16,7 @@ export function DiceCustomizer({ ready }: { ready: boolean }) {
           <span className="dice-preset-swatches" aria-hidden="true">{preset.colors.map(color=><i key={color} style={{background:color}} />)}</span><span>{preset.name}</span>{appearance.preset===preset.id && <Icon name="check" />}
         </button>)}
       </div>
-      <label className="dice-finish-label">Finish<select aria-label="Dice finish" value={appearance.finish} onChange={event=>setDiceAppearance({...appearance,finish:event.target.value as typeof appearance.finish})}><option value="matte">Matte</option><option value="polished">Polished</option><option value="metal">Metal</option></select></label>
+      <label className="dice-finish-label">Finish<select aria-label="Dice finish" value={appearance.finish} onChange={event=>setDiceAppearance({...appearance,finish:event.target.value as typeof appearance.finish})}>{DICE_FINISHES.map(finish=><option key={finish.id} value={finish.id}>{finish.name}</option>)}</select></label>
       <fieldset className="dice-effects"><legend>Effect</legend><div>{(['none','glow','sparks'] as const).map(effect=><button type="button" key={effect} aria-pressed={appearance.effect===effect} onClick={()=>setDiceAppearance({...appearance,effect})}>{effect==='none'?'None':effect==='glow'?'Glow':'Sparks'}</button>)}</div></fieldset>
       <details className="dice-custom-colors"><summary>Custom colors<Icon name="chevron" /></summary><div>{(['hope','fear','neutral'] as const).map(role=><label key={role}><span>{role==='neutral'?'Other dice':role==='hope'?'Hope':'Fear'}</span><input type="color" aria-label={`${role==='neutral'?'Other':role==='hope'?'Hope':'Fear'} dice color`} value={paletteFor(role,appearance).body} onChange={event=>setDiceAppearance({...appearance,colors:{...appearance.colors,[role]:event.target.value}})} /></label>)}</div></details>
       <div className="dice-style-actions"><button type="button" disabled={!ready||previewing} onClick={async()=>{setPreviewing(true);setError('');try{await previewDice();}catch{setError('Could not preview dice.');}finally{setPreviewing(false);}}}><Icon name="dice" />{previewing?'Previewing…':'Preview set'}</button><button type="button" className="dice-style-reset" onClick={()=>setDiceAppearance({...DEFAULT_APPEARANCE,colors:{}})}>Reset</button></div>
