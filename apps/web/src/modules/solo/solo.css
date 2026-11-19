@@ -208,3 +208,11 @@
 .solo-lodestar-table .solo-table td { overflow-wrap: anywhere; }
 .solo-panel-credit { text-wrap: balance; }
 .solo-panel .solo-lodestar-table .solo-table .solo-range { width: 4.6em; white-space: nowrap; }
+
+/* Move text: gains, losses and links between moves */
+.solo-token { padding: 1px 6px; border-radius: 5px; font-weight: 650; font-size: .94em; white-space: nowrap; }
+.solo-token.is-gain { background: color-mix(in srgb, var(--ds-brand) 18%, transparent); color: var(--ds-brand-strong); }
+.solo-token.is-loss { background: color-mix(in srgb, var(--color-rose-400) 18%, transparent); color: var(--color-rose-400); }
+.solo-move-link { color: inherit; font-style: italic; text-decoration: underline dotted color-mix(in srgb, var(--ds-brand) 70%, transparent); text-underline-offset: 3px; }
+.solo-move-link:hover { color: var(--ds-brand-strong); text-decoration-style: solid; }
+.solo-move-roll span { min-width: 0; }

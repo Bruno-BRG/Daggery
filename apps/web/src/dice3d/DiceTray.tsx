@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { burnMomentum, negativeMomentumCancelsHope, resetMomentum, type Advantage, type ClientRollMessage, type DualityResult } from '@daggery/shared';
 import { getActiveCampaign } from '../campaign-context';
 import { signed, useMomentum } from '../systems/useMomentum';
+import { Icon } from '../components/Icon';
+import '../systems/trackers.css';
 import { addFear } from '../sync/store';
 import { describePayload, normalizeAuthor, type RollSpec } from './rollPlan';
 import { attachTray } from './tray';
@@ -101,27 +103,19 @@ function MomentumHint({ result, momentum, reset, cancelsHope, onBurn }: {
   const canBurn = !result.critical && momentum > result.fear && momentum > reset;
   if (!canBurn && !cancelsHope) return null;
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-200" role="status">
+    <div className="tracker is-momentum is-inline momentum-hint" role="status" data-negative={momentum < 0 || undefined}>
       {cancelsHope && (
-        <p>
-          Momentum {signed(momentum)} matches your Hope die ({result.hope}). Cancel that die: subtract {result.hope} from the total
-          ({result.total} becomes {result.total - result.hope}). The roll cannot be with Hope.
+        <p className="tracker-warning">
+          <Icon name="stress" />
+          <span>Momentum {signed(momentum)} matches your Hope die ({result.hope}). Cancel that die: the total goes from {result.total} to <strong>{result.total - result.hope}</strong>, and the roll cannot be with Hope.</span>
         </p>
       )}
       {canBurn && (
-        <>
-          <p>
-            Momentum {signed(momentum)} is higher than your Fear die ({result.fear}). If the roll was not a strong hit, you may burn it:
-            ignore the Fear die and improve the result one step. Momentum resets to {signed(reset)}.
-          </p>
-          <button
-            type="button"
-            onClick={onBurn}
-            className="rounded-lg border border-accent-500/60 bg-accent-500/10 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-accent-500/20"
-          >
-            Burn Momentum
-          </button>
-        </>
+        <button type="button" className="tracker-action" onClick={onBurn}>
+          <Icon name="torch" />
+          <strong>Burn Momentum {signed(momentum)}</strong>
+          <small>Your Fear die shows {result.fear}. Ignore it and improve the result one step, if it was not a strong hit. Resets to {signed(reset)}.</small>
+        </button>
       )}
     </div>
   );

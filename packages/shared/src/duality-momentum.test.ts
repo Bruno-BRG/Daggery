@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  burnedOutcome, burnMomentum, canBurnMomentum, initialMomentum, initiativeAfter, maxMomentum, negativeMomentumCancelsHope,
+  burnedOutcome, burnMomentum, setMomentum, canBurnMomentum, initialMomentum, initiativeAfter, maxMomentum, negativeMomentumCancelsHope,
   parseMomentum, resetMomentum, setDebility, setInitiative, sufferMomentum, sufferSupply, takeMomentum, takeSupply, turnTheTide,
 } from './duality-momentum';
 
@@ -54,6 +54,16 @@ describe('Momentum', () => {
     const fixed = parseMomentum({ value: 99, supply: -4, debilities: ['wounded', 'wounded', 'bogus'], initiative: 'dragon', experience: 'x' });
     expect(fixed).toMatchObject({ value: 9, supply: 0, debilities: ['wounded'], initiative: null, experience: 0 });
     expect(parseMomentum(null)).toEqual(initialMomentum());
+  });
+});
+
+describe('Setting Momentum directly', () => {
+  it('stays between -6 and the maximum', () => {
+    const tracker = { ...initialMomentum(), debilities: ['wounded' as const, 'shaken' as const] };
+    expect(setMomentum(tracker, 5).value).toBe(5);
+    expect(setMomentum(tracker, 10).value).toBe(8);
+    expect(setMomentum(tracker, -9).value).toBe(-6);
+    expect(setMomentum(tracker, 3.9).value).toBe(3);
   });
 });
 

@@ -163,3 +163,8 @@ export const initiativeLabelFor = (initiative: Initiative): string =>
   initiative === 'hero' ? 'You have initiative: Strike, Secure an Advantage, Face Danger or End the Fight.'
     : initiative === 'foe' ? 'Your foe has initiative: Clash, Face Danger, Compel or Turn the Tide.'
       : '';
+
+/** Sets Momentum directly, as when you tap a rung of the ladder. It stays between -6 and your maximum. */
+export const setMomentum = (tracker: MomentumTracker, value: number): MomentumTracker => ({
+  ...tracker, value: clamp(Math.trunc(value), MOMENTUM_MIN, maxMomentum(tracker.debilities)),
+});

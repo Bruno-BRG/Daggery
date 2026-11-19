@@ -69,7 +69,17 @@
 
 .challenges-hint { margin: 0; color: var(--ds-muted); font-size: 13px; line-height: 1.55; }
 .challenges-hint strong { color: var(--ds-ink); }
-.challenges-initiative { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-surface); }
-.challenges-initiative p { margin: 0; color: var(--ds-muted); font-size: 12.5px; line-height: 1.5; }
-.challenges-initiative-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
-.challenges-initiative-buttons .challenges-btn[aria-pressed='true'] { border-color: var(--ds-brand); color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 10%, var(--ds-surface)); font-weight: 650; }
+.challenges-initiative { padding: 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-surface); }
+.challenges-initiative-head { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--ds-muted); font-size: 12.5px; }
+.challenges-initiative-head span { display: inline-flex; align-items: center; gap: 6px; }
+.challenges-initiative-head .daggery-icon { width: 15px; height: 15px; color: var(--ds-brand); }
+.challenges-initiative-head strong { color: var(--ds-ink); font-size: 15px; font-variant-numeric: tabular-nums; }
+.challenges-initiative .tracker-action { max-width: 420px; }
+.challenges-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 4px; }
+.challenges-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border: 1px solid var(--ds-border); border-radius: 999px; background: var(--ds-inset); color: var(--ds-muted); font-size: 12.5px; }
+.challenges-badge .daggery-icon { width: 14px; height: 14px; }
+.challenges-badge.is-rank { color: var(--ds-ink); font-weight: 650; border-color: var(--ds-border-strong); }
+.challenges-badge.is-rank .daggery-icon { color: var(--ds-brand); }
+.challenges-badge.is-harm { color: var(--ds-ink); border-color: color-mix(in srgb, var(--color-rose-400) 45%, var(--ds-border)); background: color-mix(in srgb, var(--color-rose-400) 12%, transparent); }
+.challenges-badge.is-harm .daggery-icon { color: var(--color-rose-400); }
+.challenges-btn.is-harm { min-width: 104px; }

@@ -11,6 +11,7 @@ import { SOLO_SECTIONS, type RefBlock, type SoloSection } from './reference';
 import { DIFFICULTIES, MOVE_FLOWS, MOVE_GROUP_META, OUTCOME_ORDER, type Step } from './workflow';
 import { ReferenceTableCard } from './table-reference';
 import { LODESTAR_GROUPS, LodestarTableCard, lodestarTablesIn } from './lodestar-reference';
+import { Rich } from './rich';
 import './solo.css';
 
 /**
@@ -220,9 +221,9 @@ function MoveDetail({ move }: { move: IronMove }) {
   const d100Tables = moveLodestarTables(move);
   const usesOracle = [...(flow.tools ?? []), ...OUTCOME_ORDER.flatMap(outcome => flow[outcome] ?? [])].some(step => step.kind === 'oracle' || step.kind === 'fear-check');
   return <article className="solo-move">
-    <p className="solo-move-trigger">{move.trigger}</p>
-    {move.roll && <p className="solo-move-roll"><Icon name="dice" />{move.roll}</p>}
-    {move.text && <p className="solo-move-text">{move.text}</p>}
+    <p className="solo-move-trigger"><Rich text={move.trigger} self={move.id} /></p>
+    {move.roll && <p className="solo-move-roll"><Icon name="dice" /><span><Rich text={move.roll} self={move.id} /></span></p>}
+    {move.text && <p className="solo-move-text"><Rich text={move.text} self={move.id} /></p>}
     {flow.tools && <p className="solo-move-uses"><strong>Uses:</strong> {flow.tools.map(stepText).join(', ')}</p>}
 
     {flow.resolve === 'action' && <section className="solo-move-block" aria-label="Difficulty">
@@ -235,7 +236,7 @@ function MoveDetail({ move }: { move: IronMove }) {
     {OUTCOME_ORDER.some(outcome => move[outcome]) && <section className="solo-outcomes" aria-label="Outcomes">
       {OUTCOME_ORDER.filter(outcome => move[outcome]).map(outcome => <div key={outcome} className={`solo-outcome is-${outcome}`}>
         <h3>{IRON_OUTCOME_LABELS[outcome]}<small>{outcome === 'strong' ? 'Success with Hope' : outcome === 'weak' ? 'Success with Fear' : 'Failure'}</small></h3>
-        <p>{move[outcome]}</p>
+        <p><Rich text={move[outcome]!} self={move.id} /></p>
         {flow[outcome]?.length ? <p className="solo-move-uses"><strong>Then:</strong> {flow[outcome]!.map(stepText).join(', ')}</p> : null}
       </div>)}
     </section>}

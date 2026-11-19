@@ -1,0 +1,143 @@
+/* ====================================================================== Top bar trackers: Momentum and Fear */
+.daggery-trackers { display: flex; flex: none; align-items: center; gap: 8px; }
+.tracker { position: relative; flex: none; --tone: var(--ds-brand); }
+.tracker.is-fear { --tone: var(--ds-fear); }
+
+/* The chip: an icon, a small meter and the number, one quiet pill. */
+.tracker-chip { display: inline-flex; align-items: center; gap: 9px; padding: 0 12px 0 10px; border: 1px solid var(--ds-border); border-radius: 999px; background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 7%, var(--ds-surface)), var(--ds-surface)); color: var(--ds-ink); font-size: 13px; cursor: pointer; transition: border-color .2s, box-shadow .25s, transform .2s; }
+.tracker-chip:hover { border-color: color-mix(in srgb, var(--tone) 60%, var(--ds-border)); }
+.tracker-chip[aria-expanded='true'] { border-color: var(--tone); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 18%, transparent); }
+.tracker-chip > .daggery-icon { width: 17px; height: 17px; color: var(--tone); flex: none; }
+.tracker-label { color: var(--ds-muted); font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; }
+.tracker-count { min-width: 2.1ch; text-align: center; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.tracker[data-negative] .tracker-count { color: var(--color-rose-400); }
+.tracker[data-active] .tracker-chip { border-color: var(--tone); background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 20%, var(--ds-surface)), color-mix(in srgb, var(--tone) 8%, var(--ds-surface))); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tone) 16%, transparent), 0 0 18px color-mix(in srgb, var(--tone) 22%, transparent); }
+
+/* Segment meters: the same little ticks in the chip and the panel. */
+.tracker-meter { display: inline-flex; align-items: stretch; gap: 2px; height: 14px; }
+.tracker-meter i { width: 4px; border-radius: 2px; background: color-mix(in srgb, var(--ds-muted) 28%, transparent); transition: background .25s, transform .25s; }
+.tracker-meter i.is-pos { background: var(--tone); box-shadow: 0 0 6px color-mix(in srgb, var(--tone) 55%, transparent); }
+.tracker-meter i.is-neg { background: var(--color-rose-400); box-shadow: 0 0 6px color-mix(in srgb, var(--color-rose-400) 55%, transparent); }
+.tracker-meter i.is-zero { margin-left: 2px; margin-right: 2px; background: color-mix(in srgb, var(--ds-ink) 45%, transparent); }
+.tracker-meter i.is-blocked { background: repeating-linear-gradient(135deg, transparent 0 2px, color-mix(in srgb, var(--ds-muted) 35%, transparent) 2px 3px); opacity: .6; }
+.tracker-meter i.is-threshold { box-shadow: 0 0 0 1px var(--ds-ink); }
+.tracker-meter i.is-cap { transform: scaleY(1.28); }
+
+.tracker-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px 3px 6px; border-radius: 999px; background: color-mix(in srgb, var(--tone) 18%, transparent); font-size: 12px; font-weight: 650; }
+.tracker-badge .daggery-icon { width: 13px; height: 13px; }
+.tracker[data-initiative='foe'] .tracker-badge { background: color-mix(in srgb, var(--color-rose-400) 22%, transparent); }
+
+.tracker[data-pulse='up'] .tracker-chip { animation: tracker-up .75s ease-out; }
+.tracker[data-pulse='down'] .tracker-chip { animation: tracker-down .75s ease-out; }
+@keyframes tracker-up { 0% { transform: scale(1); } 22% { transform: scale(1.09); box-shadow: 0 0 0 7px color-mix(in srgb, var(--tone) 22%, transparent), 0 0 22px var(--tone); } 100% { transform: scale(1); } }
+@keyframes tracker-down { 0% { transform: scale(1); } 22% { transform: scale(.93); } 100% { transform: scale(1); } }
+
+/* ------------------------------------------------------------------------------------------ The panel */
+.tracker-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 70; width: min(352px, calc(100vw - 24px)); max-height: min(88vh, 800px); overflow-y: auto; display: grid; gap: 10px; padding: 12px; border: 1px solid var(--ds-border-strong); border-radius: var(--radius-xl); background: var(--ds-raised); color: var(--ds-ink); box-shadow: 0 18px 44px var(--ds-shadow-lg); animation: tracker-panel .18s ease-out; scrollbar-width: thin; }
+@keyframes tracker-panel { from { opacity: 0; transform: translateY(-6px) scale(.985); } }
+.tracker-card { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--ds-border); border-radius: var(--radius-lg); background: var(--ds-surface); }
+.tracker-card.is-hero { padding: 14px 12px 12px; background: radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--tone) 20%, transparent), transparent 70%), var(--ds-surface); border-color: color-mix(in srgb, var(--tone) 38%, var(--ds-border)); }
+.tracker-card h4 { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--ds-muted); font-size: 11px; font-weight: 650; letter-spacing: .09em; text-transform: uppercase; }
+.tracker-card h4 .daggery-icon { width: 14px; height: 14px; color: var(--tone); }
+.tracker-card h4 small { margin-left: auto; font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--ds-faint); }
+
+.tracker-dial { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 10px; }
+.tracker-dial output { display: grid; justify-items: center; line-height: 1; }
+.tracker-dial output strong { font-size: 46px; font-weight: 750; letter-spacing: -.03em; color: var(--tone); font-variant-numeric: tabular-nums; text-shadow: 0 0 22px color-mix(in srgb, var(--tone) 40%, transparent); }
+.tracker[data-negative] .tracker-dial output strong { color: var(--color-rose-400); text-shadow: 0 0 22px color-mix(in srgb, var(--color-rose-400) 40%, transparent); }
+.tracker-dial output small { margin-top: 6px; color: var(--ds-muted); font-size: 12px; }
+.tracker-step { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--ds-border-strong); border-radius: 50%; background: var(--ds-raised); color: var(--ds-ink); cursor: pointer; transition: border-color .15s, background .15s, transform .1s; }
+.tracker-step:hover:not(:disabled) { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 12%, var(--ds-raised)); }
+.tracker-step:active:not(:disabled) { transform: scale(.94); }
+.tracker-step:disabled { opacity: .35; cursor: not-allowed; }
+.tracker-step .daggery-icon { width: 20px; height: 20px; }
+
+/* The ladder: tap a rung to set the value. */
+.tracker-ladder { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; }
+.tracker-ladder button { position: relative; display: grid; place-items: center; height: 38px; padding: 0; border: 0; border-radius: 5px; background: color-mix(in srgb, var(--ds-muted) 14%, transparent); color: var(--ds-faint); font-size: 10px; font-weight: 650; font-variant-numeric: tabular-nums; cursor: pointer; transition: background .15s, color .15s, transform .12s; }
+.tracker-ladder button:hover:not(:disabled) { background: color-mix(in srgb, var(--tone) 24%, transparent); color: var(--ds-ink); transform: translateY(-1px); }
+.tracker-ladder button.is-neg { background: color-mix(in srgb, var(--color-rose-400) 12%, transparent); }
+.tracker-ladder button.is-pos.is-filled { background: color-mix(in srgb, var(--tone) 55%, transparent); color: var(--ds-ink); }
+.tracker-ladder button.is-neg.is-filled { background: color-mix(in srgb, var(--color-rose-400) 58%, transparent); color: var(--ds-ink); }
+.tracker-ladder button.is-current { background: var(--tone); color: var(--ds-on-brand); box-shadow: 0 0 0 2px var(--ds-surface), 0 0 14px color-mix(in srgb, var(--tone) 60%, transparent); z-index: 1; transform: scaleY(1.14); }
+.tracker-ladder button.is-neg.is-current { background: var(--color-rose-400); color: #fff; }
+.tracker-ladder button.is-blocked { background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--ds-muted) 22%, transparent) 3px 4px); color: color-mix(in srgb, var(--ds-faint) 55%, transparent); cursor: not-allowed; }
+.tracker-ladder button.is-reset::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .85; }
+.tracker-ladder button.is-zero { margin-left: 3px; }
+.tracker-ladder-key { display: flex; justify-content: space-between; margin-top: -2px; color: var(--ds-faint); font-size: 11px; }
+.tracker-ladder-key span:nth-child(2)::before { content: '● '; font-size: 8px; vertical-align: 1px; }
+
+.tracker-action { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 10px; min-height: 52px; padding: 8px 14px; border: 1px solid color-mix(in srgb, var(--tone) 55%, var(--ds-border)); border-radius: var(--radius-lg); background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 22%, var(--ds-raised)), color-mix(in srgb, var(--tone) 9%, var(--ds-raised))); color: var(--ds-ink); text-align: left; cursor: pointer; transition: filter .15s, transform .1s, box-shadow .2s; }
+.tracker-action:hover:not(:disabled) { filter: brightness(1.1); box-shadow: 0 6px 18px color-mix(in srgb, var(--tone) 22%, transparent); }
+.tracker-action:active:not(:disabled) { transform: scale(.985); }
+.tracker-action:disabled { opacity: .45; cursor: not-allowed; filter: saturate(.5); }
+.tracker-action > .daggery-icon { grid-row: span 2; width: 24px; height: 24px; color: var(--tone); }
+.tracker-action strong { font-size: 14.5px; font-weight: 700; }
+.tracker-action small { color: var(--ds-muted); font-size: 12px; line-height: 1.35; }
+
+.tracker-warning { margin: 0; display: flex; gap: 8px; align-items: flex-start; padding: 9px 11px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--color-rose-400) 14%, transparent); border: 1px solid color-mix(in srgb, var(--color-rose-400) 38%, transparent); font-size: 12.5px; line-height: 1.45; }
+.tracker-warning .daggery-icon { width: 16px; height: 16px; flex: none; margin-top: 1px; color: var(--color-rose-400); }
+.tracker-note { margin: 0; color: var(--ds-muted); font-size: 12.5px; line-height: 1.5; }
+
+/* Supply and Experience: little pips. */
+.tracker-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tracker-pips { display: inline-flex; gap: 6px; }
+.tracker-pips button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--ds-border-strong); border-radius: 9px; background: transparent; color: var(--ds-faint); cursor: pointer; transition: background .15s, color .15s, transform .1s; }
+.tracker-pips button:hover { border-color: var(--tone); }
+.tracker-pips button.is-on { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 22%, transparent); color: var(--tone); }
+.tracker-pips button:active { transform: scale(.92); }
+.tracker-pips .daggery-icon { width: 18px; height: 18px; }
+.tracker-mini { display: inline-flex; align-items: center; gap: 8px; }
+.tracker-mini button { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--ds-border-strong); border-radius: 50%; background: var(--ds-raised); color: var(--ds-ink); cursor: pointer; }
+.tracker-mini button:hover:not(:disabled) { border-color: var(--tone); }
+.tracker-mini button:disabled { opacity: .35; cursor: not-allowed; }
+.tracker-mini .daggery-icon { width: 15px; height: 15px; }
+.tracker-mini strong { min-width: 2ch; text-align: center; font-size: 22px; font-variant-numeric: tabular-nums; }
+
+/* Initiative: a segmented control with icons. */
+.tracker-segments { display: grid; grid-template-columns: repeat(3, 1fr); padding: 3px; border: 1px solid var(--ds-border); border-radius: var(--radius-md); background: var(--ds-inset); gap: 3px; }
+.tracker-segments button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; border: 0; border-radius: 6px; background: transparent; color: var(--ds-muted); font-size: 13px; cursor: pointer; transition: background .15s, color .15s; }
+.tracker-segments button:hover { color: var(--ds-ink); }
+.tracker-segments button .daggery-icon { width: 16px; height: 16px; }
+.tracker-segments button[aria-pressed='true'] { background: var(--ds-raised); color: var(--ds-ink); font-weight: 650; box-shadow: 0 1px 4px var(--ds-shadow); }
+.tracker-segments button[aria-pressed='true'].is-hero { color: var(--ds-brand); }
+.tracker-segments button[aria-pressed='true'].is-foe { color: var(--color-rose-400); }
+.tracker-state { display: flex; gap: 10px; align-items: center; padding: 9px 11px; border-radius: var(--radius-md); background: color-mix(in srgb, var(--ds-brand) 11%, transparent); border: 1px solid color-mix(in srgb, var(--ds-brand) 30%, transparent); font-size: 12.5px; line-height: 1.45; }
+.tracker-state.is-foe { background: color-mix(in srgb, var(--color-rose-400) 11%, transparent); border-color: color-mix(in srgb, var(--color-rose-400) 30%, transparent); }
+.tracker-state .daggery-icon { width: 20px; height: 20px; flex: none; }
+
+/* Debilities: three groups, three colours. */
+.tracker-debs { display: grid; gap: 8px; }
+.tracker-debs > div { display: grid; gap: 5px; }
+.tracker-debs h5 { margin: 0; color: var(--ds-faint); font-size: 10.5px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+.tracker-debs .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tracker-debs button { --group: var(--ds-brand); min-height: 36px; padding: 0 12px; border: 1px solid var(--ds-border-strong); border-radius: 999px; background: transparent; color: var(--ds-muted); font-size: 13px; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.tracker-debs button[data-group='bane'] { --group: var(--color-rose-400); }
+.tracker-debs button[data-group='burden'] { --group: var(--ds-fear); }
+.tracker-debs button:hover { border-color: var(--group); color: var(--ds-ink); }
+.tracker-debs button[aria-pressed='true'] { border-color: var(--group); background: color-mix(in srgb, var(--group) 22%, transparent); color: var(--ds-ink); font-weight: 650; }
+.tracker-debs button[aria-pressed='true']::before { content: '✕'; margin-right: 6px; font-size: 10px; color: var(--group); }
+
+.tracker :is(button):focus-visible { outline: 2px solid var(--ds-focus); outline-offset: 2px; }
+
+@media (max-width: 1100px) { .tracker-meter { display: none; } }
+@media (max-width: 760px) {
+  .tracker-label { display: none; }
+  .tracker-chip { padding: 0 10px 0 8px; gap: 6px; }
+  .daggery-trackers { position: static; gap: 6px; }
+  .daggery-trackers .tracker { position: static; }
+  .tracker-panel { position: fixed; top: 64px; right: 10px; left: 10px; width: auto; max-height: calc(100dvh - 80px); }
+  .tracker-ladder button { height: 34px; font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tracker-chip, .tracker-panel, .tracker .tracker-chip { animation: none !important; transition: none; }
+  .tracker-meter i, .tracker-ladder button, .tracker-step { transition: none; }
+}
+.tracker.is-fear .tracker-state { background: color-mix(in srgb, var(--ds-fear) 13%, transparent); border-color: color-mix(in srgb, var(--ds-fear) 34%, transparent); }
+.tracker.is-fear .tracker-state .daggery-icon { color: var(--ds-fear); }
+.tracker.is-fear .tracker-ladder button.is-pos { background: color-mix(in srgb, var(--ds-fear) 10%, transparent); }
+.tracker.is-fear .tracker-ladder button.is-pos.is-filled { background: color-mix(in srgb, var(--ds-fear) 55%, transparent); }
+.tracker.is-fear .tracker-ladder button.is-current { background: var(--ds-fear); color: #fff; }
+/* Used outside the top bar (Challenges, the dice tray): the same pieces on a plain block. */
+.tracker.is-inline { position: static; display: grid; gap: 8px; }
+.tracker.is-inline .tracker-segments { max-width: 420px; }

@@ -4,7 +4,8 @@ import { IconButton, ItemCard, PanelSection, TONES } from '../../components/Acco
 import { useDocs } from '../../sync/store';
 import { adversaries } from '@daggery/content';
 import { initiativeLabelFor, setInitiative, turnTheTide, type IronRank, type PackSize } from '@daggery/shared';
-import { useMomentum } from '../../systems/useMomentum';
+import { signed, useMomentum } from '../../systems/useMomentum';
+import '../../systems/trackers.css';
 import {
   COUNTDOWN_SIZES, RANK_OPTIONS, TRACK_TICKS, TYPE_LABEL, TYPE_ORDER, TYPE_TITLE,
   addTicks, boxTicks, clamp, createCountdown, createTrack, harmFromFoe, inflictHarm, isTrackDoc, markProgress, progressTicks, rankForAdversary, rankLabel, score, toggleCountdown, trackCaption,
@@ -98,14 +99,21 @@ export default function Challenges({ author: _author }: { author: string }) {
 /** Who has initiative in the fight, and Turn the Tide. The same tracker as the top bar. */
 function InitiativeBar() {
   const { tracker, update } = useMomentum();
-  return <div className="challenges-initiative" role="group" aria-label="Initiative">
-    <div className="challenges-initiative-buttons">
-      {([[null, 'No fight'], ['hero', 'You have initiative'], ['foe', 'Foe has initiative']] as const).map(([value, label]) => (
-        <button key={label} type="button" className="challenges-btn" aria-pressed={tracker.initiative === value} onClick={() => update(current => setInitiative(current, value))}>{label}</button>
-      ))}
-      <button type="button" className="challenges-btn" disabled={tracker.initiative === null || tracker.tideTurned} onClick={() => update(turnTheTide)}>Turn the Tide{tracker.tideTurned ? ' (used)' : ''}</button>
+  const fighting = tracker.initiative !== null;
+  return <div className="tracker is-momentum is-inline challenges-initiative" data-negative={tracker.value < 0 || undefined} role="group" aria-label="Initiative">
+    <div className="challenges-initiative-head">
+      <span><Icon name="spark" />Momentum <strong>{signed(tracker.value)}</strong></span>
+      <span><Icon name="backpack" />Supply <strong>{tracker.supply}</strong></span>
     </div>
-    {tracker.initiative && <p>{initiativeLabelFor(tracker.initiative)}</p>}
+    <div className="tracker-segments" role="group" aria-label="Who has initiative">
+      <button type="button" aria-pressed={tracker.initiative === null} onClick={() => update(current => setInitiative(current, null))}>No fight</button>
+      <button type="button" className="is-hero" aria-pressed={tracker.initiative === 'hero'} onClick={() => update(current => setInitiative(current, 'hero'))}><Icon name="shield" />You</button>
+      <button type="button" className="is-foe" aria-pressed={tracker.initiative === 'foe'} onClick={() => update(current => setInitiative(current, 'foe'))}><Icon name="adversary" />Foe</button>
+    </div>
+    {fighting && <p className={`tracker-state${tracker.initiative === 'foe' ? ' is-foe' : ''}`} role="status"><Icon name={tracker.initiative === 'hero' ? 'combat' : 'adversary'} /><span>{initiativeLabelFor(tracker.initiative)}</span></p>}
+    {fighting && <button type="button" className="tracker-action" disabled={tracker.tideTurned} onClick={() => update(turnTheTide)}>
+      <Icon name="rotate" /><strong>Turn the Tide</strong><small>{tracker.tideTurned ? 'Used this fight' : 'Once per fight: steal initiative'}</small>
+    </button>}
   </div>;
 }
 
@@ -201,11 +209,19 @@ function TrackCard({ id, doc, onSave, onRemove }: {
         </>
       : <>
           <p className="challenges-score">Progress score: <strong>{score(doc.ticks)}</strong> <span>· {clamp(doc.ticks, 0, TRACK_TICKS)}/{TRACK_TICKS} ticks</span></p>
-          {doc.type === 'fight' && <p className="challenges-hint">This foe deals {harmFromFoe(doc.rank)} harm to you: mark that many Hit Points (or Stress). Each harm you inflict marks {RANK_OPTIONS.find(option => option.id === doc.rank)!.mark}. When you End the Fight, roll against {score(doc.ticks)}.</p>}
+          {doc.type === 'fight' && <div className="challenges-badges" aria-label="Foe">
+            <span className="challenges-badge is-rank"><Icon name="adversary" />{rankLabel(doc.rank)} foe</span>
+            <span className="challenges-badge is-harm"><Icon name="heart" />Deals {harmFromFoe(doc.rank)} harm</span>
+            <span className="challenges-badge"><Icon name="combat" />Each harm marks {RANK_OPTIONS.find(option => option.id === doc.rank)!.mark}</span>
+          </div>}
+          {doc.type === 'bond' && <div className="challenges-badges" aria-label="Bonds">
+            <span className="challenges-badge is-rank"><Icon name="users" />{clamp(doc.ticks, 0, TRACK_TICKS)} {clamp(doc.ticks, 0, TRACK_TICKS) === 1 ? 'bond' : 'bonds'}</span>
+            <span className="challenges-badge">While you share a bond, many moves give +2</span>
+          </div>}
           <div className="challenges-actions">
             {doc.type === 'fight'
               ? <>
-                {[1, 2, 3].map(harm => <button key={harm} type="button" className={`challenges-btn${harm === 2 ? ' is-primary' : ''}`} aria-label={`Inflict ${harm} harm on ${doc.name}`}
+                {[1, 2, 3].map(harm => <button key={harm} type="button" className={`challenges-btn is-harm${harm === 2 ? ' is-primary' : ''}`} aria-label={`Inflict ${harm} harm on ${doc.name}`}
                   onClick={() => onSave(id, doc, { ticks: inflictHarm(doc.ticks, doc.rank, harm) })}>Inflict {harm} harm</button>)}
               </>
               : <button type="button" className="challenges-btn is-primary" aria-label={`Mark progress for ${doc.name}`}
