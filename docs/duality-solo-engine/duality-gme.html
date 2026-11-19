@@ -210,7 +210,7 @@
   <h2>Relationships</h2>
   <p>A <b>bond</b> is a lasting tie to a person or community: mark one tick on your <b>bonds track</b> for each. While you share a bond, many moves give you +2. <b>Make a Connection</b> first, then <b>Forge a Bond</b>.</p>
 </div>
-<div data-moves="*" data-only="compel,sojourn,draw-circle,make-connection,forge-bond,test-bond,aid-ally"></div>
+<div data-moves="*" data-only="compel,sojourn,draw-circle,make-connection,forge-bond"></div>
 
 <div class="foot pagefoot">
   Unofficial fan-made rules for Daggerheart. Adapted from Ironsworn by Shawn Tomkin (CC BY-NC-SA 4.0, non-commercial). Needs the Daggerheart core rules.
@@ -220,7 +220,7 @@
 
 <section class="page">
 
-<div data-moves="*" data-only="write-epilogue"></div>
+<div data-moves="*" data-only="test-bond,aid-ally,write-epilogue"></div>
 <div class="block">
   <h2>Scene Challenge</h2>
   <p>For a tense scene against a threat or a clock (a chase, an infiltration, a debate): name the objective and give it a <b>grave</b> progress track, then a <b>tension clock</b> of 4 segments at a disadvantage, 6 on even footing, 8 with an advantage. <b>Finish the Scene</b> with a progress roll when the track or the clock is full.</p>
@@ -6992,6 +6992,7 @@ for (const el of document.querySelectorAll("[data-moves]")) {
       if (move.weak) parts.push(`<div><b class="wk">Weak hit:</b> ${move.weak}</div>`);
       if (move.miss) parts.push(`<div><b class="ms">Miss:</b> ${move.miss}</div>`);
     } else if (move.text) parts.push(`<div>${move.text}</div>`);
+    if ((move.strong || move.weak || move.miss) && move.text) parts.push(`<div>${move.text}</div>`);
     return `<div class="${move.name === el.dataset.break ? "block move col" : "block move"}">${parts.join("")}</div>`;
   }).join("");
 }

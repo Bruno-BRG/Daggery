@@ -6869,7 +6869,7 @@ for (const el of document.querySelectorAll("[data-moves]")) {
     if (move.strong) parts.push(`<div><b class="st">Strong hit:</b> ${move.strong}</div>`);
     if (move.weak) parts.push(`<div><b class="wk">Weak hit:</b> ${move.weak}</div>`);
     if (move.miss) parts.push(`<div><b class="ms">Miss:</b> ${move.miss}</div>`);
-    if (!move.strong && !move.weak && !move.miss && move.text) parts.push(`<div>${move.text}</div>`);
+    if (move.text) parts.push(`<div>${move.text}</div>`);
     return `<div class="block move">${parts.join("")}</div>`;
   }).join("");
 }
