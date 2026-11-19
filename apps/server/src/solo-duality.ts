@@ -1,6 +1,7 @@
 import { adversaries } from '@daggery/content';
 import {
-  adversaryTypeName, IRON_LIKELIHOODS, IRON_OUTCOME_LABELS,
+  adversaryTypeName, adversariesForRank, foeRankFor, FOE_RANKS, IRON_LIKELIHOODS, IRON_OUTCOME_LABELS, lodestarTable, readLodestarColumn,
+  type LodestarColumn, type LodestarRow,
   resolveIronProgress, DUALITY_MEANING_CHOICES, dualityTable, fearCheck, readDualityMeaning,
   readDualityTable, resolveFearSpend, rollDie,
   type DualityList, type DualityMeaningTable, type Rng, type SoloResult, type SoloState, type SoloTone, type SoloTrackerItem,
@@ -37,6 +38,39 @@ class Table {
   constructor(private roll: DualityRoll) {}
   get fear() { return this.roll.fear - this.spent; }
   d12() { return rollDie(12, this.roll.rng); }
+  d100() { return rollDie(100, this.roll.rng); }
+  /** One d100 on a Lodestar column, written to the lines. The dice show 00 for 100. */
+  lodestar(column: LodestarColumn, label = column.label): { roll: number; row: LodestarRow } {
+    const roll = this.d100(), row = readLodestarColumn(column, roll);
+    this.lines.push(`${label} d100 ${roll === 100 ? '00' : roll}: ${row[2]}`);
+    return { roll, row };
+  }
+  /**
+   * A d100 result that says "Roll twice" or "Roll again" is followed here: both results happen, and
+   * the same result twice is made worse. Further "roll twice" rows are rerolled so it cannot recurse.
+   */
+  lodestarFollow(column: LodestarColumn, first: { row: LodestarRow }): string {
+    const text = first.row[2];
+    if (/^Roll twice/.test(text)) {
+      const picked: LodestarRow[] = [];
+      for (let tries = 0; picked.length < 2 && tries < 200; tries++) {
+        const next = this.lodestar(column);
+        if (!/^Roll (twice|again)/.test(next.row[2])) picked.push(next.row);
+      }
+      if (picked.length < 2) throw new Error('Could not resolve a double roll');
+      const same = picked[0]![2] === picked[1]![2];
+      this.lines.push(same ? 'The same result twice: make it worse (or more dramatic).' : 'Both results happen.');
+      return same ? `${picked[0]![2]} (worse)` : picked.map(row => row[2]).join(' + ');
+    }
+    if (/^Roll again/.test(text)) {
+      for (let tries = 0; tries < 200; tries++) {
+        const next = this.lodestar(column);
+        if (!/^Roll again/.test(next.row[2])) { this.lines.push('Apply that result, but make it worse.'); return `${next.row[2]} (worse)`; }
+      }
+      throw new Error('Could not resolve a reroll');
+    }
+    return text;
+  }
   /** Spends Fear if the pool has it. Returns whether it was paid. */
   spend(amount = 1): boolean {
     if (this.fear < amount) return false;
@@ -197,7 +231,10 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
     const typeName = adversaryTypeName(type.roll);
     const suggestions = suggestAdversaries(typeName, creature.roll, tier, () => t.d12());
     if (suggestions.length) t.lines.push(`From the catalog${tier ? ` (tier ${tier})` : ''}: ${suggestions.map(item => item.name).join(', ')}. Reskin to fit if needed.`);
-    t.lines.push('Build the fight with Battle Points as normal. Ask the Oracle whether they notice you first.');
+    t.lines.push(tier !== undefined
+      ? `Foe rank: ${FOE_RANKS.find(item => item.id === foeRankFor(typeName, tier))!.label} (a tier ${tier} ${typeName}).`
+      : `Foe rank by tier: ${[1, 2, 3, 4].map(level => `${FOE_RANKS.find(item => item.id === foeRankFor(typeName, level))!.label} (tier ${level})`).join(', ')}.`);
+    t.lines.push('Enter the Fray with that rank, or build the fight with Battle Points as normal. Ask the Oracle whether they notice you first.');
     const creatureName = creature.value.split(':')[0]!;
     return t.done(`${typeName} · ${creatureName} · ${situation.value.toLowerCase()}`, typeName === 'Solo' || typeName === 'Leader' ? 'fear' : 'neutral', { suggestions }, question || 'Encounter');
   }
@@ -250,6 +287,53 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
     const check = t.check();
     if (check.passed) { t.spend(); return t.done(`Danger: ${t.row('journey', 0).value}`, 'fear', { total: check.roll }, question || 'Journey leg'); }
     return t.done(`Discovery: ${t.row('journey', 1).value}`, 'hope', { total: check.roll }, question || 'Journey leg');
+  }
+
+  if (kind === 'duality-lodestar') {
+    const found = lodestarTable(text(input.tableId, 60));
+    if (found.id === 'settlement-name') {
+      // A category first, then an example from that category's own list.
+      const [categories, ...lists] = found.columns;
+      const category = t.lodestar(categories!, 'Category');
+      const index = categories!.rows.findIndex(row => row === category.row);
+      const example = t.lodestar(lists[index]!, lists[index]!.label);
+      return t.done(example.row[2], 'neutral', { total: example.roll }, question || found.title);
+    }
+    if (found.id === 'quick-settlement-name') {
+      const prefix = t.lodestar(found.columns[0]!), suffix = t.lodestar(found.columns[1]!);
+      return t.done(`${prefix.row[2].replace(/-$/, '')}${suffix.row[2].replace(/^-/, '')}`, 'neutral', {}, question || found.title);
+    }
+    if (found.id === 'challenge-rank') {
+      const rank = t.lodestar(found.columns[0]!), index = found.columns[0]!.rows.findIndex(row => row === rank.row);
+      for (const column of found.columns.slice(1)) t.lines.push(`${column.label}: ${column.rows[index]![2]}`);
+      const duality = FOE_RANKS.find(item => item.ironsworn === rank.row[2]);
+      if (duality) t.lines.push(`In Duality GME this rank is ${duality.label}.`);
+      return t.done(rank.row[2], rank.row[2] === 'Epic' || rank.row[2] === 'Extreme' ? 'fear' : 'neutral', { total: rank.roll }, question || found.title);
+    }
+    let column = 0;
+    if (found.columns.length > 1) {
+      column = input.column === undefined || input.column === null ? 0 : Number(input.column);
+      if (!Number.isInteger(column) || column < 0 || column >= found.columns.length) throw new Error('Invalid table column');
+    }
+    const rolled = t.lodestar(found.columns[column]!);
+    return t.done(t.lodestarFollow(found.columns[column]!, rolled), found.id === 'pay-the-price' || found.id === 'mystic-backlash' ? 'fear' : 'neutral', { total: rolled.roll }, question || found.title);
+  }
+
+  if (kind === 'duality-foe-rank') {
+    // Rolls a foe's rank (Challenge Rank, Foes column), then names the Daggerheart adversaries that fit it.
+    const challenge = lodestarTable('challenge-rank'), rolled = t.lodestar(challenge.columns[0]!, 'Challenge rank');
+    const rank = FOE_RANKS.find(item => item.ironsworn === rolled.row[2])!;
+    t.lines.push(`Duality GME rank: ${rank.label}. Harm ${rank.harm} against you; ${rank.progress}. ${rank.foe}.`);
+    const fits = adversariesForRank(rank.id);
+    t.lines.push(`Look for: ${rank.fits}.`);
+    const pool = adversaries.filter(item => foeRankFor(item.type, item.tier) === rank.id);
+    const source = [...pool], picked: { id: string; name: string }[] = [];
+    while (source.length && picked.length < 3) {
+      const [item] = source.splice(Math.floor((t.d12() - 1) / 12 * source.length), 1);
+      picked.push({ id: item!.id, name: item!.name });
+    }
+    if (picked.length) t.lines.push(`From the catalog: ${picked.map(item => item.name).join(', ')}.`);
+    return t.done(`${rank.label} foe (${fits.length} type and tier pairs fit)`, rank.harm >= 4 ? 'fear' : 'neutral', { total: rolled.roll, suggestions: picked }, question || 'Foe rank');
   }
 
   if (kind === 'duality-table') {

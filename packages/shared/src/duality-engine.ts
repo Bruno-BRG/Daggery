@@ -139,7 +139,7 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
       'Cursed or haunted ground', 'Natural disaster', 'The lair of something big'],
     Discovery: ['A quiet road; nothing', 'Fellow travelers', 'Shelter or a good campsite', 'A ruin', 'A settlement or homestead',
       'A shrine or landmark', 'A useful resource', 'Tracks or signs', 'A trader', 'Someone in need', 'A hidden cache',
-      'A wondrous sight: gain a Hope'] }),
+      'A wondrous sight: take +1 momentum'] }),
   table('wilds', 'Wilds: Terrain, Weather and Landmark', 'explore', {
     Terrain: ['Open plains', 'Rolling hills', 'Dense forest', 'Old, quiet forest', 'Marsh or bog', 'Mountains or crags',
       'Highland moor', 'River valley', 'Coast or cliffs', 'Desert or badlands', 'Snowfields or tundra', 'Strange land (roll Descriptor)'],
@@ -182,7 +182,7 @@ export const DUALITY_TABLES: readonly DualityTable[] = [
   table('iron-opportunity', 'Find an Opportunity', 'iron', { Opportunity: [
     'The terrain favors you', 'A hidden path', 'Useful supplies', 'You learn a foe’s weakness', 'Shelter or safety',
     'A distraction you can use', 'Someone offers help', 'A clue to your oath', 'Something left behind',
-    'High ground: advantage on your next roll', 'An enemy gives themselves away', 'Momentum: gain a Hope'] }),
+    'High ground: advantage on your next roll', 'An enemy gives themselves away', 'Take +1 momentum'] }),
   table('iron-discovery', 'Make a Discovery', 'iron', { Discovery: [
     'An untouched place of power', 'A lost settlement, still alive', 'A great beast at peace', 'Ruins of a vanished people',
     'A gate to another realm', 'A trove of old knowledge', 'A sacred grove or spring', 'A relic fallen from the sky',

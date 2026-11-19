@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DUALITY_TABLES } from './duality-engine';
-import { IRON_MOVES, IRON_RANKS, ironProgressScore, markIronProgress, resolveIronProgress } from './duality-variants';
+import { IRON_MOVE_GROUPS, IRON_MOVES, IRON_RANKS, ironProgressScore, isLodestarMove, LODESTAR_MOVE_NAMES, markIronProgress, resolveIronProgress } from './duality-variants';
 
 describe('Duality GME', () => {
   it('marks progress by rank and caps the track', () => {
@@ -16,6 +16,25 @@ describe('Duality GME', () => {
   it('has unique moves, each with either text or all three outcomes', () => {
     expect(new Set(IRON_MOVES.map(move => move.id)).size).toBe(IRON_MOVES.length);
     for (const move of IRON_MOVES) expect(move.text !== undefined || (move.strong && move.weak && move.miss)).toBeTruthy();
+  });
+  it('has every Ironsworn Lodestar move, under its Ironsworn name', () => {
+    expect(LODESTAR_MOVE_NAMES).toHaveLength(35);
+    const names = IRON_MOVES.map(move => move.name);
+    for (const name of LODESTAR_MOVE_NAMES) expect(names, name).toContain(name);
+    expect(IRON_MOVES.filter(isLodestarMove)).toHaveLength(35);
+  });
+  it('puts every move in a known group, and every Lodestar group has moves', () => {
+    const groups = IRON_MOVE_GROUPS.map(group => group.id);
+    for (const move of IRON_MOVES) expect(groups, move.id).toContain(move.group);
+    for (const group of groups) expect(IRON_MOVES.some(move => move.group === group), group).toBe(true);
+  });
+  it('says what to do on a hit and a miss in every move that rolls', () => {
+    for (const move of IRON_MOVES.filter(move => move.roll && move.id !== 'ask-oracle' && move.id !== 'pay-price' && move.id !== 'turn-tide' && move.id !== 'aid-ally')) {
+      if (move.text === undefined || move.strong) expect(move.strong && move.weak && move.miss, `${move.id} outcomes`).toBeTruthy();
+    }
+  });
+  it('no longer hands out Hope for moves, because Momentum does that', () => {
+    for (const move of IRON_MOVES) expect(JSON.stringify(move), move.id).not.toMatch(/gain a Hope/i);
   });
   it('ships its tables', () => {
     for (const id of ['iron-price', 'iron-vignette', 'iron-waypoint', 'iron-opportunity', 'iron-discovery', 'iron-chaos'])

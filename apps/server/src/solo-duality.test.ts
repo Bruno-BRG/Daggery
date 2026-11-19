@@ -200,3 +200,57 @@ test('combat severe prices roll twice, record both dice and pay Fear exactly onc
     assert.match(entry.result.detail, /Fear spent: 1 \(0 left\)/);
   } finally { f.close(); }
 });
+
+/** A raw rng value that makes rollDie land on `value` of a d100. */
+const d100 = (value: number) => (value - 0.5) / 100;
+const roll100 = (kind: string, input: Record<string, unknown>, ...dice: number[]) => {
+  let index = 0;
+  const rng = () => d100(dice[index++] ?? 50);
+  return rollDuality(kind, { state: initialSoloState(), fear: 3, rng, input, question: '' });
+};
+
+test('Lodestar d100 tables read the printed row, and 00 is 100', () => {
+  assert.equal(roll100('duality-lodestar', { tableId: 'region' }, 1).result.title, 'Barrier Islands');
+  assert.equal(roll100('duality-lodestar', { tableId: 'region' }, 100).result.title, 'Elsewhere');
+  assert.equal(roll100('duality-lodestar', { tableId: 'action' }, 37).result.title, 'Hunt');
+  assert.match(roll100('duality-lodestar', { tableId: 'region' }, 100).result.detail, /d100 00: Elsewhere/);
+  assert.throws(() => roll100('duality-lodestar', { tableId: 'nothing' }, 1), /Invalid Lodestar table/);
+});
+
+test('Lodestar nested and paired tables roll each part', () => {
+  // Category 20 is "A manmade edifice"; example 35 is the fourth of its ten.
+  assert.equal(roll100('duality-lodestar', { tableId: 'settlement-name' }, 20, 35).result.title, 'Redhall');
+  assert.equal(roll100('duality-lodestar', { tableId: 'quick-settlement-name' }, 1, 1).result.title, 'Bleakmoor');
+  assert.equal(roll100('duality-lodestar', { tableId: 'quick-settlement-name' }, 40, 97).result.title, 'Lowwick');
+  const rank = roll100('duality-lodestar', { tableId: 'challenge-rank' }, 60);
+  assert.equal(rank.result.title, 'Formidable');
+  assert.match(rank.result.detail, /Foes: Exceptional fighters and mighty creatures/);
+  assert.match(rank.result.detail, /In Duality GME this rank is Grave/);
+});
+
+test('"Roll twice" results roll two more, skip further doubles, and worsen a repeat', () => {
+  const both = roll100('duality-lodestar', { tableId: 'pay-the-price' }, 100, 4, 60);
+  assert.equal(both.result.title, 'A person or community you trusted loses faith in you, or acts against you. + It is harmful.');
+  assert.match(both.result.detail, /Both results happen/);
+  const same = roll100('duality-lodestar', { tableId: 'pay-the-price' }, 99, 60, 62);
+  assert.equal(same.result.title, 'It is harmful. (worse)');
+  const skipsDouble = roll100('duality-lodestar', { tableId: 'pay-the-price' }, 99, 100, 4, 60);
+  assert.equal(skipsDouble.result.title.includes('Roll twice'), false);
+  const again = roll100('duality-lodestar', { tableId: 'pay-the-price' }, 1, 2, 77);
+  assert.equal(again.result.title, 'A surprising development complicates your quest. (worse)');
+});
+
+test('foe rank rolls the Challenge Rank and names adversaries of that rank', () => {
+  const rolled = roll100('duality-foe-rank', {}, 90, 6, 6, 6);
+  assert.match(rolled.result.title, /^Dire foe/);
+  assert.match(rolled.result.detail, /Duality GME rank: Dire\. Harm 4 against you; 2 ticks per harm/);
+  assert.ok(rolled.result.suggestions && rolled.result.suggestions.length > 0);
+  assert.equal(roll100('duality-foe-rank', {}, 10, 6, 6, 6).result.title.startsWith('Minor'), true);
+});
+
+test('an encounter tells you the foe rank for Enter the Fray', () => {
+  const ranked = rollDuality('duality-encounter', { state: initialSoloState(), fear: 0, rng: queue(5, 3, 8, 1, 1, 1), input: { tier: 2 }, question: '' });
+  assert.match(ranked.result.detail, /Foe rank: (Minor|Serious|Grave|Dire|Legendary) \(a tier 2 /);
+  const open = rollDuality('duality-encounter', { state: initialSoloState(), fear: 0, rng: queue(5, 3, 8, 1, 1, 1), input: {}, question: '' });
+  assert.match(open.result.detail, /Foe rank by tier: .*\(tier 1\).*\(tier 4\)/);
+});
