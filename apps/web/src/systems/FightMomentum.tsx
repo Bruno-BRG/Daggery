@@ -13,7 +13,7 @@ const net = (fight: FightRecord) => {
  */
 export function FightMomentum({ tracker }: { tracker: MomentumTracker }) {
   const { fight, history } = tracker;
-  if (!fight && history.length === 0) return <p className="tracker-note">Start a fight and its Momentum is recorded here.</p>;
+  if (!fight && history.length === 0) return <p className="tracker-note">Start a fight and it gets its own Momentum.</p>;
   return (
     <div className="fight-momentum">
       {fight ? (

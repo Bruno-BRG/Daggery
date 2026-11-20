@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { burnMomentum, negativeMomentumCancelsHope, resetMomentum, type Advantage, type ClientRollMessage, type DualityResult } from '@daggery/shared';
+import { activeMomentum, burnMomentum, negativeMomentumCancelsHope, resetMomentum, type Advantage, type ClientRollMessage, type DualityResult } from '@daggery/shared';
 import { getActiveCampaign } from '../campaign-context';
 import { signed, useMomentum } from '../systems/useMomentum';
 import { Icon } from '../components/Icon';
@@ -242,7 +242,7 @@ export function DiceTray({ author, onRolled }: DiceTrayProps) {
           {summary}
         </p>
       )}
-      {lastDuality && !burned && <MomentumHint result={lastDuality} momentum={tracker.value} reset={resetMomentum(tracker.debilities)}
+      {lastDuality && !burned && <MomentumHint result={lastDuality} momentum={activeMomentum(tracker)} reset={resetMomentum(tracker.debilities)}
         cancelsHope={negativeMomentumCancelsHope(tracker, lastDuality.hope)}
         onBurn={() => {
           update(burnMomentum);

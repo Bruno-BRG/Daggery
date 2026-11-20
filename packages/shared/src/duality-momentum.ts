@@ -37,7 +37,12 @@ const DEBILITY_IDS: readonly string[] = DEBILITIES.map(item => item.id);
 /** Who holds the spotlight in a fight. `null` means no fight is on. */
 export type Initiative = 'hero' | 'foe' | null;
 
-/** The Momentum of one fight: where it began, where it is (or ended), and its best and worst points. */
+/**
+ * The Momentum of one fight. Every fight has its own Momentum, apart from the campaign's. It begins
+ * fresh when the fight begins (at the reset value) and is gone when the fight ends. While a fight is on,
+ * every gain, loss and burn applies to it, and the campaign Momentum waits where it was.
+ * `end` is the fight's Momentum right now (or at the end of the fight).
+ */
 export interface FightRecord {
   start: number;
   end: number;
@@ -54,7 +59,7 @@ export interface MomentumTracker {
   initiative: Initiative;
   /** Set once per fight when Turn the Tide is used. */
   tideTurned: boolean;
-  /** The fight that is on now, or `null`. */
+  /** The fight that is on now, with its own Momentum, or `null`. */
   fight: FightRecord | null;
   /** The last fights, newest first. */
   history: FightRecord[];
@@ -66,6 +71,15 @@ export const initialMomentum = (): MomentumTracker => ({
 
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
 const whole = (value: unknown, fallback: number) => (typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : fallback);
+
+/** The Momentum you play with now: the fight's, while a fight is on, otherwise the campaign's. */
+export const activeMomentum = (tracker: MomentumTracker): number => (tracker.fight ? tracker.fight.end : tracker.value);
+/** Sets the Momentum you play with now and keeps the fight's best and worst points up to date. */
+function withActive(tracker: MomentumTracker, value: number): MomentumTracker {
+  if (!tracker.fight) return { ...tracker, value };
+  const fight = tracker.fight;
+  return { ...tracker, fight: { ...fight, end: value, peak: Math.max(fight.peak, value), low: Math.min(fight.low, value) } };
+}
 
 /** Each marked Debility lowers the most Momentum you can hold by one. */
 export const maxMomentum = (debilities: readonly string[]) => MOMENTUM_MAX - new Set(debilities).size;
@@ -82,13 +96,15 @@ export function parseMomentum(raw: unknown): MomentumTracker {
     ? [...new Set(input.debilities.filter((id): id is DebilityId => typeof id === 'string' && DEBILITY_IDS.includes(id)))]
     : [];
   const initial = initialMomentum();
+  const fight = parseFight(input.fight);
+  const top = maxMomentum(debilities);
   return {
     kind: 'momentum', debilities,
     value: clamp(whole(input.value, initial.value), MOMENTUM_MIN, maxMomentum(debilities)),
     supply: clamp(whole(input.supply, initial.supply), 0, SUPPLY_MAX),
     initiative: input.initiative === 'hero' || input.initiative === 'foe' ? input.initiative : null,
     tideTurned: input.tideTurned === true,
-    fight: parseFight(input.fight),
+    fight: fight ? { ...fight, end: Math.min(fight.end, top), start: Math.min(fight.start, top), peak: Math.min(fight.peak, top) } : null,
     history: Array.isArray(input.history) ? input.history.map(parseFight).filter((item): item is FightRecord => item !== null).slice(0, FIGHT_HISTORY) : [],
   };
 }
@@ -104,7 +120,7 @@ function parseFight(raw: unknown): FightRecord | null {
 /** "Take +N momentum": never above the maximum. */
 export function takeMomentum(tracker: MomentumTracker, amount: number): MomentumTracker {
   if (amount < 0) throw new RangeError('Use sufferMomentum for a loss');
-  return { ...tracker, value: Math.min(maxMomentum(tracker.debilities), tracker.value + amount) };
+  return withActive(tracker, Math.min(maxMomentum(tracker.debilities), activeMomentum(tracker) + amount));
 }
 
 /**
@@ -113,12 +129,12 @@ export function takeMomentum(tracker: MomentumTracker, amount: number): Momentum
  */
 export function sufferMomentum(tracker: MomentumTracker, amount: number): { tracker: MomentumTracker; setback: number } {
   if (amount < 0) throw new RangeError('Use takeMomentum for a gain');
-  const next = Math.max(MOMENTUM_MIN, tracker.value - amount);
-  return { tracker: { ...tracker, value: next }, setback: amount - (tracker.value - next) };
+  const now = activeMomentum(tracker), next = Math.max(MOMENTUM_MIN, now - amount);
+  return { tracker: withActive(tracker, next), setback: amount - (now - next) };
 }
 
 /** Momentum is exchanged, not lost: burning, Face a Setback and Pay the Price all end here. */
-export const burnMomentum = (tracker: MomentumTracker): MomentumTracker => ({ ...tracker, value: resetMomentum(tracker.debilities) });
+export const burnMomentum = (tracker: MomentumTracker): MomentumTracker => withActive(tracker, resetMomentum(tracker.debilities));
 
 export type MoveOutcome = 'strong' | 'weak' | 'miss';
 const IMPROVED: Record<MoveOutcome, MoveOutcome> = { miss: 'weak', weak: 'strong', strong: 'strong' };
@@ -129,7 +145,7 @@ const IMPROVED: Record<MoveOutcome, MoveOutcome> = { miss: 'weak', weak: 'strong
  * the world does not gain Fear from the roll. Progress moves ignore Momentum.
  */
 export function canBurnMomentum(tracker: MomentumTracker, fearDie: number, outcome: MoveOutcome): boolean {
-  return outcome !== 'strong' && tracker.value > fearDie;
+  return outcome !== 'strong' && activeMomentum(tracker) > fearDie;
 }
 export const burnedOutcome = (outcome: MoveOutcome): MoveOutcome => IMPROVED[outcome];
 
@@ -138,7 +154,7 @@ export const burnedOutcome = (outcome: MoveOutcome): MoveOutcome => IMPROVED[out
  * number comes off the total, and the roll cannot be a success with Hope.
  */
 export const negativeMomentumCancelsHope = (tracker: MomentumTracker, hopeDie: number): boolean =>
-  tracker.value < 0 && -tracker.value === hopeDie;
+  activeMomentum(tracker) < 0 && -activeMomentum(tracker) === hopeDie;
 
 /** Strong hits take or keep Initiative. Weak hits and misses pass it to the foe. */
 export const initiativeAfter = (outcome: MoveOutcome): Exclude<Initiative, null> => (outcome === 'strong' ? 'hero' : 'foe');
@@ -153,7 +169,7 @@ export function sufferSupply(tracker: MomentumTracker, amount: number): { tracke
   const supply = tracker.supply - paid;
   const debilities: DebilityId[] = supply === 0 && !tracker.debilities.includes('unprepared') ? [...tracker.debilities, 'unprepared'] : tracker.debilities;
   const next = { ...tracker, supply, debilities };
-  return { tracker: { ...next, value: Math.min(next.value, maxMomentum(debilities)) }, shortfall: amount - paid };
+  return { tracker: withActive({ ...next, value: Math.min(next.value, maxMomentum(debilities)) }, Math.min(activeMomentum(next), maxMomentum(debilities))), shortfall: amount - paid };
 }
 export function takeSupply(tracker: MomentumTracker, amount: number): MomentumTracker {
   if (amount < 0) throw new RangeError('Use sufferSupply for a loss');
@@ -165,27 +181,29 @@ export function setDebility(tracker: MomentumTracker, id: DebilityId, marked: bo
   const has = tracker.debilities.includes(id);
   if (has === marked) return tracker;
   const debilities = marked ? [...tracker.debilities, id] : tracker.debilities.filter(item => item !== id);
-  return { ...tracker, debilities, value: Math.min(tracker.value, maxMomentum(debilities)) };
+  const top = maxMomentum(debilities);
+  return withActive({ ...tracker, debilities, value: Math.min(tracker.value, top) }, Math.min(activeMomentum(tracker), top));
 }
 
 /**
- * Starts a fight, or ends it by passing `null`. Starting writes a fresh record of this fight's Momentum.
- * Ending moves that record into the history. Changing who has Initiative mid-fight keeps the record.
+ * Starts a fight, or ends it by passing `null`. Starting begins a new Momentum for this fight, at the
+ * reset value (+2, or less with debilities); the campaign Momentum waits. Ending throws the fight's
+ * Momentum away, keeps a note of it in the history, and the campaign Momentum is as it was.
+ * Changing who has Initiative mid-fight keeps the fight's Momentum.
  */
 export function setInitiative(tracker: MomentumTracker, initiative: Initiative): MomentumTracker {
   if (initiative === null) {
-    const history = tracker.fight ? [{ ...tracker.fight, end: tracker.value }, ...tracker.history].slice(0, FIGHT_HISTORY) : tracker.history;
+    const history = tracker.fight ? [tracker.fight, ...tracker.history].slice(0, FIGHT_HISTORY) : tracker.history;
     return { ...tracker, initiative, tideTurned: false, fight: null, history };
   }
-  const fight = tracker.fight ?? { start: tracker.value, end: tracker.value, peak: tracker.value, low: tracker.value };
+  const begin = Math.min(resetMomentum(tracker.debilities), maxMomentum(tracker.debilities));
+  const fight = tracker.fight ?? { start: begin, end: begin, peak: begin, low: begin };
   return { ...tracker, initiative, fight };
 }
 
-/** Keeps the current fight's record up to date. Call it after any change to Momentum. */
+/** Kept for callers that mirror a change: the fight's best and worst points follow its Momentum. */
 export function trackFight(tracker: MomentumTracker): MomentumTracker {
-  const fight = tracker.fight;
-  if (!fight || (fight.end === tracker.value && fight.peak >= tracker.value && fight.low <= tracker.value)) return tracker;
-  return { ...tracker, fight: { ...fight, end: tracker.value, peak: Math.max(fight.peak, tracker.value), low: Math.min(fight.low, tracker.value) } };
+  return tracker.fight ? withActive(tracker, tracker.fight.end) : tracker;
 }
 
 /** What a fight did to your Momentum: the end minus the start. */
@@ -205,6 +223,5 @@ export const initiativeLabelFor = (initiative: Initiative): string =>
       : '';
 
 /** Sets Momentum directly, as when you tap a rung of the ladder. It stays between -6 and your maximum. */
-export const setMomentum = (tracker: MomentumTracker, value: number): MomentumTracker => ({
-  ...tracker, value: clamp(Math.trunc(value), MOMENTUM_MIN, maxMomentum(tracker.debilities)),
-});
+export const setMomentum = (tracker: MomentumTracker, value: number): MomentumTracker =>
+  withActive(tracker, clamp(Math.trunc(value), MOMENTUM_MIN, maxMomentum(tracker.debilities)));

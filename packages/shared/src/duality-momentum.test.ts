@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  burnedOutcome, burnMomentum, setMomentum, canBurnMomentum, initialMomentum, initiativeAfter, maxMomentum, negativeMomentumCancelsHope,
-  parseMomentum, resetMomentum, setDebility, setInitiative, sufferMomentum, sufferSupply, takeMomentum, takeSupply, trackFight, turnTheTide, fightNet,
+  activeMomentum, burnedOutcome, burnMomentum, setMomentum, canBurnMomentum, initialMomentum, initiativeAfter, maxMomentum, negativeMomentumCancelsHope,
+  parseMomentum, resetMomentum, setDebility, setInitiative, sufferMomentum, sufferSupply, takeMomentum, takeSupply, turnTheTide, fightNet,
 } from './duality-momentum';
 
 describe('Momentum', () => {
@@ -98,26 +98,44 @@ describe('Initiative', () => {
 });
 
 describe('Momentum of a fight', () => {
-  it('starts a record when a fight begins and keeps best and worst points', () => {
-    let t = setInitiative({ ...initialMomentum(), value: 3 }, 'hero');
-    expect(t.fight).toEqual({ start: 3, end: 3, peak: 3, low: 3 });
-    t = trackFight({ ...t, value: 7 });
-    t = trackFight({ ...t, value: -1 });
-    expect(t.fight).toEqual({ start: 3, end: -1, peak: 7, low: -1 });
+  it('begins a separate Momentum at the reset value and leaves the campaign Momentum alone', () => {
+    const t = setInitiative({ ...initialMomentum(), value: 7 }, 'hero');
+    expect(t.value).toBe(7);
+    expect(t.fight).toEqual({ start: 2, end: 2, peak: 2, low: 2 });
+    expect(activeMomentum(t)).toBe(2);
+    expect(setInitiative({ ...initialMomentum(), debilities: ['wounded'] }, 'foe').fight?.start).toBe(1);
+  });
+  it('applies every gain, loss and burn to the fight, and the campaign waits', () => {
+    let t = setInitiative({ ...initialMomentum(), value: 7 }, 'hero');
+    t = takeMomentum(t, 5);
+    expect(activeMomentum(t)).toBe(7);
+    t = sufferMomentum(t, 9).tracker;
+    expect(t.fight).toEqual({ start: 2, end: -2, peak: 7, low: -2 });
     expect(fightNet(t.fight!)).toBe(-4);
+    expect(t.value).toBe(7);
+    t = burnMomentum(takeMomentum(t, 9));
+    expect(activeMomentum(t)).toBe(2);
+    expect(t.value).toBe(7);
   });
-  it('keeps the record when Initiative changes hands', () => {
-    const t = setInitiative(setInitiative({ ...initialMomentum(), value: 3 }, 'hero'), 'foe');
-    expect(t.fight?.start).toBe(3);
+  it('lets the fight burn only against its own Momentum', () => {
+    const t = setInitiative({ ...initialMomentum(), value: 9 }, 'hero');
+    expect(canBurnMomentum(t, 5, 'miss')).toBe(false);
+    expect(canBurnMomentum({ ...t, value: 1 }, 1, 'miss')).toBe(true);
   });
-  it('moves the record to the history when the fight ends, newest first, five at most', () => {
-    let t = initialMomentum();
-    for (let i = 0; i < 7; i++) {
-      t = setInitiative({ ...t, value: i }, 'hero');
-      t = setInitiative(trackFight({ ...t, value: i + 1 }), null);
-    }
+  it('keeps the fight when Initiative changes hands', () => {
+    const t = setInitiative(takeMomentum(setInitiative(initialMomentum(), 'hero'), 3), 'foe');
+    expect(t.fight).toMatchObject({ start: 2, end: 5 });
+  });
+  it('throws the fight Momentum away at the end, keeping a note, newest first, five at most', () => {
+    let t = { ...initialMomentum(), value: 4 };
+    for (let i = 0; i < 7; i++) t = setInitiative(takeMomentum(setInitiative(t, 'hero'), i), null);
     expect(t.fight).toBeNull();
+    expect(t.value).toBe(4);
     expect(t.history).toHaveLength(5);
-    expect(t.history[0]).toMatchObject({ start: 6, end: 7 });
+    expect(t.history[0]).toMatchObject({ start: 2, end: 8 });
+  });
+  it('lowers the fight Momentum when a debility lowers the maximum', () => {
+    const t = setDebility(takeMomentum(setInitiative(initialMomentum(), 'hero'), 8), 'wounded', true);
+    expect(activeMomentum(t)).toBe(9);
   });
 });

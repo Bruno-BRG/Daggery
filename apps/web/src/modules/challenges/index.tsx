@@ -4,7 +4,7 @@ import { IconButton, ItemCard, PanelSection, TONES } from '../../components/Acco
 import { useDocs } from '../../sync/store';
 import { useActiveHero } from '../sheets/activeHero';
 import { adversaries } from '@daggery/content';
-import { heroHarm, initiativeLabelFor, setInitiative, turnTheTide, type IronRank, type PackSize } from '@daggery/shared';
+import { activeMomentum, heroHarm, initiativeLabelFor, setInitiative, turnTheTide, type IronRank, type PackSize } from '@daggery/shared';
 import { FightMomentum } from '../../systems/FightMomentum';
 import { signed, useMomentum } from '../../systems/useMomentum';
 import '../../systems/trackers.css';
@@ -102,9 +102,10 @@ export default function Challenges({ author: _author }: { author: string }) {
 function InitiativeBar() {
   const { tracker, update } = useMomentum();
   const fighting = tracker.initiative !== null;
-  return <div className="tracker is-momentum is-inline challenges-initiative" data-negative={tracker.value < 0 || undefined} role="group" aria-label="Initiative">
+  return <div className="tracker is-momentum is-inline challenges-initiative" data-negative={activeMomentum(tracker) < 0 || undefined} role="group" aria-label="Initiative">
     <div className="challenges-initiative-head">
-      <span><Icon name="spark" />Momentum <strong>{signed(tracker.value)}</strong></span>
+      <span><Icon name={fighting ? 'combat' : 'spark'} />{fighting ? 'Fight Momentum' : 'Momentum'} <strong>{signed(activeMomentum(tracker))}</strong></span>
+      {fighting && <span><Icon name="spark" />Campaign <strong>{signed(tracker.value)}</strong></span>}
       <span><Icon name="backpack" />Supply <strong>{tracker.supply}</strong></span>
     </div>
     <div className="tracker-segments" role="group" aria-label="Who has initiative">

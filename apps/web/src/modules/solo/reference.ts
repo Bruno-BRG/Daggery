@@ -288,7 +288,7 @@ export const SOLO_SECTIONS: readonly SoloSection[] = [
           ['Banes and burdens', 'Maimed, Corrupted (banes), Cursed, Tormented (burdens). Burdens clear only by finishing the quest that caused them.'],
           ['Debility cost', 'Each marked Debility lowers your maximum Momentum by 1 and your reset (+2, then +1, then 0).'],
           ['Levels', 'There is no experience count. You level up at a milestone: a Grave, Dire or Legendary vow fulfilled, a story arc finished, or when the table agrees. Use Advance.'],
-          ['Fight Momentum', 'The tracker records Momentum from the start of each fight: start, now, best, worst and net.'],
+          ['Fight Momentum', 'Every fight has its own Momentum, apart from the campaign’s. It begins at your reset (+2) and is gone when the fight ends. In a fight, all gains, losses and burns use it. Campaign Momentum waits.'],
           ['Hit Points and Stress', 'Ironsworn’s health and spirit are the Hit Points and Stress on your sheet.'],
         ],
       },
