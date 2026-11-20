@@ -43,24 +43,6 @@ export function resolveIronProgress(score: number, challenge1: number, challenge
   return { outcome: beaten === 2 ? 'strong' : beaten === 1 ? 'weak' : 'miss', match: challenge1 === challenge2 };
 }
 
-/**
- * The Duality progress roll. The two Duality Dice (Hope and Fear, d12) are the challenge dice. A d12 is
- * 1.2 times a d10, so the progress score is converted to a target of the same strength:
- * target = score x 1.2, rounded. The odds stay within 5 points of Ironsworn's two d10.
- * Like the d10 roll, it gives no Hope and no Fear, and no modifier changes it.
- */
-export const dualityProgressTarget = (score: number): number => {
-  if (!Number.isInteger(score) || score < 0 || score > 10) throw new Error('Invalid progress score');
-  return Math.round((score * 6) / 5);
-};
-/** The target must beat each die (ties go to the dice). Matching dice: a twist. */
-export function resolveDualityProgress(score: number, hope: number, fear: number): { outcome: IronOutcome; match: boolean; target: number } {
-  assertDie(hope, 12, 'Hope die'); assertDie(fear, 12, 'Fear die');
-  const target = dualityProgressTarget(score);
-  const beaten = Number(target > hope) + Number(target > fear);
-  return { outcome: beaten === 2 ? 'strong' : beaten === 1 ? 'weak' : 'miss', match: hope === fear, target };
-}
-
 /** GME likelihoods over the Hope + Fear targets. */
 export const IRON_LIKELIHOODS = DUALITY_LIKELIHOODS;
 export const IRON_CLOCK_SIZES = [4, 6, 8] as const;

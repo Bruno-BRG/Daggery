@@ -185,7 +185,7 @@
       <ul>
         <li><b>The Daggerheart rules</b> for character creation, combat, damage and adversaries.</li>
         <li><b>The Duality Dice:</b> two d12 in different colors, one for Hope and one for Fear.</li>
-        <li><b>Two d10</b> (optional): the classic Ironsworn challenge dice. The Duality Dice can do their job.</li>
+        <li><b>Two d10:</b> the challenge dice for progress rolls.</li>
         <li><b>A d6</b> for advantage dice, <b>a d20</b> for adversary attacks, and the damage dice your character uses.</li>
         <li><b>A character sheet</b>, and the <b>tracker sheet</b> at the back of this book (or a notebook).</li>
         <li>Tokens or a counter for <b>Hope</b> and <b>Fear</b>.</li>
@@ -406,27 +406,29 @@
     </div>
     <div class="block">
       <h2>The progress roll</h2>
-      <p>When a move asks for a <b>progress roll</b>, count the <b>full boxes</b> on the track: that is your <b>progress score</b>, from 0 to 10. Partly filled boxes do not count. Turn it into a <b>target</b>: 0 to 10 becomes 0, 1, 2, 4, 5, 6, 7, 8, 10, 11, 12. Then roll the <b>Duality Dice</b>. The Hope and Fear dice are the challenge dice: compare your target to each.</p>
+      <p>When a move asks for a <b>progress roll</b>, count the <b>full boxes</b> on the track: that is your <b>progress score</b>, from 0 to 10. Partly filled boxes do not count. Roll the two challenge dice (d10) and compare your score to each.</p>
       <div class="fig">
-        <div class="stack"><span data-die="score:7"></span><span class="lbl">Target 7 (score 6)</span></div>
+        <div class="stack"><span data-die="score:6"></span><span class="lbl">Progress score</span></div>
         <span class="op">vs</span>
-        <div class="stack"><span data-die="hope:4"></span><span class="lbl">Beaten</span></div>
-        <div class="stack"><span data-die="fear:9"></span><span class="lbl">Not beaten</span></div>
+        <div class="stack"><span data-die="d10:4"></span><span class="lbl">Beaten</span></div>
+        <div class="stack"><span data-die="d10:8"></span><span class="lbl">Not beaten</span></div>
       </div>
-      <div class="out"><div class="ic"><span>&#10003;</span><span>&#10003;</span></div><p><b>Strong hit:</b> your target beats both dice.</p></div>
-      <div class="out"><div class="ic"><span>&#10003;</span><span>&#10007;</span></div><p><b>Weak hit:</b> your target beats one die.</p></div>
-      <div class="out"><div class="ic"><span>&#10007;</span><span>&#10007;</span></div><p><b>Miss:</b> your target beats neither.</p></div>
+      <p class="cap">A score of 6 beats the 4 but not the 8: a weak hit.</p>
+      <div class="out"><div class="ic"><span>&#10003;</span><span>&#10003;</span></div><p><b>Strong hit:</b> your score beats both dice.</p></div>
+      <div class="out"><div class="ic"><span>&#10003;</span><span>&#10007;</span></div><p><b>Weak hit:</b> your score beats one die.</p></div>
+      <div class="out"><div class="ic"><span>&#10007;</span><span>&#10007;</span></div><p><b>Miss:</b> your score beats neither.</p></div>
     </div>
     <div class="callout">
-      <p>Ties go to the dice: your target must beat a die. Progress rolls never give Hope or Fear, and no modifier, Experience or Hope can change them.</p>
+      <p>Ties go to the challenge dice. Your score has to beat a die, not equal it.</p>
+      <p>Progress rolls never give Hope or Fear, and no modifier, Experience or Hope can change them. Your progress is your bonus.</p>
     </div>
     <div class="block">
       <h2>Matches</h2>
-      <p>When both dice show the same number (doubles), it is a <b>match</b>. Something unexpected happens. On a hit, the twist is in your favor. On a miss, it is a dire turn: a new danger, a betrayal, a worse outcome. If you are unsure what the twist is, <i>Ask the Oracle</i>.</p>
+      <p>When both challenge dice show the same number, it is a <b>match</b>. Something unexpected happens. On a hit, the twist is in your favor: a new opportunity, a revelation, an extra reward. On a miss, it is a dire turn: a new danger, a betrayal, a worse outcome than the move says. If you are unsure what the twist is, <i>Ask the Oracle</i>.</p>
     </div>
     <div class="block">
       <h2>When to roll</h2>
-      <p>You decide when to make a progress roll, as long as the story allows it. A full track is not required. Rolling early is a gamble: a score of 4 beats each die less than half the time. Rolling late costs time, and the world keeps moving.</p>
+      <p>You decide when to make a progress roll, as long as the story allows it. A full track is not required. Rolling early is a gamble: a score of 4 beats a d10 less than half the time. Rolling late costs time and scenes, and the world keeps moving. That tension is the heart of the game.</p>
     </div>
     <div class="block">
       <h2>Tension clocks</h2>
@@ -436,7 +438,7 @@
     </div>
     <div class="block">
       <h2>Progress roll odds</h2>
-      <p>How likely each outcome is for each progress score. Use it to decide when to roll.</p>
+      <p>How likely each outcome is for each progress score. Use it to decide whether to roll now or push for one more box.</p>
       <div data-odds="progress"></div>
     </div>
   </div>
@@ -612,7 +614,7 @@
       <p><b>Roll + trait.</b> Make a Daggerheart action roll with that trait. &ldquo;The trait that fits&rdquo; means choose by how you act: <b>Agility</b> to move fast, <b>Strength</b> to force, <b>Finesse</b> to be precise or quiet, <b>Instinct</b> to sense and react, <b>Presence</b> to charm or command, <b>Knowledge</b> to recall or reason.</p>
       <p><b>Strong hit, weak hit, miss.</b> The three move outcomes (page <span data-ref="Mechanics Summary"></span>).</p>
       <p><b>Mark progress.</b> Fill a progress track by its rank.</p>
-      <p><b>Progress roll.</b> Your progress target against the Hope and Fear dice. No traits, no Hope.</p>
+      <p><b>Progress roll.</b> Your progress score against two challenge dice. No traits, no Hope.</p>
       <p><b>Pay the Price.</b> Suffer the outcome of a miss.</p>
       <p><b>Severe.</b> A price the world made worse with 1 Fear: roll it twice.</p>
       <p><b>Take +N momentum.</b> Add N to Momentum, up to your maximum. <b>Suffer &minus;N momentum:</b> subtract N, down to &minus;6.</p>
@@ -621,7 +623,7 @@
       <p><b>Supply.</b> A 0 to 5 pool for gear, food and preparation.</p>
       <p><b>Mark a Stress.</b> As in Daggerheart. If you cannot, mark a Hit Point instead.</p>
       <p><b>Advantage.</b> Add a d6 advantage die to the roll.</p>
-      <p><b>Twist.</b> A result that turns the story: from doubles on the oracle, or doubles on a progress roll.</p>
+      <p><b>Twist.</b> A result that turns the story: from doubles on the oracle, or a match on the challenge dice.</p>
       <p><b>Rank.</b> Minor, Serious, Grave, Dire or Legendary.</p>
       <p><b>Fear Check.</b> A d12 equal to or under Fear passes (page <span data-ref="The World's Voice"></span>).</p>
     </div>
@@ -1208,7 +1210,7 @@
     </div>
     <div class="block">
       <h3>The end of the vow</h3>
-      <p>Over the next sessions Wren follows the voice, reaches three milestones and fills <b>6 boxes</b> on her vow. In a hidden glade she finds Maro, alive, and the bounty hunter standing over her. After the fight, Wren makes the progress roll for <i>Fulfill Your Vow</i>: the Hope die shows 4 and the Fear die 9. Her score of 6 is a target of 7: it beats one die, a weak hit. No Hope and no Fear change hands. Maro is saved and the well can be cured, but whoever betrayed her is still out there. She marks 1 experience. Momentum does not count on a progress roll. Wren swears a new vow.</p>
+      <p>Over the next sessions Wren follows the voice, reaches three milestones and fills <b>6 boxes</b> on her vow. In a hidden glade she finds Maro, alive, and the bounty hunter standing over her. After the fight, Wren makes the progress roll for <i>Fulfill Your Vow</i>: the challenge dice show 4 and 8. A score of 6 beats one: a weak hit. Maro is saved and the well can be cured, but whoever betrayed her is still out there. She marks 1 experience. Momentum does not count on a progress roll. Wren swears a new vow.</p>
     </div>
     <div class="block">
       <h3>A closer look: the fight in the glade</h3>
@@ -1276,7 +1278,7 @@
     </div>
     <div class="block">
       <h2>Progress roll</h2>
-      <p>Full boxes to target: 0 1 2 3 4 5 6 7 8 9 10 = 0 1 2 4 5 6 7 8 10 11 12. Beat both Duality Dice: strong hit. Beat one: weak hit. Beat neither: miss. Ties go to the dice. Doubles are a twist. No Hope, no Fear.</p>
+      <p>Full boxes vs two d10. Beat both: strong hit. Beat one: weak hit. Beat neither: miss. Ties go to the dice. A match is a twist. No Hope, no Fear, no modifiers.</p>
     </div>
     <div class="block">
       <h2>Fear Check</h2>
@@ -7995,11 +7997,11 @@ for (const el of $('[data-momentum]')) el.innerHTML = Array.from({ length: 17 },
   return `<span class="${v === 0 ? 'z' : ''}">${v > 0 ? '+' + v : v < 0 ? '−' + -v : '0'}${v === -6 ? '<small>min</small>' : v === 2 ? '<small>start</small>' : v === 10 ? '<small>max</small>' : ''}</span>`; }).join('');
 for (const el of $('[data-debilities]')) el.innerHTML = T['iron-debilities'].c[0].map(label => `<span>${label}</span>`).join('');
 
-// Exact odds: a target beats a d12 on (target - 1) of its 12 faces; a Fear Check passes on Fear of 12 faces.
+// Exact odds: a score beats a d10 on (score - 1) of its 10 faces; a Fear Check passes on Fear of 12 faces.
 const pct = x => `${Math.round(x * 100)}%`;
 for (const el of $('[data-odds="progress"]')) {
   let h = '<table><tr><th class="n">Score</th><th>Strong</th><th>Weak</th><th>Miss</th><th class="n">Score</th><th>Strong</th><th>Weak</th><th>Miss</th></tr>';
-  const line = s => { const p = Math.max(0, Math.round(s * 1.2) - 1) / 12; return `<td class="n">${s}</td><td>${pct(p * p)}</td><td>${pct(2 * p * (1 - p))}</td><td>${pct((1 - p) ** 2)}</td>`; };
+  const line = s => { const p = Math.max(0, s - 1) / 10; return `<td class="n">${s}</td><td>${pct(p * p)}</td><td>${pct(2 * p * (1 - p))}</td><td>${pct((1 - p) ** 2)}</td>`; };
   for (let s = 0; s <= 5; s++) h += `<tr>${line(s)}${s + 6 <= 10 ? line(s + 6) : '<td></td><td></td><td></td><td></td>'}</tr>`;
   el.innerHTML = h + '</table>';
 }

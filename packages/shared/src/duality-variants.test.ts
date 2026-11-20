@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DUALITY_TABLES } from './duality-engine';
-import { dualityProgressTarget, resolveDualityProgress, IRON_MOVE_GROUPS, IRON_MOVES, IRON_RANKS, ironProgressScore, isLodestarMove, LODESTAR_MOVE_NAMES, markIronProgress, resolveIronProgress } from './duality-variants';
+import { IRON_MOVE_GROUPS, IRON_MOVES, IRON_RANKS, ironProgressScore, isLodestarMove, LODESTAR_MOVE_NAMES, markIronProgress, resolveIronProgress } from './duality-variants';
 
 describe('Duality GME', () => {
   it('marks progress by rank and caps the track', () => {
@@ -39,25 +39,5 @@ describe('Duality GME', () => {
   it('ships its tables', () => {
     for (const id of ['iron-price', 'iron-vignette', 'iron-waypoint', 'iron-opportunity', 'iron-discovery', 'iron-chaos'])
       expect(DUALITY_TABLES.some(table => table.id === id)).toBe(true);
-  });
-});
-
-describe('Duality progress roll', () => {
-  it('converts a score to a d12 target', () => {
-    expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(dualityProgressTarget)).toEqual([0, 1, 2, 4, 5, 6, 7, 8, 10, 11, 12]);
-    expect(() => dualityProgressTarget(11)).toThrow();
-  });
-  it('compares the target with the Hope and Fear dice', () => {
-    expect(resolveDualityProgress(6, 3, 5)).toEqual({ outcome: 'strong', match: false, target: 7 });
-    expect(resolveDualityProgress(6, 3, 8).outcome).toBe('weak');
-    expect(resolveDualityProgress(6, 7, 7)).toEqual({ outcome: 'miss', match: true, target: 7 });
-    expect(resolveDualityProgress(0, 1, 1).outcome).toBe('miss');
-  });
-  it('stays within 6 points of the Ironsworn d10 odds for every score', () => {
-    const beat = (target: number, sides: number) => Math.max(0, target - 1) / sides;
-    for (let score = 0; score <= 10; score++) {
-      const duality = beat(dualityProgressTarget(score), 12), iron = beat(score, 10);
-      expect(Math.abs(duality - iron)).toBeLessThan(0.06);
-    }
   });
 });

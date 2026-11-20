@@ -3,9 +3,8 @@ import { Icon } from '../../components/Icon';
 import { IconButton, ItemCard, PanelSection, TONES } from '../../components/Accordion';
 import { useDocs } from '../../sync/store';
 import { useActiveHero } from '../sheets/activeHero';
-import { useDiceTray } from '../../dice3d';
 import { adversaries } from '@daggery/content';
-import { heroHarm, IRON_OUTCOME_LABELS, initiativeLabelFor, resolveDualityProgress, setInitiative, turnTheTide, type IronRank, type PackSize } from '@daggery/shared';
+import { heroHarm, initiativeLabelFor, setInitiative, turnTheTide, type IronRank, type PackSize } from '@daggery/shared';
 import { FightMomentum } from '../../systems/FightMomentum';
 import { signed, useMomentum } from '../../systems/useMomentum';
 import '../../systems/trackers.css';
@@ -73,7 +72,7 @@ export default function Challenges({ author: _author }: { author: string }) {
     <header className="challenges-heading">
       <p className="challenges-kicker">Solo play</p>
       <h1><Icon name="target" />Challenges</h1>
-      <p>Keep the vows, fights, journeys, bonds, scenes and countdowns that matter. Mark progress from the rank, then count the full boxes for a progress score. Roll the Duality Dice against it: the Hope and Fear dice are the challenge dice.</p>
+      <p>Keep the vows, fights, journeys, bonds, scenes and countdowns that matter. Mark progress from the rank, then count the full boxes for a progress score. Roll the challenge dice (two d10) against it on the table.</p>
     </header>
 
     {TYPE_ORDER.map(type => {
@@ -190,23 +189,6 @@ function TrackCard({ id, doc, onSave, onRemove }: {
 }) {
   const { hero } = useActiveHero();
   const mine = heroHarm('deadly', hero?.proficiency ?? 1);
-  const { roll } = useDiceTray();
-  const [verdict, setVerdict] = useState<string | null>(null);
-  const [rolling, setRolling] = useState(false);
-  // The Duality progress roll: the Hope and Fear dice are the challenge dice. No Hope, no Fear.
-  const progressRoll = () => {
-    if (doc.type === 'countdown') return;
-    setRolling(true);
-    const points = score(doc.ticks);
-    void roll({ kind: 'duality' }, {
-      onComputed: payload => {
-        setRolling(false);
-        if (payload.kind !== 'duality') return;
-        const result = resolveDualityProgress(points, payload.result.hope, payload.result.fear);
-        setVerdict(`Progress ${points} (target ${result.target}) vs Hope ${payload.result.hope} and Fear ${payload.result.fear}: ${IRON_OUTCOME_LABELS[result.outcome]}${result.match ? ', and the dice match: a twist' : ''}.`);
-      },
-    }).catch(() => setRolling(false));
-  };
   return <ItemCard
     title={doc.name}
     caption={<span className="challenges-caption"><span>{trackCaption(doc)}</span>{doc.type !== 'countdown' && <TrackBar ticks={doc.ticks} />}</span>}
@@ -253,10 +235,6 @@ function TrackCard({ id, doc, onSave, onRemove }: {
             <button type="button" className="challenges-btn" aria-label={`Remove one tick from ${doc.name}`} onClick={() => onSave(id, doc, { ticks: addTicks(doc.ticks, -1) })}>−1 tick</button>
             <button type="button" className="challenges-btn" aria-label={`Add one tick to ${doc.name}`} onClick={() => onSave(id, doc, { ticks: addTicks(doc.ticks, 1) })}>+1 tick</button>
           </div>
-          <div className="challenges-actions">
-            <button type="button" className="challenges-btn is-primary" disabled={rolling} aria-label={`Progress roll for ${doc.name}`} onClick={progressRoll}><Icon name="dice" />Progress roll</button>
-          </div>
-          {verdict && <p className="tracker-state" role="status"><Icon name="dice" /><span>{verdict}</span></p>}
         </>}
     <label className="challenges-field">Notes
       <textarea rows={3} maxLength={4000} value={doc.notes} placeholder="What is at stake, and what changed?" onChange={event => onSave(id, doc, { notes: event.target.value })} />
