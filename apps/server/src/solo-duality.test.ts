@@ -124,12 +124,23 @@ test('a hazard reads one row, so the failure fits the hazard', () => {
   assert.deepEqual(hazard.result.cells, [{ table: 'hazard', column: 0, roll: 1 }, { table: 'hazard', column: 1, roll: 1 }]);
 });
 
+test('Duality GME: a progress roll uses the Duality Dice, or two d10 on request', () => {
+  const d12 = (...values: number[]) => { let i = 0; return () => (values[i++]! - 0.5) / 12; };
+  const state = initialSoloState();
+  // Score 6 has a target of 7.
+  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d12(3, 6), input: { score: 6 }, question: '' }).result.title, 'Strong hit');
+  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d12(3, 9), input: { score: 6 }, question: '' }).result.title, 'Weak hit');
+  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d12(8, 8), input: { score: 6 }, question: '' }).result.title, 'Miss (match)');
+  const classic = rollDuality('iron-progress', { state, fear: 0, rng: (() => { const v = [3, 5]; let i = 0; return () => (v[i++]! - 0.5) / 10; })(), input: { score: 6, dice: 'd10' }, question: '' });
+  assert.equal(classic.result.title, 'Strong hit');
+});
+
 test('Duality GME: progress rolls beat the challenge dice, and a severe price spends Fear for a second price', () => {
   const d10 = (...values: number[]) => { let i = 0; return () => (values[i++]! - 0.5) / 10; };
   const state = initialSoloState();
-  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d10(3, 5), input: { score: 6, name: 'Find the caravan' }, question: '' }).result.title, 'Strong hit');
-  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d10(3, 6), input: { score: 6 }, question: '' }).result.title, 'Weak hit');
-  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d10(7, 7), input: { score: 6 }, question: '' }).result.title, 'Miss (match)');
+  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d10(3, 5), input: { score: 6, dice: 'd10', name: 'Find the caravan' }, question: '' }).result.title, 'Strong hit');
+  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d10(3, 6), input: { score: 6, dice: 'd10' }, question: '' }).result.title, 'Weak hit');
+  assert.equal(rollDuality('iron-progress', { state, fear: 0, rng: d10(7, 7), input: { score: 6, dice: 'd10' }, question: '' }).result.title, 'Miss (match)');
   const severe = rollDuality('iron-price', { state, fear: 2, rng: queue(5, 6), input: { severe: true }, question: '' });
   assert.equal(severe.result.title, 'Mark a Stress + Take damage (by tier)');
   assert.equal(severe.fearSpent, 1);

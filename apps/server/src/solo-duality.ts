@@ -2,7 +2,7 @@ import { adversaries } from '@daggery/content';
 import {
   adversaryTypeName, adversariesForRank, foeRankFor, FOE_RANKS, IRON_LIKELIHOODS, IRON_OUTCOME_LABELS, lodestarTable, readLodestarColumn,
   type LodestarColumn, type LodestarRow,
-  resolveIronProgress, DUALITY_MEANING_CHOICES, dualityTable, fearCheck, readDualityMeaning,
+  resolveIronProgress, resolveDualityProgress, DUALITY_MEANING_CHOICES, dualityTable, fearCheck, readDualityMeaning,
   readDualityTable, resolveFearSpend, rollDie,
   type DualityList, type DualityMeaningTable, type Rng, type SoloResult, type SoloState, type SoloTone, type SoloTrackerItem,
 } from '@daggery/shared';
@@ -166,9 +166,12 @@ export function rollDuality(kind: string, roll: DualityRoll): DualityOutcome {
   if (kind === 'iron-progress') {
     const score = typeof input.score === 'number' ? input.score : Number(input.score);
     const name = text(input.name ?? '', 120, '').trim();
-    const c1 = rollDie(10, roll.rng), c2 = rollDie(10, roll.rng), result = resolveIronProgress(score, c1, c2);
-    t.lines.push(`Progress ${score} vs challenge dice ${c1} and ${c2}`);
-    if (result.match) t.lines.push('The challenge dice match: a twist or an extreme result.');
+    // Duality Dice are the default. `dice: 'd10'` plays the Ironsworn way, with two d10.
+    const classic = input.dice === 'd10';
+    const sides = classic ? 10 : 12, c1 = rollDie(sides, roll.rng), c2 = rollDie(sides, roll.rng);
+    const result = classic ? resolveIronProgress(score, c1, c2) : resolveDualityProgress(score, c1, c2);
+    t.lines.push(classic ? `Progress ${score} vs challenge dice ${c1} and ${c2}` : `Progress ${score} (target ${resolveDualityProgress(score, c1, c2).target}) vs Hope ${c1} and Fear ${c2}`);
+    if (result.match) t.lines.push('The dice match: a twist or an extreme result.');
     const tone: SoloTone = result.outcome === 'strong' ? 'hope' : result.outcome === 'miss' ? 'fear' : 'neutral';
     return t.done(`${IRON_OUTCOME_LABELS[result.outcome]}${result.match ? ' (match)' : ''}`, result.match ? 'revelation' : tone, { total: score }, question || name || 'Progress roll');
   }

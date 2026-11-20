@@ -71,12 +71,12 @@ export const SOLO_SECTIONS: readonly SoloSection[] = [
       },
       {
         title: 'Progress roll',
-        note: 'Count full boxes only: the score runs 0 to 10. Roll two d10 and compare the score to each.',
+        note: 'Count full boxes only: the score runs 0 to 10. Turn it into a target (0, 1, 2, 4, 5, 6, 7, 8, 10, 11, 12), then roll the Duality Dice and compare the target to each die. Two d10 and the plain score also work.',
         rows: [
-          ['Strong hit', 'Your score beats both dice.'],
-          ['Weak hit', 'Your score beats one die.'],
-          ['Miss', 'Your score beats neither.'],
-          ['Ties and matches', 'Ties go to the challenge dice. A match is a twist: a favor on a hit, a dire turn on a miss.'],
+          ['Strong hit', 'Your target beats both dice.'],
+          ['Weak hit', 'Your target beats one die.'],
+          ['Miss', 'Your target beats neither.'],
+          ['Ties and matches', 'Ties go to the dice. Doubles are a twist: a favor on a hit, a dire turn on a miss.'],
           ['No modifiers', 'Progress rolls never give Hope or Fear; no trait, Experience or Hope can change them.'],
         ],
       },
